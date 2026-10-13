@@ -419,10 +419,15 @@ end
 -- Entries and placement
 -- ---------------------------------------------------------------------------
 
+-- Set by the Minimap plugin while it shows the map on its own: buttons that would stay on the
+-- minimap go to the drawer instead (their saved choice is kept for when it's off again).
+L.noMinimap = false
+
 function L:Placement(key)
     local c = ns.char.launchers
-    if c.useCharacter and c.placement[key] then return c.placement[key] end
-    return ns.db.launchers.placement[key] or "drawer"
+    local place = (c.useCharacter and c.placement[key]) or ns.db.launchers.placement[key] or "drawer"
+    if place == "minimap" and L.noMinimap then return "drawer" end
+    return place
 end
 
 local function PluginId(e) return "launcher:" .. e.key end

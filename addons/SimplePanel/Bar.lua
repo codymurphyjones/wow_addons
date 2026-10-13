@@ -861,6 +861,8 @@ function Bar:Reveal() idle = 0; targetOffset = 0 end
 
 local ADJUST = { "MinimapCluster", "BuffFrame" }
 local saved, applying = {}, false
+-- Frames a plugin positions itself (the Minimap plugin lines buffs up beside its square); left alone here.
+Bar.adjustOwned = {}
 
 local function CapturePoints(f)
     local pts = {}
@@ -878,11 +880,11 @@ local function ApplyAdjust()
     local off = Offset()
     for _, name in ipairs(ADJUST) do
         local f = _G[name]
-        if f and not (f.IsProtected and f:IsProtected()) then
+        if f and not (f.IsProtected and f:IsProtected()) and not Bar.adjustOwned[name] then
             if not saved[name] then
                 saved[name] = CapturePoints(f)
                 hooksecurefunc(f, "SetPoint", function(self)
-                    if applying then return end
+                    if applying or Bar.adjustOwned[name] then return end
                     -- Someone else moved it: take their position as the new base and re-offset.
                     saved[name] = CapturePoints(self)
                     C_Timer.After(0, ApplyAdjust)

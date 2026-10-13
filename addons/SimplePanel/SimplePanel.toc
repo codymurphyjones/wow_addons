@@ -33,6 +33,7 @@ Plugins\Performance.lua
 Plugins\Bags.lua
 Plugins\Durability.lua
 Plugins\Location.lua
+Plugins\Minimap.lua
 Plugins\XP.lua
 Plugins\Memory.lua
 Plugins\Hearthstone.lua
