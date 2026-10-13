@@ -1,0 +1,1 @@
+Smart junk seller that learns what you vendor, protects gear upgrades and valuables, sorts your bags and bank your way, and posts your Auction List one click per item at Auctionator prices.

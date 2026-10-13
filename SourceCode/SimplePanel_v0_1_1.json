@@ -1,0 +1,10 @@
+{
+  "addon": "SimplePanel",
+  "version": "0.1.1",
+  "changelog": "Version 0.1.1",
+  "changelogType": "text",
+  "releaseType": "release",
+  "manual": false,
+  "force": false,
+  "game_versions": null
+}

@@ -1,0 +1,8 @@
+<Bindings>
+    <Binding name="QUARTERMASTER_BUY_NEXT" header="QUARTERMASTER" category="ADDONS">
+        Quartermaster_BuyNext()
+    </Binding>
+    <Binding name="QUARTERMASTER_TOGGLE" category="ADDONS">
+        Quartermaster_Toggle()
+    </Binding>
+</Bindings>

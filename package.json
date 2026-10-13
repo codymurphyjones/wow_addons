@@ -1,0 +1,22 @@
+{
+  "name": "wow-addons",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WoW addon workspace: sync dev builds / CurseForge releases into the game and publish releases.",
+  "packageManager": "yarn@1.22.22",
+  "scripts": {
+    "test": "python addon_sync.py sync",
+    "test:watch": "python addon_sync.py sync --watch",
+    "stop": "python addon_sync.py stop",
+    "deploy": "python addon_sync.py publish",
+    "deploy:check": "python addon_sync.py publish --dry-run",
+    "bump": "python addon_sync.py bump",
+    "status": "python addon_sync.py status",
+    "link": "python addon_sync.py link",
+    "init": "python addon_sync.py init",
+    "dev": "python addon_sync.py dev",
+    "release": "python addon_sync.py release",
+    "auto": "python addon_sync.py auto",
+    "skip": "python addon_sync.py skip"
+  }
+}

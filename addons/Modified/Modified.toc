@@ -1,0 +1,15 @@
+## Interface: 16001, 120007
+## Title: Modified
+## Notes: Visually design Shift/Ctrl/Alt modifier macros for your action bar buttons. /mod
+## Version: 1.0.4
+## SavedVariablesPerCharacter: ModifiedDB
+## IconTexture: Interface\AddOns\Modified\Textures\Icon.tga
+
+Core.lua
+Bars.lua
+MacroBuilder.lua
+MacroManager.lua
+Settings.lua
+SpellPicker.lua
+UI_BarList.lua
+UI_Editor.lua

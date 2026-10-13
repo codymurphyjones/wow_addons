@@ -1,0 +1,36 @@
+## Interface: 16001, 11509, 20506, 50504, 120100
+## Title: Quartermaster
+## Notes: Keeps your supply lists from Auctionator's prices, searches the live auction house with Auctionator-style filters, and buys one click at a time. /qm
+## Author: Dinoblankie + Claude
+## Version: 0.1.4
+## RequiredDeps: Auctionator
+## Dependencies: Auctionator
+## SavedVariables: QuartermasterDB
+## SavedVariablesPerCharacter: QuartermasterCharDB
+## IconTexture: Interface\AddOns\Quartermaster\Media\Icon.png
+## Category: Auction & Economy
+## AddonCompartmentFunc: Quartermaster_OnCompartmentClick
+
+Compat.lua
+Core.lua
+Widgets.lua
+Catalog.lua
+Search.lua
+SearchBar.lua
+Lists.lua
+Prebuilt.lua
+Scanner.lua
+FullScan.lua
+Purchase.lua
+Buyer.lua
+Compare.lua
+UI.lua
+BrowsePage.lua
+ListsPage.lua
+PrebuiltPage.lua
+AHTabs.lua
+AuctionSearch.lua
+CartTab.lua
+AuctionTab.lua
+Reagents.lua
+Minimap.lua

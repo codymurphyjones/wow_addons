@@ -1,0 +1,1 @@
+One stat priority for every class and spec, shared by all your addons. Every spec starts from a sensible default. Drag stats into order, press X to set one aside, and gear, loot and consumable addons that support StatLedger follow your list, switching automatically when you respec.

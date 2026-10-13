@@ -1,0 +1,9 @@
+Wowhead quest data (https://www.wowhead.com/forever/), 2026-10-12
+quests listed: 5428
+quests written: 3087
+quest pages read: 5428
+kept (reward items, dungeon or raid, or a step before one): 3087
+quests rewarding gear: 1106
+with a giver: 2712
+NPCs: 1273, objects: 148, instances with quests: 30
+pages that failed: none

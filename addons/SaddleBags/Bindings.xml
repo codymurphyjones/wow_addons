@@ -1,0 +1,9 @@
+<Bindings>
+	<Binding name="SADDLEBAGS_NEXT" header="SADDLEBAGS">SaddleBags:NextTab()</Binding>
+	<Binding name="SADDLEBAGS_TAB1">SaddleBags:SelectTab(1)</Binding>
+	<Binding name="SADDLEBAGS_TAB2">SaddleBags:SelectTab(2)</Binding>
+	<Binding name="SADDLEBAGS_TAB3">SaddleBags:SelectTab(3)</Binding>
+	<Binding name="SADDLEBAGS_TAB4">SaddleBags:SelectTab(4)</Binding>
+	<Binding name="SADDLEBAGS_TAB5">SaddleBags:SelectTab(5)</Binding>
+	<Binding name="SADDLEBAGS_NEXTSADDLE">SaddleBags:NextSaddle()</Binding>
+</Bindings>

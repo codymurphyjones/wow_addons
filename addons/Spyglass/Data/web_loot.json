@@ -1,0 +1,187 @@
+{
+ "source": "https://wowtbc.gg/warcraftforever/loot-tables/",
+ "fetched": "2026-10-10",
+ "instances": {
+  "CityOfDalaran": {
+   "url": "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/city-of-dalaran/",
+   "bosses": [
+    {
+     "boss": "Atrexis the Grave Knight",
+     "items": [
+      {
+       "name": "Bonebinder's Signet",
+       "slot": "finger"
+      },
+      {
+       "name": "Gravespike Repeater",
+       "slot": "ranged, crossbow"
+      },
+      {
+       "name": "Graveweave Bindings",
+       "slot": "wrist, cloth"
+      }
+     ],
+     "empty": false
+    },
+    {
+     "boss": "Arcane Anomaly",
+     "items": [
+      {
+       "name": "Runemender's Seal",
+       "slot": "finger"
+      },
+      {
+       "name": "Ephemeral Grips",
+       "slot": "hands, cloth"
+      },
+      {
+       "name": "Mana-Warped Chain Shirt",
+       "slot": "chest, mail"
+      }
+     ],
+     "empty": false
+    },
+    {
+     "boss": "Arcanic Enigma",
+     "items": [
+      {
+       "name": "Wand of Mana Concentration",
+       "slot": "ranged, wand"
+      },
+      {
+       "name": "Violet Sorcerer's Robes",
+       "slot": "chest, cloth"
+      },
+      {
+       "name": "Drape of Shifting Energy",
+       "slot": "back, cloth"
+      }
+     ],
+     "empty": false
+    },
+    {
+     "boss": "Unstable Sentinel",
+     "items": [
+      {
+       "name": "Guardian's Dualblade",
+       "slot": "two-hand, axe"
+      },
+      {
+       "name": "Unstable Crystalline Shoulderpads",
+       "slot": "shoulder, leather"
+      },
+      {
+       "name": "Refractory Scaleguards",
+       "slot": "legs, mail"
+      }
+     ],
+     "empty": false
+    },
+    {
+     "boss": "Mana Devourer",
+     "items": [
+      {
+       "name": "Spine of the Devourer",
+       "slot": "two-hand, staff"
+      },
+      {
+       "name": "Slitherwrap Girdle",
+       "slot": "waist, leather"
+      },
+      {
+       "name": "Manascale Treads",
+       "slot": "feet, mail"
+      }
+     ],
+     "empty": false
+    },
+    {
+     "boss": "Fel Ancient",
+     "items": [
+      {
+       "name": "Felbough Arm",
+       "slot": "two-hand, polearm"
+      },
+      {
+       "name": "Garb of Fallen Felbark",
+       "slot": "chest, leather"
+      },
+      {
+       "name": "Blightleaf Rope",
+       "slot": "waist, cloth"
+      }
+     ],
+     "empty": false
+    },
+    {
+     "boss": "Lyn the Ignored",
+     "items": [
+      {
+       "name": "Tendonscraper Dagger",
+       "slot": "main hand, dagger"
+      },
+      {
+       "name": "Cartilage Shapers",
+       "slot": "hands, leather"
+      },
+      {
+       "name": "Bonepile Gaze",
+       "slot": "off hand, shield"
+      }
+     ],
+     "empty": false
+    },
+    {
+     "boss": "Shade of the Archmage",
+     "items": [
+      {
+       "name": "Archmagister's Faceted Pendant",
+       "slot": "neck"
+      },
+      {
+       "name": "Violet Sorcerer's Mantle",
+       "slot": "shoulder, cloth"
+      },
+      {
+       "name": "Ponderous Orb",
+       "slot": "held in off-hand"
+      }
+     ],
+     "empty": false
+    }
+   ]
+  },
+  "TheDrownedCity": {
+   "url": "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/the-drowned-city/",
+   "bosses": []
+  },
+  "KroldokStronghold": {
+   "url": "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/krol-dok-stronghold/",
+   "bosses": []
+  },
+  "AlcazPrison": {
+   "url": "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/alcaz-prison/",
+   "bosses": []
+  },
+  "BlackmawHold": {
+   "url": "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/blackmaw-hold/",
+   "bosses": []
+  },
+  "ShapersTerrace": {
+   "url": "https://wowtbc.gg/warcraftforever/loot-tables/dungeons/shaper-s-terrace/",
+   "bosses": []
+  },
+  "MountHyjal": {
+   "url": "https://wowtbc.gg/warcraftforever/loot-tables/raids/hyjal-summit/",
+   "bosses": []
+  },
+  "BarrowDeepsRaid": {
+   "url": "https://wowtbc.gg/warcraftforever/loot-tables/raids/barrow-deeps/",
+   "bosses": []
+  },
+  "OnyxiasLairNew": {
+   "url": "https://wowtbc.gg/warcraftforever/loot-tables/raids/onyxia-s-lair/",
+   "bosses": []
+  }
+ }
+}

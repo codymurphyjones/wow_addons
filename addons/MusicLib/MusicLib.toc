@@ -1,0 +1,7 @@
+## Interface: 16001, 11509
+## Title: MusicLib
+## Notes: Custom wand sound and zone music demo
+## IconTexture: Interface\AddOns\MusicLib\icon
+## Version: 0.1.2
+
+MusicLib.lua

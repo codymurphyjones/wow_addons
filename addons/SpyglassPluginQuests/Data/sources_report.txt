@@ -1,0 +1,31 @@
+SpyglassPluginQuests sources, built from GearQuest Forever
+
+craft     1084
+quest     1697
+vendor    1482
+world     2548
+total     6811
+
+Left out:
+  missing on this server       0
+  unsourced                 1007
+  boss drop SpyGlass has     713
+  other                        0
+
+By sub type:
+  craft               1084
+  quest               1696
+  quest:seasonal         1
+  vendor              1482
+  world:boss            16
+  world:container        7
+  world:fishing          4
+  world:mail             1
+  world:object          24
+  world:rare           178
+  world:special          2
+  world:trash           46
+  world:world         2270
+
+1475 items aren't in SpyGlass's item data yet (Data/SourcesHarvest.lua);
+the game supplies their details when the list asks, and /sg harvest bakes them in.

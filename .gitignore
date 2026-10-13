@@ -1,0 +1,5 @@
+.env
+.addon_sync/
+__pycache__/
+node_modules/
+yarn.lock

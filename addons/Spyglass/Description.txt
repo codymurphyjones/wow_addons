@@ -1,0 +1,1 @@
+Loot journal for every dungeon and raid, with boss abilities, tactics and models, plus a Character window tab ranking the gear you can use by your StatLedger stat priority. Upgrades are marked, and a click shows where each item drops.

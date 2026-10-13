@@ -1,0 +1,10 @@
+{
+  "addon": "Spyglass",
+  "version": "1.0.4",
+  "changelog": "Version 1.0.4",
+  "changelogType": "text",
+  "releaseType": "release",
+  "manual": false,
+  "force": false,
+  "game_versions": null
+}

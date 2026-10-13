@@ -1,0 +1,21 @@
+## Interface: 16001
+## Title: SpyGlassPluginQuests
+## Notes: Expands SpyGlass to every known item: quest rewards with their chains, world drops, vendor gear and crafted gear, ranked by your StatLedger priorities. Needs SpyGlass.
+## Author: Dinoblankie + Claude
+## Version: 1.1.3
+## Dependencies: Spyglass
+## LoadOnDemand: 1
+## SavedVariablesPerCharacter: SpyGlassPluginQuestsDB, LootPriorityPluginDB
+## X-SpyGlass-Plugin: 1
+## IconTexture: Interface\AddOns\SpyglassPluginQuests\Media\Icon
+## Category: Equipment
+
+Data\QuestDB.lua
+Data\Sources.lua
+Data\SourcesWowhead.lua
+Quests.lua
+Location.lua
+Dungeons.lua
+QuestWindow.lua
+Sources.lua
+Plugin.lua

@@ -1,0 +1,15 @@
+## Interface: 16001
+## Title: SaddleBags: Tabbed UI System
+## Notes: Pack the quest tracker, damage meters, Details! and any other window into tabbed panels, called Saddles, and switch between them with one click. Make as many Saddles as you like. /sb
+## Author: Dinoblankie + Claude
+## Version: 1.0.3
+## SavedVariables: SaddleBagsDB
+## OptionalDeps: Details
+## Category: Interface Enhancements
+## IconTexture: Interface\AddOns\SaddleBags\Media\Icon
+
+Core.lua
+Panel.lua
+DamageMeter.lua
+Picker.lua
+Options.lua

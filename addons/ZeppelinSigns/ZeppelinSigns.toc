@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: Zeppelin Signs
+## Notes: Stand at a zeppelin tower or ship dock and a big sign at the top of your screen shows where it goes. Covers Horde zeppelins, Forever's skyships and the ships; move signs or add your own. /zep
+## Author: Dinoblankie + Claude
+## Version: 1.1.2
+## SavedVariables: ZeppelinSignsDB
+## Category: Interface Enhancements
+## IconTexture: Interface\AddOns\ZeppelinSigns\Media\Icon
+
+ZeppelinSigns.lua

@@ -1,0 +1,1 @@
+Every known item in SpyGlass: quest rewards with their chain and a tracker, world drops, vendor and crafted gear. All ranked by your StatLedger priority, under new Quests, World, Vendors and Crafted buttons.

@@ -1,0 +1,32 @@
+## Interface: 16001, 11509, 20506, 50504, 120100
+## Title: Wally
+## Notes: Smart junk seller. Learns what you habitually sell, protects possible gear upgrades, and manages junk / never-sell lists.
+## Author: Dinoblankie + Claude
+## Version: 0.1.4
+## OptionalDeps: Auctionator
+## SavedVariables: WallyDB
+## SavedVariablesPerCharacter: WallyCharDB
+## IconTexture: Interface\AddOns\Wally\Media\Wally
+## Category: Bags & Inventory
+## AddonCompartmentFunc: Wally_OnCompartmentClick
+
+Compat.lua
+Core.lua
+Lists.lua
+Sessions.lua
+Gear.lua
+Value.lua
+JunkFilter.lua
+Learning.lua
+Prompt.lua
+AuctionLearning.lua
+AuctionScan.lua
+AuctionPoster.lua
+Seller.lua
+Sort.lua
+Merchant.lua
+Tooltip.lua
+Widgets.lua
+UI.lua
+AuctionTab.lua
+Minimap.lua

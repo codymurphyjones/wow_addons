@@ -1,0 +1,1 @@
+Pack your quest tracker, damage meters, Details! and nearly any other window into tabbed Saddles and switch with one click. Drop a window on a tab to lock it in, make as many Saddles as you like, and windows stay put, even if addons try to move them.
