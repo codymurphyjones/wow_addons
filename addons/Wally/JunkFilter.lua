@@ -12,7 +12,8 @@ local POOR, UNCOMMON = 0, 2
 function JF:ClearCache() end
 
 -- Works from a link alone (tooltips) or a bag slot info table.
-function JF:Evaluate(link, info)
+-- skipOneOff: judge it as if no plugin had queued it for a one-off vendor sale (Learning uses this).
+function JF:Evaluate(link, info, skipOneOff)
     if not link then return false, nil, "none" end
     local name, _, quality, _, _, _, _, _, _, _, price, classID = C.GetItemInfo(link)
     name = name or C.NameFromLink(link)
@@ -25,6 +26,10 @@ function JF:Evaluate(link, info)
     if price == 0 then return false, "Can't be sold", "none" end
     if classID == CLASS_QUEST then return false, "Quest item", "none" end
     if info and info.locked then return false, "Locked", "none" end
+
+    -- Queued once to sell to a vendor (Wealth Planner's Go liquid): sold this time, never listed.
+    local once = not skipOneOff and db.oneOff and db.oneOff[key]
+    if once and once.how == "vendor" then return true, "Sell once (Go liquid)", "junk" end
 
     if db.exclusions[key] then return false, "Never Sell list", "keep" end
     local rule = ns.Lists:MatchPattern("exclude", key)

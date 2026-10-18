@@ -9,6 +9,7 @@
 ## IconTexture: Interface\AddOns\TapeMeasure\Media\Icon
 ## Category: Equipment
 ## AddonCompartmentFunc: TapeMeasure_OnCompartmentClick
+## X-Curse-Project-ID: 1735039
 
 Compat.lua
 Core.lua

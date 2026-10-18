@@ -196,7 +196,7 @@ function AuctionSearch:Create(parent, opts)
     headers:Set("price", false)
     -- Listings view: Back and the item's name in place of the headers.
     local back = MakeButton(results, "< Back", 60, 20); back:SetPoint("TOPLEFT", 0, 0); back:Hide()
-    back:SetScript("OnClick", function() v:ShowGroups() end)
+    back:SetScript("OnClick", function() v:Back() end)
     local title = results:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     title:SetPoint("LEFT", back, "RIGHT", 8, 0); title:SetPoint("RIGHT", results, "RIGHT", -30, 0)
     title:SetJustifyH("LEFT"); title:SetWordWrap(false); title:Hide()
@@ -358,7 +358,7 @@ function M:Run(f, load, openItemID)
     end
     local token = Claim(self)
     if not token then return end
-    self.f, self.multi = ns.Search.Copy(f), nil
+    self.f, self.multi, self.before = ns.Search.Copy(f), nil, nil
     Remember(f)
     self.state, self.candidate, self.selected = "searching", nil, nil
     self.groups, self.mode, self.page = {}, "groups", 1
@@ -376,7 +376,7 @@ function M:Run(f, load, openItemID)
         self:ShowGroups()
         if openItemID and groups then
             for _, g in ipairs(groups) do
-                if g.itemID == openItemID then return self:OpenGroup(g) end
+                if g.itemID == openItemID then return self:Open(g) end
             end
             self:SetStatus("|cffd9736bNone listed right now.|r")
         end
@@ -396,7 +396,7 @@ function M:RunList(list)
         if f then todo[#todo + 1] = { entry = entry, f = f } end
     end
     if #todo == 0 then return ns:Print(list.name .. " has nothing to search for.", true) end
-    self.multi, self.f = { list = list, sections = {} }, nil
+    self.multi, self.f, self.before = { list = list, sections = {} }, nil, nil
     self.state, self.candidate, self.selected, self.mode, self.groups = "searching", nil, nil, "groups", {}
     self.page = 1
     local i = 0
@@ -428,6 +428,63 @@ function M:RunList(list)
     end
     self:Refresh()
     Next()
+end
+
+-- Clicking an item: a supply crate (Crates.lua) shows itself and what fills it; anything else, or
+-- the crate inside that view, opens its listings.
+function M:Open(g)
+    local inCrate = self.multi and self.multi.crate
+    local e = ns.Catalog:Get(g.itemID) or {}
+    local filler = not inCrate and ns.Crates:Filler(g.itemID, g.name or e.name)
+    if filler then return self:RunCrate(g, filler) end
+    self:OpenGroup(g)
+end
+
+-- A crate and what fills it, under one heading each. The filler is found with a live search: by
+-- exact name when Auctionator knows the item, otherwise by part of the name, keeping the items
+-- whose name fits (or, if none does, everything but other crates).
+function M:RunCrate(g, filler)
+    local token = Claim(self)
+    if not token then return end
+    self.before = { groups = self.groups, f = self.f, multi = self.multi, page = self.page, status = self.status:GetText() }
+    local fill = { filler = filler, groups = {}, searching = true }
+    self.multi = { crate = g, sections = { { crate = true, groups = { g } }, fill } }
+    self.state, self.candidate, self.selected, self.mode, self.page = "searching", nil, nil, "groups", 1
+    local crateName = g.link or g.name or "crate"
+    self:SetStatus(("|cffffd24dLooking up what fills %s...|r"):format(crateName))
+    self:ShowGroups()
+    ns.Scanner:Browse({ text = filler.search, exact = filler.exact }, function(groups)
+        if self.token ~= token then return end
+        self.state, fill.searching, fill.failed = "idle", nil, groups == nil
+        local mine, others = {}, {}
+        for _, x in ipairs(groups or {}) do
+            local name = x.name or (ns.Catalog:Get(x.itemID) or {}).name
+            if x.itemID == filler.id or (name and filler.names[name:lower()]) then mine[#mine + 1] = x
+            elseif not ns.Crates:Is(name) then others[#others + 1] = x end
+        end
+        fill.groups = #mine > 0 and mine or others
+        -- Found it live though Auctionator didn't know it: now + can add it.
+        if not filler.id and #mine > 0 then
+            filler.id = mine[1].itemID
+            filler.label = mine[1].name or filler.label
+        end
+        self:SetStatus(("%s: the crate and what fills it"):format(crateName))
+        self:ShowGroups(true)
+    end)
+end
+
+-- Back: from listings to the items; from a crate to the search it came from.
+function M:Back()
+    if self.mode == "listings" then return self:ShowGroups() end
+    local b = self.before
+    if not (self.multi and self.multi.crate and b) then return self:ShowGroups() end
+    if self.state == "searching" then
+        ns.Scanner:Abort()
+        self.state, self.token = "idle", (self.token or 0) + 1
+    end
+    self.groups, self.f, self.multi, self.page, self.before = b.groups or {}, b.f, b.multi, b.page, nil
+    self:SetStatus(b.status)
+    self:ShowGroups()
 end
 
 local SORTERS = {
@@ -478,31 +535,63 @@ local function GroupRow(self, g, target)
         detail = table.concat(detail, "  ·  "),
         right = PriceText(g.minUnit, g.itemID),
         hint = (market and ("Market: " .. Money(market) .. "\n") or "") .. "Click to see its listings and buy. Right-click or + adds it to your list. Shift-click to link.",
-        onClick = function() self:OpenGroup(g) end,
+        onClick = function() self:Open(g) end,
         onRightClick = add,
         actions = { { "+", add, "Add to " .. (target and target.name or "your list") } },
     }
 end
 
--- Matching items, 50 a page (after Search a list: items under one heading per list entry).
+-- A section's heading: a list entry (Search a list), or a crate and what fills it (RunCrate).
+local function SectionHead(self, sec, target)
+    local found = sec.searching and "|cffffd24dsearching...|r" or sec.failed and "|cffd9736bno answer|r"
+        or (#sec.groups == 0 and "|cffd9736bnone listed|r" or (#sec.groups .. " item" .. (#sec.groups == 1 and "" or "s")))
+    if sec.entry then
+        local need = ns.Lists:Remaining(sec.entry)
+        return {
+            noIcon = true, text = ns.Lists:Describe(sec.entry),
+            detail = found .. ("  ·  need %d"):format(need),
+            dim = need == 0 and 0.55 or nil,
+        }
+    end
+    if sec.crate then
+        return { noIcon = true, text = "|cff55d6beCrate|r", detail = "Click it for its listings" }
+    end
+    local f = sec.filler
+    local detail = { found }
+    if f.qty then detail[#detail + 1] = "need " .. f.qty end
+    if f.id then detail[#detail + 1] = "you have " .. ns.Stock:Have(f.id) end
+    local d = {
+        noIcon = true, text = "|cff55d6beFilled with:|r " .. f.label, detail = table.concat(detail, "  ·  "),
+        hint = "What the crate is filled with. Click a row below for its listings.",
+    }
+    if f.id then
+        d.actions = { { "+", function() self:AddItem(f.id, f.qty) end,
+            "Add " .. (f.qty or "some") .. " to " .. (target and target.name or "your list") } }
+    end
+    return d
+end
+
+-- Matching items, 50 a page (after Search a list: items under one heading per list entry; for a
+-- crate: the crate, then what fills it).
 function M:ShowGroups(keepScroll)
     self.mode, self.listings, self.candidate, self.selected = "groups", {}, nil, nil
     if self.state == "listing" or self.state == "focusing" or self.state == "quoting" then
         ns.Scanner:Abort(); ns.Purchase:Cancel(); self.state = "idle"
     end
     self.group = nil
-    self.back:Hide(); self.title:Hide(); self.headers:Show()
+    local crate = self.multi and self.multi.crate
+    if crate then
+        local e = ns.Catalog:Get(crate.itemID) or {}
+        self.back:Show(); self.headers:Hide(); self.title:Show()
+        self.title:SetText(("%s  |cff8fa3b3and what fills it|r"):format(crate.link or e.link or e.name or "?"))
+    else
+        self.back:Hide(); self.title:Hide(); self.headers:Show()
+    end
     local target = self:Target()
     local all = {}
     if self.multi then
         for _, sec in ipairs(self.multi.sections) do
-            local need = ns.Lists:Remaining(sec.entry)
-            all[#all + 1] = {
-                noIcon = true, text = ns.Lists:Describe(sec.entry),
-                detail = sec.failed and "|cffd9736bno answer|r" or (#sec.groups == 0 and "|cffd9736bnone listed|r"
-                    or (#sec.groups .. " item" .. (#sec.groups == 1 and "" or "s"))) .. ("  ·  need %d"):format(need),
-                dim = need == 0 and 0.55 or nil,
-            }
+            all[#all + 1] = SectionHead(self, sec, target)
             SortGroups(sec.groups, "price", false)
             for _, g in ipairs(sec.groups) do all[#all + 1] = GroupRow(self, g, target) end
         end
@@ -557,10 +646,10 @@ function M:ShowListings()
     for _, l in ipairs(self.listings) do
         local d = {
             icon = W.IconFor(e.icon and e or { itemID = g.itemID }), link = l.link or g.link or e.link,
-            text = ("%dx %s"):format(l.count, l.link or g.link or e.name or "?"),
-            detail = ("%s each  ·  %s for all%s"):format(PriceText(l.unit, g.itemID), Money(l.buyout),
+            text = ("%dx %s"):format(l.available or l.count, l.link or g.link or e.name or "?"),
+            detail = ("%s each  ·  %s for all%s"):format(PriceText(l.unit, g.itemID), Money(l.unit * (l.available or l.count)),
                 l.owner and ("  ·  " .. l.owner) or ""),
-            right = Money(l.buyout),
+            right = Money(l.unit * (l.available or l.count)),
             selected = self.selected == l,
         }
         if commodity then
@@ -814,15 +903,16 @@ function M:BuyNow(c)
     if self.state == "buying" and not ns.Purchase:Busy() then self.state = "idle"; self:Refresh() end
 end
 
--- Add to: stackable items ask how many first, like Buy; anything else adds one.
-function M:AddItem(itemID)
+-- Add to: stackable items ask how many first, like Buy; anything else adds one (or qty).
+-- qty: the amount the dialog starts at (a crate's filler).
+function M:AddItem(itemID, qty)
     local target = self:Target()
-    if not IsStackable(self, itemID) then return ns.Lists:AddItem(itemID, 1, target) end
+    if not IsStackable(self, itemID) then return ns.Lists:AddItem(itemID, qty or 1, target) end
     local e = ns.Catalog:Get(itemID) or {}
     local market = ns.Catalog:PriceFor(itemID)
     W.QuantityDialog({
         title = "Add " .. (e.link or e.name or ("item " .. itemID)) .. " to " .. target.name,
-        icon = W.IconFor(e.icon and e or { itemID = itemID }), qty = self.defaultQty or 1, mainLabel = "Add",
+        icon = W.IconFor(e.icon and e or { itemID = itemID }), qty = qty or self.defaultQty or 1, mainLabel = "Add",
         describe = function(q)
             if not market then return "No market price yet." end
             return ("Market %s each, about %s for %d."):format(Money(market), Money(market * q), q)

@@ -3,9 +3,10 @@ local _, ns = ...
 -- Minimap: just the map, in a square panel styled like the bar with 5px around it, in the top-right
 -- corner under the bar. Everything else the game draws around the map goes (ring, zone name,
 -- clock, zoom buttons, day/night button...). What's still needed is drawn here, in the square's
--- corners: tracking as a gear (top left), a calendar tile (top right) and the queue status button
--- (bottom right); mail is the Mail plugin's job. The mouse wheel zooms. Add-on minimap buttons go
--- to the drawer. Buffs line up to the left of the square.
+-- corners: tracking as a gear (top left), a calendar tile (top right), the battleground queue
+-- (bottom left) and the dungeon queue (bottom right); mail is the Mail plugin's job. The mouse wheel zooms. Add-on minimap buttons
+-- placed on the minimap stay around its edge; the rest are the drawer's. Buffs line up to the left
+-- of the square.
 local T = SimplePanel.Theme
 
 local GAP = 4         -- between the buffs and the square, and below the bar
@@ -18,6 +19,7 @@ local box             -- the square panel
 local cal             -- the calendar tile
 local savedPoints, savedScale, savedWheel -- the minimap's own anchors, size and mouse wheel
 local hidden = {}     -- [region] = its parent before we hid it
+local rescued = {}    -- [button] = its parent before we moved it onto the map, out of hidden parts
 local taken = {}      -- [key] = { frame, parent, points, scale, alphas, overlay } for corner frames
 local hider = CreateFrame("Frame")
 hider:Hide()
@@ -50,6 +52,18 @@ local function OnMinimap(f)
         or (MinimapBackdrop and IsAncestor(MinimapBackdrop, f)))
 end
 
+-- One of the minimap's parts, or a frame kept beside the map by its anchors (the game's newer queue
+-- button is the screen's child, hung off the map).
+local function ByMinimap(f)
+    if OnMinimap(f) then return true end
+    for i = 1, f:GetNumPoints() do
+        local _, rel = f:GetPoint(i)
+        if rel and (rel == Minimap or rel == MinimapCluster or OnMinimap(rel)) then return true end
+    end
+end
+
+local IS_CLASSIC = WOW_PROJECT_ID ~= nil and WOW_PROJECT_MAINLINE ~= nil and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE
+
 -- ---------------------------------------------------------------------------
 -- Corner frames: the game's own buttons moved into a corner, some redrawn
 -- ---------------------------------------------------------------------------
@@ -62,13 +76,28 @@ local CORNERS = {
             local c = MinimapCluster
             return (c and c.Tracking) or MiniMapTracking or MiniMapTrackingFrame
         end },
-    -- Dungeon finder / battleground queue: kept as the game draws it (it shows the queue's state).
-    queue = { point = "BOTTOMRIGHT", keepArt = true,
+    -- Dungeon finder queue and battleground queue: kept as the game draws them (they show the
+    -- queue's state), less their round border. The battleground one sits bottom left; where the
+    -- queue eye also stands for battlegrounds it takes that corner, else it goes bottom right.
+    queue = { keepArt = true,
+        point = function()
+            local bf = MiniMapBattlefieldFrame
+            return (taken.battlefield or (bf and OnMinimap(bf))) and "BOTTOMRIGHT" or "BOTTOMLEFT"
+        end,
         find = function()
-            for _, name in ipairs({ "QueueStatusMinimapButton", "MiniMapLFGFrame", "LFGMinimapFrame", "MiniMapBattlefieldFrame" }) do
+            -- Classic clients with the newer queue eye keep it by the map; on retail it's by the
+            -- micro menu and stays there.
+            local q = QueueStatusButton
+            if q and (ByMinimap(q) or IS_CLASSIC) then return q end
+            for _, name in ipairs({ "QueueStatusMinimapButton", "MiniMapLFGFrame", "LFGMinimapFrame" }) do
                 local f = _G[name]
-                if f and OnMinimap(f) then return f end
+                if f and ByMinimap(f) then return f end
             end
+        end },
+    battlefield = { point = "BOTTOMLEFT", keepArt = true,
+        find = function()
+            local f = MiniMapBattlefieldFrame
+            if f and OnMinimap(f) then return f end
         end },
 }
 
@@ -89,22 +118,64 @@ local function HideArt(f, alphas)
     for _, child in ipairs({ f:GetChildren() }) do HideArt(child, alphas) end
 end
 
+-- The round ring the game draws around its minimap buttons: textures named or keyed "Border", or
+-- drawn from a border file.
+local function IsBorder(f, r)
+    if r == f.Border or r == f.border then return true end
+    local name = r:GetName() or ""
+    if name:find("Border") then return true end
+    local path = r.GetTextureFilePath and r:GetTextureFilePath() or r:GetTexture()
+    return type(path) == "string" and path:find("Border") ~= nil
+end
+
+local function HideBorder(f, alphas)
+    for _, r in ipairs({ f:GetRegions() }) do
+        if r:IsObjectType("Texture") and alphas[r] == nil and IsBorder(f, r) then alphas[r] = r:GetAlpha(); r:SetAlpha(0) end
+    end
+end
+
+local placing = false
+
+-- Sized to a corner tile and set in its corner, where the frame's own anchor point lands.
+local function Place(key)
+    local t, spec = taken[key], CORNERS[key]
+    local f = t.frame
+    placing = true
+    if f:GetParent() ~= box then f:SetParent(box) end
+    f:SetFrameStrata("MEDIUM")
+    local point = type(spec.point) == "function" and spec.point() or spec.point
+    -- The battleground icon (always the bottom-left one) is drawn 35% larger.
+    f:SetScale(CORNER * (point == "BOTTOMLEFT" and 1.35 or 1) / t.size)
+    f:ClearAllPoints()
+    local x = point:find("LEFT") and INSET or -INSET
+    local y = point:find("TOP") and -INSET or INSET
+    f:SetPoint(point, box, point, x / f:GetScale(), y / f:GetScale())
+    placing = false
+end
+
 local function Take(key)
     local spec = CORNERS[key]
     if taken[key] or not box then return end
     local f = spec.find()
     if not f or (f.IsProtected and f:IsProtected()) then return end
-    local t = { frame = f, parent = f:GetParent(), points = Points(f), scale = f:GetScale(), alphas = {} }
+    -- A frame not laid out yet reads 0 wide; sized as a standard minimap button rather than blown up.
+    local size = math.max(f:GetWidth(), f:GetHeight())
+    local t = { frame = f, parent = f:GetParent(), points = Points(f), scale = f:GetScale(), alphas = {},
+        size = size >= 8 and size or 32 }
     taken[key] = t
-    f:SetParent(box)
-    f:SetFrameStrata("MEDIUM")
-    local size = math.max(f:GetWidth(), f:GetHeight(), 1)
-    f:SetScale(CORNER / size)
-    f:ClearAllPoints()
-    local x = spec.point:find("LEFT") and INSET or -INSET
-    local y = spec.point:find("TOP") and -INSET or INSET
-    f:SetPoint(spec.point, box, spec.point, x / f:GetScale(), y / f:GetScale())
-    if spec.keepArt then return end
+    Place(key)
+    if not f.simplePanelPlaced then
+        f.simplePanelPlaced = true
+        -- The game moving, resizing or re-parenting it (a queue's status changing) puts it back in its corner.
+        for _, method in ipairs({ "SetPoint", "SetParent", "SetScale" }) do
+            hooksecurefunc(f, method, function()
+                if active and taken[key] and taken[key].frame == f and not placing then C_Timer.After(0, function()
+                    if active and taken[key] and taken[key].frame == f then Place(key) end
+                end) end
+            end)
+        end
+    end
+    if spec.keepArt then return HideBorder(f, t.alphas) end
     -- Redrawn: the game's art goes, our icon goes on top, and our tooltip replaces the game's.
     HideArt(f, t.alphas)
     local b = ClickPart(f)
@@ -236,7 +307,7 @@ local MAP_PARTS = {
 
 -- Hidden by parenting them to a hidden frame, so the game showing them again changes nothing.
 local function Hide(f)
-    if f and f ~= Minimap and f ~= box and not hidden[f] and f:GetParent() ~= hider
+    if f and f ~= Minimap and f ~= box and not hidden[f] and not rescued[f] and f:GetParent() ~= hider
         and not (f.IsProtected and f:IsProtected()) and not IsAncestor(f, Minimap) then
         hidden[f] = f:GetParent()
         f:SetParent(hider)
@@ -257,6 +328,25 @@ end
 local function ShowAll()
     for f, parent in pairs(hidden) do f:SetParent(parent) end
     hidden = {}
+end
+
+-- Add-on buttons kept on the minimap but parented to the backdrop or the cluster would vanish with
+-- them: they move onto the map itself (their anchors don't change).
+local function RescueButtons()
+    if not ns.Launchers or InCombatLockdown() then return end
+    for _, b in ipairs(ns.Launchers:MinimapButtons()) do
+        local parent = b:GetParent()
+        if not rescued[b] and parent and parent ~= Minimap and not IsAncestor(Minimap, b)
+            and OnMinimap(b) and not (b.IsProtected and b:IsProtected()) then
+            rescued[b] = parent
+            b:SetParent(Minimap)
+        end
+    end
+end
+
+local function ReturnButtons()
+    for b, parent in pairs(rescued) do b:SetParent(parent) end
+    rescued = {}
 end
 
 -- ---------------------------------------------------------------------------
@@ -361,6 +451,7 @@ local function Layout(p)
         if math.abs(MinimapCluster:GetScale() - scale) > 0.001 then MinimapCluster:SetScale(scale) end
     end
     for key in pairs(CORNERS) do Take(key) end
+    RescueButtons()
     HideAll() -- again each time: parts load late (the clock) or get re-created
     local k = Minimap:GetEffectiveScale() / UIParent:GetEffectiveScale()
     box:SetSize(Minimap:GetWidth() * k + 2 * PAD, Minimap:GetHeight() * k + 2 * PAD)
@@ -398,7 +489,6 @@ local function Activate(p)
     savedScale = savedScale or (MinimapCluster and MinimapCluster:GetScale())
     savedWheel = Minimap:IsMouseWheelEnabled()
     Minimap:EnableMouseWheel(true)
-    if ns.Launchers then ns.Launchers.noMinimap = true; ns.Launchers:ApplyAll() end
     if not hooked then
         hooked = true
         Minimap:HookScript("OnMouseWheel", Zoom)
@@ -425,6 +515,7 @@ local function Deactivate()
     Minimap:EnableMouseWheel(savedWheel or false)
     for key in pairs(CORNERS) do Release(key) end
     ReleaseAuras()
+    ReturnButtons()
     ShowAll()
     if savedPoints then
         applying = true
@@ -432,7 +523,6 @@ local function Deactivate()
         applying = false
         savedPoints = nil
     end
-    if ns.Launchers then ns.Launchers.noMinimap = false; ns.Launchers:ApplyAll() end
 end
 
 SimplePanel.RegisterPlugin({
@@ -442,10 +532,17 @@ SimplePanel.RegisterPlugin({
     icon = "Interface\\Icons\\INV_Misc_Map02",
     zone = "right",
     defaultEnabled = false,
-    defaults = { alignBuffs = true, scale = 0.8, collapsed = false },
+    defaults = { alignBuffs = true, scale = 0.92, collapsed = false },
     events = { "PLAYER_ENTERING_WORLD", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED", "CALENDAR_UPDATE_PENDING_INVITES" },
 
     onInit = function(p)
+        -- The default size went from 80% to 92% (15% larger): move a saved 80% (the old default) up
+        -- once. A size picked on the slider afterwards is left alone.
+        local settings = p:Settings()
+        if not settings.sizedUp then
+            if settings.scale == 0.8 then settings.scale = 0.92 end
+            settings.sizedUp = true
+        end
         -- Parts of the game's UI load on demand (the clock); hide them when they arrive.
         p:On("ADDON_LOADED", function() if active then Layout(p) end end)
         for _, ev in ipairs(p.def.events) do p:On(ev, function() if active then C_Timer.After(0, function() Layout(p) end) end end) end

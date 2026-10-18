@@ -1,0 +1,16 @@
+## Interface: 16001, 11509, 20506, 50504, 120100
+## Title: RoadLog
+## Notes: Records the roads you walk, as paths in world coordinates, and draws them on the world map. Turn it on from the minimap button and walk down the middle of the road. /roadlog
+## Author: Dinoblankie + Claude
+## Version: 0.1.0
+## SavedVariables: RoadLogDB
+## IconTexture: Interface\AddOns\RoadLog\Media\Icon
+## Category: Map & Minimap
+## AddonCompartmentFunc: RoadLog_OnCompartmentClick
+
+Compat.lua
+Core.lua
+Nav.lua
+Recorder.lua
+Minimap.lua
+MapLines.lua

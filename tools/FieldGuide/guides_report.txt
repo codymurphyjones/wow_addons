@@ -1,0 +1,243 @@
+== Alliance (48 zones)
+  Darnassus 1                from level  1 to  5.91     7 quests,   0 dropped   ~77 min   (grind to 4: ~3 min)
+  Dun Morogh                 from level  1 to 11.40    47 quests,   4 dropped   ~192 min
+     dropped (low XP for the walk): The Reports [291], Beer Basted Boar Ribs [384], A Refugee's Quandary [3361], Dawn in the Mountains [99158]
+  Elwynn Forest 1            from level  1 to 11.36    52 quests,   3 dropped   ~211 min
+     dropped (low XP for the walk): Wolves Across the Border [33], Rest and Relaxation [2158], Milly Osworth [3903]
+  Stormwind City 1           from level  1 to  3.93     4 quests,   3 dropped   ~0 min
+     dropped (low XP for the walk): Wine Shop Advert [332], Harlan Needs a Resupply [333], Package for Thurman [334]
+  Teldrassil 1               from level  1 to 11.33    50 quests,   6 dropped   ~228 min
+     XP estimated: Escaping Ban'ethil
+     dropped (low XP for the walk): The Woodland Protector [459], Rellian Greenspyre [922], Dolanaar Delivery [2159], The Sisterhood of Elune [98391], The Lost Runner [99046], Easing Suffering [99073]
+  Zephras Isle               from level  1 to 12.75    81 quests,   4 dropped   ~299 min
+     dropped (low XP for the walk): Elemental Unrest [92464], Hippogryph Harrassment [92516], Unwelcome Visitors [92741], Crab Season [93317]
+  Ironforge 7                from level  7 to 17.20     4 quests,   0 dropped   ~73 min
+  Darkshore                  from level  9 to 16.35    54 quests,   3 dropped   ~200 min
+     XP estimated: Holy Diver
+     dropped (low XP for the walk): The Absent Minded Prospector [741], Beached Sea Creature [4728], Expanding Horizons [97914]
+  The Barrens                from level  9 to 15.17    14 quests,   1 dropped   ~48 min
+     dropped (low XP for the walk): Deepmoss Spider Eggs [1069]
+  Westfall 9                 from level  9 to 16.14    23 quests,   4 dropped   ~275 min
+     dropped (low XP for the walk): The Defias Brotherhood [135], Continue to Stormwind [6281], Moonbrook Espionage [92747], Explosive Consultation [92748]
+  Loch Modan                 from level 10 to 19.01    36 quests,   0 dropped   ~273 min
+  Stormwind City 10          from level 10 to 56.06    31 quests,   9 dropped   ~325 min
+     XP estimated: Feast at the Blue Recluse
+     dropped (low XP for the walk): The Legend of Stalvan [72], Speaking of Fortitude [343], Humble Beginnings [399], A Donation of Wool [7791], Runes of the Sorcerer-Kings [78148], Greater Friend of the Library [79536], Greater Friend of the Library [82208], Philmor's Favor [97220], A Friend of the Family [98191]
+  Redridge Mountains         from level 12 to 20.47    27 quests,   1 dropped   ~237 min
+     dropped (low XP for the walk): Messenger to Stormwind [120]
+  Ashenvale                  from level 15 to 26.41    38 quests,   3 dropped   ~275 min
+     dropped (low XP for the walk): Velinde Starsong [1037], Kayneth Stillwind [4581], Slowing the Orc Advance [86757]
+  Stonetalon Mountains       from level 16 to 22.10    13 quests,   3 dropped   ~90 min
+     dropped (low XP for the walk): An Old Colleague [1072], A Scroll from Mauren [1075], Scramble [79980]
+  Duskwood                   from level 18 to 28.19    56 quests,   3 dropped   ~419 min
+     dropped (low XP for the walk): Return to Jitters [240], Seeking Wisdom [269], The Missing Diplomat [1245]
+  Elwynn Forest 20           from level 20 to 22.10     4 quests,   0 dropped   ~52 min
+  Moonglade 20               from level 20 to 20.10     3 quests,   0 dropped   ~12 min
+  Wetlands                   from level 20 to 28.29    46 quests,   8 dropped   ~320 min
+     XP estimated: A Friend of the Family
+     dropped (low XP for the walk): In Search of The Excavation Team [305], In Search of The Excavation Team [306], Fall of Dun Modr [472], Report to Captain Stoutfist [473], The Thandol Span [633], Old Habits [98223], Gleaning Our Future [98310], For Further Study [98313]
+  Hillsbrad Foothills        from level 25 to 30.66    17 quests,   2 dropped   ~260 min
+     dropped (low XP for the walk): Letter to Stormpike [514], An Alarming Request [92432]
+  Ironforge 25               from level 25 to 50.04    13 quests,   5 dropped   ~192 min
+     dropped (low XP for the walk): Passing the Burden [3448], A Donation of Wool [7802], A Donation of Silk [7803], A Donation of Wool [7807], A Donation of Silk [7808]
+  Swamp of Sorrows 25        from level 25 to 30.31     4 quests,   2 dropped   ~29 min
+     dropped (low XP for the walk): Draenethyst Crystals [1389], Driftwood [1398]
+  Alterac Mountains 26       from level 26 to 32.03     3 quests,   0 dropped   ~50 min
+  Darnassus 26               from level 26 to 54.00     6 quests,   1 dropped   ~82 min
+     dropped (low XP for the walk): A Donation of Wool [7792]
+  Dustwallow Marsh           from level 28 to 33.05    20 quests,   1 dropped   ~99 min
+     dropped (low XP for the walk): ... and Bugs [1258]
+  Stranglethorn Vale         from level 28 to 45.06    69 quests,   0 dropped   ~736 min
+  Thousand Needles           from level 28 to 35.01    11 quests,   1 dropped   ~94 min
+     dropped (low XP for the walk): Razzeric's Tweaking [1187]
+  Arathi Highlands           from level 30 to 35.39    25 quests,   0 dropped   ~201 min
+     XP estimated: Hints of a New Plague?
+  Badlands                   from level 30 to 40.18    13 quests,   1 dropped   ~126 min
+     dropped (low XP for the walk): Pearl Diving [705]
+  Desolace                   from level 30 to 34.22    26 quests,   4 dropped   ~244 min
+     dropped (low XP for the walk): Bone Collector [5501], Ghost-o-plasm Round Up [6134], Valley of Bones [92841], Valley of Bones [93034]
+  The Hinterlands            from level 38 to 40.38    11 quests,   1 dropped   ~107 min
+     dropped (low XP for the walk): Thadius Grimshade [2990]
+  Tanaris                    from level 39 to 58.21    32 quests,   6 dropped   ~439 min
+     XP estimated: Noggenfogger Elixir
+     dropped (low XP for the walk): The Super Egg-O-Matic [2741], Return to Ironforge [2977], The Stone Circle [3444], Screecher Spirits [3520], Calm Before the Storm [4508], Fire Plume Forged [5801]
+  Blasted Lands              from level 40 to 45.42     7 quests,   2 dropped   ~23 min
+     dropped (low XP for the walk): The Cover of Darkness [2743], Petty Squabbles [2783]
+  Feralas                    from level 40 to 45.23    27 quests,   0 dropped   ~166 min
+  Searing Gorge              from level 40 to 45.61    23 quests,   0 dropped   ~173 min
+  Westfall 40                from level 40 to 40.26     5 quests,   0 dropped   ~102 min
+  Teldrassil 42              from level 42 to 52.07     3 quests,   0 dropped   ~56 min
+  Azshara                    from level 45 to 55.16    13 quests,   0 dropped   ~150 min
+  Felwood                    from level 45 to 49.27    12 quests,   2 dropped   ~178 min
+     dropped (low XP for the walk): Aquementas [4005], Speak to Nafien [8462]
+  Swamp of Sorrows 45        from level 45 to 45.25     5 quests,   1 dropped   ~27 min
+     dropped (low XP for the walk): You Are Rakh'likh, Demon [3628]
+  Un'Goro Crater             from level 47 to 51.04    26 quests,   0 dropped   ~230 min
+  Burning Steppes            from level 48 to 52.04     9 quests,   1 dropped   ~164 min
+     dropped (low XP for the walk): The True Masters [4224]
+  Eastern Plaguelands        from level 50 to 55.07    17 quests,   0 dropped   ~257 min
+  Western Plaguelands        from level 50 to 57.13    38 quests,   2 dropped   ~235 min
+     dropped (low XP for the walk): Better Late Than Never [5022], Mrs. Dalson's Diary [5058]
+  Alterac Mountains 51       from level 51 to 51.15     4 quests,   0 dropped   ~22 min
+  Winterspring               from level 51 to 55.04    16 quests,   2 dropped   ~156 min
+     dropped (low XP for the walk): The Videre Elixir [3909], The Ruins of Kel'Theril [5244]
+  Moonglade 54               from level 54 to 56.04     4 quests,   0 dropped   ~43 min
+  Silithus                   from level 54 to 60.00    22 quests,   4 dropped   ~242 min
+     dropped (low XP for the walk): What Tomorrow Brings [8286], Vyral the Vile [8321], Abyssal Contacts [8361], Cenarion Battlegear [8800]
+  Hand-offs to another zone: 200
+    Arathi Highlands: Hints of a New Plague? -> Hillsbrad Foothills (30); MacKreel's Moonshine -> Hillsbrad Foothills (28); Sunken Treasure -> Stranglethorn Vale (35)
+    Ashenvale: Journey to Stonetalon Peak -> Stonetalon Mountains (18); On Guard in Stonetalon -> Stonetalon Mountains (17); Seeking Caitlin -> Wetlands (24); The Tower of Althalaxx -> Darkshore (13)
+    Azshara: The Formation of Felbane -> Stranglethorn Vale (45)
+    Badlands: Murdaloc -> Loch Modan (30); News for Fizzle -> Thousand Needles (28); Summoning the Princess -> Arathi Highlands (30)
+    Burning Steppes: Felnok Steelspring -> Winterspring (50); Leonid Barthalomew -> Eastern Plaguelands (57); The True Masters -> Redridge Mountains (48)
+    Darkshore: One Shot. One Kill. -> Ashenvale (10); Return to Nessa -> Teldrassil (10); The Sleeper Has Awakened -> Ashenvale (17); The Tower of Althalaxx -> Ashenvale (13); The Tower of Althalaxx -> Ashenvale (13); Therylune's Escape -> Ashenvale (10); Trek to Ashenvale -> Ashenvale (15); Unrequited Love -> Wetlands (18)
+    Darnassus: A Call to Arms: The Plaguelands! -> Western Plaguelands (50); Grove of the Ancients -> Darkshore (6); March of the Silithid -> Tanaris (50); Nessa Shadowsong -> Teldrassil (10); Rabine Saturna -> Moonglade (54); Return to Denalan -> Teldrassil (4); The Absent Minded Prospector -> Wetlands (15); The Barrens Port -> The Barrens (25); Trouble In Darkshore? -> Darkshore (14)
+    Desolace: Down the Scarlet Path -> Hillsbrad Foothills (34)
+    Dun Morogh: Stout to Kadrell -> Loch Modan (8)
+    Duskwood: Messenger to Darkshire -> Redridge Mountains (18); Supplies for Nethergarde -> Blasted Lands (40); The Legend of Stalvan -> Elwynn Forest (22); The Legend of Stalvan -> Westfall (22)
+    Dustwallow Marsh: Cortello's Riddle -> The Hinterlands (35)
+    Eastern Plaguelands: Auntie Marlene -> Western Plaguelands (50); Find Myranda -> Western Plaguelands (52); Of Love and Family -> Western Plaguelands (52); Return to Chromie -> Western Plaguelands (50); Soulbound Keepsake -> Western Plaguelands (57); Tormented By the Past -> Winterspring (53)
+    Elwynn Forest: A Watchful Eye -> Redridge Mountains (20); Ink Supplies -> Redridge Mountains (20); Return to Verner -> Redridge Mountains (13); The Legend of Stalvan -> Duskwood (22)
+    Felwood: Ancient Spirit -> Ashenvale (49); Mystery Goo -> Winterspring (52); Seeking Spiritual Aid -> The Barrens (48); Speak to Salfa -> Winterspring (45); To Winterspring! -> Winterspring (53)
+    Feralas: An Orphan Looking For a Home -> Thousand Needles (38); In Search of Knowledge -> Teldrassil (42); Rescue OOX-22/FE! -> Stranglethorn Vale (40); The Sunken Temple -> Tanaris (46)
+    Hillsbrad Foothills: A Lack of Virtue -> Wetlands (18); Hints of a New Plague? -> Arathi Highlands (30); Talk of the Town -> Stranglethorn Vale (28)
+    Ironforge: A Call to Arms: The Plaguelands! -> Western Plaguelands (50); A Supernatural Device -> Tanaris (58); Arcane Runes -> Azshara (45); At Last! -> Loch Modan (40); Dwarven Justice -> Searing Gorge (40); Find Bingles -> Loch Modan (12); Forbidden Knowledge -> Badlands (30); Further Mysteries -> Hillsbrad Foothills (30); In Search of Anthion -> Eastern Plaguelands (58); Ineptitude + Chemicals = Fun -> Stonetalon Mountains (17); Ironband Wants You! -> Loch Modan (30); Powder to Ironband -> Loch Modan (10); Reclaimers' Business in Desolace -> Desolace (30); Return to Brock -> Loch Modan (10); Seeing What Happens -> Tanaris (45); Taking Back Silithus -> Silithus (54); The Brassbolts Brothers -> Thousand Needles (28); The Brassbolts Brothers -> Thousand Needles (40); The Sovereign Imperative -> Alterac Mountains (51); Theldurin the Lost -> Badlands (30)
+    Loch Modan: A Dark Threat Looms -> Wetlands (16); Eagle's Fist -> Arathi Highlands (14); Find Agmond -> Badlands (30); Stonegear's Search -> Dun Morogh (20); The Algaz Gauntlet -> Wetlands (19)
+    Redridge Mountains: Messenger to Darkshire -> Duskwood (18); Messenger to Westfall -> Westfall (14); Rethban Ore -> Elwynn Forest (20); The Defias Brotherhood -> Westfall (14); The Price of Shoes -> Elwynn Forest (14); The True Masters -> Burning Steppes (48)
+    Searing Gorge: Ledger from Tanaris -> Tanaris (43)
+    Silithus: Umber, Archivist -> Moonglade (54)
+    Stonetalon Mountains: Further Instructions -> The Barrens (16); Reclaiming the Charred Vale -> Feralas (20); Update for Sentinel Thenysil -> Ashenvale (17); Wet Job -> Loch Modan (14)
+    Stormwind City: A Call to Arms: The Plaguelands! -> Western Plaguelands (50); Armed and Ready -> Duskwood (20); Brother Anton -> Desolace (34); Brother Paxton -> Elwynn Forest (20); Business in Auberdine -> Darkshore (13); Explosive Consultation -> Westfall (9); Flint Shadowmore -> Western Plaguelands (56); Good Luck Charm -> Western Plaguelands (50); James Hyal -> Wetlands (30); Jonespyre's Request -> Feralas (47); Journey to Sentinel Hill -> Westfall (7); Making Do -> Darkshore (13); Malin's Request -> Arathi Highlands (30); Messenger to Stormwind -> Redridge Mountains (14); Morgan Stern -> Dustwallow Marsh (33); Remember That I Love You -> Duskwood (15); Return to Lewis -> Westfall (10); Southshore -> Hillsbrad Foothills (20); Special Delivery for Gaxim -> Stonetalon Mountains (17); Stormpike's Delivery -> Loch Modan (9); The Corruption Abroad -> Darkshore (18); The Defias Brotherhood -> Westfall (14); The Doomed Fleet -> Wetlands (20); The Dragon's Eye -> Winterspring (50); The Legend of Stalvan -> Elwynn Forest (22); The Missing Diplomat -> Duskwood (28); The Missing Diplomat -> Wetlands (28); The Shamed Lieutenant -> Hillsbrad Foothills (20); The True Masters -> Redridge Mountains (48); To The Hinterlands -> The Hinterlands (38); Vital Supplies -> Duskwood (40)
+    Stranglethorn Vale: Akiris by the Bundle -> Dustwallow Marsh (38); Goblin Sponsorship -> Thousand Needles (29); Magical Analysis -> Alterac Mountains (32); Return to the Blasted Lands -> Swamp of Sorrows (45); Rumors for Kravel -> Thousand Needles (30); Stoley's Debt -> Tanaris (40); Sunken Treasure -> Arathi Highlands (35); The Caravan Road -> Duskwood (25); Zanzil's Mixture and a Fool's Stout -> Thousand Needles (35)
+    Swamp of Sorrows: Cortello's Riddle -> Dustwallow Marsh (35); Deliver the Shipment -> Blasted Lands (30); In Eranikus' Own Words -> Winterspring (48); Kirith -> Blasted Lands (45); The Demon Hunter -> Azshara (45)
+    Tanaris: Deliver to MacKinley -> Stranglethorn Vale (40); Handle With Care -> Teldrassil (42); Linken's Sword -> Un'Goro Crater (47); Rescue OOX-17/TN! -> Stranglethorn Vale (43); Safety First -> Thousand Needles (29); The Hand of Rastakhan -> Stranglethorn Vale (40)
+    Teldrassil: Find Ranshalla -> Winterspring (52); Flight to Auberdine -> Darkshore (10); Return to Troyas -> Feralas (42); Starfall -> Winterspring (53); The Borrower -> Tanaris (42)
+    The Barrens: Cleansed Water Returns to Felwood -> Felwood (48); Further Instructions -> Stonetalon Mountains (16); Goblin Sponsorship -> Stranglethorn Vale (29); Parts for Kravel -> Thousand Needles (30); Passage to Booty Bay -> Stranglethorn Vale (25); Stepping Stones -> Stonetalon Mountains (14); Ziz Fizziks -> Stonetalon Mountains (16)
+    Thousand Needles: Back to Booty Bay -> Stranglethorn Vale (35); Goblin Sponsorship -> The Barrens (29); Hemet Nesingwary -> Stranglethorn Vale (28); Martek the Exiled -> Badlands (26); Report Back to Fizzlebub -> Stranglethorn Vale (35); Safety First -> Tanaris (29); The Newest Member of the Family -> The Hinterlands (38); The Rumormonger -> Stranglethorn Vale (30); Wharfmaster Dizzywig -> The Barrens (30)
+    Un'Goro Crater: A Visit to Gregan -> Feralas (47); It's a Secret to Everybody -> Winterspring (47); Linken's Memory -> Felwood (47); The New Springs -> Winterspring (51)
+    Western Plaguelands: Brother Carlin -> Eastern Plaguelands (50); In Dreams -> Eastern Plaguelands (52); Little Pamela -> Eastern Plaguelands (50); Mold Rhymes With... -> Tanaris (55); The Battle of Darrowshire -> Eastern Plaguelands (55); The Dying, Ras Frostwhisper -> Eastern Plaguelands (57)
+    Westfall: ... and that note you found -> The Barrens (14); Messenger to Westfall -> Redridge Mountains (14); Of Mice and Milk -> Stranglethorn Vale (15); The Defias Brotherhood -> Redridge Mountains (14); The Legend of Stalvan -> Duskwood (22)
+    Wetlands: A Dark Threat Looms -> Loch Modan (16); Bloom of the Heavens -> Darkshore (22); James Hyal -> Dustwallow Marsh (30); Plea To The Alliance -> Arathi Highlands (28); The Missing Diplomat -> Dustwallow Marsh (28)
+    Winterspring: Duke Nicholas Zverenhoff -> Eastern Plaguelands (50); Falling to Corruption -> Felwood (52); Guardians of the Altar -> Teldrassil (52); Meet at the Grave -> Tanaris (47); Return to Tinkee -> Burning Steppes (50); Sister Pamela -> Eastern Plaguelands (50); The Everlook Report -> Western Plaguelands (50); Troubled Spirits of Kel'Theril -> Eastern Plaguelands (53); Words of the High Chief -> Felwood (52); Wrath of the Blue Flight -> Western Plaguelands (57)
+    Zephras Isle: The Magical City of Dalaran -> Alterac Mountains (7)
+
+== Horde (43 zones)
+  Durotar                    from level  1 to 11.24    38 quests,   3 dropped   ~186 min
+     dropped (low XP for the walk): Sting of the Scorpid [789], Need for a Cure [812], Neeru Fireblade [829]
+  Mulgore 1                  from level  1 to 11.60    35 quests,  10 dropped   ~190 min
+     dropped (low XP for the walk): The Hunt Begins [747], The Hunt Continues [750], Rite of Strength [757], Journey into Thunder Bluff [775], The Battleboars [780], A Task Unfinished [1656], Welcome to Azeroth [95350], Thunderhorn's Report [98435], Grim Tidings [99081], The High Chieftain [99082]
+  Tirisfal Glades 1          from level  1 to 12.98    54 quests,   2 dropped   ~314 min
+     dropped (low XP for the walk): The Prodigal Lich [405], Leonid's Letter [98545]
+  Zephras Isle               from level  1 to 12.76    75 quests,   9 dropped   ~273 min   (grind to 4: ~1 min)
+     dropped (low XP for the walk): Elemental Unrest [92464], Return to Rorian [92469], Foul Matriarch [92470], The Next Step [92472], Hippogryph Harrassment [92516], Mercy Falls on Deaf Ears [93165], Crab Season [93317], Harvesting Windstones [93552], Blood for Blood [93740]
+  Thunder Bluff 3            from level  3 to 20.20     8 quests,   1 dropped   ~114 min
+     dropped (low XP for the walk): Forsaken Aid [1064]
+  Orgrimmar 5                from level  5 to 10.03     9 quests,   0 dropped   ~51 min
+  Undercity 5                from level  5 to 16.41     5 quests,   4 dropped   ~7 min
+     dropped (low XP for the walk): The Lich's Identity [357], A Husband's Revenge [530], Michael Garrett [6322], The Apothecary's Metaphysical Primer [79095]
+  Silverpine Forest          from level  9 to 20.16    36 quests,   3 dropped   ~210 min
+     dropped (low XP for the walk): Rot Hide Origins [444], Zinge's Delivery [1359], Ride to the Undercity [6323]
+  The Barrens                from level  9 to 30.06    75 quests,  11 dropped   ~486 min
+     dropped (low XP for the walk): Apothecary Zamah [853], Journey to the Crossroads [854], The Guns of Northwatch [891], The Elder Crone [1063], Deepmoss Spider Eggs [1069], The Swarm Grows [1145], A New Ore Sample [1153], Rilli Greasygob [3923], Ride to Thunder Bluff [6362], Ride to Orgrimmar [6384], Report to Kadrak [6541]
+  Westfall                   from level 10 to 15.13     3 quests,   0 dropped   ~36 min
+  Stonetalon Mountains       from level 14 to 25.10    23 quests,   0 dropped   ~249 min
+  Ashenvale                  from level 15 to 23.14    17 quests,   0 dropped   ~155 min
+     XP estimated: The Ashenvale Hunt
+  Hillsbrad Foothills        from level 19 to 40.05    38 quests,   0 dropped   ~472 min
+  Moonglade 20               from level 20 to 20.10     3 quests,   0 dropped   ~12 min
+  Mulgore 23                 from level 23 to 23.54     4 quests,   0 dropped   ~26 min
+  Thousand Needles           from level 24 to 35.01    29 quests,   0 dropped   ~245 min
+  Desolace                   from level 25 to 34.04    23 quests,   3 dropped   ~195 min
+     dropped (low XP for the walk): Ghost-o-plasm Round Up [6134], Clam Bait [6142], Valley of Bones [93034]
+  Orgrimmar 26               from level 26 to 50.06     4 quests,   5 dropped   ~63 min
+     dropped (low XP for the walk): Ripple Recovery [649], A Donation of Wool [7826], A Donation of Silk [7827], A Donation of Wool [7833], A Donation of Silk [7834]
+  Thunder Bluff 26           from level 26 to 47.04     6 quests,   1 dropped   ~111 min
+     dropped (low XP for the walk): A Donation of Wool [7820]
+  Stranglethorn Vale         from level 28 to 45.06    66 quests,   0 dropped   ~864 min
+  Alterac Mountains 29       from level 29 to 29.15     3 quests,   0 dropped   ~18 min
+  Arathi Highlands           from level 29 to 35.44    32 quests,   0 dropped   ~270 min
+  Badlands                   from level 30 to 52.09    14 quests,   0 dropped   ~255 min
+  Dustwallow Marsh 30        from level 30 to 38.66    20 quests,   1 dropped   ~147 min
+     dropped (low XP for the walk): The Black Shield [1276]
+  Undercity 30               from level 30 to 50.03    13 quests,   2 dropped   ~129 min
+     dropped (low XP for the walk): A Donation of Wool [7813], A Donation of Silk [7814]
+  Swamp of Sorrows           from level 35 to 45.42    20 quests,   1 dropped   ~163 min
+     XP estimated: Threat From the Sea
+     dropped (low XP for the walk): Fresh Meat [1430]
+  Feralas                    from level 38 to 47.11    27 quests,   1 dropped   ~387 min
+     dropped (low XP for the walk): A Strange Request [3121]
+  Tanaris                    from level 39 to 58.21    32 quests,   5 dropped   ~418 min
+     XP estimated: Noggenfogger Elixir
+     dropped (low XP for the walk): The Super Egg-O-Matic [2741], Return to Thunder Bluff [2967], Screecher Spirits [3520], Calm Before the Storm [4509], Fire Plume Forged [5802]
+  Searing Gorge              from level 40 to 45.53    17 quests,   0 dropped   ~114 min
+  The Hinterlands            from level 42 to 46.66    21 quests,   1 dropped   ~233 min
+     dropped (low XP for the walk): Rin'ji's Secret [2782]
+  Azshara                    from level 45 to 55.16    18 quests,   3 dropped   ~179 min
+     dropped (low XP for the walk): Delivery to Magatha [3518], Delivery to Jes'rimon [3541], Delivery to Andron Gant [3542]
+  Blasted Lands              from level 45 to 45.42     7 quests,   1 dropped   ~23 min
+     dropped (low XP for the walk): The Cover of Darkness [2743]
+  Felwood                    from level 46 to 52.24    18 quests,   0 dropped   ~256 min
+  Un'Goro Crater             from level 47 to 51.04    26 quests,   0 dropped   ~222 min
+  Burning Steppes            from level 50 to 52.04     5 quests,   0 dropped   ~46 min
+  Eastern Plaguelands        from level 50 to 55.07    17 quests,   0 dropped   ~235 min
+  Tirisfal Glades 50         from level 50 to 55.09     7 quests,   3 dropped   ~41 min
+     dropped (low XP for the walk): Alas, Andorhal [105], Skeletal Fragments [964], A Plague Upon Thee [5901]
+  Western Plaguelands        from level 50 to 57.13    15 quests,   3 dropped   ~67 min
+     dropped (low XP for the walk): Glyphed Oaken Branch [4987], Better Late Than Never [5023], Mrs. Dalson's Diary [5058]
+  Winterspring               from level 50 to 55.04    15 quests,   1 dropped   ~135 min
+     dropped (low XP for the walk): The Videre Elixir [3909]
+  Alterac Mountains 51       from level 51 to 51.15     4 quests,   0 dropped   ~22 min
+  Moonglade 54               from level 54 to 56.04     4 quests,   0 dropped   ~43 min
+  Silithus                   from level 54 to 60.00    22 quests,   4 dropped   ~242 min
+     dropped (low XP for the walk): What Tomorrow Brings [8286], Vyral the Vile [8321], Abyssal Contacts [8361], Cenarion Battlegear [8800]
+  Dustwallow Marsh 55        from level 55 to 55.16     4 quests,   0 dropped   ~84 min
+  Hand-offs to another zone: 158
+    Arathi Highlands: Sunken Treasure -> Stranglethorn Vale (35)
+    Azshara: The Formation of Felbane -> Stranglethorn Vale (45)
+    Badlands: Dreadmaul Rock -> Burning Steppes (48); News for Fizzle -> Thousand Needles (28); Report to Helgrum -> Swamp of Sorrows (30); Summoning the Princess -> Arathi Highlands (30)
+    Desolace: Hunting in Stranglethorn -> Stranglethorn Vale (28); The Testament of Rexxar -> Western Plaguelands (55)
+    Durotar: Conscript of the Horde -> The Barrens (10)
+    Dustwallow Marsh: Ascension... -> Desolace (55); Cortello's Riddle -> The Hinterlands (35); Stinky's Escape -> The Barrens (30); The Troll Witchdoctor -> Stranglethorn Vale (30)
+    Eastern Plaguelands: Auntie Marlene -> Western Plaguelands (50); Find Myranda -> Western Plaguelands (52); Of Love and Family -> Western Plaguelands (52); Return to Chromie -> Western Plaguelands (50); Soulbound Keepsake -> Western Plaguelands (57)
+    Felwood: Mystery Goo -> Winterspring (52); Seeking Spiritual Aid -> The Barrens (48); Speak to Salfa -> Winterspring (45)
+    Feralas: Rescue OOX-22/FE! -> Stranglethorn Vale (40)
+    Hillsbrad Foothills: Blood in the Streets -> Silverpine Forest (30); Consult Master Gadrin -> Durotar (40); Gol'dir -> Alterac Mountains (29); Lord Aliden Perenolde -> Alterac Mountains (29); Regthar Deathgate -> The Barrens (30); Shrewd Negotiations -> Alterac Mountains (24); The Hammer May Fall -> Arathi Highlands (30)
+    Orgrimmar: A Call to Arms: The Plaguelands! -> Tirisfal Glades (50); A Supernatural Device -> Tanaris (58); A Threat in Feralas -> Feralas (38); Ak'Zeloth -> The Barrens (4); Alliance Relations -> Desolace (30); Betrayed -> Azshara (44); In Defense of Frostwolf -> Alterac Mountains (51); In Search of Anthion -> Eastern Plaguelands (58); Jes'rimon's Payment to Jediga -> Azshara (45); Journey to the Crossroads -> The Barrens (7); March of the Silithid -> Tanaris (50); Return to Witch Doctor Uzer'i -> Feralas (40); Return to the Crossroads. -> The Barrens (10); Ripple Recovery -> The Hinterlands (42); Taking Back Silithus -> Silithus (54); The Ashenvale Hunt -> Ashenvale (20); The Champion of the Horde -> Desolace (55); The Spirits of Stonetalon -> The Barrens (13); The Swarm Grows -> Thousand Needles (29)
+    Searing Gorge: Ledger from Tanaris -> Tanaris (43)
+    Silithus: Umber, Archivist -> Moonglade (54)
+    Silverpine Forest: Journey to Hillsbrad Foothills -> Hillsbrad Foothills (19); The Engraved Ring -> Tirisfal Glades (10)
+    Stonetalon Mountains: Calling in the Reserves -> Thousand Needles (23); Further Instructions -> The Barrens (16); Protect Kaya -> The Barrens (12); Report to Kadrak -> The Barrens (17)
+    Stranglethorn Vale: Goblin Sponsorship -> Thousand Needles (29); Marg Speaks -> Dustwallow Marsh (30); Return to the Blasted Lands -> Swamp of Sorrows (45); Rumors for Kravel -> Thousand Needles (30); Stoley's Debt -> Tanaris (40); Sunken Treasure -> Arathi Highlands (35); Trollbane -> Arathi Highlands (32); Zanzil's Mixture and a Fool's Stout -> Thousand Needles (35)
+    Swamp of Sorrows: Cortello's Riddle -> Dustwallow Marsh (35); In Eranikus' Own Words -> Winterspring (48); Kirith -> Blasted Lands (45); Neeka Bloodscar -> Badlands (30); The Atal'ai Exile -> The Hinterlands (38); The Demon Hunter -> Azshara (45)
+    Tanaris: Deliver to MacKinley -> Stranglethorn Vale (40); Linken's Sword -> Un'Goro Crater (47); Rescue OOX-17/TN! -> Stranglethorn Vale (43); Safety First -> Thousand Needles (29); The Hand of Rastakhan -> Stranglethorn Vale (40)
+    The Barrens: ... and that note you found -> Westfall (14); Cleansed Water Returns to Felwood -> Felwood (48); Further Instructions -> Stonetalon Mountains (16); Goblin Sponsorship -> Stranglethorn Vale (29); Kaya's Alive -> Stonetalon Mountains (12); Letter to Jin'Zil -> Stonetalon Mountains (15); Mura Runetotem -> Silverpine Forest (10); Parts for Kravel -> Thousand Needles (30); Stepping Stones -> Stonetalon Mountains (14); The Ashenvale Hunt -> Ashenvale (20); The Kolkar of Desolace -> Desolace (30); Ziz Fizziks -> Stonetalon Mountains (16)
+    The Hinterlands: Rescue OOX-09/HL! -> Stranglethorn Vale (43); Return to Fel'Zerul -> Swamp of Sorrows (38); Venom Bottles -> Hillsbrad Foothills (40)
+    Thousand Needles: Back to Booty Bay -> Stranglethorn Vale (35); Family Tree -> Desolace (32); Goblin Sponsorship -> The Barrens (29); Hemet Nesingwary -> Stranglethorn Vale (28); Martek the Exiled -> Badlands (26); Report Back to Fizzlebub -> Stranglethorn Vale (35); Safety First -> Tanaris (29); Test of Lore -> Stonetalon Mountains (25); The Rumormonger -> Stranglethorn Vale (30); Wharfmaster Dizzywig -> The Barrens (30)
+    Thunder Bluff: A Call to Arms: The Plaguelands! -> Tirisfal Glades (50); Arikara -> Thousand Needles (24); Earthen Echo -> Mulgore (24); Journey to Tarren Mill -> Hillsbrad Foothills (13); Magatha's Payment to Jediga -> Azshara (45); Rabine Saturna -> Moonglade (54); Return to Jahan -> The Barrens (10); Seeing What Happens -> Tanaris (45); Sergra Darkthorn -> The Barrens (10); The Ashenvale Hunt -> Ashenvale (20); The Barrens Oases -> The Barrens (10); The Sacred Flame -> Thousand Needles (20); Until Death Do Us Part -> Silverpine Forest (12)
+    Tirisfal Glades: A Plague Upon Thee -> Western Plaguelands (48); Delivery to Silverpine Forest -> Silverpine Forest (9); Mold Rhymes With... -> Tanaris (55); Target: Dalson's Tears -> Western Plaguelands (50); Target: Felstone Field -> Western Plaguelands (50); Target: Gahrron's Withering -> Western Plaguelands (50); Target: Writhing Haunt -> Western Plaguelands (50)
+    Un'Goro Crater: It's a Secret to Everybody -> Winterspring (47); Linken's Memory -> Felwood (47); Marvon's Workshop -> The Barrens (47); The New Springs -> Winterspring (51)
+    Undercity: A Call to Arms: The Plaguelands! -> Tirisfal Glades (50); A Recipe For Death -> Silverpine Forest (9); Andron's Payment to Jediga -> Azshara (45); Elixir of Agony -> Hillsbrad Foothills (24); Final Passage -> Thousand Needles (25); Into the Field -> Tanaris (38); Return the Book -> Tirisfal Glades (5); Return to Podrig -> Silverpine Forest (10); Sample for Helbrim -> The Barrens (10); The Champion of the Banshee Queen -> Eastern Plaguelands (54); The Crimson Courier -> Eastern Plaguelands (56); The Crown of Will -> Hillsbrad Foothills (34); Thule Ravenclaw -> Silverpine Forest (10)
+    Western Plaguelands: A Plague Upon Thee -> Tirisfal Glades (48); Brother Carlin -> Eastern Plaguelands (50); Emberstrife -> Dustwallow Marsh (55); In Dreams -> Eastern Plaguelands (52); Little Pamela -> Eastern Plaguelands (50); Return to the Bulwark -> Tirisfal Glades (50); Return to the Bulwark -> Tirisfal Glades (50); Return to the Bulwark -> Tirisfal Glades (50); Return to the Bulwark -> Tirisfal Glades (50); The Battle of Darrowshire -> Eastern Plaguelands (55); The Dying, Ras Frostwhisper -> Eastern Plaguelands (57)
+    Winterspring: A Strange One -> Felwood (49); Duke Nicholas Zverenhoff -> Eastern Plaguelands (50); Falling to Corruption -> Felwood (52); Meet at the Grave -> Tanaris (47); Return to Tinkee -> Burning Steppes (50); Sister Pamela -> Eastern Plaguelands (50); The Everlook Report -> Tirisfal Glades (50); Words of the High Chief -> Felwood (52); Wrath of the Blue Flight -> Western Plaguelands (57)
+    Zephras Isle: The Earthen Ring -> Mulgore (7)
+
+== Dungeons (quests per faction)
+  Ragefire Chasm               13-18   Alliance  0   Horde  3   started inside: Alliance 0, Horde 0
+  Wailing Caverns              17-24   Alliance  4   Horde  8   started inside: Alliance 1, Horde 1
+  The Deadmines                17-26   Alliance  6   Horde  0   started inside: Alliance 0, Horde 0
+  Shadowfang Keep              22-30   Alliance  0   Horde  2   started inside: Alliance 0, Horde 0
+  The Stockade                 24-32   Alliance  6   Horde  0   started inside: Alliance 0, Horde 0
+  Blackfathom Deeps            24-32   Alliance  3   Horde  5   started inside: Alliance 0, Horde 1
+  Scarlet Monastery            28-45   Alliance  3   Horde  3   started inside: Alliance 0, Horde 0
+  Razorfen Kraul               29-38   Alliance  2   Horde  3   started inside: Alliance 0, Horde 0
+  Gnomeregan                   29-38   Alliance 11   Horde  2   started inside: Alliance 0, Horde 0
+  Razorfen Downs               37-46   Alliance  2   Horde  3   started inside: Alliance 0, Horde 1
+  Uldaman                      41-51   Alliance 11   Horde  9   started inside: Alliance 0, Horde 0
+  Zul'Farrak                   44-54   Alliance  9   Horde  9   started inside: Alliance 0, Horde 0
+  Maraudon                     46-55   Alliance  5   Horde  5   started inside: Alliance 0, Horde 0
+  The Temple of Atal'Hakkar    50-56   Alliance  3   Horde  4   started inside: Alliance 0, Horde 0
+  Blackrock Depths             52-60   Alliance  9   Horde 16   started inside: Alliance 0, Horde 0
+  Blackrock Spire              55-60   Alliance 16   Horde 16   started inside: Alliance 1, Horde 0
+  Dire Maul                    55-60   Alliance  6   Horde  6   started inside: Alliance 0, Horde 0
+  Stratholme                   58-60   Alliance 10   Horde 11   started inside: Alliance 1, Horde 1
+  Scholomance                  58-60   Alliance 10   Horde 10   started inside: Alliance 0, Horde 0

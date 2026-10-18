@@ -94,10 +94,12 @@ local function ItemText(self, entry, itemID)
     return ns.Lists:Describe(entry)
 end
 
--- Price cap for one item: a search entry's max price, else market price plus tolerance.
+-- Price cap for one item: a search entry's max price, else its own cap (maxUnit), else market price plus tolerance.
 local function MaxUnit(entry, itemID)
     if entry.filter and entry.filter.maxPrice then return entry.filter.maxPrice, nil end
     local market = ns.Catalog:PriceFor(itemID)
+    -- A cap set by whoever added it (Wealth Planner: the most a buy still pays at).
+    if entry.maxUnit then return entry.maxUnit, market end
     if not market then return nil, nil end
     return market * (1 + ns.Lists:Tolerance(entry) / 100), market
 end
@@ -434,8 +436,9 @@ function Buyer:PlaceBid()
         onBought = function()
             if not Mine() then return end
             Bought(entry, c)
-            if c.commodity then
-                -- Quantities on the market changed; search again before the next purchase.
+            if Modern(c) then
+                -- Quantities on the market changed (and a grouped row's bought auction is gone);
+                -- search again before the next purchase.
                 if ns.Lists:Remaining(entry) > 0 then return self:Search(entry) end
                 return self:Advance()
             end

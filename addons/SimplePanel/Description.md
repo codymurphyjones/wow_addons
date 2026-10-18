@@ -265,7 +265,7 @@ It hit an error. `/sb errors` lists the details, which are useful in a bug repor
 
 ## Notes
 
-- Built for **World of Warcraft: Forever** (Interface 16001). It also loads on Classic Era, Classic progression and retail clients.
+- Built for **World of Warcraft: Forever** (Interface 16001).
 - **No libraries required.** If another add-on loads LibDataBroker, SimplePanel shows its feeds and launchers too.
 - Its flat, dark look matches **Wally**.
 

@@ -51,7 +51,8 @@ function Compare:LiveUnit(id, qty)
     local cost, got = 0, 0
     for _, l in ipairs(listings) do
         if got >= qty then break end
-        cost, got = cost + l.buyout, got + l.count
+        local n = l.available or l.count -- grouped modern rows: one bid each, `available` of them
+        cost, got = cost + l.unit * n, got + n
     end
     return got > 0 and cost / got or nil, math.min(got, qty)
 end

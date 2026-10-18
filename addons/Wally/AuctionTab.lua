@@ -151,12 +151,18 @@ local function QueueItem(row, isNext)
     local d = {
         icon = row.icon or IconFor(row), link = row.link, plainText = key,
         text = (row.link or key) .. "  |cffffffffx" .. (row.count or 1) .. "|r"
-            .. ((row.keep or 0) > 0 and row.count > 0 and ("  |cff8fa3b3(keeping %d)|r"):format(row.keep) or ""),
+            .. ((row.keep or 0) > 0 and row.count > 0 and ("  |cff8fa3b3(keeping %d)|r"):format(row.keep) or "")
+            .. (row.oneOff and "  |cffffd24d(once)|r" or ""),
         onRightClick = function(shift)
             if shift then ns.Lists:Remove("auctionList", key) else ns.Lists:Add("neverAuction", row.link or key, "manual") end
         end,
         hint = "Right-click: never auction (permanent)\nShift+right-click: remove from the Auction List",
     }
+    -- Queued to sell once (Wealth Planner's Go liquid): not on the Auction List, so right-click drops it.
+    if row.oneOff then
+        d.onRightClick = function() WallyAPI.SellOnce(row.link or key, nil) end
+        d.hint = "Sell once: queued from Go liquid, not on your Auction List.\nRight-click: take it off the queue"
+    end
     local price = row.unit and ("%d x %s = %s"):format(row.count, Money2(row.unit), Money2(row.unit * row.count)) or ""
     if row.state == "posted" then
         d.status = { texture = READY }

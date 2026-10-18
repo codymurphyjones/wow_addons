@@ -8,14 +8,14 @@ Nothing is ranked in advance: every item goes through SpyGlass's own scoring, by
 priority of whichever class and spec you're playing.
 
 Needs only **SpyGlass**. The quest data (`Data\QuestDB.lua`) ships with the plugin, baked from
-Wowhead's WoW Forever database by `Spyglass\Tools\fetch_wowhead_quests.py` and `build_items.py`.
+Wowhead's WoW Forever database by `tools/Spyglass/fetch_wowhead_quests.py` and `build_items.py`.
 
 ## World, Vendors and Crafted
 
 - **Buttons:** World, Vendors and Crafted join Dungeons, Raids and Quests; All includes them.
 - **Where the data comes from:** `Data\Sources.lua`, an index of about 6,800 items and their
-  sources, built by `Spyglass\Tools\build_sources.py` from GearQuest Forever's local item facts
-  (only the facts; its per-class rankings aren't used). Quest rewards it knows that the quest data
+  sources: a fixed snapshot, built once from GearQuest Forever's item facts (only the facts; its
+  per-class rankings weren't used). It isn't rebuilt anymore. Quest rewards it knows that the quest data
   doesn't tie to a quest are matched to a quest by name, or else listed with
   the index's own text.
 - **What's listed:** green or better, and not only for the other faction.
@@ -25,9 +25,6 @@ Wowhead's WoW Forever database by `Spyglass\Tools\fetch_wowhead_quests.py` and `
   the reagents, and the nearest map spot.
 - **Click:** marks the nearest spot for your faction on the world map, with the on-screen
   tracker; click again to stop.
-- **Rebuilding the index:** `python -I Spyglass/Tools/build_sources.py`. It also writes
-  `Data\SourcesHarvest.lua` (items SpyGlass's item data lacks; `/sg harvest sources` in dev mode
-  queues them) and `Data\sources_report.txt` (counts).
 
 ## Quests in the list
 
@@ -54,9 +51,9 @@ Styled like the game's quest giver window:
 - **Quest chain:** every step, with finished ones ticked and the next one marked.
 - **Rewards:** the gear on offer, with the item you came from highlighted.
 
-**Track quest** marks where to go on the world map (not the minimap: you'll find the NPC there
-once you're close). It also shows an on-screen tracker such as "Pick up: The Defias
-Brotherhood". **Close** closes the window.
+**Track quest** points the **Waypoint** addon's arrow at where to go next, such as "Pick up: The
+Defias Brotherhood", with a marker on the world map. The button only shows when Waypoint is
+installed. **Close** closes the window.
 
 ### How tracking finds the right quest
 

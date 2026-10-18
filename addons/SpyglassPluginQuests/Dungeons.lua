@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- Which quests belong to which dungeon or raid. Worked out ahead of time by
--- Spyglass\Tools\build_items.py (Data\QuestDB.lua): a quest belongs to an
+-- tools/Spyglass/build_items.py (Data\QuestDB.lua): a quest belongs to an
 -- instance when its zone is the instance, its giver stands inside, or
 -- something it asks for is only found there: a creature to kill or talk to,
 -- an object, or an item that drops from one of them.

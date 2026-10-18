@@ -1,0 +1,4 @@
+<Bindings>
+    <!-- Its own category, so Key Bindings shows a "BattleRecap" section. -->
+    <Binding name="CLICK BattleRecapRevengeButton:LeftButton" category="BattleRecap"/>
+</Bindings>

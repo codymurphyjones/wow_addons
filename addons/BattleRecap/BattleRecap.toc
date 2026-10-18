@@ -1,0 +1,31 @@
+## Interface: 16001
+## Title: BattleRecap
+## Notes: PvP death recaps: who killed you, with what, how fast and why, plus how to counter them. Covers battlegrounds, arenas, world PvP and duels. Hit breakdowns, graphs, nemeses, lifetime stats, match summaries and one-key revenge targeting. /brecap
+## Author: Dinoblankie + Claude
+## Version: 1.1.1
+## SavedVariables: BattleRecapDB
+## IconTexture: Interface\AddOns\BattleRecap\Media\Icon
+## Category: PvP
+## AddonCompartmentFunc: BattleRecap_OnCompartmentClick
+## X-Curse-Project-ID: 1743876
+
+Core.lua
+Log.lua
+Meter.lua
+Fight.lua
+Analysis.lua
+Stats.lua
+Hints.lua
+CounterData.lua
+CounterAdvice.lua
+Counter.lua
+Remedies.lua
+Widgets.lua
+Popup.lua
+Details.lua
+Dashboard.lua
+Match.lua
+Share.lua
+Revenge.lua
+Settings.lua
+Minimap.lua

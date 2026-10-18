@@ -9,6 +9,7 @@
 ## IconTexture: Interface\AddOns\Wally\Media\Wally
 ## Category: Bags & Inventory
 ## AddonCompartmentFunc: Wally_OnCompartmentClick
+## X-Curse-Project-ID: 1735051
 
 Compat.lua
 Core.lua
@@ -30,3 +31,4 @@ Widgets.lua
 UI.lua
 AuctionTab.lua
 Minimap.lua
+API.lua

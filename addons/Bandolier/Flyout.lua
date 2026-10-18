@@ -278,20 +278,27 @@ function F:Create()
             and (SecureCmdOptionParse("[@boss1,exists] 1") == "1" or owner:GetAttribute("forceboss")) then
             order = "b"
         end
+        -- Out of everything for this resource: use the other resource's list
+        -- instead of opening the bar.
+        local other = not buffsOnly and ((combat and "c" or "r") .. (resource == "h" and "m" or "h")) or nil
         local fallback
-        for i = 1, self:GetAttribute(order .. "-n") or 0 do
-            local key = self:GetAttribute(order .. "-" .. i)
-            local left = self:GetAttribute("left-" .. key) or 0
-            if left > 0 then
-                local group = self:GetAttribute("group-" .. key) or ""
-                local t = group ~= "" and owner:GetFrameRef("t-" .. group)
-                if not (t and t:IsShown()) then
-                    self:SetAttribute("left-" .. key, left - 1)
-                    owner:RunAttribute("startcd", group)
-                    self:SetAttribute("item", self:GetAttribute("item-" .. key))
-                    return
+        for pass = 1, 2 do
+            local steps = pass == 1 and order or other
+            if fallback or not steps then break end
+            for i = 1, self:GetAttribute(steps .. "-n") or 0 do
+                local key = self:GetAttribute(steps .. "-" .. i)
+                local left = self:GetAttribute("left-" .. key) or 0
+                if left > 0 then
+                    local group = self:GetAttribute("group-" .. key) or ""
+                    local t = group ~= "" and owner:GetFrameRef("t-" .. group)
+                    if not (t and t:IsShown()) then
+                        self:SetAttribute("left-" .. key, left - 1)
+                        owner:RunAttribute("startcd", group)
+                        self:SetAttribute("item", self:GetAttribute("item-" .. key))
+                        return
+                    end
+                    fallback = fallback or key
                 end
-                fallback = fallback or key
             end
         end
         -- Every buff is already up: do nothing rather than drink one again.

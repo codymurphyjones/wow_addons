@@ -3,3 +3,9 @@
 __pycache__/
 node_modules/
 yarn.lock
+
+# The build tools' datasets are kept packed (tools/<Addon>/<folder>.tar.xz, tracked); the folders
+# only exist while a build runs (tools/datasets.py, tools/build_all.py).
+tools/*/.wowhead_cache/
+tools/*/.cache/
+tools/*/*.tar.xz.tmp

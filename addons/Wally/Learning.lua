@@ -31,11 +31,14 @@ function Learn:OnSold(bag, slot)
     local key = ns.Key(name)
     local byWally = ns.Seller and ns.Seller.selling
     ns:AddHistory("sold", info.link, info.count, price * (info.count or 1), byWally)
+    -- A one-off you queued (Go liquid) was your choice, so it teaches like a sale by hand.
+    local once = key and ns.db.oneOff[key]
+    if once and once.how == "vendor" then byWally = false end
 
     -- Only habits you form by hand count; and decided items need no learning.
     if byWally or not ns.db.options.learn or not key then ns:Changed() return end
     if ns.db.inclusions[key] or ns.db.exclusions[key] then ns:Changed() return end
-    local isJunk, _, verdict = ns.JunkFilter:Evaluate(info.link, info)
+    local isJunk, _, verdict = ns.JunkFilter:Evaluate(info.link, info, true)
     if isJunk or verdict == "keep" then ns:Changed() return end
 
     local h = ns.db.habits[key]

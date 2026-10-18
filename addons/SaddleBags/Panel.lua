@@ -382,10 +382,16 @@ function Saddle:GetTabFrame(i)
 	bar:Hide()
 	tf.bar = bar
 
-	scroll:EnableMouseWheel(true)
+	-- A frame that takes the mouse wheel also takes the mouse: it becomes the
+	-- frame under the cursor and windows beneath it (the damage meter, which
+	-- is only anchored into the tab) never see the hover. So the scroll frame
+	-- takes the wheel only while the tab actually scrolls.
 	scroll:SetScript("OnMouseWheel", function(_, delta)
 		bar:SetValue(bar:GetValue() - delta * 30)
 	end)
+	scroll:EnableMouseWheel(false)
+	bar:HookScript("OnShow", function() scroll:EnableMouseWheel(true) end)
+	bar:HookScript("OnHide", function() scroll:EnableMouseWheel(false) end)
 
 	self.tabFrames[i] = tf
 	self:SetTabOpen(tf, false)
@@ -656,6 +662,7 @@ function Saddle:Layout(i)
 			-- only anchored to the content frame.
 			if not info.handsOff and f:GetParent() ~= content then
 				f:SetParent(content)
+				if info.strata then f:SetFrameStrata(info.strata) end
 				if info.levelOffset then f:SetFrameLevel(content:GetFrameLevel() + info.levelOffset) end
 			end
 			if not IsAttached(f, self, i) then

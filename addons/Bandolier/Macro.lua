@@ -59,16 +59,22 @@ function M:UpdateIcon(inCombat)
     elseif inCombat and not IsShiftKeyDown() and (UnitExists("boss1") or ns.forceBoss) then
         prefix = "b"
     end
+    -- Out of everything for this resource: the press falls through to the
+    -- other resource's list, so show that.
+    local other = not buffsOnly and ((inCombat and "c" or "r") .. (resource == "h" and "m" or "h")) or nil
     local chosen, fallback
-    for i = 1, use:GetAttribute(prefix .. "-n") or 0 do
-        local key = use:GetAttribute(prefix .. "-" .. i)
-        if (use:GetAttribute("left-" .. key) or 0) > 0 then
-            if not ns.Flyout:IsCooling(use:GetAttribute("group-" .. key)) then
-                chosen = key
-                break
+    for _, steps in ipairs({ prefix, other }) do
+        for i = 1, use:GetAttribute(steps .. "-n") or 0 do
+            local key = use:GetAttribute(steps .. "-" .. i)
+            if (use:GetAttribute("left-" .. key) or 0) > 0 then
+                if not ns.Flyout:IsCooling(use:GetAttribute("group-" .. key)) then
+                    chosen = key
+                    break
+                end
+                fallback = fallback or key
             end
-            fallback = fallback or key
         end
+        if chosen or fallback then break end
     end
     if not buffsOnly then chosen = chosen or fallback end -- Alt never re-drinks a buff
     if not chosen then return end

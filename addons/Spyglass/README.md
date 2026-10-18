@@ -41,8 +41,7 @@ Click the tab again, or any other tab, to go back to your stats.
 | `/sg tab` | Hide or show the Character window tab |
 | `/sg options` | Open SpyGlass's settings |
 | `/sg plugins` | List the plugins found and whether each loaded |
-| `/sg untrack` | Stop tracking a quest |
-| `/sg tracker` | Unlock the on-screen tracker to drag it (or use Edit Mode) |
+| `/sg untrack` | Stop tracking a quest (with the Waypoint addon) |
 
 ## Loot journal
 
@@ -232,8 +231,9 @@ The level window sizes are at the top of `Data.lua` (`LEVELS_ABOVE`, `LEVELS_BEL
 
 Plugin items go through the same level window, class filter and ranking as everything else. A
 plugin can also mark a place with `SpyGlass:SetWaypoint({ uiMapID, x, y, title, subtitle,
-onClick, key })`: a world map marker plus the on-screen tracker. `ClearWaypoint()` removes it,
-and `GetWaypoint()` returns the tracked waypoint.
+onClick, key })`, which hands it to the **Waypoint** addon's arrow. `ClearWaypoint()` removes it,
+and `GetWaypoint()` returns the tracked waypoint. Without Waypoint installed tracking is off:
+`HasWaypoints()` says whether it's there, so a plugin can hide its Track buttons.
 
 ### The API
 

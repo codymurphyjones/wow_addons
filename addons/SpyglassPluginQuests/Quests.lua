@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- Quest facts, read from Data\QuestDB.lua (Wowhead's WoW Forever database,
--- baked by Spyglass\Tools\build_items.py): titles, chains, who gives each
+-- baked by tools/Spyglass/build_items.py): titles, chains, who gives each
 -- quest, who may take it, and which quests reward gear.
 local Q = {}
 ns.Quests = Q

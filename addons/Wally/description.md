@@ -4,7 +4,7 @@
 
 Wally is a smart junk seller. It sells your junk at any merchant in one click, and it learns what *you* treat as junk by watching what you sell by hand. Before it sells anything it checks that the item isn't a possible gear upgrade, one of your most valuable stacks, or something you've told it to keep. It also sorts your bags and bank exactly the way you set it up, repairs your gear, keeps a history of every sale, and, with Auctionator installed, posts your regular auction items from its own auction house tab.
 
-- Works on Classic Era, The Burning Crusade Classic, Mists of Pandaria Classic and Retail.
+- Built for **World of Warcraft: Forever**.
 - **Auctionator is optional.** Wally uses its prices to value items, and needs it for the auction features.
 - Lists, rules, learning and settings are shared by all your characters. Window position, minimap button, merchant button position and bags left out of sorting are saved per character.
 
@@ -275,7 +275,7 @@ With **Item tooltip lines** on, item tooltips show:
 - **Drag:** move it around the minimap.
 - The tooltip shows how much junk you're carrying and what it's worth.
 - Until you move it yourself, Wally finds a free spot so it doesn't overlap other addons' minimap buttons.
-- Hide or show it in settings or with `/wally minimap`. Wally is also in the AddOn compartment on clients that have one.
+- Hide or show it in settings or with `/wally minimap`. Wally is also in the AddOn compartment.
 
 ---
 

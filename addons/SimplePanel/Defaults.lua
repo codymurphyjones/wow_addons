@@ -4,7 +4,7 @@ local _, ns = ...
 -- settings. Taken from the author's own bar. Used for new installs, new profiles and "Reset all
 -- settings"; anyone with a saved layout keeps theirs (missing keys are filled in, nothing is
 -- overwritten). Ammo, Hunter pet and Reagents leave "enabled" to their class check.
--- Regenerate from your own saved setup with Tools\make_defaults.py.
+-- Regenerate from your own saved setup with tools/SimplePanel/make_defaults.py.
 ns.DEFAULT_LAYOUT = {
     -- left
     Friends = { enabled = false, zone = "left", order = 1, showIcon = false, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { showFriends = true, showGuild = true } },
@@ -24,7 +24,7 @@ ns.DEFAULT_LAYOUT = {
     Pet = { zone = "left", order = 15, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { announce = true, showName = true } },
     Honor = { enabled = false, zone = "left", order = 16, showIcon = false, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140 },
     -- center
-    Gold = { enabled = true, zone = "center", order = 1, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { barTotal = false, scope = "realm", showSession = true } },
+    Gold = { enabled = true, zone = "center", order = 1, showIcon = false, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { barTotal = false, scope = "realm", showSession = true } },
     Location = { enabled = true, zone = "center", order = 2, showIcon = false, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { coords = true, placeName = "both", precise = false } },
     Durability = { enabled = true, zone = "center", order = 3, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { show = "lowest" } },
     WorldBuffs = { enabled = false, zone = "center", order = 4, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { announce = true, hideEmpty = false, warnMinutes = 5 } },

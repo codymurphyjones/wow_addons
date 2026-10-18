@@ -180,7 +180,26 @@ local function CreateLearningPage()
 end
 
 -- Auction List / Never Auction / Learning (auction habits). Posting happens on the auction house tab.
-local AUCTION_VIEWS = { { "auctionList", "Auction List" }, { "neverAuction", "Never Auction" }, { "learning", "Learning" } }
+local AUCTION_VIEWS = { { "auctionList", "Auction List" }, { "neverAuction", "Never Auction" }, { "learning", "Learning" }, { "market", "On Market" } }
+local TIME_BAND = { [0] = "<30m", "30m-2h", "2-12h", "12-48h" }
+local BAND_LEFT = { [0] = 1800, 7200, 43200, 172800 }
+
+-- Time left on one of your auctions; a remembered one counts down from when it was seen.
+local function MarketTimeLeft(a, live)
+    local s
+    if live then
+        s = a.timeLeftSeconds
+        if not s then return TIME_BAND[a.timeLeft] or "" end
+    elseif a.expires then
+        s = math.max(0, a.expires - time())
+    else
+        return ""
+    end
+    local text = s >= 3600 and ("%dh %dm"):format(s / 3600, s % 3600 / 60) or ("%dm"):format(math.max(1, s / 60))
+    -- Only a time-left band was known: this is the most it can have left.
+    if not live and not a.exact then text = "up to " .. text end
+    return text .. " left"
+end
 
 local function CreateAuctionPage()
     local p = NewPage("auction")
@@ -190,7 +209,7 @@ local function CreateAuctionPage()
 
     p.viewButtons = {}
     for i, v in ipairs(AUCTION_VIEWS) do
-        local b = MakeButton(p, v[2], 110, 26); b:SetPoint("TOPLEFT", (i - 1) * 116, -46)
+        local b = MakeButton(p, v[2], 100, 26); b:SetPoint("TOPLEFT", (i - 1) * 104, -46)
         b:SetScript("OnClick", function() p.view = v[1]; UI:RefreshPage("auction") end)
         p.viewButtons[v[1]] = b
     end
@@ -198,7 +217,7 @@ local function CreateAuctionPage()
     p.search:SetPoint("TOPRIGHT", 0, -46)
     p.search:SetScript("OnTextChanged", function() UI:RefreshPage("auction") end)
 
-    local function Kind() return p.view == "learning" and "auctionList" or p.view end
+    local function Kind() return (p.view == "learning" or p.view == "market") and "auctionList" or p.view end
     p.add = MakeEditBox(p, 300, "Item name, link or ID (or drag an item here)")
     p.add:SetPoint("TOPLEFT", 0, -80)
     local function AddTyped()
@@ -212,6 +231,7 @@ local function CreateAuctionPage()
     local addItem = MakeButton(p, "Add item", 80, 26)
     addItem:SetPoint("LEFT", p.add, "RIGHT", 8, 0)
     addItem:SetScript("OnClick", AddTyped)
+    p.addItem = addItem
     local forget = MakeButton(p, "Forget everything", 130, 26)
     forget:SetPoint("TOPRIGHT", 0, -80)
     forget:SetScript("OnClick", function()
@@ -231,8 +251,50 @@ local function CreateAuctionPage()
             else b:SetBackdropBorderColor(0.16, 0.24, 0.29, 1) end
         end
         p.forget:SetShown(p.view == "learning")
+        p.add:SetShown(p.view ~= "market"); p.addItem:SetShown(p.view ~= "market")
         local search = p.search:GetText()
         local items = {}
+        if p.view == "market" then
+            local list, seen, live = ns.Auction:Market()
+            local text = ns.Key(search)
+            local sorted, total = {}, 0
+            for _, a in ipairs(list) do
+                total = total + (a.unit or 0) * (a.quantity or 1)
+                if not text or (a.key or ""):find(text, 1, true) then sorted[#sorted + 1] = a end
+            end
+            -- Soonest to run out first.
+            local function Left(a)
+                if live then return a.timeLeftSeconds or (BAND_LEFT[a.timeLeft] or math.huge) end
+                return a.expires or math.huge
+            end
+            table.sort(sorted, function(a, b)
+                local la, lb = Left(a), Left(b)
+                if la ~= lb then return la < lb end
+                return (a.key or "") < (b.key or "")
+            end)
+            for _, a in ipairs(sorted) do
+                local q = a.quantity or 1
+                local price = a.unit and (q > 1 and ("%s each, %s"):format(C.Money(a.unit), C.Money(a.unit * q)) or C.Money(a.unit)) or "No buyout"
+                local detail = price .. "  -  " .. MarketTimeLeft(a, live)
+                if ns.db.auctionList[a.key] then detail = detail .. "  -  |cff59f28cOn Auction List|r" end
+                if a.someSold then detail = detail .. "  -  |cffffd24dSome sold|r" end
+                items[#items + 1] = {
+                    icon = a.icon or IconFor(a), link = a.link, plainText = a.key,
+                    text = (a.link or a.key or "?") .. "  |cffffffffx" .. q .. "|r", detail = detail,
+                }
+            end
+            local count = #list
+            local head = ("%d auction%s up, %s in buyouts."):format(count, count == 1 and "" or "s", C.Money(total))
+            if live then
+                p.summary:SetText(head .. " Live from the auction house.")
+            elseif seen then
+                p.summary:SetText(head .. (" As of your last auction house visit (%s), minus what has run out since.\nSales and expiries are picked up from chat; visit the auction house for an exact list."):format(When(seen)))
+            else
+                p.summary:SetText("Visit the auction house once and Wally will remember your auctions here.")
+            end
+            p.list:Set(items, text and "Nothing matches." or (seen and "None of your auctions are still up." or "No auctions seen yet."))
+            return
+        end
         if p.view == "learning" then
             local threshold = ns.db.options.threshold
             p.summary:SetText(("Posting an item by hand raises its score; cancelling lowers it. At %d%% Wally asks whether to auction it for you.\nPost from Wally's tab at the auction house."):format(threshold * 100))
@@ -982,6 +1044,14 @@ local TABS = {
     { "settings", "Settings", "INV_Misc_Gear_01" },
 }
 
+-- Tabs added by plugins (API.lua): { key, label, icon, build = builder(page) }, shown before Settings.
+local pluginTabs = {}
+function UI:AddPluginTab(key, label, icon, builder)
+    if frame then return false end -- the window is already built; the tab shows after /reload
+    pluginTabs[#pluginTabs + 1] = { key, label, icon, build = builder }
+    return true
+end
+
 local function ShowTab(name)
     activeTab = name
     for key, p in pairs(pages) do p:SetShown(key == name) end
@@ -1020,13 +1090,21 @@ local function CreateMainFrame()
     SetBackdrop(side); side:SetBackdropColor(0.045, 0.065, 0.085, 1)
     local shown = {}
     for _, d in ipairs(TABS) do
+        if d[1] == "settings" then
+            for _, t in ipairs(pluginTabs) do shown[#shown + 1] = t end
+        end
         if not d.auction or ns:AuctionsEnabled() then shown[#shown + 1] = d end
     end
     for i, d in ipairs(shown) do
         local b = MakeButton(side, d[2], 147, 40); b:SetPoint("TOPLEFT", 9, -12 - (i - 1) * 46)
         b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
         local icon = b:CreateTexture(nil, "ARTWORK"); icon:SetSize(23, 23); icon:SetPoint("LEFT", 9, 0)
-        icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        -- Plugin tabs may bring their own texture path instead of an icon name.
+        if d[3]:find("[\\/]") then
+            icon:SetTexture(d[3])
+        else
+            icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        end
         b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
         b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
         b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(0.075, 0.105, 0.13, 1) end end)
@@ -1038,13 +1116,20 @@ local function CreateMainFrame()
         end
         tabs[d[1]] = b
     end
-    Muted(Label(side, "Drag items onto a list\nto add them.\n\nShift-click links into\nthe add box.\n\nAt a merchant, drop items\non the Wally button.", "GameFontHighlightSmall", 12, -14 - #shown * 46, 145))
+    -- With plugin tabs there's no room left for the tips.
+    if #pluginTabs == 0 then
+        Muted(Label(side, "Drag items onto a list\nto add them.\n\nShift-click links into\nthe add box.\n\nAt a merchant, drop items\non the Wally button.", "GameFontHighlightSmall", 12, -14 - #shown * 46, 145))
+    end
     Label(side, "v" .. ns.VERSION, "GameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
 
     CreateListPage("junk", "inclusions")
     CreateListPage("never", "exclusions")
     CreateLearningPage(); CreateBagsPage(); CreateHistoryPage()
     if ns:AuctionsEnabled() then CreateAuctionPage() end
+    for _, t in ipairs(pluginTabs) do
+        local ok, err = pcall(t.build, NewPage(t[1]))
+        if not ok then ns:Print("A plugin's tab failed to build: " .. tostring(err), true) end
+    end
     ShowTab(activeTab); frame:Hide()
 end
 
@@ -1070,9 +1155,11 @@ end
 function UI:Show(tab)
     if not ns.db then return end
     CreateMainFrame()
-    if tab then ShowTab(tab) end
+    if tab and pages[tab] then ShowTab(tab) end
     frame:Show(); self:Refresh()
 end
+
+function UI:ActiveTab() return frame and frame:IsShown() and activeTab or nil end
 
 -- Shift-clicking an item while an add box has focus inserts its link there.
 local function InsertLink(link)

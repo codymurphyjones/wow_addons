@@ -4,10 +4,12 @@
 ## Author: Dinoblankie + Claude
 ## Version: 1.0.7
 ## Dependencies: AtlasLootClassic, StatLedger
+## OptionalDeps: Waypoint
 ## SavedVariables: SpyGlassDB, SpyGlassJournalDB, LootPriorityDB, LootPriorityJournalDB
 ## IconTexture: Interface\AddOns\Spyglass\Media\Icon
 ## Category: Equipment
 ## AddonCompartmentFunc: SpyGlass_Toggle
+## X-Curse-Project-ID: 1735103
 
 Data.lua
 Data\Items.lua
@@ -26,7 +28,6 @@ API.lua
 Plugins.lua
 Contribute.lua
 Sync.lua
-Waypoint.lua
 Journal\ZoneArt.lua
 Journal\Art.lua
 Journal\Journal.lua
@@ -36,6 +37,11 @@ Journal\Abilities.lua
 Journal\Model.lua
 Journal\Instance.lua
 Journal\Professions.lua
+Journal\PullData.lua
+Journal\Group.lua
+Journal\DungeonMap.lua
+Journal\Pulls.lua
+Journal\Scrapbook.lua
 Journal\Minimap.lua
 CharPanel.lua
 Settings.lua

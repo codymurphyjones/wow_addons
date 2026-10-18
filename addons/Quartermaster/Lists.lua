@@ -218,3 +218,57 @@ function Lists:ExportToAuctionator(list)
     if ok then ns:Print(("Sent %d items to Auctionator as \"%s\"."):format(#terms, listName), true)
     else ns:Print("Auctionator refused the list: " .. tostring(err), true) end
 end
+
+-- For other addons (Wealth Planner's Invest tab). items = { { id, qty, maxUnit } }; maxUnit, when
+-- given, is the most the Cart pays per unit for that item (instead of market price plus tolerance).
+QuartermasterAPI = QuartermasterAPI or {}
+
+-- Puts items on a list (adding to an item already on it), makes it the Cart's list and opens the
+-- Cart tab when the auction house is open, so you can review it before buying anything.
+local function Fill(list, index, items)
+    for _, it in ipairs(items) do
+        local id, qty = tonumber(it.id), math.floor(tonumber(it.qty) or 0)
+        if id and qty >= 1 then
+            local existing = Lists:Find(list, id)
+            if existing then
+                existing.qty = existing.qty + qty
+                if it.maxUnit then existing.maxUnit = math.max(existing.maxUnit or 0, math.floor(it.maxUnit)) end
+            else
+                local e = ns.Catalog:Get(id)
+                table.insert(list.entries, { itemID = id, name = e and e.name, link = e and e.link, qty = qty, bought = 0,
+                    maxUnit = it.maxUnit and math.floor(it.maxUnit) or nil })
+            end
+        end
+    end
+    Lists:SetActive(index)
+    if ns.char.cart.mode ~= "list" then ns.Buyer:Stop(true); ns.char.cart.mode = "list" end
+    if ns.CartTab then ns.CartTab:Recount(); ns.CartTab:Select() end
+    ns:Changed()
+    return #list.entries
+end
+
+-- Fills the list called `name` (made if missing), replacing what was on it. Returns how many items
+-- went on it.
+function QuartermasterAPI.SetShoppingList(name, items)
+    if type(name) ~= "string" or type(items) ~= "table" then return 0 end
+    local index
+    for i, l in ipairs(ns.char.lists) do if l.name == name then index = i break end end
+    if not index then Lists:Create(name); index = #ns.char.lists end
+    local list = ns.char.lists[index]
+    if ns.Buyer.list == list then ns.Buyer:Stop(true) end
+    wipe(list.entries)
+    return Fill(list, index, items)
+end
+
+-- Makes a new list with these items (its name gets " (2)", " (3)"... if taken), leaving your other
+-- lists alone. Returns how many items went on it and the list's name.
+function QuartermasterAPI.NewShoppingList(name, items)
+    if type(name) ~= "string" or type(items) ~= "table" then return 0 end
+    local taken = {}
+    for _, l in ipairs(ns.char.lists) do taken[l.name] = true end
+    local final, n = name, 1
+    while taken[final] do n = n + 1; final = ("%s (%d)"):format(name, n) end
+    Lists:Create(final)
+    local index = #ns.char.lists
+    return Fill(ns.char.lists[index], index, items), final
+end

@@ -99,6 +99,12 @@ Quartermaster adds a **Cart** tab to the auction house, next to Auctionator's ta
 - When an item is done, the Cart moves to the next one by itself. When the list is done, it prints what it spent and anything still missing.
 - **Stop** ends the run at any time. Closing the auction house stops it too.
 
+### Waylaid Supplies crates
+Click a **Waylaid Supplies** crate in the Buying tab or the Cart's search, and Quartermaster looks up the crate and the item that fills it, together.
+- The crate comes first, then **Filled with:** the filler item's listings, with how many the crate needs (when its tooltip says) and how many you have.
+- Click either one to see its listings and buy. **+** on the "Filled with" heading adds the filler to your list.
+- **Back** returns to your search.
+
 ### Buys at market price, and asks before overpaying
 - The **market price** is Auctionator's latest price for the item.
 - The Cart buys any stack priced at or below **market + tolerance** per item. Tolerance is 10% by default; change it in Settings, or per item on the Lists page.
@@ -203,7 +209,7 @@ Its listings are all above market + tolerance. Choose **Buy Cheapest** to buy an
 
 ## Notes
 
-- Built for **World of Warcraft: Forever** (Interface 16001) and its classic auction house. It also loads on other clients that Auctionator supports.
+- Built for **World of Warcraft: Forever** (Interface 16001) and its classic auction house.
 - **Requires Auctionator.** No other libraries are needed.
 - Its flat, dark look matches **Wally**.
 

@@ -419,15 +419,18 @@ end
 -- Entries and placement
 -- ---------------------------------------------------------------------------
 
--- Set by the Minimap plugin while it shows the map on its own: buttons that would stay on the
--- minimap go to the drawer instead (their saved choice is kept for when it's off again).
-L.noMinimap = false
-
 function L:Placement(key)
     local c = ns.char.launchers
-    local place = (c.useCharacter and c.placement[key]) or ns.db.launchers.placement[key] or "drawer"
-    if place == "minimap" and L.noMinimap then return "drawer" end
-    return place
+    return (c.useCharacter and c.placement[key]) or ns.db.launchers.placement[key] or "drawer"
+end
+
+-- The real buttons left on the minimap (the Minimap plugin keeps them around its square).
+function L:MinimapButtons()
+    local list = {}
+    for _, e in ipairs(entries) do
+        if e.button and self:Placement(e.key) == "minimap" then list[#list + 1] = e.button end
+    end
+    return list
 end
 
 local function PluginId(e) return "launcher:" .. e.key end

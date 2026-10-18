@@ -11,6 +11,8 @@ local C = ns.Compat
 local ACCENT, MUTED = W.ACCENT, W.MUTED
 local MAX_ROWS = 8
 local ROW_H, HEADER_H = 30, 34
+local LEFT_W = 70           -- the "left over" column
+local BUTTONS_W = 22 + 2 + 34 + 2 + 22 + 10 -- minus, count, plus, and the gap before them (MakeRow)
 
 local function Call(name, ...)
     local fn = _G[name]
@@ -195,6 +197,38 @@ end
 local function Step() return IsShiftKeyDown() and 5 or 1 end
 
 -- ---------------------------------------------------------------------------
+-- Vendor reagents. Thread, wood, vials, dyes, flux...: anything a vendor sells isn't put on the
+-- Cart. The Waypoint addon owns where vendors are and what they sell: Quartermaster asks it which
+-- reagents vendors sell (Waypoint:SoldByVendors), and hands those to its popup
+-- (Waypoint:PromptVendors): Navigate (its arrow leads to the nearest vendor selling them), Add
+-- anyway (back here, onto the Cart), or Cancel. Without Waypoint, everything goes to the Cart.
+-- ---------------------------------------------------------------------------
+
+local function Vendors()
+    return Waypoint and Waypoint.SoldByVendors and Waypoint.PromptVendors and Waypoint or nil
+end
+
+-- One click's additions: { { item, qty, name } }. Auction reagents go to the Cart as always;
+-- vendor ones go to Waypoint's popup, once per click.
+local function AddBatch(adds)
+    local wp, vendor = Vendors(), {}
+    for _, a in ipairs(adds) do
+        if a.qty > 0 then
+            if wp and type(a.item) == "number" and wp:SoldByVendors(a.item) > 0 then
+                vendor[#vendor + 1] = { id = a.item, qty = a.qty, name = a.name }
+            else
+                Adjust(a.item, a.qty)
+            end
+        end
+    end
+    if #vendor > 0 then
+        wp:PromptVendors(vendor, function(items)
+            for _, it in ipairs(items) do Adjust(it.id, it.qty) end
+        end, "Quartermaster")
+    end
+end
+
+-- ---------------------------------------------------------------------------
 -- Panel
 -- ---------------------------------------------------------------------------
 
@@ -227,22 +261,27 @@ local function MakeRow(panel, i)
     local minus = W.MakeButton(row, "-", 22, 22); minus:SetPoint("RIGHT", row.count, "LEFT", -2, 0)
     plus:SetScript("OnClick", function()
         local d = row.data
-        if d and (d.itemID or d.name) then Adjust(d.itemID or d.name, Step()) end
+        if d and (d.itemID or d.name) then AddBatch({ { item = d.itemID or d.name, qty = Step(), name = d.name } }) end
     end)
     minus:SetScript("OnClick", function()
         local d = row.data
         if d and d.itemID then Adjust(d.itemID, -Step()) end
     end)
-    W.Hint(plus, "Add to cart", "Adds 1 (Shift: 5) to the list the Cart buys.")
+    W.Hint(plus, "Add to cart", "Adds 1 (Shift: 5) to the list the Cart buys. Vendor-sold reagents ask to navigate to a vendor instead.")
     W.Hint(minus, "Take off cart", "Removes 1 (Shift: 5). Never below what you've already bought.")
+
+    -- What's left of this reagent after crafting as many as the reagents cover (bags + cart).
+    row.left = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.left:SetWidth(LEFT_W); row.left:SetJustifyH("RIGHT")
+    row.left:SetPoint("RIGHT", minus, "LEFT", -10, 0)
 
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.name:SetPoint("TOPLEFT", iconBox, "TOPRIGHT", 8, -1)
-    row.name:SetPoint("RIGHT", minus, "LEFT", -8, 0)
+    row.name:SetPoint("RIGHT", row.left, "LEFT", -8, 0)
     row.name:SetJustifyH("LEFT"); row.name:SetWordWrap(false)
     row.detail = W.Muted(row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
     row.detail:SetPoint("BOTTOMLEFT", iconBox, "BOTTOMRIGHT", 8, 1)
-    row.detail:SetPoint("RIGHT", minus, "LEFT", -8, 0)
+    row.detail:SetPoint("RIGHT", row.left, "LEFT", -8, 0)
     row.detail:SetJustifyH("LEFT"); row.detail:SetWordWrap(false)
     return row
 end
@@ -264,14 +303,59 @@ local function BuildPanel(kind, parent)
 
     local all = W.MakeButton(panel, "Add all", 70, 22); all:SetPoint("TOPRIGHT", -10, -6)
     all:SetScript("OnClick", function()
-        local times = Step()
+        local times, adds = Step(), {}
         for _, row in ipairs(panel.rows) do
             local d = row:IsShown() and row.data
-            if d and d.need > 0 and (d.itemID or d.name) then Adjust(d.itemID or d.name, d.need * times) end
+            if d and d.need > 0 and (d.itemID or d.name) then adds[#adds + 1] = { item = d.itemID or d.name, qty = d.need * times, name = d.name } end
         end
+        AddBatch(adds)
     end)
     W.Hint(all, "Add all reagents", "Adds what one craft needs of every reagent (Shift: five crafts).")
-    panel.target:SetPoint("RIGHT", all, "LEFT", -10, 0)
+
+    -- Add needed: evens the reagents out one craft at a time. Each reagent covers (have + on the
+    -- cart) / need crafts; one click raises the fewest covered by one (Shift: five) and tops every
+    -- reagent up to that, so only what's missing is added. Read fresh at the click, so fast clicks
+    -- count what the previous ones added.
+    local needed = W.MakeButton(panel, "Add needed", 84, 22); needed:SetPoint("RIGHT", all, "LEFT", -6, 0)
+    needed:SetScript("OnClick", function()
+        local reagents = {}
+        for _, d in ipairs(ReadReagents(kind)) do
+            if d.need > 0 and (d.itemID or d.name) then reagents[#reagents + 1] = d end
+        end
+        if #reagents == 0 then return end
+        local fewest = math.huge
+        for _, d in ipairs(reagents) do fewest = math.min(fewest, math.floor((d.have + d.qty) / d.need)) end
+        local crafts, adds = fewest + Step(), {}
+        for _, d in ipairs(reagents) do
+            local missing = crafts * d.need - (d.have + d.qty)
+            if missing > 0 then adds[#adds + 1] = { item = d.itemID or d.name, qty = missing, name = d.name } end
+        end
+        AddBatch(adds)
+    end)
+    W.Hint(needed, "Add needed reagents", "Evens out your reagents one craft at a time: counts how many crafts each reagent covers "
+        .. "(in your bags plus on the cart), then adds only what's missing for one more craft than the lowest (Shift: five more).")
+
+    -- Reset: this recipe's reagents off the order (down to what's already bought), nothing else.
+    local reset = W.MakeButton(panel, "Reset", 60, 22); reset:SetPoint("RIGHT", needed, "LEFT", -6, 0)
+    reset:SetScript("OnClick", function()
+        local list = OrderList()
+        if not list then return ns:Print("Tick a prebuilt list in the Cart first.", true) end
+        local changed = false
+        for _, d in ipairs(kind.Read()) do
+            local entry = FindEntry(list, d.itemID, d.name)
+            if entry then
+                if (entry.bought or 0) > 0 then entry.qty = entry.bought else ns.Lists:Remove(list, entry) end
+                changed = true
+            end
+        end
+        if changed then
+            ns:Changed()
+            if ns.CartTab then ns.CartTab:Recount() end
+        end
+    end)
+    W.Hint(reset, "Reset this recipe", "Takes this recipe's reagents off the list you're adding to, back to what you've already bought. "
+        .. "Other items on the list stay.")
+    panel.target:SetPoint("RIGHT", reset, "LEFT", -10, 0)
     panel.target:SetJustifyH("LEFT"); panel.target:SetWordWrap(false)
 
     panel.rows = {}
@@ -279,9 +363,13 @@ local function BuildPanel(kind, parent)
     panel.empty = W.Muted(panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
     panel.empty:SetPoint("TOPLEFT", 12, -HEADER_H)
     panel.empty:SetText("Pick a recipe to see its reagents.")
+    -- How many the reagents cover, right under the "left over" column.
+    panel.crafts = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.crafts:SetPoint("BOTTOMRIGHT", -(10 + BUTTONS_W), 9)
+    panel.crafts:SetJustifyH("RIGHT")
     panel.total = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     panel.total:SetPoint("BOTTOMLEFT", 12, 9)
-    panel.total:SetPoint("BOTTOMRIGHT", -12, 9)
+    panel.total:SetPoint("RIGHT", panel.crafts, "LEFT", -10, 0)
     panel.total:SetJustifyH("LEFT")
     kind.panel = panel
     return panel
@@ -297,6 +385,14 @@ local function RefreshKind(kind)
     local list = OrderList()
     panel.target:SetText(list and ("Adding to: " .. list.name) or "Tick a prebuilt list in the Cart")
     local reagents = ReadReagents(kind)
+    -- Crafts the reagents cover: with the cart (have + to buy), and from your bags alone.
+    local crafts, now
+    for _, d in ipairs(reagents) do
+        if d.need > 0 then
+            crafts = math.min(crafts or math.huge, math.floor((d.have + d.qty) / d.need))
+            now = math.min(now or math.huge, math.floor(d.have / d.need))
+        end
+    end
     local total, unpriced = 0, 0
     for i, row in ipairs(panel.rows) do
         local d = reagents[i]
@@ -311,6 +407,14 @@ local function RefreshKind(kind)
                 if d.cost then total = total + d.cost else unpriced = unpriced + 1 end
             end
             row.detail:SetText(detail)
+            if crafts and d.need > 0 then
+                local left = d.have + d.qty - crafts * d.need
+                row.left:SetText(("%d left"):format(left))
+                local c = left > 0 and ACCENT or MUTED
+                row.left:SetTextColor(c[1], c[2], c[3])
+            else
+                row.left:SetText("")
+            end
             row.count:SetText(d.qty)
             local color = d.qty > 0 and ACCENT or MUTED
             row.count:SetTextColor(color[1], color[2], color[3])
@@ -328,6 +432,12 @@ local function RefreshKind(kind)
     else
         panel.total:SetText(shown > 0 and "Nothing from this recipe on the cart yet" or "")
         panel.total:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+    end
+    if crafts then
+        panel.crafts:SetText(("Can craft |cffffffff%d|r%s"):format(crafts,
+            now < crafts and (" |cff8fa3b3(%d from bags)|r"):format(now) or ""))
+    else
+        panel.crafts:SetText("")
     end
     panel:SetHeight(HEADER_H + math.max(shown, 1) * ROW_H + 24)
 end

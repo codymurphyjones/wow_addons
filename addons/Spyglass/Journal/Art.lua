@@ -128,7 +128,7 @@ function Art:For(inst, probe)
             art = { texture = lfg, r = 1, g = 1, b = 1 }
         elseif shipped then
             -- A scenic view of the zone (or its revealed map), shipped in
-            -- Media\Zones (Tools/fetch_zone_art.py). Already the tile's shape.
+            -- Media\Zones (tools/Spyglass/fetch_zone_art.py). Already the tile's shape.
             art = { texture = "Interface\\AddOns\\Spyglass\\Media\\Zones\\" .. shipped .. ".tga", r = 1, g = 1, b = 1,
                 fit = true }
         else
@@ -140,7 +140,7 @@ function Art:For(inst, probe)
             return art
         end
     end
-    -- A shipped scenic view (Tools/fetch_zone_art.py) for the places this
+    -- A shipped scenic view (tools/Spyglass/fetch_zone_art.py) for the places this
     -- client has no Dungeon Finder picture for. SetTexture can't tell: it
     -- answers true for a missing file too and draws nothing, so those places
     -- are listed (SHIPPED_FIRST) rather than probed.

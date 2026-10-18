@@ -26,6 +26,7 @@ Commands (run with -h for options):
   dev|release|auto|skip NAME ...   pin an addon to a mode (auto clears the pin)
   publish [NAME]          upload NAME, or every addon newer than CurseForge (yarn deploy)
   publish --queued        upload what's waiting in SourceCode/
+  check [NAME ...]        every addon vs its CurseForge project: what publish would ship (yarn deploy:check)
   bump [NAME ...]         bump the patch version (TOC + Lua VERSION lines); all addons by default
   stop                    restore the AddOns folders sync replaced since the session began (yarn stop)
 
@@ -43,9 +44,11 @@ Real environment variables override .env.
 Stdlib only; needs Python 3.8+.
 """
 import argparse
+import difflib
 import fnmatch
 import functools
 import hashlib
+import html
 import json
 import os
 import re
@@ -82,6 +85,9 @@ DEFAULT_CONFIG = {
     "release_dir": "SourceCode",
     "game_version_type_id": None,
     "include_prereleases": False,
+    # CurseForge game versions every upload is tagged with (WoW Forever only), whatever else the
+    # TOC's ## Interface line loads on. Empty: one per ## Interface number. --game-versions overrides.
+    "game_versions": ["1.60.1"],
     "exclude": ["__pycache__", "*.py", "*.pyc", "Tools", "Dev", ".git*", "*.md", "*.txt"],
 }
 MODES = ("dev", "release", "skip")
@@ -338,8 +344,8 @@ def content_hash(addon, patterns):
     return _hash_entries((rel, path.read_bytes()) for rel, path in iter_files(addon.path, patterns))
 
 
-def zip_content_hash(zpath, addon_name, patterns):
-    """Hash of <addon_name>/ inside a release zip, comparable with content_hash()."""
+def zip_entries(zpath, addon_name, patterns):
+    """[(relative path, bytes)] of <addon_name>/ inside a release zip, excluded files left out."""
     prefix = addon_name.lower() + "/"
     entries = []
     with zipfile.ZipFile(zpath) as zf:
@@ -350,7 +356,12 @@ def zip_content_hash(zpath, addon_name, patterns):
             rel = name[len(prefix):]
             if not is_excluded(tuple(rel.split("/")), patterns):
                 entries.append((rel, zf.read(info)))
-    return _hash_entries(entries)
+    return entries
+
+
+def zip_content_hash(zpath, addon_name, patterns):
+    """Hash of <addon_name>/ inside a release zip, comparable with content_hash()."""
+    return _hash_entries(zip_entries(zpath, addon_name, patterns))
 
 
 def next_version(version):
@@ -466,6 +477,10 @@ class CurseForge:
 
     def mod(self, project_id):
         return self._get(f"/v1/mods/{project_id}")["data"]
+
+    def description(self, project_id):
+        """The project page's description, as CurseForge renders it (HTML)."""
+        return self._get(f"/v1/mods/{project_id}/description")["data"] or ""
 
     def latest_file(self, project_id, game_version_type_id=None, include_prereleases=False):
         params = {"pageSize": 50, "index": 0}
@@ -760,7 +775,10 @@ def apply_plan(p, wow, state, patterns, dry_run):
 
 
 def print_table(rows):
-    headers = ("Addon", "Local", "CurseForge", "Mode", "Action", "Why")
+    print_table_rows(("Addon", "Local", "CurseForge", "Mode", "Action", "Why"), rows)
+
+
+def print_table_rows(headers, rows):
     widths = [max(len(str(r[i])) for r in [headers] + rows) for i in range(len(headers))]
     line = lambda r: "  ".join(str(c).ljust(w) for c, w in zip(r, widths)).rstrip()
     print(line(headers))
@@ -1087,6 +1105,12 @@ def interface_to_version(interface):
     return f"{int(s[:-4])}.{int(s[-4:-2])}.{int(s[-2:])}"
 
 
+def upload_game_versions(cfg, toc):
+    """Game version names an upload is tagged with: cfg game_versions, else the TOC's ## Interface."""
+    return list(cfg.get("game_versions") or [
+        interface_to_version(i) for i in re.split(r"[,\s]+", toc.get("interface", "")) if i.isdigit()])
+
+
 def build_release_zip(addon, cfg, folder):
     """Zip the workspace copy (same files as a dev install) into folder/<Name>_v1_0_3.zip."""
     dest = folder / upload_zip_name(addon)
@@ -1150,6 +1174,96 @@ def upload_relations(cfg, cf, toc):
     return relations, unlinked
 
 
+def find_description(addon):
+    """The addon's CurseForge page text: Description.md in the addon folder (any case), or None."""
+    return next((p for p in sorted(addon.path.glob("*.md")) if p.stem.lower() == "description"), None)
+
+
+def page_words(text, as_html=False):
+    """Lowercased words of Markdown or HTML, so a page CurseForge rendered from the Markdown
+    compares equal to it whatever the markup, link targets or typography."""
+    if as_html:
+        text = re.sub(r"<(script|style)\b.*?</\1>", " ", text, flags=re.S | re.I)
+        text = html.unescape(re.sub(r"<[^>]+>", " ", text))
+    else:
+        text = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", text)  # links and images: keep the text
+        text = re.sub(r"(?m)^\s*\d+[.)]\s", " ", text)  # numbered list markers aren't text in HTML
+        text = re.sub(r"(?m)^\s*```[\w+-]*", " ", text)  # a code fence's language isn't shown
+        # Real HTML tags are markup; placeholders like <n> or <list> are shown as text.
+        text = re.sub(r"</?(?:a|b|i|u|s|em|strong|br|p|div|span|img|code|pre|hr|h[1-6]|ul|ol|li|table|thead|"
+                      r"tbody|tr|td|th|sub|sup|center|font|details|summary|iframe|blockquote)\b[^>]*>", " ", text,
+                      flags=re.I)
+    return re.findall(r"[^\W_]+", text.lower())
+
+
+def first_difference(local, live):
+    """None when two word lists match, else (local excerpt, live excerpt) around the first change."""
+    if local == live:
+        return None
+    for tag, i1, _, j1, _ in difflib.SequenceMatcher(None, local, live, autojunk=False).get_opcodes():
+        if tag != "equal":
+            return " ".join(local[max(0, i1 - 4):i1 + 8]), " ".join(live[max(0, j1 - 4):j1 + 8])
+    return None
+
+
+def page_drift(cf, addon, pid):
+    """(project, [(field, what to paste, detail)]) where the CurseForge page differs from the workspace:
+    the summary against description.txt (else the TOC's ## Notes), the description against Description.md."""
+    mod = cf.mod(pid)
+    drift = []
+    summary_file = next((p for p in sorted(addon.path.glob("*.txt")) if p.stem.lower() == "description"), None)
+    if summary_file:
+        summary, source = summary_file.read_text(encoding="utf-8-sig").strip(), summary_file.name
+    else:
+        summary, source = strip_color(addon.toc.get("notes")), "the TOC's ## Notes"
+    if summary and page_words(summary) != page_words(mod.get("summary") or ""):
+        drift.append(("Summary", source, (summary, mod.get("summary") or "(empty)")))
+    desc = find_description(addon)
+    if desc:
+        diff = first_difference(page_words(desc.read_text(encoding="utf-8-sig")),
+                                page_words(cf.description(pid), as_html=True))
+        if diff:
+            drift.append(("Description", desc.name,
+                          f"first difference - here: \"...{diff[0]}...\", on CurseForge: \"...{diff[1] or '(empty)'}...\""))
+    return mod, drift
+
+
+def report_pages(cfg, cf, addons):
+    """Say which CurseForge project pages need their summary or description pasted in by hand:
+    the Upload API can't change them. Returns True when every page matches."""
+    linked = [a for a in addons if a.name in cfg["projects"]]
+    if not linked or not cf.key or cf.down:
+        return True
+    stale, failed = [], []
+    for addon in linked:
+        try:
+            mod, drift = page_drift(cf, addon, cfg["projects"][addon.name])
+        except SyncError as exc:
+            failed.append(f"{addon.name} ({exc})")
+            continue
+        if drift:
+            stale.append((addon, mod, drift))
+    print()
+    if failed:
+        print(f"Couldn't compare page text for: {', '.join(failed)}")
+    if not stale:
+        print(f"CurseForge pages: summary and description match the workspace for all {len(linked) - len(failed)} checked.")
+        return True
+    print("== Update on CurseForge by hand (uploads can't change project pages)")
+    for addon, mod, drift in stale:
+        url = (mod.get("links") or {}).get("websiteUrl") or f"project {mod.get('id')}"
+        print(f"  {addon.name}  {url}")
+        for field, source, detail in drift:
+            if field == "Summary":
+                print(f"    Summary      paste {source}:")
+                print(f"                 {detail[0]}")
+                print(f"                 (CurseForge has: {detail[1]})")
+            else:
+                print(f"    Description  paste {addon.path.relative_to(ROOT).as_posix()}/{source}")
+                print(f"                 {detail}")
+    return False
+
+
 def publish_zip(cfg, cf, addon, zpath, meta, yes=False, dry_run=False):
     """Check and upload one zip. Returns ("uploaded", file id), ("already", CurseForge's version),
     ("cancelled", None) or ("dry-run", None). Raises Unavailable if CurseForge can't be reached."""
@@ -1190,8 +1304,7 @@ def publish_zip(cfg, cf, addon, zpath, meta, yes=False, dry_run=False):
 
     game_versions = upload_call(cfg, "/api/game/versions", errors={
         401: "Upload token is invalid or revoked", 403: "Upload token is invalid or revoked"})
-    wanted = meta.get("game_versions") or [
-        interface_to_version(i) for i in re.split(r"[,\s]+", toc.get("interface", "")) if i.isdigit()]
+    wanted = meta.get("game_versions") or upload_game_versions(cfg, toc)
     by_name = {}
     for v in game_versions:
         by_name.setdefault(v.get("name"), v["id"])
@@ -1265,11 +1378,15 @@ def cmd_publish(args):
     cfg = load_config()
     addons = discover(cfg)
     cf = CurseForge(api_key(cfg), refresh=True)
+    picked = resolve_names(addons, [args.name]) if args.name and not args.queued else addons
     if args.queued:
-        return publish_outbox(cfg, cf, addons, args)
-    if not args.name:
-        return publish_all(cfg, cf, addons, args)
-    return publish_addon(cfg, cf, resolve_names(addons, [args.name])[0], args)
+        ok = publish_outbox(cfg, cf, addons, args)
+    elif not args.name:
+        ok = publish_all(cfg, cf, addons, args)
+    else:
+        ok = publish_addon(cfg, cf, picked[0], args)
+    report_pages(cfg, cf, picked)  # after the uploads: page text is edited on the website
+    return ok
 
 
 def publish_all(cfg, cf, addons, args):
@@ -1457,6 +1574,216 @@ def publish_outbox(cfg, cf, addons, args):
     return ok
 
 
+def diff_release(addon, patterns, zpath):
+    """(added, removed, changed) paths between the workspace and <addon>/ in a release zip.
+    Version lines are ignored, like content_hash()."""
+    local = dict(iter_files(addon.path, patterns))
+    released = dict(zip_entries(zpath, addon.name, patterns))
+    changed = [rel for rel in sorted(set(local) & set(released))
+               if normalize_content(rel, local[rel].read_bytes()) != normalize_content(rel, released[rel])]
+    return sorted(set(local) - set(released)), sorted(set(released) - set(local)), changed
+
+
+def print_paths(label, paths, limit=None):
+    if not paths:
+        return
+    shown = paths if limit is None else paths[:limit]
+    print(f"    {label} ({len(paths)}):")
+    for rel in shown:
+        print(f"      {rel}")
+    if len(shown) < len(paths):
+        print(f"      ... and {len(paths) - len(shown)} more (--files lists them all)")
+
+
+def check_outbox(cfg, cf, addons, only=None):
+    """What `deploy` would do with the zips waiting in release_dir. Returns their upload labels."""
+    picked = {a.name.lower() for a in only} if only else None
+    items = [i for i in outbox(cfg) if picked is None or (i[1] or "").lower() in picked]
+    if not items:
+        return []
+    by_lower = {a.name.lower(): a for a in addons}
+    uploads = []
+    print(f"== Waiting in {release_dir(cfg).name} (uploaded first)")
+    for zpath, name, version in items:
+        addon = by_lower.get((name or "").lower())
+        pid = addon and cfg["projects"].get(addon.name)
+        if not addon:
+            print(f"  {zpath.name}: no matching addon - left in place")
+            continue
+        if not pid:
+            print(f"  {zpath.name}: {addon.name} isn't linked - would fail (run `yarn link {addon.name}`)")
+            continue
+        try:
+            latest = cf.latest_file(pid, cfg.get("game_version_type_id"), include_prereleases=True)
+            cf_version = latest and (inspect_release_zip(cf.download(latest, addon.name), addon.name)[1]
+                                     or latest.get("displayName"))
+        except (SyncError, zipfile.BadZipFile) as exc:
+            print(f"  {zpath.name}: can't compare with CurseForge ({exc})")
+            continue
+        if cf_version and compare_versions(version, cf_version) <= 0:
+            print(f"  {zpath.name}: CurseForge already has {cf_version} - would be removed, not uploaded")
+        else:
+            with zipfile.ZipFile(zpath) as zf:
+                count = sum(1 for i in zf.infolist() if not i.is_dir())
+            print(f"  {zpath.name}: WOULD UPLOAD {version} over {cf_version or 'nothing'} ({count} files)")
+            uploads.append(f"{zpath.name} (queued)")
+    print()
+    return uploads
+
+
+def cmd_check(args):
+    """Read-only preview of `deploy`: every addon matched with its CurseForge project and latest
+    file, and exactly what would be uploaded. Writes nothing but the download cache."""
+    cfg = load_config()
+    every = discover(cfg)
+    addons = resolve_names(every, args.names) if args.names else every
+    cf = CurseForge(api_key(cfg), refresh=args.refresh)
+    patterns = cfg["exclude"]
+    author = cfg["curseforge_author"]
+    token = upload_token(cfg)
+    state = load_json(STATE_PATH, {})
+
+    print("Setup")
+    print(f"  CURSEFORGE_KEY           {'set' if cf.key else 'MISSING - deploy packages zips for a manual upload'}")
+    print(f"  CURSEFORGE_UPLOAD_TOKEN  {'set' if token else 'MISSING - uploads fail'}")
+    print(f"  CURSEFORGE_AUTHOR        {author or 'MISSING - uploads are refused'}")
+    print(f"  Never shipped            {', '.join(patterns)}")
+    game_versions = None
+    if token:
+        try:
+            game_versions = {v.get("name") for v in upload_call(cfg, "/api/game/versions", errors={
+                401: "Upload token is invalid or revoked", 403: "Upload token is invalid or revoked"})}
+        except SyncError as exc:
+            print(f"  Upload API               {exc}")
+    print()
+
+    deploying = check_outbox(cfg, cf, every, addons if args.names else None) if cf.key else []
+    rows, blocked = [], []
+    for addon in addons:
+        pid = cfg["projects"].get(addon.name)
+        print(f"== {addon.name} {addon.version or '(no version)'}")
+        rel = None
+        if pid:
+            try:
+                mod = cf.mod(pid)
+                owners = [a.get("name", "?") for a in mod.get("authors", [])]
+                owned = bool(author) and norm(author) in {norm(o) for o in owners}
+                print(f"  Project     {mod.get('name')} (id {pid}) by {', '.join(owners) or 'nobody'}"
+                      f"{'' if owned or not author else f' - NOT {author}'}")
+                print(f"  Page        {(mod.get('links') or {}).get('websiteUrl') or '-'}")
+            except SyncError as exc:
+                owned = None
+                print(f"  Project     id {pid} - can't look it up: {exc}")
+            rel, error = fetch_release(addon, cfg, cf, state.get(addon.name, {}))
+            if rel:
+                print(f"  CurseForge  {rel['version']} (file {rel['file_id']}{', cached copy' if rel.get('cached') else ''})"
+                      f" ships {', '.join(rel['folders']) or 'nothing'}")
+            else:
+                print(f"  CurseForge  {'no files yet' if not error else error}")
+        else:
+            owned = None
+            print("  Project     not linked")
+            if cf.key and not cf.down:
+                try:
+                    hits = {m["id"]: m for term in dict.fromkeys([addon.title, addon.name]) for m in cf.search(term)}
+                    mine = [m for m in hits.values()
+                            if not author or any(norm(a.get("name")) == norm(author) for a in m.get("authors", []))]
+                    wanted = {norm(addon.title), norm(addon.name)}
+                    for m in [m for m in mine if norm(m.get("name")) in wanted or norm(m.get("slug")) in wanted][:3]:
+                        print(f"  Candidate   {m['name']} (id {m['id']}) - `yarn link {addon.name}` to link it")
+                except SyncError:
+                    pass
+
+        def verdict(text, why=""):
+            print(f"  Verdict     {text}{f' - {why}' if why else ''}\n")
+            rows.append((addon.name, addon.version or "?", rel["version"] if rel else "-", text, why))
+
+        if not addon.version:
+            verdict("SKIP", "no '## Version:' in the TOC")
+            continue
+        if cfg["overrides"].get(addon.name) == "skip":
+            verdict("SKIP", "pinned: skip")
+            continue
+        if cf.key and not pid:
+            verdict("SKIP", f"not linked to CurseForge (`yarn link {addon.name}`)")
+            continue
+        if rel and addon.name.lower() not in {f.lower() for f in rel["folders"]}:
+            verdict("BLOCKED", f"CurseForge file has no {addon.name}/ folder - wrong project id?")
+            blocked.append(addon.name)
+            continue
+        try:
+            changed, last = deploy_status(addon, cfg, state, cf)
+        except SyncError as exc:
+            verdict("ERROR", str(exc))
+            blocked.append(addon.name)
+            continue
+        if changed is None:
+            verdict("UNKNOWN", "CurseForge unavailable and nothing cached to compare")
+            continue
+        if not changed:
+            why = f"same files as {last or 'the last release'} (version lines ignored)"
+            if pid and last and (not rel or compare_versions(last, rel["version"]) > 0):
+                why += (f"; CurseForge lists {rel['version'] if rel else 'nothing'} yet - if {last} isn't "
+                        f"processing there, `yarn deploy {addon.name} --force` uploads it")
+            verdict("UP TO DATE", why)
+            continue
+
+        version = addon.version
+        if last and compare_versions(version, last) <= 0:
+            version = next_version(last)
+            print(f"  Version     {addon.version} is not past {last} - deploy bumps it to {version} first")
+        files = iter_files(addon.path, patterns)
+        size = sum(path.stat().st_size for _, path in files)
+        name = f"{addon.name}_v{version.replace('.', '_')}.zip"
+        print(f"  Zip         {name}: {len(files)} files, {size / 1024:.0f} KB, all under {addon.name}/")
+        if args.files:
+            print_paths("Contents", [rel for rel, _ in files])
+        if rel:
+            added, removed, edited = diff_release(addon, patterns, rel["zip"])
+            print(f"  Changes vs  {rel['version']}: {len(added)} added, {len(edited)} changed, {len(removed)} removed")
+            limit = None if args.files else 15
+            print_paths("Added", added, limit)
+            print_paths("Changed", edited, limit)
+            print_paths("Removed", removed, limit)
+        else:
+            print("  Changes vs  nothing on CurseForge yet - every file is new")
+        wanted = upload_game_versions(cfg, addon.toc)
+        known = "" if game_versions is None else (
+            " (" + ", ".join(f"{w} {'OK' if w in game_versions else 'UNKNOWN to CurseForge'}" for w in wanted) + ")")
+        print(f"  Game        {', '.join(map(str, wanted)) or 'none - pass --game-versions'}{known}")
+        deps = toc_dependencies(addon.toc)
+        print(f"  Relations   {', '.join(f'{n} ({k})' for n, k in deps) or 'none'}")
+        changelog = "CHANGELOG.md" if (addon.path / "CHANGELOG.md").is_file() else f'none - uploads say "Version {version}"'
+        print(f"  Changelog   {changelog}")
+
+        if not cf.key:
+            verdict("PACKAGE", f"v{version} zipped to {release_dir(cfg).name} for a manual upload (no CURSEFORGE_KEY)")
+            deploying.append(f"{addon.name} {version} (package)")
+            continue
+        problems = [why for bad, why in ((not token, "no CURSEFORGE_UPLOAD_TOKEN"),
+                                         (not author, "no CURSEFORGE_AUTHOR"),
+                                         (owned is False, f"project isn't owned by {author}"),
+                                         (game_versions is not None and not any(w in game_versions for w in wanted),
+                                          "no game version CurseForge knows"))
+                    if bad]
+        if problems:
+            verdict("BLOCKED", "; ".join(problems))
+            blocked.append(addon.name)
+        else:
+            verdict("DEPLOY", f"v{version} over {last or 'nothing'}")
+            deploying.append(f"{addon.name} {version}")
+
+    print_table_rows(("Addon", "Local", "CurseForge", "Verdict", "Why"), rows)
+    print()
+    if cf.down:
+        print(f"warning: {cf.down} - compared against cached releases where possible")
+    print(f"`yarn deploy` would ship: {', '.join(deploying) if deploying else 'nothing'}")
+    if blocked:
+        print(f"Blocked: {', '.join(blocked)} - fix the problems above first")
+    report_pages(cfg, cf, addons)
+    return not blocked
+
+
 def cmd_bump(args):
     cfg = load_config()
     addons = discover(cfg)
@@ -1601,12 +1928,18 @@ def main(argv=None):
     group.add_argument("--changelog", help="changelog text")
     group.add_argument("--changelog-file", help="changelog file (default: CHANGELOG.md in the addon)")
     p.add_argument("--game-versions", action="append", metavar="V[,V]",
-                   help="game version names (default: from the TOC ## Interface line)")
+                   help="game version names (default: 1.60.1, WoW Forever)")
     p.add_argument("--manual", action="store_true", help="upload hidden until approved on CurseForge")
     p.add_argument("--dry-run", action="store_true", help="run every check and build the zip, no upload")
     p.add_argument("--yes", action="store_true", help="don't ask for confirmation")
     p.add_argument("--force", action="store_true", help="publish even if the version isn't newer")
     p.set_defaults(func=cmd_publish)
+
+    p = sub.add_parser("check", help="show exactly what publish would deploy, changing nothing")
+    p.add_argument("names", nargs="*")
+    p.add_argument("--files", action="store_true", help="list every file in each zip and every change")
+    p.add_argument("--refresh", action="store_true", help="ignore the 10-minute CurseForge API cache")
+    p.set_defaults(func=cmd_check)
 
     p = sub.add_parser("bump", help="bump the patch version (all addons by default)")
     p.add_argument("names", nargs="*")

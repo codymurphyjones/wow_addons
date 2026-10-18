@@ -2,12 +2,13 @@
 ## Title: SimplePanel
 ## Notes: A clean info bar across the top of your screen: gold, XP, bags, durability, quests, professions, friends and more, with rich tooltips, charts, drag-and-drop layout, color schemes, profiles and a drawer for minimap buttons.
 ## Author: Dinoblankie + Claude
-## Version: 0.1.3
+## Version: 0.1.4
 ## SavedVariables: SimplePanelDB
 ## SavedVariablesPerCharacter: SimplePanelCharDB
 ## IconTexture: Interface\AddOns\SimplePanel\Media\Icon
 ## Category: Interface Enhancements
 ## AddonCompartmentFunc: SimplePanel_OnCompartmentClick
+## X-Curse-Project-ID: 1740497
 
 Compat.lua
 Core.lua

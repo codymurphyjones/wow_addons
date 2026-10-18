@@ -9,6 +9,7 @@
 ## X-SpyGlass-Plugin: 1
 ## IconTexture: Interface\AddOns\SpyglassPluginQuests\Media\Icon
 ## Category: Equipment
+## X-Curse-Project-ID: 1735122
 
 Data\QuestDB.lua
 Data\Sources.lua

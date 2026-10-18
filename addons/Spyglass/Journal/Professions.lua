@@ -4,7 +4,7 @@ local D = ns.Data
 -- The journal's Professions tab: what the crafting professions and
 -- Enchanting make, every recipe (trainer, vendor, drop and quest ones) with
 -- where to learn it, from SpyGlass's own data (Data\Professions.lua, built
--- from Wowhead by Tools\fetch_wowhead_professions.py). Left: one row per profession;
+-- from Wowhead by tools/Spyglass/fetch_wowhead_professions.py). Left: one row per profession;
 -- the selected one opens into its gear slots and other item types. Right:
 -- the profession's home (its gear slots laid out like a paper doll, the
 -- other types under it) or one slot's list, the most useful for you first:

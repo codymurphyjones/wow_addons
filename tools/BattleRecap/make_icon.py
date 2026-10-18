@@ -1,0 +1,98 @@
+"""Draws the BattleRecap logo: a bone-white skull over two crossed swords, with a red glow
+behind them, on a dark round badge with a gold rim (the same badge style as StatLedger's).
+
+Usage: python make_icon.py <output dir>
+Writes <output dir>/Icon.tga (128x128, 32-bit, used in game) and
+<output dir>/Logo.png (512x512, for CurseForge and other listings)."""
+import os, sys
+from PIL import Image, ImageDraw, ImageFilter
+
+S = 1024                      # supersampled canvas, downscaled at the end
+C = S / 2
+img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+
+
+def circle(d, r, fill=None, outline=None, width=0, cx=C, cy=C):
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill, outline=outline, width=width)
+
+
+# Soft drop shadow
+shadow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+ImageDraw.Draw(shadow).ellipse([C - 470, C - 455, C + 470, C + 485], fill=(0, 0, 0, 170))
+img = Image.alpha_composite(img, shadow.filter(ImageFilter.GaussianBlur(18)))
+d = ImageDraw.Draw(img)
+
+# Gold rim and dark badge
+circle(d, 480, fill=(120, 82, 24))
+circle(d, 462, fill=(214, 166, 64))
+circle(d, 446, fill=(92, 60, 18))
+circle(d, 432, fill=(30, 22, 28))
+
+# Everything inside the badge is drawn on a layer clipped to the badge.
+inside = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+
+# A red glow behind the skull
+glow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+ImageDraw.Draw(glow).ellipse([C - 320, C - 300, C + 320, C + 320], fill=(220, 50, 40, 120))
+inside = Image.alpha_composite(inside, glow.filter(ImageFilter.GaussianBlur(70)))
+
+
+def sword():
+    """One upright sword on its own layer, point up, centred on the canvas."""
+    layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    ds = ImageDraw.Draw(layer)
+    top, guard, bottom, w = C - 400, C + 190, C + 360, 46
+    blade = [(C, top), (C + w, top + 90), (C + w, guard), (C - w, guard), (C - w, top + 90)]
+    ds.polygon([(x + 8, y + 10) for x, y in blade], fill=(0, 0, 0, 120))
+    ds.polygon(blade, fill=(200, 208, 220), outline=(60, 66, 80), width=8)
+    ds.polygon([(C, top + 30), (C + 14, top + 90), (C + 14, guard - 10), (C, guard - 10)], fill=(245, 248, 255))
+    # crossguard, grip and pommel
+    ds.rounded_rectangle([C - 130, guard - 6, C + 130, guard + 40], radius=18, fill=(214, 166, 64), outline=(92, 60, 18), width=8)
+    ds.rounded_rectangle([C - 26, guard + 40, C + 26, bottom], radius=10, fill=(110, 62, 30), outline=(50, 28, 12), width=6)
+    circle(ds, 40, fill=(214, 166, 64), outline=(92, 60, 18), width=8, cx=C, cy=bottom + 26)
+    return layer
+
+
+for angle in (40, -40):
+    inside = Image.alpha_composite(inside, sword().rotate(angle, resample=Image.BICUBIC, center=(C, C)))
+
+# Skull
+di = ImageDraw.Draw(inside)
+BONE, EDGE, HOLE = (238, 230, 210), (70, 56, 48), (36, 20, 22)
+sx, sy = C, C - 20
+di.ellipse([sx - 196, sy - 200 + 12, sx + 196, sy + 150 + 12], fill=(0, 0, 0, 130))
+di.ellipse([sx - 190, sy - 200, sx + 190, sy + 150], fill=BONE, outline=EDGE, width=12)
+di.rounded_rectangle([sx - 112, sy + 80, sx + 112, sy + 230], radius=40, fill=BONE, outline=EDGE, width=12)
+di.rectangle([sx - 100, sy + 70, sx + 100, sy + 100], fill=BONE)  # hides the seam between head and jaw
+# eyes and nose
+di.ellipse([sx - 140, sy - 40, sx - 30, sy + 70], fill=HOLE)
+di.ellipse([sx + 30, sy - 40, sx + 140, sy + 70], fill=HOLE)
+circle(di, 16, fill=(255, 70, 50), cx=sx - 85, cy=sy + 18)
+circle(di, 16, fill=(255, 70, 50), cx=sx + 85, cy=sy + 18)
+di.polygon([(sx, sy + 80), (sx + 28, sy + 130), (sx - 28, sy + 130)], fill=HOLE)
+# teeth
+for i in range(-2, 3):
+    x = sx + i * 40
+    di.line([(x, sy + 158), (x, sy + 222)], fill=EDGE, width=8)
+# shine on the dome
+shine = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+ImageDraw.Draw(shine).ellipse([sx - 120, sy - 170, sx + 20, sy - 90], fill=(255, 255, 255, 110))
+inside = Image.alpha_composite(inside, shine.filter(ImageFilter.GaussianBlur(10)))
+
+mask = Image.new("L", (S, S), 0)
+ImageDraw.Draw(mask).ellipse([C - 432, C - 432, C + 432, C + 432], fill=255)
+clipped = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+clipped.paste(inside, (0, 0), Image.composite(inside.split()[3], Image.new("L", (S, S), 0), mask))
+img = Image.alpha_composite(img, clipped)
+
+# Inner shadow under the rim
+ring = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+ImageDraw.Draw(ring).ellipse([C - 440, C - 440, C + 440, C + 440], outline=(0, 0, 0, 140), width=22)
+img = Image.alpha_composite(img, ring.filter(ImageFilter.GaussianBlur(8)))
+
+out_dir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "BattleRecap", "Media")
+os.makedirs(out_dir, exist_ok=True)
+icon = img.resize((128, 128), Image.LANCZOS)
+icon.save(os.path.join(out_dir, "Icon.tga"))
+img.resize((512, 512), Image.LANCZOS).save(os.path.join(out_dir, "Logo.png"))
+print("saved", os.path.join(out_dir, "Icon.tga"), "and Logo.png")

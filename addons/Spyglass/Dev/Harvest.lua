@@ -4,7 +4,7 @@ local D = ns.Data
 -- Developer tool: /sg harvest asks the server, slowly, about every item
 -- AtlasLoot lists for dungeons and raids and every gear item in
 -- D.HARVEST_RANGES, and saves what it learns in SpyGlassDevDB. Run
--- Tools\build_items.py afterwards to turn that into Data\Items.lua.
+-- tools/Spyglass/build_items.py afterwards to turn that into Data\Items.lua.
 -- Only exists when D.DEV_MODE is true.
 if not D.DEV_MODE then return end
 
@@ -239,7 +239,7 @@ local function Tick()
     end
     if exhausted and next(waiting) == nil then
         db.state.phase = "done"
-        Stop("finished: " .. Count(db.items) .. " items saved. /reload, then run Tools\\build_items.py.")
+        Stop("finished: " .. Count(db.items) .. " items saved. /reload, then run tools/Spyglass/build_items.py.")
     end
 end
 

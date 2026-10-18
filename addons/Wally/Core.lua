@@ -18,6 +18,9 @@ ns.DEFAULTS = {
     neverAuction = {},
     auctionHabits = {},
     auctionHistory = {},
+    -- One-off sales a plugin queued (Wealth Planner's Go liquid): key -> { how = "auction" | "vendor",
+    -- name, id, link, t }. Never on the lists: gone once the item has left your bags.
+    oneOff = {},
     auctionScans = {}, -- realm -> time() of the last finished full scan
     options = {
         keepSessions = 30,
@@ -114,6 +117,7 @@ function ns:Changed()
         if ns.Merchant and ns.Merchant.UpdateState then ns.Merchant:UpdateState() end
         if ns.Auction and ns.Auction.supported then ns.Auction:Build() end
         if ns.AuctionTab and ns.AuctionTab.Refresh then ns.AuctionTab:Refresh() end
+        if ns.API then ns.API:FireChanged() end
     end)
 end
 

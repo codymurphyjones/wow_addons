@@ -1,0 +1,41 @@
+## Interface: 16001, 11509, 20506, 50504, 120100
+## Title: SmartPlates
+## Notes: Threat-reactive nameplates with an aggro percentage: 100% is where aggro flips, above 100% means you are holding it.
+## Author: Dinoblankie + Claude
+## Version: 0.1.1
+## SavedVariables: SmartPlatesDB
+## SavedVariablesPerCharacter: SmartPlatesCharDB
+## IconTexture: Interface\AddOns\SmartPlates\Media\SmartPlates
+## Category: Unit Frames
+## AddonCompartmentFunc: SmartPlates_OnCompartmentClick
+## X-Curse-Project-ID: 1743890
+
+Compat.lua
+Core.lua
+Profiles.lua
+CVars.lua
+Media.lua
+Role.lua
+Threat.lua
+Style.lua
+Plate.lua
+Elements\Healthbar.lua
+Elements\Text.lua
+Elements\Castbar.lua
+Elements\Icons.lua
+Plugins\AuraContainers.lua
+Plugins\Auras.lua
+Plugins\ComboPoints.lua
+Plugins\Arena.lua
+Plugins\BossMods.lua
+Plugins\Quest.lua
+Plugins\HealerTracker.lua
+Plugins\Totems.lua
+Plugins\ClassIcon.lua
+Plugins\Social.lua
+Plugins\Experience.lua
+Plugins\Resource.lua
+Widgets.lua
+UI.lua
+Minimap.lua
+TestMode.lua

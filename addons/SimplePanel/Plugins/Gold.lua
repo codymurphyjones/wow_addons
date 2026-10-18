@@ -44,6 +44,8 @@ SimplePanel.RegisterPlugin({
             if s.allRealms then s.scope = "all" end
             s.allRealms = nil
         end
+        -- The coins in the text already say it's gold: the bar icon is off (once; "Show icon" brings it back).
+        if not s.iconOff then p:Layout().showIcon = false; s.iconOff = true end
         sessionStart = GetMoney()
         Save()
         p:Record("gold", GetMoney() / 10000)
@@ -63,7 +65,7 @@ SimplePanel.RegisterPlugin({
             local _, total = Characters(p)
             shown = total
         end
-        local segs = { { text = C.ShortMoney(shown) } }
+        local segs = { { text = C.CoinMoney(shown) } }
         local delta = money - (sessionStart or money)
         if p:Get("showSession") and delta ~= 0 then
             segs[2] = { text = (delta > 0 and "+" or "-") .. C.ShortMoney(delta):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""),

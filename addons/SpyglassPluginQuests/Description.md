@@ -61,11 +61,11 @@ A window in the style of the game's quest giver frame, on parchment. Drag it any
 - **Buttons:** **Track quest** / **Stop tracking**, **Reset skipped** (only shown when a step in this chain was skipped) and **Close**.
 
 ### Quest tracking
-**Track quest** puts a marker on the world map and shows an on-screen tracker, such as **"Pick up: The Defias Brotherhood"** with the giver and zone underneath.
+**Track quest** points the **Waypoint** addon's arrow (and its world map marker) at the next step, such as **"Pick up: The Defias Brotherhood"** with the giver and zone underneath. Tracking needs Waypoint; without it the button is hidden.
 
 - **Always the right step.** Tracking points at the first step of the chain you haven't completed. With no completion data, that's the first quest of the chain.
-- **Pick up, then turn in.** A step not yet in your log points to its quest giver. Once you accept it, the tracker switches to **"Turn in: ..."** and points to the NPC who takes it back.
-- **Moves on by itself.** Accepting or handing in a quest updates the tracker a moment later. Finishing the reward quest stops tracking, and you're told in chat.
+- **Pick up, then turn in.** A step not yet in your log points to its quest giver. Once you accept it, the arrow switches to **"Turn in: ..."** and points to the NPC who takes it back.
+- **Moves on by itself.** Accepting or handing in a quest updates the arrow a moment later. Finishing the reward quest stops tracking, and you're told in chat.
 - **Steps you can't get are skipped.** If you reach the giver and they don't offer the step (you did it before the game kept track, or it isn't for your character), it's marked *not offered here* and the tracker moves to the next step. Being under the quest's level never counts: you're told the level you need instead. If a skip was wrong, press **Reset skipped** in the quest window.
 - **Reopen the window** by clicking the tracker or the map marker.
 - **Stop tracking** with the tracker's **X**, the window's **Stop tracking** button, or `/sg untrack`.
@@ -91,7 +91,7 @@ The plugin adds a **Quests** tab (book icon) to every instance page in SpyGlass'
 2. Log in. You'll see "Quest Rewards: ... items added" in chat a moment later.
 3. Open your Character window and click the **SpyGlass** tab (or type `/sg`). Press **Quests**, **World**, **Vendors** or **Crafted** to see one source, or **All** to see everything with dungeon and raid loot.
 4. Click a quest item to open its quest window. Read where the chain starts and what it rewards.
-5. Press **Track quest** and follow the world map marker and the on-screen tracker. It updates as you accept and hand in each step.
+5. Press **Track quest** and follow Waypoint's arrow. It updates as you accept and hand in each step.
 6. Planning a dungeon run? Open the journal (`/sgj` or the SpyGlass minimap button), pick the dungeon and open the **Quests** tab to pick up its quests before you go.
 
 ---

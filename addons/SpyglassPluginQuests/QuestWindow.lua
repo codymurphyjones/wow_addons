@@ -283,6 +283,8 @@ local function Draw()
     f.scroll:SetVerticalScroll(0)
     f.track:SetText(IsTracked(reward) and "Stop tracking" or "Track quest")
     f.track:SetEnabled(loc ~= nil and loc.uiMapID ~= nil)
+    -- Tracking points the Waypoint addon's arrow; without it there's nothing to track with.
+    f.track:SetShown(SpyGlass.HasWaypoints ~= nil and SpyGlass:HasWaypoints())
     f.resetSkips:SetShown(anySkipped)
 end
 

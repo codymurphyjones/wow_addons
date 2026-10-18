@@ -159,7 +159,7 @@ local function IsRaid(mod, inst)
     return ok and type(typeName) == "string" and typeName:lower():find("raid") ~= nil
 end
 
--- Loot AtlasLoot hasn't got yet, as wowtbc.gg reports it (Tools/fetch_web_loot.py,
+-- Loot AtlasLoot hasn't got yet, as wowtbc.gg reports it (tools/Spyglass/fetch_web_loot.py,
 -- shipped in Data\Items.lua as ItemData.reported). Items go to the AtlasLoot
 -- boss of the same name, or to a new boss (index nil: AtlasLoot has no
 -- page for it) when AtlasLoot's list doesn't have one by that name.

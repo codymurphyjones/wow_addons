@@ -164,8 +164,9 @@ p = SimplePanel.RegisterPlugin({
     end,
 
     tooltip = function(_, tt)
-        local state = S.StatusWords()
-        tt:AddDouble("You are", state, nil, state == "Busy" and T.red or (state == "Away" and T.yellow or T.green))
+        local state, _, stale, why = S.StatusWords()
+        tt:AddDouble("You are", state .. (stale and " (?)" or ""), nil, state == "Busy" and T.red or (state == "Away" and T.yellow or T.green))
+        if stale then tt:AddLine("May be out of date: " .. why, T.muted, true) end
         -- Your settings first, each once: the rules with a bar icon as Open or Blocked (in the same
         -- order as the icons), the rest On or Off. Away and Busy are the line above.
         local skip = false

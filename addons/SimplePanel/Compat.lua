@@ -52,7 +52,17 @@ function Compat.Money(copper)
     return GetMoneyString(copper)
 end
 
--- Short money text for the bar: "123g 45s" / "45s 12c".
+-- Short money with coin icons, for the bar's gold: "123[g] 45[s]" / "45[s] 12[c]".
+local COIN = "%s|TInterface\\MoneyFrame\\UI-%sIcon:0:0:2:0|t"
+function Compat.CoinMoney(copper)
+    copper = math.floor(math.abs(tonumber(copper) or 0))
+    local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
+    if g > 0 then return COIN:format(BreakUpLargeNumbers and BreakUpLargeNumbers(g) or g, "Gold") .. " " .. COIN:format(s, "Silver") end
+    if s > 0 then return COIN:format(s, "Silver") .. " " .. COIN:format(c, "Copper") end
+    return COIN:format(c, "Copper")
+end
+
+-- Short money text with letters: "123g 45s" / "45s 12c" (compact: the session change).
 function Compat.ShortMoney(copper)
     copper = math.floor(math.abs(tonumber(copper) or 0))
     local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
@@ -376,13 +386,15 @@ function Compat.OnlineFriends()
 end
 
 -- Online guild members as { name, level, class, classFile, zone, rank }, and the guild's size.
+-- You aren't in the list: you know you're online.
 function Compat.OnlineGuild()
     local out = {}
     if not (IsInGuild and IsInGuild() and GetNumGuildMembers) then return out, 0 end
     local total = GetNumGuildMembers() or 0
+    local me = UnitName and UnitName("player")
     for i = 1, total do
         local name, rank, _, level, class, zone, _, _, online, _, classFile = GetGuildRosterInfo(i)
-        if name and online then
+        if name and online and Compat.PlayerName(name) ~= me then
             out[#out + 1] = { name = Compat.PlayerName(name), level = level,
                 class = class, classFile = classFile, zone = zone, rank = rank }
         end

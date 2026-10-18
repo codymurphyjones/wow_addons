@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- Every other known item and where it comes from: world drops, vendors and
--- crafted gear (Data\Sources.lua, built by Spyglass\Tools\build_sources.py).
+-- crafted gear (Data\Sources.lua: a fixed snapshot, built once from GearQuest Forever's item facts).
 -- Nothing here ranks anything: SpyGlass scores each item by your StatLedger
 -- priorities, the same as dungeon loot.
 local S = {}
@@ -262,6 +262,10 @@ function S:Track(itemID)
 end
 
 local function OnClick(origin)
+    if not (SpyGlass.HasWaypoints and SpyGlass:HasWaypoints()) then
+        print(PREFIX .. "install the Waypoint addon to get an arrow to where this item comes from.")
+        return
+    end
     local wp = SpyGlass:GetWaypoint()
     if wp and wp.key == TrackKey(origin.item) then
         SpyGlass:ClearWaypoint()

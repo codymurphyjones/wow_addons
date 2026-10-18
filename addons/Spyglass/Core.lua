@@ -503,7 +503,6 @@ events:SetScript("OnEvent", function(_, event, arg1, arg2)
         Changed("quests", QuestLogSignature)
         Changed("spells", SpellsSignature)
         Changed("skills", SkillsSignature)
-        ns.Waypoint:Init()
         ns.Plugins:Scan()
         ns.CharPanel:Init()
         ns.Settings:Register()
@@ -589,12 +588,8 @@ SlashCmdList.SPYGLASS = function(msg)
         print(ns:PerfText())
         local lines = inst and ns.List:DiagnoseInstance(inst, filter) or ns.List:Diagnose(key, filter)
         for _, line in ipairs(lines) do print(line) end
-    elseif msg == "tracker" then
-        local unlocked = ns.Waypoint:ToggleUnlocked()
-        ns:Print(unlocked and "Tracker unlocked: drag it, then /sg tracker again to lock it."
-            or "Tracker locked.")
     elseif msg == "untrack" then
-        ns.Waypoint:Clear()
+        SpyGlass:ClearWaypoint()
     elseif msg == "plugins" then
         local found = ns.Plugins:Found()
         if #found == 0 then
@@ -620,7 +615,7 @@ SlashCmdList.SPYGLASS = function(msg)
         ns:Print("/sg - your gear list on the Character window, /sg journal - open the loot journal, "
             .. "/sg atlas - open AtlasLoot, "
             .. "/sg tab - show or hide the Character window tab, /sg options - settings, /sg plugins - list plugins, "
-            .. "/sg untrack - stop tracking, /sg tracker - move the tracker (or use Edit Mode), "
+            .. "/sg untrack - stop tracking (needs the Waypoint addon), "
             .. "/sg collect - collector mode (for the developer: keeps players' contributed data)")
     end
 end

@@ -129,21 +129,26 @@ function API:RegisterPlugin(def)
     return ns.Plugins:Register(def)
 end
 
--- Tracks one place: a marker on the world map and an on-screen tracker
--- (movable in Edit Mode) naming it. wp = { uiMapID, x, y (0-1 on that map),
--- title, subtitle, onClick, key }. Setting a new one replaces the old.
+-- Waypoints go to the Waypoint addon (its arrow, map marker and minimap dot).
+-- Without it, tracking is off: SetWaypoint does nothing and GetWaypoint is nil.
+function API:HasWaypoints()
+    return type(Waypoint) == "table" and Waypoint.Set ~= nil
+end
+
+-- Tracks one place. wp = { uiMapID, x, y (0-1 on that map), title, subtitle,
+-- onClick, key }. Setting a new one replaces the old.
 function API:SetWaypoint(wp)
-    ns.Waypoint:Set(wp)
+    if self:HasWaypoints() and type(wp) == "table" then Waypoint:Set("SpyGlass", wp) end
 end
 
 function API:ClearWaypoint()
-    ns.Waypoint:Clear()
+    if self:HasWaypoints() then Waypoint:Clear("SpyGlass") end
 end
 
 -- The tracked waypoint, or nil. After a reload it has no onClick until its
 -- plugin sets it again (key tells the plugin which one it was).
 function API:GetWaypoint()
-    return ns.Waypoint:Get()
+    return self:HasWaypoints() and Waypoint:Get("SpyGlass") or nil
 end
 
 -- A plugin asks for its own tab on the loot journal's instance page. No

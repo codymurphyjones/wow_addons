@@ -84,6 +84,7 @@ Some bosses don't show boss frames. For those, type `/bandolier boss` before the
 > - **Mid-fight, low health, plain press:** Healthstone. Press again: it's on cooldown, so a Major Healing Potion. Press again: potions are on cooldown, so a bandage.
 > - **After the fight, plain press:** a bandage first, since it's free. When you're Recently Bandaged, the apples.
 > - **Run out of everything except apples:** the plain press still eats an apple out of combat.
+> - **Run out of every health item:** the plain press uses your best mana item instead (and the other way round with Prioritize Mana, or on Shift). The pop-out bar only opens when both are empty.
 
 ---
 

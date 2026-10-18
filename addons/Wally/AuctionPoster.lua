@@ -43,11 +43,15 @@ function Auction:Build()
     local function Add(bag, slot, info, reagent)
         local key = ns.Key(C.NameFromLink(info.link))
         local entry = key and db.auctionList[key]
+        -- A one-off (queued by a plugin) posts this once without joining the Auction List.
+        local once = key and not entry and db.oneOff and db.oneOff[key]
+        if once and once.how ~= "auction" then once = nil end
+        if once then entry = once end
         -- The reagent bag is off limits unless you dropped the item on the Wally tab yourself.
-        if entry and (not reagent or entry.fromReagentBag) and not db.neverAuction[key] and not C.IsSlotBound(bag, slot) then
+        if entry and (not reagent or entry.fromReagentBag) and (once or not db.neverAuction[key]) and not C.IsSlotBound(bag, slot) then
             local row = byKey[key]
             if not row then
-                row = { key = key, link = info.link, icon = info.icon, count = 0 }
+                row = { key = key, link = info.link, icon = info.icon, count = 0, oneOff = once and true or nil }
                 byKey[key] = row
                 rows[#rows + 1] = row
             end
@@ -71,7 +75,7 @@ function Auction:Build()
 
     local opt = db.options.auction
     for _, row in ipairs(rows) do
-        local entry = db.auctionList[row.key]
+        local entry = db.auctionList[row.key] or db.oneOff[row.key]
         row.duration = entry.duration or opt.duration or 2
         -- What you keep in your bags (set per item on the Next up card) stays out of the post.
         row.have = row.count
@@ -315,9 +319,81 @@ function ShowNextAsk()
     StaticPopup_Show("WALLY_CANCEL_AUCTIONS", what, nil, { key = a.key })
 end
 
+-- ---------------------------------------------------------------------------
+-- Last known auctions: what was up when you last left the auction house, kept per character so
+-- the Auctions page can show it anywhere. Auctions drop off when their time runs out, or when the
+-- chat says one sold or expired.
+-- ns.char.lastAuctions = { t = time(), list = { { key, link, icon, quantity, unit, expires, exact, someSold } } }
+-- ---------------------------------------------------------------------------
+
+local BAND_SECONDS = { [0] = 1800, 7200, 43200, 172800 } -- upper end of each time-left band
+
+local function SaveSnapshot()
+    if not (ns.char and Auction.owned) then return end
+    local now, list = time(), {}
+    for _, a in ipairs(Auction.owned) do
+        local left = a.timeLeftSeconds or BAND_SECONDS[a.timeLeft]
+        list[#list + 1] = {
+            key = a.key, link = a.link, icon = a.icon, quantity = a.quantity, unit = a.unit,
+            expires = left and now + left or nil, exact = a.timeLeftSeconds ~= nil or nil,
+        }
+    end
+    ns.char.lastAuctions = { t = now, list = list }
+end
+
+-- Your auctions still on the market: the live list at the auction house, otherwise the last one
+-- seen minus what has run out since. Returns list, time it was seen, live.
+function Auction:Market()
+    if self.open and self.owned then return self.owned, time(), true end
+    local snap = ns.char and ns.char.lastAuctions
+    if type(snap) ~= "table" or type(snap.list) ~= "table" then return {}, nil, false end
+    local now, out = time(), {}
+    for _, a in ipairs(snap.list) do
+        if not a.expires or a.expires > now then out[#out + 1] = a end
+    end
+    return out, snap.t, false
+end
+
+-- "A buyer has been found for your auction of %s." and "Your auction of %s has expired."
+local function NamePattern(fmt)
+    if type(fmt) ~= "string" then return nil end
+    local pat = fmt:gsub("[%(%)%.%+%-%*%?%[%]%^%$]", "%%%0"):gsub("%%s", "(.+)")
+    return "^" .. pat .. "$"
+end
+local SOLD, EXPIRED = NamePattern(ERR_AUCTION_SOLD_S), NamePattern(ERR_AUCTION_EXPIRED_S)
+
+local function OnSystemMessage(msg)
+    -- Secret values (this client hides some chat text from addons) can't be read.
+    if (issecretvalue and issecretvalue(msg)) or (canaccessvalue and not canaccessvalue(msg)) then return end
+    if type(msg) ~= "string" then return end
+    local name, sold = SOLD and msg:match(SOLD), true
+    if not name then name, sold = EXPIRED and msg:match(EXPIRED), false end
+    if not name then return end
+    local key = ns.Key(C.NameFromLink(name) or name)
+    local snap = key and ns.char and ns.char.lastAuctions
+    if type(snap) ~= "table" or type(snap.list) ~= "table" then return end
+    -- The message doesn't say which auction: take the one closest to running out.
+    local best
+    for i, a in ipairs(snap.list) do
+        if a.key == key and (not best or (a.expires or math.huge) < (snap.list[best].expires or math.huge)) then
+            best = i
+        end
+    end
+    if not best then return end
+    -- A stack of commodities can sell a few at a time; the message doesn't say how many.
+    local a = snap.list[best]
+    if sold and (a.quantity or 1) > 1 and not a.someSold then
+        a.someSold = true
+    else
+        table.remove(snap.list, best)
+    end
+    ns:Changed()
+end
+
 local function OnOwnedUpdated()
     if not Auction.open then return end
     Auction.owned = OwnedActive()
+    SaveSnapshot()
     local counts, links = {}, {}
     for _, a in ipairs(Auction.owned) do
         counts[a.key] = (counts[a.key] or 0) + 1
@@ -410,6 +486,7 @@ local function OnCancelSent(auctionID)
             if list[i].auctionID == auctionID then table.remove(list, i) end
         end
     end
+    SaveSnapshot()
     ns:Changed()
 end
 
@@ -480,6 +557,7 @@ if Auction.supported then
         ns:Changed()
     end)
     ns:On("OWNED_AUCTIONS_UPDATED", OnOwnedUpdated)
+    ns:On("CHAT_MSG_SYSTEM", OnSystemMessage)
     ns:On("AUCTION_CANCELED", OnCanceled)
     if C_AuctionHouse.CancelAuction then hooksecurefunc(C_AuctionHouse, "CancelAuction", OnCancelSent) end
     -- New auctions show up in the Active view; one query covers a burst of confirmations.

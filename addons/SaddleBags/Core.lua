@@ -357,6 +357,11 @@ function TS:Capture(saddle, tabIndex, frameOrName, includeAttached)
 		-- and the bars turn dim or invisible. Layout re-applies this offset.
 		local parentLevel = info.parent and info.parent.GetFrameLevel and info.parent:GetFrameLevel() or 0
 		info.levelOffset = math.max(1, frame:GetFrameLevel() - parentLevel)
+		-- SetParent also moves a frame into its new parent's strata. Windows
+		-- that set their own (Details keeps everything in LOW) must keep it:
+		-- Details' full-window right-click button would otherwise rise from
+		-- under its bars into the panel's MEDIUM strata and eat every hover.
+		info.strata = frame:GetFrameStrata()
 		-- Unclamped so an inactive tab can park it off-screen; a clamped frame
 		-- would be pushed back into the screen's top-left corner. The watchdog
 		-- (Panel.lua) keeps it that way and notices size/visibility changes.
@@ -413,6 +418,7 @@ function TS:Detach(frameOrName)
 		if not info.handsOff then
 			local parent = info.parent or UIParent
 			frame:SetParent(parent)
+			if info.strata then frame:SetFrameStrata(info.strata) end
 			if info.levelOffset then frame:SetFrameLevel(parent:GetFrameLevel() + info.levelOffset) end
 		end
 		frame:ClearAllPoints()

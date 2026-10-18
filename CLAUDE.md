@@ -14,9 +14,11 @@ So anything written in the game folder is lost on the next `yarn stop`, and it n
 That covers everything:
 - source code, TOC files and docs;
 - generated data (Wowhead scrapes, `Data\*.lua`, zone pictures);
-- tool caches (`Tools\.wowhead_cache`).
+- tool caches (`tools\<Addon>\.wowhead_cache`).
 
-All of it lives under `addons\<Addon>\` in this repo.
+What ships lives under `addons\<Addon>\`. Build logic does not: every script that generates an addon's data or art (scrapers, data builders, `make_icon.py`), with its caches and working files, lives under `tools\<Addon>\` at the repo root, and writes its output into `addons\<Addon>\`. Scripts find their addon from their own location, so they run from any folder (`python -I tools\Waypoint\build_places.py`). New build scripts go there too, never inside an addon folder.
+
+`yarn build` (`tools\build_all.py`) runs every build in order. The datasets (each `tools\<Addon>\.wowhead_cache` and `.cache`) are kept packed as `.tar.xz` beside the folder: the build unpacks them first and packs them again at the end. Running one script by hand needs `yarn data:unpack` first and `yarn data:pack` after. Wowhead pages are fetched through a real Chrome window (`tools\_shared\webfetch.py`, Playwright), because Wowhead refuses curl and headless browsers.
 
 ## If a session starts in the game folder
 

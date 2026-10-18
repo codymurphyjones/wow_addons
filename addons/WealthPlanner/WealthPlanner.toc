@@ -1,0 +1,48 @@
+## Interface: 16001, 11509, 20506, 50504, 120100
+## Title: Wealth Planner
+## Notes: A Wally plugin that treats the auction house like a stock market, keeps a share of your wealth invested, and posts the best-paying jobs (farming, gathering, crafting) on a Jobs Board with map pins (and the Waypoint addon's arrow, if installed). /wp
+## Author: Dinoblankie + Claude
+## Version: 0.1.0
+## Dependencies: Wally
+## OptionalDeps: Auctionator, Waypoint
+## SavedVariables: WealthPlannerDB
+## SavedVariablesPerCharacter: WealthPlannerCharDB
+## IconTexture: Interface\AddOns\WealthPlanner\Media\Icon
+## Category: Auction & Economy
+## AddonCompartmentFunc: WealthPlanner_OnCompartmentClick
+
+Compat.lua
+Core.lua
+Widgets.lua
+Chart.lua
+Data\Farms.lua
+Data\Crafts.lua
+Data\VendorItems.lua
+Prices.lua
+History.lua
+Analytics.lua
+Portfolio.lua
+Invest.lua
+Patterns.lua
+Deposits.lua
+Conversions.lua
+Trends.lua
+Recovery.lua
+Explain.lua
+Jobs.lua
+Crafting.lua
+Session.lua
+Nav.lua
+MapPins.lua
+MinimapPins.lua
+Tracker.lua
+UI.lua
+OverviewPage.lua
+MarketPage.lua
+PortfolioPage.lua
+InsightsPage.lua
+JobsPage.lua
+WorkLogPage.lua
+SettingsPage.lua
+InvestTab.lua
+Minimap.lua

@@ -9,7 +9,7 @@
     "test:watch": "python addon_sync.py sync --watch",
     "stop": "python addon_sync.py stop",
     "deploy": "python addon_sync.py publish",
-    "deploy:check": "python addon_sync.py publish --dry-run",
+    "deploy:check": "python addon_sync.py check",
     "bump": "python addon_sync.py bump",
     "status": "python addon_sync.py status",
     "link": "python addon_sync.py link",
@@ -17,6 +17,11 @@
     "dev": "python addon_sync.py dev",
     "release": "python addon_sync.py release",
     "auto": "python addon_sync.py auto",
-    "skip": "python addon_sync.py skip"
+    "skip": "python addon_sync.py skip",
+    "build": "python tools/build_all.py",
+    "data:status": "python tools/datasets.py status",
+    "data:unpack": "python tools/datasets.py unpack",
+    "data:pack": "python tools/datasets.py pack",
+    "deploy:full": "python tools/build_all.py && python addon_sync.py publish"
   }
 }

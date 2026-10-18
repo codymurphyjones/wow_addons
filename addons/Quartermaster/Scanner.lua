@@ -261,11 +261,13 @@ ns:On("ITEM_SEARCH_RESULTS_UPDATED", function(itemKey)
     local quantity = Call(C_AuctionHouse.GetItemSearchResultsQuantity, itemKey)
     if RetryIfEmpty(has, full, quantity) then return end
     local listings = {}
+    -- Identical auctions come grouped in one row: buyoutAmount is the price of each one, quantity how
+    -- many, and a bid on the row's auctionID buys one of them at buyoutAmount (as Auctionator does).
+    -- So a listing is one purchase (count 1 at unit = buyout), with `available` at that price.
     for i = 1, C_AuctionHouse.GetNumItemSearchResults(itemKey) or 0 do
         local r = C_AuctionHouse.GetItemSearchResultInfo(itemKey, i)
-        local count = r and r.quantity or 1
         if r and r.buyoutAmount and r.buyoutAmount > 0 and not r.containsOwnerItem then
-            listings[#listings + 1] = { unit = r.buyoutAmount / count, count = count, buyout = r.buyoutAmount,
+            listings[#listings + 1] = { unit = r.buyoutAmount, count = 1, available = r.quantity or 1, buyout = r.buyoutAmount,
                 auctionID = r.auctionID, link = r.itemLink, itemID = id }
         end
     end

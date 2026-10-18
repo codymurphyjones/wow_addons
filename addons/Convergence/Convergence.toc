@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: Convergence
+## Notes: Shows the known Elemental Convergence spots on the world map, so you can route long trips past them.
+## Author: Dinoblankie + Claude
+## Version: 1.0.0
+## Category: Map
+## IconTexture: Interface\AddOns\Convergence\Media\Icon
+
+Data.lua
+Convergence.lua

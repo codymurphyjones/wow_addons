@@ -87,8 +87,10 @@ end
 
 local function Commit(p)
     ns:AddAuctionHistory(p.link, p.quantity, p.unit, p.duration, p.byWally)
-    -- Only habits you form by hand count.
-    if not p.byWally then Learn:Train(p.link, p.quantity, p.duration) end
+    -- Only habits you form by hand count; a one-off you queued (Go liquid) was your choice too.
+    local key = ns.Key(C.NameFromLink(p.link))
+    local once = key and ns.db.oneOff[key]
+    if not p.byWally or (once and once.how == "auction") then Learn:Train(p.link, p.quantity, p.duration) end
     if ns.Auction then ns.Auction:OnCreated(p) end
     ns:Changed()
 end

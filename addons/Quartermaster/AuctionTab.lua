@@ -78,6 +78,16 @@ function AuctionTab:Search(text)
     return true
 end
 
+-- For other addons: open Quartermaster's Buying tab and search for an item (by name) at the auction
+-- house. Returns true when the search started (the auction house has to be open).
+--   QuartermasterAPI.SearchAuction("Linen Cloth")
+QuartermasterAPI = QuartermasterAPI or {}
+function QuartermasterAPI.SearchAuction(text)
+    if type(text) ~= "string" or text == "" then return false end
+    local ok, started = pcall(AuctionTab.Search, AuctionTab, text)
+    return ok and started or false
+end
+
 -- Edits a Cart search entry here (from the Lists page).
 function AuctionTab:EditEntry(entry)
     if not self:Select() then return false end

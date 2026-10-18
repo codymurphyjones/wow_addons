@@ -1,0 +1,1 @@
+Threat-reactive nameplates in a clean flat style that show your aggro as a percentage: 100% is where aggro flips, above 100% means you're holding it.

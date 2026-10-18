@@ -10,3 +10,12 @@ Spyglass
 SpyglassPluginQuests
 ZeppelinSigns
 SimpleBar
+BattleRecap
+SmartPlates
+Convergence
+WealthPlanner
+GroupHistory
+MrMiyagi
+Waypoint
+FieldGuide
+RoadLog

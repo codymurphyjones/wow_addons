@@ -43,7 +43,7 @@ Install **SpyGlassPluginQuests** to add every other known item (green or better)
 - A **Quests** button joins Dungeons and Raids, and All includes quest gear too.
 - It lists only quests your race, class and faction can take and that you haven't finished. Each row names the next step of the chain you still have to do, such as "next: The Defias Brotherhood (step 2 of 7)", and moves on as you hand quests in.
 - **Click a quest item** to open a quest window with the objectives, where to start (giver, zone and map coordinates), the whole chain with finished steps ticked, and the rewards.
-- **Track quest** puts a marker on the world map and shows an on-screen tracker, such as "Pick up: ..." or "Turn in: ...". It moves on as you progress, skips any step a quest giver doesn't offer you, and stops once you finish the reward quest. Move the tracker in Edit Mode.
+- **Track quest** (with the **Waypoint** addon) points Waypoint's arrow at the next step, such as "Pick up: ..." or "Turn in: ...". It moves on as you progress, skips any step a quest giver doesn't offer you, and stops once you finish the reward quest.
 - The journal gets a **Quests** tab on every instance page. It lists the quests tied to that dungeon or raid, or with a boss picked, the quests involving that boss. Quests you can't take are shown dimmed, with why ("Horde only").
 
 The plugin needs **QuestieDB**. Questie itself is optional; when it's loaded, the plugin uses its zone data for more exact map markers.
@@ -73,7 +73,6 @@ The minimap button: left-click opens the journal, right-click opens your gear li
 | `/sg options` | Open the settings |
 | `/sg plugins` | List the plugins found, and why any didn't load |
 | `/sg untrack` | Stop tracking a quest |
-| `/sg tracker` | Unlock the on-screen tracker to drag it (or use Edit Mode) |
 | `/sg debug` | Show why items are or aren't listed |
 
 ---
@@ -123,7 +122,7 @@ SpyGlass sets a global `SpyGlass` table (`API_VERSION` 1). The built-in journal 
 - ranked rows for any list of items;
 - item info and usability checks;
 - the shared tooltip and click handlers;
-- waypoints with an on-screen tracker;
+- waypoints, through the Waypoint addon's arrow;
 - a refresh callback.
 
 **Plugins** add their own items to the list, each with where it comes from:

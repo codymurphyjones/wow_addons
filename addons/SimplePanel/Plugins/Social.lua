@@ -15,6 +15,29 @@ local function Settings()
     return l and l.settings
 end
 
+-- Your Away and Busy flags. Clients with Midnight's restrictions (WoW Forever, Retail) can hand these
+-- back as hidden "secret" values, and any test on one is an error. Then we keep showing the last
+-- value we could read and say it may be out of date.
+local away = { afk = false, dnd = false, stale = false }
+local STALE_REASON = "The game is hiding your Away/Busy status from addons right now (it does this in combat and in some instances), so this is the last status SimplePanel could read."
+
+local function ReadFlag(fn)
+    local ok, v = pcall(fn, "player")
+    if not ok or (issecretvalue and issecretvalue(v)) then return nil end
+    return v and true or false
+end
+
+-- afk, dnd, stale
+local function AwayFlags()
+    local afk, dnd = ReadFlag(UnitIsAFK), ReadFlag(UnitIsDND)
+    if afk == nil or dnd == nil then
+        away.stale = true
+    else
+        away.afk, away.dnd, away.stale = afk, dnd, false
+    end
+    return away.afk, away.dnd, away.stale
+end
+
 local function Say(msg)
     local s = Settings()
     if s and s.announce then ns:Print(msg, true) end
@@ -140,12 +163,12 @@ local SWITCHES = {
     { header = "Status" },
     {
         text = "Away (AFK)", tooltip = "Marks you as away, the same as /afk.",
-        get = function() return UnitIsAFK("player") and true or false end,
+        get = function() return (AwayFlags()) end,
         set = function() SendFlag("AFK") end,
     },
     {
         text = "Busy (Do Not Disturb)", tooltip = "Marks you as busy, the same as /dnd. Whispers get an automatic reply.",
-        get = function() return UnitIsDND("player") and true or false end,
+        get = function() local _, dnd = AwayFlags(); return dnd end,
         set = function() SendFlag("DND") end,
     },
 
@@ -254,18 +277,23 @@ local SHIELD = "Interface\\Icons\\Spell_Holy_PowerWordShield"
 -- What the bar shows, as segments: a status dot (green available, yellow Away, red Busy), then a
 -- shield with the number of blocks that are on, if any.
 local function Status()
-    local dot = UnitIsDND("player") and DOTS.busy or (UnitIsAFK("player") and DOTS.away or DOTS.online)
+    local afk, dnd, stale = AwayFlags()
+    local dot = dnd and DOTS.busy or (afk and DOTS.away or DOTS.online)
     local segs = { { icon = dot, fullIcon = true, text = "" } }
+    -- A small "?" after the dot while the status shown is only the last one we could read.
+    if stale then segs[#segs + 1] = { text = "?", color = T.muted } end
     local n = ActiveCount()
     if n > 0 then segs[2] = { icon = SHIELD, text = tostring(n), color = T.accent } end
     return segs
 end
 
 -- Words for the same thing, for tooltips.
+-- state, number of blocks, stale (the state is the last one we could read), and why.
 local function StatusWords()
     local n = ActiveCount()
-    local state = UnitIsDND("player") and "Busy" or (UnitIsAFK("player") and "Away" or "Available")
-    return state, n
+    local afk, dnd, stale = AwayFlags()
+    local state = dnd and "Busy" or (afk and "Away" or "Available")
+    return state, n, stale, stale and STALE_REASON or nil
 end
 
 -- Your interaction rules, one per kind of request: { topic, open, switch }.
@@ -321,8 +349,9 @@ p = SimplePanel.RegisterPlugin({
     text = function() return Status() end,
 
     tooltip = function(_, tt)
-        local state, n = StatusWords()
-        tt:AddDouble("You are", state, nil, state == "Busy" and T.red or (state == "Away" and T.yellow or T.green))
+        local state, n, stale, why = StatusWords()
+        tt:AddDouble("You are", state .. (stale and " (?)" or ""), nil, state == "Busy" and T.red or (state == "Away" and T.yellow or T.green))
+        if stale then tt:AddLine("May be out of date: " .. why, T.muted, true) end
         tt:AddDouble("Blocks on", tostring(n), nil, n > 0 and T.accent or T.muted)
         for _, sw in ipairs(SWITCHES) do
             if sw.header then

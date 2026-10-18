@@ -1,5 +1,5 @@
 -- The shared history that decides which SpyGlass clients trust each other when
--- they sync discoveries (Sync.lua). Tools/export_anchors.py rewrites the
+-- they sync discoveries (Sync.lua). tools/Spyglass/export_anchors.py rewrites the
 -- developer's part from the developer's saved commits.
 local _, ns = ...
 ns.Anchors = {
