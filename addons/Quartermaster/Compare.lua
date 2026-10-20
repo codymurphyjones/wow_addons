@@ -3,6 +3,7 @@ local _, ns = ...
 -- What the cart was expected to cost against what the auction house really asks. "Expected" is
 -- Auctionator's market price as it stood when the auction house opened; "live" is this visit's
 -- listings, from a quiet check of every cart item and from the Buyer's own searches. Per visit only.
+-- Everything is keyed by Lists:Key: an enchanted copy is a different item from the plain one.
 local Compare = { expected = {}, live = {}, paid = {}, failed = {} }
 ns.Compare = Compare
 
@@ -11,14 +12,25 @@ local UP, DOWN, SAME = "|cffd9736b", "|cff59f28c", "|cffffffff"
 
 local function Refresh() if ns.CartTab then ns.CartTab:Refresh() end end
 
-function Compare:Expected(id)
-    if not id then return nil end
-    if self.expected[id] == nil then self.expected[id] = ns.Catalog:PriceFor(id) or false end
-    return self.expected[id] or nil
+-- An exact entry's expected unit price (Lists:Price: its variant's market price, or the price seen).
+function Compare:Expected(entry)
+    local key = entry and not entry.filter and ns.Lists:Key(entry)
+    if not key then return nil end
+    if self.expected[key] == nil then self.expected[key] = ns.Lists:Price(entry) or false end
+    return self.expected[key] or nil
+end
+
+-- By key alone (purchases): what Expected stored, else a plain item's market price.
+local function ExpectedByKey(self, key)
+    if self.expected[key] == nil then
+        local id = tonumber(key)
+        self.expected[key] = id and ns.Catalog:PriceFor(id) or false
+    end
+    return self.expected[key] or nil
 end
 
 local function Snapshot(self, entries)
-    for _, e in ipairs(entries) do self:Expected(e.itemID) end
+    for _, e in ipairs(entries) do self:Expected(e) end
 end
 
 ns:On("AUCTION_HOUSE_SHOW", function()
@@ -32,21 +44,21 @@ end)
 ns:On("AUCTION_HOUSE_CLOSED", function() Compare:StopCheck() end)
 
 -- The Buyer's listings table is stored as is, so auctions it buys drop out of the live data too.
-function Compare:SetLive(id, listings)
-    if id then self.live[id] = listings end
+function Compare:SetLive(key, listings)
+    if key then self.live[key] = listings end
 end
 
-function Compare:RecordPaid(id, count, copper)
-    if not id then return end
-    local p = self.paid[id] or { copper = 0, count = 0 }
+function Compare:RecordPaid(key, count, copper)
+    if not key then return end
+    local p = self.paid[key] or { copper = 0, count = 0 }
     p.copper, p.count = p.copper + copper, p.count + count
-    self.paid[id] = p
+    self.paid[key] = p
 end
 
 -- Average unit price of the cheapest whole stacks covering qty (the way the Buyer picks), and how
 -- many of the qty are listed at all. nil while the item hasn't been checked.
-function Compare:LiveUnit(id, qty)
-    local listings = self.live[id]
+function Compare:LiveUnit(key, qty)
+    local listings = self.live[key]
     if not listings then return nil end
     local cost, got = 0, 0
     for _, l in ipairs(listings) do
@@ -72,9 +84,9 @@ end
 
 function Compare:RowText(entry, remaining)
     if entry.filter then return nil end -- search entries have no single expected price
-    local id = entry.itemID
+    local id = ns.Lists:Key(entry)
     local parts = {}
-    local expected = self:Expected(id)
+    local expected = self:Expected(entry)
     if remaining > 0 and not self.live[id] then
         parts[#parts + 1] = "expected " .. ns.Widgets.Money(expected)
             .. (self.failed[id] and " |cff8fa3b3(couldn't check)|r" or " |cff8fa3b3(checking...)|r")
@@ -107,12 +119,13 @@ function Compare:Summary(list)
     for _, entry in ipairs(list.entries) do
         local remaining = ns.Lists:Remaining(entry)
         if remaining > 0 and not entry.filter then
-            local expected = self:Expected(entry.itemID)
+            local key = ns.Lists:Key(entry)
+            local expected = self:Expected(entry)
             if expected then expAll, priced = expAll + expected * remaining, priced + 1 end
-            if not self.live[entry.itemID] then
+            if not self.live[key] then
                 unchecked = unchecked + 1
             else
-                local unit, got = self:LiveUnit(entry.itemID, remaining)
+                local unit, got = self:LiveUnit(key, remaining)
                 if not unit then none = none + 1
                 elseif expected then
                     expSum, liveSum, compared = expSum + expected * got, liveSum + unit * got, compared + 1
@@ -132,8 +145,8 @@ function Compare:Summary(list)
         end
     end
     local spent, spentExp, spentAll = 0, 0, true
-    for id, p in pairs(self.paid) do
-        local expected = self:Expected(id)
+    for key, p in pairs(self.paid) do
+        local expected = ExpectedByKey(self, key)
         spent = spent + p.copper
         if expected then spentExp = spentExp + expected * p.count else spentAll = false end
     end
@@ -175,12 +188,14 @@ local function Next(self)
     local mine = token
     local function Done(listings)
         if token ~= mine then return end
-        if listings then self.live[item.id] = listings else self.failed[item.id] = true end
+        if listings then self.live[item.key] = listings else self.failed[item.key] = true end
         self.checking.done = self.checking.done + 1
         Refresh()
         Next(self)
     end
-    if ns.Scanner:Modern() then ns.Scanner:SearchModern(item.id, Done) else ns.Scanner:ScanAll(item.name, Done) end
+    -- Only copies of the entry's own variant: an enchanted one isn't the item on the list.
+    if ns.Scanner:Modern() then ns.Scanner:SearchModern(item.id, Done, item.key)
+    else ns.Scanner:ScanAll(item.name, Done, nil, item.key) end
 end
 
 function Compare:Check()
@@ -191,9 +206,9 @@ function Compare:Check()
     local todo = {}
     for _, entry in ipairs(ns.Buyer:List().entries) do
         local name = entry.itemID and (entry.name or (ns.Catalog:Get(entry.itemID) or {}).name)
-        local id = entry.itemID
-        if ns.Lists:Remaining(entry) > 0 and name and not self.live[id] and not self.failed[id] then
-            todo[#todo + 1] = { id = entry.itemID, name = name }
+        local key = entry.itemID and ns.Lists:Key(entry)
+        if ns.Lists:Remaining(entry) > 0 and name and not self.live[key] and not self.failed[key] then
+            todo[#todo + 1] = { id = entry.itemID, key = key, name = name }
         end
     end
     if #todo == 0 then return end

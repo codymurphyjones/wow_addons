@@ -85,6 +85,15 @@ local function BarDefs()
         { type = "group", id = "quick", label = "Quick settings" },
         { type = "note", text = QUICK, keywords = "auto-hide autohide combat minimap buffs screen adjust lock dividers chat messages height opacity alpha scale font text size launcher drawer sort tile columns color colour scheme theme accent class profile switch reload size bigger larger readable zoom edit mode move drag reorder arrange layout section" },
 
+        { type = "group", id = "panels", label = "Panels" },
+        { type = "check", key = "ownPanels", label = "Own Panels", keywords = "character sheet paper doll gear stats wally panel durability repair",
+            desc = "SimplePanel's own panels in Wally's style, latched to their plugin: the Durability plugin opens SimplePanel's character sheet, and the Professions plugin its professions window (recipes, reagents, crafting, and a search through every recipe you've seen). Every profession window opens there: professions opened from your spellbook, action bars or the game's Professions book (K), and profession trainers (with Train all). The Friends & Guild and Full Social plugins open its social window: Friends (friends, recent allies, ignore, who, raid, quick join) and Guild (roster, chat, info, news, communities, calendar, finder) as two tabs of one window; the game's Social key (O) opens it on Friends and its Guild key (J) on Guild. Shift-click those plugins for their quick menu. The game's C key still opens the game's character sheet.",
+            apply = function(v)
+                if not v and ns.CharacterSheet then ns.CharacterSheet:Hide() end
+                if not v and ns.SocialWindow then ns.SocialWindow:Hide() end
+                if ns.SocialWindow and ns.SocialWindow.ApplyKeys then ns.SocialWindow:ApplyKeys() end
+            end },
+
         { type = "group", id = "reset", label = "Reset" },
         { type = "buttons", keywords = "reset layout positions windows", buttons = {
             { text = "Reset plugin layout", width = 170, fn = function() PK:ResetLayout() end,
@@ -163,7 +172,7 @@ local function BuildPluginsPage()
         r.chart = MakeButton(r, "Chart", 50, 22); r.chart:SetPoint("RIGHT", r.menu, "LEFT", -6, 0)
         r.zones = {}
         local prev
-        for _, z in ipairs({ { "right", "R" }, { "center", "C" }, { "left", "L" } }) do
+        for _, z in ipairs({ { "right", "R" }, { "center", "C" }, { "left", "L" }, { "minimap", "M" } }) do
             local b = MakeButton(r, z[2], 24, 22)
             b:SetPoint("RIGHT", prev or r.chart, "LEFT", prev and -2 or -10, 0)
             b.zone = z[1]
@@ -189,7 +198,7 @@ local function BuildPluginsPage()
         r.chart:SetScript("OnClick", function() p:ShowChart() end)
         for zone, b in pairs(r.zones) do
             W.SetActive(b, p:Layout().zone == zone)
-            b:SetShown(on)
+            b:SetShown(on and (zone ~= "minimap" or p.def.minimapZone == true))
             b:SetScript("OnClick", function() p:SetZone(zone); page.Refresh() end)
         end
         r.icon:SetDesaturated(not on)
@@ -254,11 +263,12 @@ end
 -- Launchers page: four drop boxes
 -- ---------------------------------------------------------------------------
 
-local BOX_COLORS = { drawer = ACCENT, bar = T.yellow, minimap = T.blue, hidden = T.red }
+local BOX_COLORS = { drawer = ACCENT, bar = T.yellow, minimap = T.blue, screen = T.green, hidden = T.red }
 local BOX_HINTS = {
     drawer = "Open from the Launchers plugin on the bar.",
     bar = "Each one gets its own button on the bar.",
     minimap = "Left alone on the minimap.",
+    screen = "Each one gets its own icon: drag it anywhere. Shift-right-click it for its menu.",
     hidden = "Nowhere. Turn on 'Show hidden launchers' in the drawer's menu to reach them.",
 }
 
@@ -275,7 +285,7 @@ local function BuildLaunchersPage()
     perChar:SetPoint("LEFT", scan, "RIGHT", 16, 0)
     perChar:SetScript("OnClick", function(self) ns.char.launchers.useCharacter = self:GetChecked() and true or false; ns.Launchers:ApplyAll(); page.Refresh() end)
 
-    for i, key in ipairs({ "drawer", "bar", "minimap", "hidden" }) do
+    for i, key in ipairs(ns.Launchers.ORDER) do
         local b = CreateFrame("Frame", nil, child, "BackdropTemplate")
         SetBackdrop(b); b:SetBackdropColor(T.side[1], T.side[2], T.side[3], 1)
         local c = BOX_COLORS[key]
@@ -341,7 +351,7 @@ local function BuildLaunchersPage()
         perChar:SetChecked(ns.char.launchers.useCharacter)
         local width = math.max(300, child:GetWidth())
         local cols = math.max(4, math.floor((width - 20) / 34))
-        local groups = { drawer = {}, bar = {}, minimap = {}, hidden = {} }
+        local groups = { drawer = {}, bar = {}, minimap = {}, screen = {}, hidden = {} }
         for _, e in ipairs(ns.Launchers:Entries()) do
             if Matches(e, filter) then
                 local pl = ns.Launchers:Placement(e.key)
@@ -546,10 +556,10 @@ local function BuildAboutPage()
     W.Section(page, "Using the bar", 0, -48)
     Label(page, table.concat({
         a .. "Left-click|r a plugin for its action, " .. a .. "right-click|r for its menu.",
-        a .. "Edit the bar|r (right-click empty bar space, or /sb edit) to drag plugins between the three sections, reorder and hide them.",
+        a .. "Edit the bar|r (right-click empty bar space, or /spanel edit) to drag plugins between the three sections, reorder and hide them.",
         a .. "Right-click empty bar space|r for bar options and the plugin list.",
         "Broker and launcher buttons keep their own right-click; " .. a .. "shift-right-click|r opens SimplePanel's menu.",
-        "|cffffffff/sb|r settings  ·  |cffffffff/sb chart <id>|r  ·  |cffffffff/sb profile <name>|r  ·  |cffffffff/sb errors|r  ·  |cffffffff/sb reload|r",
+        "|cffffffff/spanel|r settings  ·  |cffffffff/spanel chart <id>|r  ·  |cffffffff/spanel profile <name>|r  ·  |cffffffff/spanel errors|r  ·  |cffffffff/spanel reload|r",
     }, "\n"), "SimplePanelFontSmall", 0, -74, 540):SetSpacing(4)
     W.Section(page, "Writing a plugin (PluginKit)", 0, -170)
     local code = Label(page, EXAMPLE, "SimplePanelFontSmall", 0, -196, 540)
@@ -635,7 +645,7 @@ local function CreateMainFrame()
         b:SetScript("OnClick", function() ShowTab(d[1]) end)
         tabs[d[1]] = b
     end
-    Muted(Label(side, "Right-click the bar\nfor quick options.\n\n/sb edit to arrange\nthe plugins.", "SimplePanelFontSmall", 12, -14 - #TABS * 46, 145))
+    Muted(Label(side, "Right-click the bar\nfor quick options.\n\n/spanel edit to arrange\nthe plugins.", "SimplePanelFontSmall", 12, -14 - #TABS * 46, 145))
     local reload = MakeButton(side, "Reload UI", 147, 26); reload:SetPoint("BOTTOMLEFT", 9, 30)
     reload:SetScript("OnClick", function() ReloadUI() end)
     Hint(reload, "Reload UI", "Reloads the interface. Some changes, like a new color scheme, finish applying after a reload.")

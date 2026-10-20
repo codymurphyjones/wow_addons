@@ -178,3 +178,50 @@ function H:SetRating(full, rating)
     p.rating = (p.rating == rating) and nil or rating
     ns:Changed()
 end
+
+-- For other addons (SimplePanel's Social switches, tooltips and person menus). name is "Bob" (your
+-- realm) or "Bob-Realm"; guid, when given, supplies the realm.
+GroupHistoryAPI = GroupHistoryAPI or {}
+
+local function Resolve(name, guid)
+    name = C.Str(name)
+    local full = name and name:find("-", 1, true) and name
+    if not full and guid then
+        local _, _, _, _, _, n, realm = C.Call(GetPlayerInfoByGUID, guid)
+        n, realm = C.Str(n), C.Str(realm)
+        if n and realm then full = n .. "-" .. realm:gsub("%s", "") end
+        name = name or n
+    end
+    return full or C.Full(name)
+end
+
+-- What you know of a player, or nil if you've never grouped with them (nor rated or noted them).
+-- Returns { full, rating = 1 / -1 / nil, runs, finished, wipes, deaths, bosses, note, last, summary }.
+function GroupHistoryAPI.Get(name, guid)
+    if not (ns.db and ns.db.players) then return nil end
+    local full = Resolve(name, guid)
+    local p = full and H:Get(full)
+    if not p then return nil end
+    local t = p.t
+    return { full = full, rating = p.rating, runs = t.runs, finished = t.finished, wipes = t.wipes, deaths = t.deaths,
+        bosses = t.bosses, note = p.note, last = p.last, summary = H:Summary(full, true) }
+end
+
+-- Opens the Group History window on a player.
+function GroupHistoryAPI.Show(name, guid)
+    if not ns.db then return end
+    local full = Resolve(name, guid)
+    ns.UI:ShowPlayer(full and (H:Get(full) and full or H:Find(full)))
+end
+
+-- Thumbs up (1) or down (-1); the same rating again clears it.
+function GroupHistoryAPI.SetRating(name, guid, rating)
+    local full = ns.db and Resolve(name, guid)
+    if full then H:SetRating(full, rating) end
+end
+
+-- Your note on a player; "" clears it.
+function GroupHistoryAPI.SetNote(name, guid, note)
+    local full = ns.db and Resolve(name, guid)
+    if full then H:SetNote(full, note or "") end
+end

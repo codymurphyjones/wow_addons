@@ -81,6 +81,9 @@ QM_FACTIONS = {'The Argent Dawn': 'Argent Dawn', 'The Thorium Brotherhood': 'Tho
                'Wintersaber Trainers': 'Wintersaber Trainers', 'Brotherhood of the Light': 'Brotherhood of the Light'}
 
 MATERIAL_CLASSES = {5, 7}  # vendor-sold Reagents and Trade Goods count as crafting materials
+# Vendors whose stock is a few now and then: the Darkmoon Faire's (there a week a month), the exotic
+# goods merchants (Lhara, Vi'el: a handful, restocked slowly).
+LIMITED_RE = re.compile(r'Darkmoon Faire|Exotic')
 
 
 def as_list(v):
@@ -221,11 +224,15 @@ def main():
                                  and SUPPLY_RE.match(sub[i]).group(1) == prof], 'Supplies > Profession supplies')
 
     # Who sells each vendor crafting material (for Quartermaster's reagents, through Waypoint's API).
+    # Not the vendors with a few in stock now and then (LIMITED_RE): a material only they sell isn't
+    # one you can buy when you need it (Medium Leather from the Darkmoon Faire), so it's farmed or
+    # bought at the auction house like any other.
     sells = {}
     for item_id in db.ids('Item-'):
         it = db.item(item_id) or {}
         if it.get('class') in MATERIAL_CLASSES or item_id in TRADE_GOODS:
-            ids = sorted({n for n in (int(v) for v in as_list(it.get('vendors'))) if usable(n)})
+            ids = sorted({n for n in (int(v) for v in as_list(it.get('vendors')))
+                          if usable(n) and not LIMITED_RE.search(sub.get(n, ''))})
             if ids:
                 sells[item_id] = ids
 
@@ -283,7 +290,8 @@ def main():
 # their own maps: each is one town.
 # ---------------------------------------------------------------------------------------------
 
-WAGO = 'https://wago.tools/db2/%s/csv?build=1.15.9.70003'
+WAGO = 'https://wago.tools/db2/%s/csv?build=%s'
+CLASSIC = '1.15.9.70003'  # Classic Era: the towns' subzones
 CACHE = os.path.join(HERE, '.cache')
 OUT_TOWNS = os.path.join(ADDON, 'Data', 'Towns.lua')
 CITY_MAPS = {1453: 'Stormwind City', 1455: 'Ironforge', 1457: 'Darnassus', 1454: 'Orgrimmar',
@@ -296,16 +304,16 @@ MAX_NAMES = 4      # names per tooltip line before "+N more"
 MAX_LABELS = 8     # kinds on one line before it lists just the kinds (capitals)
 
 
-def wago_table(name):
+def wago_table(name, build=CLASSIC):
     import csv
     import io
     import subprocess
     import time
     os.makedirs(CACHE, exist_ok=True)
-    path = os.path.join(CACHE, name + '.csv')
+    path = os.path.join(CACHE, name + ('.csv' if build == CLASSIC else '.%s.csv' % build))
     if not os.path.exists(path):
         print('fetching %s ...' % name)
-        data = subprocess.run(['curl', '-s', '-f', '-A', 'Mozilla/5.0', WAGO % name], capture_output=True, check=True).stdout
+        data = subprocess.run(['curl', '-s', '-f', '-A', 'Mozilla/5.0', WAGO % (name, build)], capture_output=True, check=True).stdout
         if not data.startswith(b'ID'):
             raise SystemExit('wago.tools sent something other than a CSV for %s' % name)
         with open(path, 'wb') as f:

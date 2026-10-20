@@ -191,6 +191,22 @@ function Sc:IsUpgrade(cmp)
     return not cmp.percent or cmp.percent + 0.000001 >= (tonumber(ns.db.minUpgrade) or 0)
 end
 
+-- For other addons (Wally, before it sells gear): whether an item beats what it would replace, by
+-- your StatLedger stats. Returns isUpgrade, detail ("+4.2% (+3 Stamina, +2 Strength)"), or nil while it
+-- can't be judged (not gear, still loading). Unlike the bag highlight, a level requirement above yours
+-- doesn't count against it: you'll grow into the item.
+TapeMeasureAPI = TapeMeasureAPI or {}
+function TapeMeasureAPI.IsUpgrade(link)
+    if not link then return nil end
+    local ok, cmp = pcall(Sc.Compare, Sc, link)
+    if not ok or not cmp or cmp.verdict == "none" then return nil end
+    if cmp.info.unusable then return false, "can't use" end
+    if cmp.verdict == "new" then return cmp.new.total > 0, "empty slot" end
+    if cmp.verdict ~= "upgrade" then return false, cmp.verdict end
+    local reasons = Sc:Reasons(cmp, 2)
+    return true, Sc:FormatChange(cmp, true) .. (reasons ~= "" and (" (" .. reasons .. ")") or "")
+end
+
 -- Upgrades in your bags: { bag, slot, link, cmp }, empty slots first, then by percent.
 function Sc:ScanBags()
     local out = {}

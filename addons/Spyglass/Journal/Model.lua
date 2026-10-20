@@ -60,7 +60,7 @@ function Model:Build(parent)
     panel.name = J.TitleText(panel, 20)
     panel.name:SetPoint("BOTTOM", 0, 26)
     panel.name:SetTextColor(0.95, 0.88, 0.72)
-    panel.note = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.note = panel:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     panel.note:SetPoint("BOTTOM", 0, 10)
     panel.note:SetTextColor(0.7, 0.7, 0.7)
 

@@ -184,10 +184,12 @@ end
 -- The badges' frame level: above every layer that covers the whole map (the explored subzones'
 -- painted art is one, and it paints over anything at or below its level: a badge on an explored
 -- town vanished under it), but under Waypoint's own path and target pins (+2100). Layers at or
--- over that line are left out, so none can lift the badges over Waypoint's pins.
+-- over that line are left out, so none can lift the badges over Waypoint's pins. With OpenMap's
+-- stitched map up, all of it starts above OpenMap's art (ns:MapBase): its layers are frames inside
+-- one on the canvas, so looking through the canvas doesn't see how high they go.
 local LAYER_CAP = 2090
 BadgeLevel = function(canvas)
-    local base = canvas:GetFrameLevel()
+    local base = ns:MapBase(canvas)
     local level = base + 1999
     for _, f in ipairs({ canvas:GetChildren() }) do
         if not f.wpTown and f:IsVisible() then
@@ -529,12 +531,33 @@ function Towns:Refresh()
     end
     local mapID = WorldMapFrame:GetMapID()
     local list = mapID and Index()[mapID]
+    -- On OpenMap's stitched map a zone's neighbours show around it: their towns too (as on a zone,
+    -- not on a continent or the world, where there would be hundreds). A capital listed on its zone
+    -- and its own map shows once.
+    local info = mapID and ns.Nav:Stitched() and C_Map.GetMapInfo(mapID)
+    if info and Enum and Enum.UIMapType and info.mapType and info.mapType >= Enum.UIMapType.Zone then
+        local all, names = {}, {}
+        for _, t in ipairs(list or {}) do all[#all + 1], names[t[1]] = t, true end
+        for other, towns in pairs(Index()) do
+            if other ~= mapID then
+                for _, t in ipairs(towns) do
+                    if not names[t[1]] then
+                        local x, y = ns.Nav:OnCanvas(t[2], t[3], t[4], mapID)
+                        if x then all[#all + 1], names[t[1]] = t, true end
+                    end
+                end
+            end
+        end
+        list = all
+    end
     if list then
         local canvas = WorldMapFrame:GetCanvas()
         local w, h = canvas:GetSize()
         local scale = 1 / (WorldMapFrame:GetCanvasScale() or 1) -- the same size on screen at any zoom (as MapPins)
         local level = BadgeLevel(canvas)
         for _, t in ipairs(list) do
+            local x, y = t[3], t[4]
+            if t[2] ~= mapID then x, y = ns.Nav:OnCanvas(t[2], t[3], t[4], mapID) end
             local pin = GetPin(canvas)
             pin.town = t
             SetBadge(pin.icon, t[5] == "AH" and ICON_NEUTRAL or ICON)
@@ -543,7 +566,7 @@ function Towns:Refresh()
             pin:SetAlpha(1)
             pin:SetFrameLevel(level)
             pin:ClearAllPoints()
-            pin:SetPoint("CENTER", canvas, "TOPLEFT", t[3] * w / scale, -t[4] * h / scale)
+            pin:SetPoint("CENTER", canvas, "TOPLEFT", x * w / scale, -y * h / scale)
             pin:Show()
         end
     end

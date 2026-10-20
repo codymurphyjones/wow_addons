@@ -17,7 +17,7 @@ local function GetRow(n)
 	if not r then
 		r = CreateFrame("Frame", nil, scrollChild)
 		r:SetHeight(ROW_H)
-		r.label = r:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+		r.label = r:CreateFontString(nil, "ARTWORK", "SaddleBagsGameFontHighlight")
 		r.label:SetPoint("LEFT", 0, 0)
 		r.label:SetJustifyH("LEFT")
 		r.buttons = {}
@@ -57,7 +57,7 @@ local function AddCheck(anchor, text, onClick)
 	check:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
 	local label = check.Text or check.text
 	if not label then
-		label = check:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+		label = check:CreateFontString(nil, "ARTWORK", "SaddleBagsGameFontHighlight")
 		label:SetPoint("LEFT", check, "RIGHT", 2, 0)
 	end
 	label:SetText(text)
@@ -77,11 +77,11 @@ function TS:CreateOptions()
 	icon:SetPoint("TOPLEFT", 16, -16)
 	icon:SetTexture(TS.ICON)
 
-	local title = f:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+	local title = f:CreateFontString(nil, "ARTWORK", "SaddleBagsGameFontNormalLarge")
 	title:SetPoint("LEFT", icon, "RIGHT", 8, 0)
 	title:SetText("SaddleBags: Tabbed UI System")
 
-	local desc = f:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	local desc = f:CreateFontString(nil, "ARTWORK", "SaddleBagsGameFontHighlightSmall")
 	desc:SetPoint("TOPLEFT", icon, "BOTTOMLEFT", 0, -8)
 	desc:SetPoint("RIGHT", f, "RIGHT", -16, 0)
 	desc:SetJustifyH("LEFT")
@@ -195,7 +195,7 @@ function TS:RefreshOptions()
 	-- Saddles ------------------------------------------------------------------
 	local n = 1
 	local r = GetRow(n)
-	r.label:SetFontObject(GameFontNormalLarge)
+	r.label:SetFontObject(SaddleBagsGameFontNormalLarge)
 	r.label:SetText("Saddles")
 	SetButton(r, 1, "New Saddle...", function() TS:PromptNewSaddle() end, 120)
 	r.buttons[1]:SetEnabled(#db.saddles < self.MAX_SADDLES)
@@ -205,7 +205,7 @@ function TS:RefreshOptions()
 		local isSelected = saddle == selected
 		n = n + 1
 		r = GetRow(n)
-		r.label:SetFontObject(isSelected and GameFontNormal or GameFontHighlight)
+		r.label:SetFontObject(isSelected and SaddleBagsGameFontNormal or SaddleBagsGameFontHighlight)
 		r.label:SetFormattedText("      %s  |cffaaaaaa- %d %s, %d %s|r", sd.name,
 			sd.tabCount, sd.tabCount == 1 and "tab" or "tabs",
 			WindowCount(sd), WindowCount(sd) == 1 and "window" or "windows")
@@ -226,12 +226,12 @@ function TS:RefreshOptions()
 	GetRow(n).label:SetText("")
 	n = n + 1
 	r = GetRow(n)
-	r.label:SetFontObject(GameFontNormalLarge)
+	r.label:SetFontObject(SaddleBagsGameFontNormalLarge)
 	r.label:SetText(sd.name .. ": tabs and windows")
 
 	n = n + 1
 	r = GetRow(n)
-	r.label:SetFontObject(GameFontNormal)
+	r.label:SetFontObject(SaddleBagsGameFontNormal)
 	r.label:SetFormattedText("Number of tabs: |cffffffff%d|r", sd.tabCount)
 	SetButton(r, 1, "+", function() selected:SetTabCount(sd.tabCount + 1) end, 26)
 	SetButton(r, 2, "-", function() selected:SetTabCount(sd.tabCount - 1) end, 26)
@@ -242,7 +242,7 @@ function TS:RefreshOptions()
 		local tab = sd.tabs[i]
 		n = n + 1
 		r = GetRow(n)
-		r.label:SetFontObject(GameFontNormal)
+		r.label:SetFontObject(SaddleBagsGameFontNormal)
 		r.label:SetFormattedText("Tab %d: %s", i, tab.name)
 		SetButton(r, 1, "Rename...", function() TS:PromptRename(selected, i) end)
 		SetButton(r, 2, "Add by name...", function() TS:PromptAddByName(selected, i) end)
@@ -251,13 +251,13 @@ function TS:RefreshOptions()
 		if #tab.frames == 0 then
 			n = n + 1
 			r = GetRow(n)
-			r.label:SetFontObject(GameFontDisable)
+			r.label:SetFontObject(SaddleBagsGameFontDisable)
 			r.label:SetText("      (no windows)")
 		end
 		for pos, name in ipairs(tab.frames) do
 			n = n + 1
 			r = GetRow(n)
-			r.label:SetFontObject(GameFontHighlight)
+			r.label:SetFontObject(SaddleBagsGameFontHighlight)
 			local f = _G[name]
 			local status, kind
 			if type(f) == "table" and self.captured[f] then
@@ -287,11 +287,11 @@ function TS:RefreshOptions()
 	GetRow(n).label:SetText("")
 	n = n + 1
 	r = GetRow(n)
-	r.label:SetFontObject(GameFontNormalLarge)
+	r.label:SetFontObject(SaddleBagsGameFontNormalLarge)
 	r.label:SetText("Blizzard windows")
 	n = n + 1
 	r = GetRow(n)
-	r.label:SetFontObject(GameFontHighlightSmall)
+	r.label:SetFontObject(SaddleBagsGameFontHighlightSmall)
 	r.label:SetText("Pick a Saddle and tab to lock a window into it; it re-attaches every login. "
 		.. "|cffff8040Protected|r windows freeze their Saddle during combat.")
 
@@ -310,7 +310,7 @@ function TS:RefreshOptions()
 		if name then
 			n = n + 1
 			r = GetRow(n)
-			r.label:SetFontObject(GameFontHighlight)
+			r.label:SetFontObject(SaddleBagsGameFontHighlight)
 			local note = f:IsProtected() and "  |cffff8040protected|r" or ""
 			r.label:SetFormattedText("      %s  |cffaaaaaa(%s)|r%s", entry.label, name, note)
 			local saddle, tabIndex = self:FindTab(name)

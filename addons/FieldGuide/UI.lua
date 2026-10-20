@@ -40,6 +40,10 @@ function UI:Dock()
     end
 end
 
+-- WallyHUD's shared look: a see-through surface with a hairline, titles in primary text; the
+-- guide's green / a dungeon's purple stays only on the progress bar (where it means something).
+local function Suite() return WallyHUD and WallyHUD.Panel and WallyHUD.Tokens end
+
 local function Build()
     if f then return end
     f = CreateFrame("Frame", "FieldGuideFrame", UIParent, "BackdropTemplate")
@@ -47,6 +51,7 @@ local function Build()
     f:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
     f:SetBackdropColor(0.03, 0.05, 0.04, 0.82)
     f:SetBackdropBorderColor(GREEN[1], GREEN[2], GREEN[3], 0.35)
+    if Suite() then WallyHUD.Panel(f, "base") end
     UI:Dock()
     f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
     -- Docked under Waypoint's arrow: dragging the guide moves the arrow, and the guide follows.
@@ -71,9 +76,9 @@ local function Build()
 
     local icon = f:CreateTexture(nil, "ARTWORK"); icon:SetSize(16, 16); icon:SetPoint("TOPLEFT", 6, -5)
     icon:SetTexture(ns.ICON)
-    f.title = Text(f, "GameFontNormal", 26, -6, WIDTH - 90)
+    f.title = Text(f, "FieldGuideGameFontNormal", 26, -6, WIDTH - 90)
     f.title:SetTextColor(GREEN[1], GREEN[2], GREEN[3]); f.title:SetWordWrap(false)
-    f.count = Text(f, "GameFontHighlightSmall", WIDTH - 90, -7, 60)
+    f.count = Text(f, "FieldGuideGameFontHighlightSmall", WIDTH - 90, -7, 60)
     f.count:SetJustifyH("RIGHT"); f.count:SetTextColor(0.65, 0.7, 0.68)
 
     local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
@@ -100,12 +105,12 @@ local function Build()
     end)
     planButton:SetScript("OnLeave", function() f.count:SetTextColor(0.65, 0.7, 0.68); GameTooltip:Hide() end)
 
-    f.step = Text(f, "GameFontHighlight", 8, -32, WIDTH - 16)
+    f.step = Text(f, "FieldGuideGameFontHighlight", 8, -32, WIDTH - 16)
     -- Each line sits under the one above it, however many lines that one wraps to.
-    f.detail = Text(f, "GameFontHighlightSmall", 8, -50, WIDTH - 16)
+    f.detail = Text(f, "FieldGuideGameFontHighlightSmall", 8, -50, WIDTH - 16)
     f.detail:ClearAllPoints(); f.detail:SetPoint("TOPLEFT", f.step, "BOTTOMLEFT", 0, -4)
     f.detail:SetTextColor(0.78, 0.8, 0.78)
-    f.next = Text(f, "GameFontHighlightSmall", 8, -80, WIDTH - 16)
+    f.next = Text(f, "FieldGuideGameFontHighlightSmall", 8, -80, WIDTH - 16)
     f.next:ClearAllPoints(); f.next:SetPoint("TOPLEFT", f.detail, "BOTTOMLEFT", 0, -8)
     f.next:SetTextColor(0.55, 0.58, 0.56); f.next:SetSpacing(2)
 
@@ -206,9 +211,15 @@ function UI:Theme()
     local col = ns.char.instance and PURPLE or GREEN
     if f.themed == col then return end
     f.themed = col
+    f.bar:SetColorTexture(col[1], col[2], col[3], 0.9)
+    if Suite() then
+        local primary = WallyHUD.Tokens.text.primary
+        f.title:SetTextColor(WallyHUD.RGBA(primary))
+        if plan then plan.title:SetTextColor(WallyHUD.RGBA(primary)) end
+        return
+    end
     f:SetBackdropBorderColor(col[1], col[2], col[3], 0.35)
     f.title:SetTextColor(col[1], col[2], col[3])
-    f.bar:SetColorTexture(col[1], col[2], col[3], 0.9)
     if plan then
         plan:SetBackdropBorderColor(col[1], col[2], col[3], 0.45)
         plan.title:SetTextColor(col[1], col[2], col[3])
@@ -245,10 +256,11 @@ local function BuildPlan()
     plan:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
     plan:SetBackdropColor(0.03, 0.05, 0.04, 0.94)
     plan:SetBackdropBorderColor(GREEN[1], GREEN[2], GREEN[3], 0.45)
+    if Suite() then WallyHUD.Panel(plan, "raised") end
     plan:SetPoint("TOPRIGHT", f, "TOPLEFT", -6, 0)
     plan:SetMovable(true); plan:EnableMouse(true); plan:RegisterForDrag("LeftButton")
     plan:SetScript("OnDragStart", plan.StartMoving); plan:SetScript("OnDragStop", plan.StopMovingOrSizing)
-    plan.title = Text(plan, "GameFontNormal", 10, -8, 300)
+    plan.title = Text(plan, "FieldGuideGameFontNormal", 10, -8, 300)
     plan.title:SetTextColor(GREEN[1], GREEN[2], GREEN[3])
     if f then f.themed = nil end -- recolor both on the next refresh
     local close = CreateFrame("Button", nil, plan, "UIPanelCloseButton")
@@ -258,7 +270,7 @@ local function BuildPlan()
     scroll:SetPoint("TOPLEFT", 8, -30); scroll:SetPoint("BOTTOMRIGHT", -28, 8)
     local content = CreateFrame("Frame", nil, scroll); content:SetSize(320, 10)
     scroll:SetScrollChild(content)
-    plan.text = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    plan.text = content:CreateFontString(nil, "OVERLAY", "FieldGuideGameFontHighlightSmall")
     plan.text:SetPoint("TOPLEFT"); plan.text:SetWidth(318); plan.text:SetJustifyH("LEFT"); plan.text:SetSpacing(3)
     plan.content, plan.scroll = content, scroll
 end

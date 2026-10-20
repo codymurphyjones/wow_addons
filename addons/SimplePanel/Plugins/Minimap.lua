@@ -4,7 +4,8 @@ local _, ns = ...
 -- corner under the bar. Everything else the game draws around the map goes (ring, zone name,
 -- clock, zoom buttons, day/night button...). What's still needed is drawn here, in the square's
 -- corners: tracking as a gear (top left), a calendar tile (top right), the battleground queue
--- (bottom left) and the dungeon queue (bottom right); mail is the Mail plugin's job. The mouse wheel zooms. Add-on minimap buttons
+-- (bottom left) and the dungeon queue (bottom right); mail is the Mail plugin's job. Under the
+-- square, the server and local time. The mouse wheel zooms. Add-on minimap buttons
 -- placed on the minimap stay around its edge; the rest are the drawer's. Buffs line up to the left
 -- of the square.
 local T = SimplePanel.Theme
@@ -306,28 +307,56 @@ local MAP_PARTS = {
 }
 
 -- Hidden by parenting them to a hidden frame, so the game showing them again changes nothing.
-local function Hide(f)
+-- Unnamed things on the map itself are left alone (they're add-ons' pins); the named parts above
+-- go wherever the client put them (some clients hang the day/night button on the map).
+local faded = {}  -- [frame] = its alpha, for protected parts we can't reparent
+local function Hide(f, named)
+    -- A protected part (newer clients protect some of the map's buttons) can't be moved out of
+    -- the way; it's made invisible instead, and stops taking the mouse while out of combat.
+    if named and f and f ~= Minimap and not faded[f] and f.IsProtected and f:IsProtected() and f.SetAlpha then
+        faded[f] = f:GetAlpha()
+        f:SetAlpha(0)
+        if f.EnableMouse and not InCombatLockdown() then pcall(f.EnableMouse, f, false) end
+        hooksecurefunc(f, "SetAlpha", function(self, a)
+            if faded[self] and a ~= 0 then self:SetAlpha(0) end
+        end)
+        return
+    end
     if f and f ~= Minimap and f ~= box and not hidden[f] and not rescued[f] and f:GetParent() ~= hider
-        and not (f.IsProtected and f:IsProtected()) and not IsAncestor(f, Minimap) then
+        and not (f.IsProtected and f:IsProtected()) and (named or not IsAncestor(f, Minimap)) then
         hidden[f] = f:GetParent()
         f:SetParent(hider)
     end
 end
 
 local function HideAll()
-    for _, name in ipairs(MAP_PARTS) do Hide(_G[name]) end
+    for _, name in ipairs(MAP_PARTS) do Hide(_G[name], true) end
     for _, key in ipairs({ "ZoomIn", "ZoomOut", "ZoomHitArea" }) do Hide(Minimap[key]) end
     local c = MinimapCluster
     if c then
         -- Corner frames were moved to the square first, so they aren't the cluster's any more.
         for _, f in ipairs({ c:GetChildren() }) do Hide(f) end
         for _, r in ipairs({ c:GetRegions() }) do Hide(r) end
+        -- Newer clients hold the map in c.MinimapContainer, beside the player coordinates
+        -- (PlayerCoords) and the day/night moon (c.DielFrame, unnamed): everything there but the map.
+        local holder = c.MinimapContainer
+        if holder then
+            for _, f in ipairs({ holder:GetChildren() }) do
+                if f ~= Minimap then Hide(f, true) end
+            end
+        end
+        Hide(c.DielFrame, true)
     end
 end
 
 local function ShowAll()
     for f, parent in pairs(hidden) do f:SetParent(parent) end
     hidden = {}
+    for f, alpha in pairs(faded) do
+        faded[f] = nil
+        f:SetAlpha(alpha)
+        if f.EnableMouse and not InCombatLockdown() then pcall(f.EnableMouse, f, true) end
+    end
 end
 
 -- Add-on buttons kept on the minimap but parented to the backdrop or the cluster would vanish with
@@ -367,6 +396,68 @@ local function PlaceAuras()
     end
     auraApplying = false
 end
+
+-- ---------------------------------------------------------------------------
+-- On top: bar plugins set to "On top of the minimap" (the Location plugin) sit in a strip between
+-- the bar and the square, as wide as the square, centered. The bar hands them over in its layout.
+-- ---------------------------------------------------------------------------
+
+local top            -- the strip
+local topList = {}   -- the plugins in it
+local plugin         -- this plugin, for the collapsed setting
+
+local function TopHeight()
+    local h = 0
+    for _, q in ipairs(topList) do h = math.max(h, q.button:GetHeight()) end
+    return h
+end
+
+local function PaintTop()
+    if not top then return end
+    top:SetBackdropColor(T.base[1], T.base[2], T.base[3], ns.Clamp(ns.db.options.alpha or 1, 0, 1))
+    top:SetBackdropBorderColor(T.border[1], T.border[2], T.border[3], 1)
+end
+
+local function PlaceTop()
+    if not box then return end
+    if #topList == 0 then
+        if top then top:Hide() end
+        return
+    end
+    if not top then
+        top = CreateFrame("Frame", "SimplePanelMinimapTop", box, "BackdropTemplate")
+        top:SetBackdrop({ bgFile = T.white, edgeFile = T.white, edgeSize = 1 })
+        PaintTop()
+    end
+    top:SetFrameLevel(box:GetFrameLevel() + 2)
+    top:SetHeight(TopHeight())
+    -- shares the square's top border line
+    top:ClearAllPoints()
+    top:SetPoint("BOTTOMLEFT", box, "TOPLEFT", 0, -1)
+    top:SetPoint("BOTTOMRIGHT", box, "TOPRIGHT", 0, -1)
+    top:Show()
+    local total = 0
+    for _, q in ipairs(topList) do total = total + q.button:GetWidth() end
+    local x = -total / 2
+    for _, q in ipairs(topList) do
+        local b = q.button
+        if b:GetParent() ~= top then b:SetParent(top) end
+        b:SetFrameLevel(top:GetFrameLevel() + 1)
+        b:ClearAllPoints()
+        b:SetPoint("LEFT", top, "CENTER", x, 0)
+        if b.divider then b.divider:Hide() end
+        b:Show()
+        x = x + b:GetWidth()
+    end
+end
+
+ns.Bar.minimapHost = {
+    IsActive = function() return active and box ~= nil and not (plugin and plugin:Get("collapsed")) end,
+    Place = function(_, list)
+        topList = list
+        PlaceTop()
+    end,
+}
 
 local function TakeAuras(p)
     if auras or not p:Get("alignBuffs") or not box then return end
@@ -412,6 +503,82 @@ end
 -- The square
 -- ---------------------------------------------------------------------------
 
+-- ---------------------------------------------------------------------------
+-- Clocks: a strip under the square with the server time (left) and your computer's time (right),
+-- in the game's 12/24-hour setting. Click: the game's stopwatch and alarm.
+-- ---------------------------------------------------------------------------
+
+local clocks
+local CLOCKS_H = 20
+
+local function Clock(h, m)
+    if GetCVarBool and GetCVarBool("timeMgrUseMilitaryTime") then return ("%02d:%02d"):format(h, m) end
+    return ("%d:%02d %s"):format((h + 11) % 12 + 1, m, h < 12 and "AM" or "PM")
+end
+
+local function ServerTime()
+    local h, m = GetGameTime()
+    return Clock(h, m)
+end
+
+local function LocalTime()
+    local now = date("*t")
+    return Clock(now.hour, now.min)
+end
+
+local function UpdateClocks()
+    if not (clocks and clocks:IsShown()) then return end
+    clocks.server:SetText(T.hex.muted .. "SERVER|r  " .. ServerTime())
+    clocks.localTime:SetText(T.hex.muted .. "LOCAL|r  " .. LocalTime())
+end
+
+local function PaintClocks(hover)
+    if not clocks then return end
+    local edge = hover and T.accent or T.border
+    clocks:SetBackdropColor(T.base[1], T.base[2], T.base[3], ns.Clamp(ns.db.options.alpha or 1, 0, 1))
+    clocks:SetBackdropBorderColor(edge[1], edge[2], edge[3], 1)
+    for _, fs in ipairs({ clocks.server, clocks.localTime }) do fs:SetTextColor(T.text[1], T.text[2], T.text[3]) end
+end
+
+local function OpenTimeManager()
+    if not TimeManager_Toggle and UIParentLoadAddOn then pcall(UIParentLoadAddOn, "Blizzard_TimeManager") end
+    if TimeManager_Toggle then TimeManager_Toggle() end
+end
+
+local function MakeClocks()
+    clocks = CreateFrame("Button", "SimplePanelMinimapClocks", box, "BackdropTemplate")
+    clocks:SetBackdrop({ bgFile = T.white, edgeFile = T.white, edgeSize = 1 })
+    clocks:SetHeight(CLOCKS_H)
+    -- shares the square's bottom border line
+    clocks:SetPoint("TOPLEFT", box, "BOTTOMLEFT", 0, 1)
+    clocks:SetPoint("TOPRIGHT", box, "BOTTOMRIGHT", 0, 1)
+    clocks.server = clocks:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall")
+    clocks.server:SetPoint("LEFT", 7, 0)
+    clocks.localTime = clocks:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall")
+    clocks.localTime:SetPoint("RIGHT", -7, 0)
+    clocks:RegisterForClicks("AnyUp")
+    clocks:SetScript("OnClick", function() ns.Tooltip:Hide(); OpenTimeManager() end)
+    clocks:SetScript("OnEnter", function(self)
+        PaintClocks(true)
+        local tt = ns.Tooltip:Begin(self)
+        tt:SetTitle("Time")
+        tt:AddDouble("Server", ServerTime())
+        tt:AddDouble("Local", LocalTime())
+        tt:AddHint("Click: stopwatch and alarm")
+        tt:Show()
+    end)
+    clocks:SetScript("OnLeave", function() PaintClocks(false); ns.Tooltip:Hide() end)
+    local acc = 1
+    clocks:SetScript("OnUpdate", function(_, elapsed)
+        acc = acc + elapsed
+        if acc < 1 then return end
+        acc = 0
+        UpdateClocks()
+    end)
+    clocks:SetScript("OnShow", UpdateClocks)
+    PaintClocks(false)
+end
+
 -- Below the bar when it's showing and stays put (auto-hide slides over the corner).
 local function BarOffset()
     local bar = ns.Bar and ns.Bar.frame
@@ -425,6 +592,8 @@ local function Paint()
     box:SetBackdropColor(T.base[1], T.base[2], T.base[3], ns.Clamp(ns.db.options.alpha or 1, 0, 1))
     box:SetBackdropBorderColor(T.border[1], T.border[2], T.border[3], 1)
     PaintCalendar(cal and cal:IsMouseOver())
+    PaintTop()
+    PaintClocks(clocks and clocks:IsMouseOver())
     local t = taken.tracking
     if t and t.overlay then t.overlay.icon:SetVertexColor(T.accent[1], T.accent[2], T.accent[3]) end
 end
@@ -433,6 +602,131 @@ local function Zoom(_, delta)
     if not active then return end
     local z = Minimap:GetZoom() + (delta > 0 and 1 or -1)
     if z >= 0 and z < Minimap:GetZoomLevels() then Minimap:SetZoom(z) end
+end
+
+-- ---------------------------------------------------------------------------
+-- WallyHUD's suite look (when it's installed): a square map filling the square, and the add-on
+-- buttons in a row under it instead of on its edge.
+-- ---------------------------------------------------------------------------
+
+local function Suite()
+    return WallyHUD and WallyHUD.Tokens and not (WallyHUD.db and WallyHUD.db.suiteLook == false)
+end
+
+local ROUND_MASK = "Textures\\MinimapMask"
+local squared = false
+local function SquareMap()
+    if squared or not Minimap.SetMaskTexture then return end
+    squared = true
+    Minimap:SetMaskTexture(T.white)
+    -- Add-ons (LibDBIcon and the like) ask this to place things on the edge.
+    function GetMinimapShape() return "SQUARE" end
+end
+local function RoundMap()
+    if not squared then return end
+    squared = false
+    Minimap:SetMaskTexture(ROUND_MASK)
+    GetMinimapShape = nil
+end
+
+-- The add-on buttons set to "On the minimap" in the launcher settings (or, without the launcher
+-- manager, the ones on the map), in a row under the square (wrapping), each a little smaller.
+-- Buttons the manager keeps elsewhere (the drawer, the bar, the screen, hidden) are left to it;
+-- one moved off the minimap there leaves the row and gets its old parent, size and spot back.
+-- While one is in the row, anything that moves it (its add-on, a drag) gets it put back.
+local row
+local ICON, ICON_GAP = 24, 4
+local rowButtons = {}  -- [button] = { parent, scale, points } from before it joined the row
+local rowHooked = {}
+local placing, pending = false, false
+local PlaceRow
+local function RowSoon()
+    if placing or pending or not active then return end
+    pending = true
+    C_Timer.After(0, PlaceRow)
+end
+local function OnMap(b)
+    local parent = b:GetParent()
+    return parent == Minimap or (MinimapBackdrop and parent == MinimapBackdrop)
+end
+local function Candidates()
+    if ns.Launchers and ns.Launchers.MinimapButtons then return ns.Launchers:MinimapButtons() end
+    return WallyHUD.MinimapButtonList and WallyHUD.MinimapButtonList() or {}
+end
+local function LeaveRow(b)
+    local was = rowButtons[b]
+    if not was then return end
+    rowButtons[b] = nil
+    b:SetParent(was.parent)
+    b:SetScale(was.scale)
+    if #was.points > 0 then
+        b:ClearAllPoints()
+        SetPoints(b, was.points)
+    end
+end
+PlaceRow = function()
+    pending = false
+    if not (active and box and Suite()) then return end
+    if InCombatLockdown() then return ns:AfterCombat("minimapRow", PlaceRow) end
+    if not row then
+        row = CreateFrame("Frame", "SimplePanelMinimapButtonRow", UIParent)
+        row:SetFrameStrata("MEDIUM")
+    end
+    placing = true
+    local list, keep = {}, {}
+    for _, b in ipairs(Candidates()) do
+        if not (b.IsProtected and b:IsProtected()) and (rowButtons[b] or OnMap(b)) then
+            keep[b] = true
+            if b:IsShown() then list[#list + 1] = b end
+        end
+    end
+    for b in pairs(rowButtons) do
+        if not keep[b] then LeaveRow(b) end
+    end
+    table.sort(list, function(x, y) return (x:GetName() or "") < (y:GetName() or "") end)
+    local width = box:GetWidth() * box:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    local perRow = math.max(1, math.floor((width + ICON_GAP) / (ICON + ICON_GAP)))
+    row:ClearAllPoints()
+    local under = (clocks and clocks:IsShown()) and clocks or box
+    row:SetPoint("TOPRIGHT", under, "BOTTOMRIGHT", 0, -ICON_GAP)
+    row:SetSize(width, math.max(1, math.ceil(#list / perRow)) * (ICON + ICON_GAP))
+    row:SetShown(#list > 0)
+    for i, b in ipairs(list) do
+        if not rowButtons[b] then
+            rowButtons[b] = { parent = b:GetParent(), scale = b:GetScale(), points = Points(b) }
+        end
+        if not rowHooked[b] then
+            rowHooked[b] = true
+            -- moved, shown or hidden by someone else: lay the row out again
+            for _, method in ipairs({ "SetPoint", "Show", "Hide", "SetShown" }) do
+                hooksecurefunc(b, method, function() if rowButtons[b] then RowSoon() end end)
+            end
+        end
+        local scale = ICON / math.max(1, b:GetWidth())
+        local col, line = (i - 1) % perRow, math.floor((i - 1) / perRow)
+        b:SetParent(row)
+        b:SetScale(scale)
+        b:ClearAllPoints()
+        b:SetPoint("TOPRIGHT", row, "TOPRIGHT", -col * (ICON + ICON_GAP) / scale, -line * (ICON + ICON_GAP) / scale)
+    end
+    placing = false
+end
+
+-- The launcher manager changed where a launcher goes: the row follows on the next frame.
+if ns.Launchers and ns.Launchers.SetPlacement then
+    hooksecurefunc(ns.Launchers, "SetPlacement", function() RowSoon() end)
+end
+
+local function SuiteLayout()
+    if not Suite() then return end
+    SquareMap()
+    RowSoon()
+end
+
+local function SuiteRelease()
+    RoundMap()
+    if row then row:Hide() end
+    for b in pairs(rowButtons) do LeaveRow(b) end
 end
 
 local function Layout(p)
@@ -457,8 +751,11 @@ local function Layout(p)
     box:SetSize(Minimap:GetWidth() * k + 2 * PAD, Minimap:GetHeight() * k + 2 * PAD)
     box:ClearAllPoints()
     -- Hung from the bar: flush with the screen's right edge, its top border on the bar's bottom line.
-    box:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", 0, -math.max(0, BarOffset() - 1))
+    -- Below the strip of plugins on top, when there's one (sharing its bottom border line).
+    local above = #topList > 0 and (TopHeight() - 1) or 0
+    box:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", 0, -math.max(0, BarOffset() - 1) - above)
     box:Show()
+    PlaceTop()
     local _, rel = Minimap:GetPoint(1)
     if Minimap:GetNumPoints() ~= 1 or rel ~= box then
         applying = true
@@ -468,11 +765,14 @@ local function Layout(p)
     end
     cal:SetShown(HasCalendar())
     UpdateCalendar()
+    clocks:SetShown(p:Get("clocks") ~= false)
     TakeAuras(p)
+    SuiteLayout()
 end
 
 local function Activate(p)
     if active or not Minimap then return end
+    plugin = p
     if not box then
         box = CreateFrame("Frame", "SimplePanelMinimapFrame", UIParent, "BackdropTemplate")
         box:SetFrameStrata("BACKGROUND")
@@ -482,6 +782,7 @@ local function Activate(p)
         -- square places its corners itself, so there's nothing to do.
         box.Layout = function() end
         MakeCalendar()
+        MakeClocks()
     end
     active = true
     Paint()
@@ -501,6 +802,7 @@ local function Activate(p)
         hooksecurefunc(ns.Bar, "Layout", function() Paint(); Layout(p) end)
     end
     Layout(p)
+    ns.Bar:Layout() -- plugins set to sit on top of the minimap move here
 end
 
 local function Deactivate()
@@ -515,6 +817,7 @@ local function Deactivate()
     Minimap:EnableMouseWheel(savedWheel or false)
     for key in pairs(CORNERS) do Release(key) end
     ReleaseAuras()
+    SuiteRelease()
     ReturnButtons()
     ShowAll()
     if savedPoints then
@@ -523,6 +826,7 @@ local function Deactivate()
         applying = false
         savedPoints = nil
     end
+    ns.Bar:Layout() -- plugins that sat on top of the minimap go back to the bar
 end
 
 SimplePanel.RegisterPlugin({
@@ -532,7 +836,7 @@ SimplePanel.RegisterPlugin({
     icon = "Interface\\Icons\\INV_Misc_Map02",
     zone = "right",
     defaultEnabled = false,
-    defaults = { alignBuffs = true, scale = 0.92, collapsed = false },
+    defaults = { alignBuffs = true, scale = 0.92, collapsed = false, clocks = true },
     events = { "PLAYER_ENTERING_WORLD", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED", "CALENDAR_UPDATE_PENDING_INVITES" },
 
     onInit = function(p)
@@ -567,11 +871,15 @@ SimplePanel.RegisterPlugin({
                 Layout(p)
             end,
             tooltip = "Buffs and debuffs sit to the left of the square, level with its top, below the bar." })
+        m:Checkbox({ text = "Server and local time under the minimap", get = function() return p:Get("clocks") ~= false end,
+            set = function(v) p:Set("clocks", v); Layout(p) end,
+            tooltip = "Two digital clocks under the square: the server's time and your computer's. Click them for the stopwatch and alarm." })
     end,
 
     onClick = function(p, button)
         if button ~= "LeftButton" then return end
         p:Set("collapsed", not p:Get("collapsed"))
         Layout(p)
+        ns.Bar:Layout() -- plugins on top of the minimap follow it onto the bar and back
     end,
 })

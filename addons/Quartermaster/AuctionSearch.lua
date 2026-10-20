@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- The live auction house search panel, used by the Buying tab and the Cart's Find panel. Laid out
 -- like the /qm Browse page:
@@ -86,7 +87,7 @@ function AuctionSearch:Create(parent, opts)
     local treeW = opts.compact and 130 or 150
 
     -- Summary line: status left, toolbar right ------------------------------
-    v.status = Muted(v:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    v.status = Muted(v:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     v.status:SetPoint("TOPLEFT", 0, -7); v.status:SetJustifyH("LEFT"); v.status:SetWordWrap(false)
 
     local recentDrop = W.MakeDropdown(v, 140, function()
@@ -197,7 +198,7 @@ function AuctionSearch:Create(parent, opts)
     -- Listings view: Back and the item's name in place of the headers.
     local back = MakeButton(results, "< Back", 60, 20); back:SetPoint("TOPLEFT", 0, 0); back:Hide()
     back:SetScript("OnClick", function() v:Back() end)
-    local title = results:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local title = results:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     title:SetPoint("LEFT", back, "RIGHT", 8, 0); title:SetPoint("RIGHT", results, "RIGHT", -30, 0)
     title:SetJustifyH("LEFT"); title:SetWordWrap(false); title:Hide()
     local list = W.CreateRowList(results, -24, { rowHeight = 30 })
@@ -207,7 +208,7 @@ function AuctionSearch:Create(parent, opts)
     bar:SetPoint("BOTTOMLEFT", 0, 0); bar:SetPoint("BOTTOMRIGHT", 0, 0); bar:SetHeight(32)
     -- Items: pages, like the Browse tab.
     local prev = MakeButton(bar, "< Prev", 60, 26); prev:SetPoint("LEFT", 0, 0)
-    local pageText = Muted(bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    local pageText = Muted(bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     pageText:SetPoint("LEFT", prev, "RIGHT", 8, 0); pageText:SetWidth(84)
     local nextBtn = MakeButton(bar, "Next >", 60, 26); nextBtn:SetPoint("LEFT", pageText, "RIGHT", 8, 0)
     prev:SetScript("OnClick", function() v.page = v.page - 1; v:ShowGroups() end)
@@ -216,7 +217,7 @@ function AuctionSearch:Create(parent, opts)
     -- Listings: one big Buy button, one click per purchase.
     local buy = MakeButton(bar, "Buy", opts.compact and 250 or 280, 30)
     buy:SetPoint("LEFT", 0, 0)
-    buy.text:SetFontObject("GameFontHighlight")
+    buy.text:SetFontObject("QuartermasterGameFontHighlight")
     -- Keep the text off the edges; UpdateButton widens the button to fit, up to a limit.
     buy.text:ClearAllPoints()
     buy.text:SetPoint("LEFT", BUY_PAD, 0); buy.text:SetPoint("RIGHT", -BUY_PAD, 0)
@@ -265,7 +266,8 @@ function AuctionSearch:Create(parent, opts)
     addItem:SetScript("OnClick", function()
         local id = v:SelectedItem()
         if not id then return ns:Print("Click an item first.", true) end
-        v:AddItem(id)
+        -- A selected listing knows its own enchant (modern groups hold every enchant of an item).
+        v:AddItem(id, nil, (v.mode == "listings" and v.selected) or v.group)
     end)
     addSearch:SetScript("OnClick", function()
         v:AddSearch()
@@ -415,10 +417,14 @@ function M:RunList(list)
         ns.Scanner:Browse(t.f, function(groups)
             if self.token ~= token then return end
             local section = { entry = t.entry, groups = groups or {}, failed = groups == nil }
-            -- An exact entry only wants its own item (the same name can match more than one).
+            -- An exact entry only wants its own item (the same name can match more than one), and
+            -- only its own enchant. Modern groups don't know their enchant: they stay, and their
+            -- listings show each copy's.
             if not t.entry.filter and groups then
-                local mine = {}
-                for _, g in ipairs(groups) do if g.itemID == t.entry.itemID then mine[#mine + 1] = g end end
+                local mine, key = {}, ns.Lists:Key(t.entry)
+                for _, g in ipairs(groups) do
+                    if g.itemID == t.entry.itemID and (not g.variant or g.variant == key) then mine[#mine + 1] = g end
+                end
                 section.groups = mine
             end
             table.insert(self.multi.sections, section)
@@ -500,13 +506,19 @@ local function SortGroups(groups, key, desc)
     table.sort(groups, function(a, b)
         if cmp(a, b) then return not desc end
         if cmp(b, a) then return desc end
-        return a.itemID < b.itemID
+        if a.itemID ~= b.itemID then return a.itemID < b.itemID end
+        return (a.variant or "") < (b.variant or "")
     end)
 end
 
--- "1g 20s  |cff..(-12%)|r" against Auctionator's market price.
-local function PriceText(unit, itemID)
-    local market = ns.Catalog:PriceFor(itemID)
+-- A group's (or listing's) market price: its own variant's (Catalog:MarketFor), so an enchanted copy
+-- isn't measured against the plain item's price. Modern groups don't know their variant: plain.
+local function MarketOf(x, itemID)
+    return ns.Catalog:MarketFor(itemID or x.itemID, x.variant, x.link)
+end
+
+-- "1g 20s  |cff..(-12%)|r" against the market price.
+local function PriceText(unit, market)
     if not market then return Money(unit) end
     local color = ns.Compare:Diff(market, unit)
     local pct = math.floor((unit - market) / market * 100 + 0.5)
@@ -525,16 +537,20 @@ local function GroupRow(self, g, target)
     if e.equipLoc and _G[e.equipLoc] and _G[e.equipLoc] ~= "" then detail[#detail + 1] = _G[e.equipLoc] end
     detail[#detail + 1] = g.available .. " available"
     if g.ownerHas then detail[#detail + 1] = "|cffffd24dyou have some listed|r" end
-    local onList = target and ns.Lists:Find(target, g.itemID)
+    local onList = target and ns.Lists:Find(target, g.itemID, g.variant)
     if onList then detail[#detail + 1] = ("|cff55d6be%d on list|r"):format(onList.qty) end
-    local market = ns.Catalog:PriceFor(g.itemID)
-    local add = function() self:AddItem(g.itemID) end
+    local market = MarketOf(g)
+    local plain = ns.Catalog:IsPlain(g.variant)
+    local add = function() self:AddItem(g.itemID, nil, g) end
+    local tag = not plain and g.link and ns.Catalog:VariantTag(g.link) or ""
     return {
         icon = W.IconFor(e.icon and e or { itemID = g.itemID }), link = g.link or e.link,
-        text = (g.name or e.name) and W.QualityName(g.name or e.name, g.quality or e.quality) or ("|cff8fa3b3item " .. g.itemID .. "|r"),
+        text = (g.name or e.name) and (W.QualityName(g.name or e.name, g.quality or e.quality) .. tag) or ("|cff8fa3b3item " .. g.itemID .. "|r"),
         detail = table.concat(detail, "  ·  "),
-        right = PriceText(g.minUnit, g.itemID),
-        hint = (market and ("Market: " .. Money(market) .. "\n") or "") .. "Click to see its listings and buy. Right-click or + adds it to your list. Shift-click to link.",
+        right = PriceText(g.minUnit, market),
+        hint = (market and ("Market: " .. Money(market) .. "\n")
+            or (not plain and "No market price for this enchant: Auctionator prices the plain item only.\n" or ""))
+            .. "Click to see its listings and buy. Right-click or + adds it to your list. Shift-click to link.",
         onClick = function() self:Open(g) end,
         onRightClick = add,
         actions = { { "+", add, "Add to " .. (target and target.name or "your list") } },
@@ -624,7 +640,14 @@ function M:OpenGroup(g)
         if self.token ~= token then return end
         self.state = "idle"
         self.listings = listings or {}
-        ns.Compare:SetLive(g.itemID, listings)
+        -- The Cart's price check counts these too, for this variant only.
+        local key = g.variant or tostring(g.itemID)
+        local same = listings
+        if listings and not g.variant then
+            same = {}
+            for _, l in ipairs(listings) do if (l.variant or key) == key then same[#same + 1] = l end end
+        end
+        ns.Compare:SetLive(key, same)
         if not listings then self:SetStatus("|cffd9736bNo answer from the auction house.|r") end
         self:ShowListings()
     end, function(page)
@@ -639,26 +662,51 @@ function M:ShowListings()
     self.back:Show(); self.title:Show(); self.headers:Hide()
     self.list:ScrollToTop()
     local e = ns.Catalog:Get(g.itemID) or {}
-    local market = ns.Catalog:PriceFor(g.itemID)
-    self.title:SetText(("%s  |cff8fa3b3%s|r"):format(g.link or e.link or e.name or "?", market and ("market " .. Money(market)) or "no market price"))
+    local market = MarketOf(g)
+    local tag = g.link and ns.Catalog:VariantTag(g.link) or ""
+    self.title:SetText(("%s%s  |cff8fa3b3%s|r"):format(g.link or e.link or e.name or "?", tag,
+        market and ("market " .. Money(market)) or "no market price"))
     local items = {}
     local commodity = self.listings[1] and self.listings[1].commodity
+    -- Modern groups hold every enchant of an item: one heading per enchant, each cheapest first.
+    local order, byVariant = {}, {}
     for _, l in ipairs(self.listings) do
-        local d = {
-            icon = W.IconFor(e.icon and e or { itemID = g.itemID }), link = l.link or g.link or e.link,
-            text = ("%dx %s"):format(l.available or l.count, l.link or g.link or e.name or "?"),
-            detail = ("%s each  ·  %s for all%s"):format(PriceText(l.unit, g.itemID), Money(l.unit * (l.available or l.count)),
-                l.owner and ("  ·  " .. l.owner) or ""),
-            right = Money(l.unit * (l.available or l.count)),
-            selected = self.selected == l,
-        }
-        if commodity then
-            d.hint = "Trade goods are bought by quantity, cheapest first: click Buy and choose how many."
-        else
-            d.hint = "Click to select, then Buy."
-            d.onClick = function() self:Select(l) end
+        local key = l.variant or g.variant or tostring(g.itemID)
+        if not byVariant[key] then byVariant[key] = {}; order[#order + 1] = key end
+        table.insert(byVariant[key], l)
+    end
+    for _, key in ipairs(order) do
+        local rows = byVariant[key]
+        local first = rows[1]
+        if #order > 1 then
+            local plain = ns.Catalog:IsPlain(key)
+            local vm = MarketOf(first, g.itemID)
+            items[#items + 1] = {
+                noIcon = true,
+                text = plain and "|cff55d6bePlain|r" or ("|cff55d6beEnchanted:|r" .. ns.Catalog:VariantTag(first.link)),
+                detail = (#rows .. " listing" .. (#rows == 1 and "" or "s")) .. "  ·  "
+                    .. (vm and ("market " .. Money(vm)) or "no market price for this enchant"),
+            }
         end
-        items[#items + 1] = d
+        for _, l in ipairs(rows) do
+            local link = l.link or g.link
+            local ltag = link and ns.Catalog:VariantTag(link) or ""
+            local d = {
+                icon = W.IconFor(e.icon and e or { itemID = g.itemID }), link = link or e.link,
+                text = ("%dx %s%s"):format(l.available or l.count, link or e.name or "?", ltag),
+                detail = ("%s each  ·  %s for all%s"):format(PriceText(l.unit, MarketOf(l.link and l or g, g.itemID)),
+                    Money(l.unit * (l.available or l.count)), l.owner and ("  ·  " .. l.owner) or ""),
+                right = Money(l.unit * (l.available or l.count)),
+                selected = self.selected == l,
+            }
+            if commodity then
+                d.hint = "Trade goods are bought by quantity, cheapest first: click Buy and choose how many."
+            else
+                d.hint = "Click to select, then Buy."
+                d.onClick = function() self:Select(l) end
+            end
+            items[#items + 1] = d
+        end
     end
     self.list:Set(items, self.state == "listing" and "Reading listings..." or "None listed right now.")
     self:Refresh()
@@ -806,7 +854,7 @@ function M:BuyDialog()
                         session.spent = session.spent + bought.buyout
                         self.spent = (self.spent or 0) + bought.buyout
                         ns.Stock:RecordPurchase(bought.itemID, bought.count)
-                        ns.Compare:RecordPaid(bought.itemID, bought.count, bought.buyout)
+                        ns.Compare:RecordPaid(tostring(bought.itemID), bought.count, bought.buyout)
                         ns:Changed()
                         self:SetStatus(("Bought %d / %d %s  ·  spent %s"):format(session.bought, session.target, link, Money(session.spent)))
                         if session.bought >= session.target then return Finish(d) end
@@ -878,7 +926,7 @@ function M:BuyNow(c)
         onBought = function(bought)
             if self.token ~= token then return end
             ns.Stock:RecordPurchase(bought.itemID, bought.count)
-            ns.Compare:RecordPaid(bought.itemID, bought.count, bought.buyout)
+            ns.Compare:RecordPaid(bought.variant or (bought.itemID and tostring(bought.itemID)), bought.count, bought.buyout)
             self.spent = (self.spent or 0) + bought.buyout
             ns:Print(("Bought %dx %s for %s."):format(bought.count, bought.link or "?", Money(bought.buyout)))
             self:SetStatus(("Bought %dx for %s  ·  spent this visit %s"):format(bought.count, Money(bought.buyout), Money(self.spent)))
@@ -904,9 +952,13 @@ function M:BuyNow(c)
 end
 
 -- Add to: stackable items ask how many first, like Buy; anything else adds one (or qty).
--- qty: the amount the dialog starts at (a crate's filler).
-function M:AddItem(itemID, qty)
+-- qty: the amount the dialog starts at (a crate's filler). g: the group it was picked from; an
+-- enchanted (or random-suffix) group goes on the list as that variant, with its cheapest price.
+function M:AddItem(itemID, qty, g)
     local target = self:Target()
+    if g and g.link and not ns.Catalog:IsPlain(g.variant) then
+        return ns.Lists:AddItem(g.link, qty or 1, target, g.minUnit or g.unit)
+    end
     if not IsStackable(self, itemID) then return ns.Lists:AddItem(itemID, qty or 1, target) end
     local e = ns.Catalog:Get(itemID) or {}
     local market = ns.Catalog:PriceFor(itemID)
@@ -1020,7 +1072,7 @@ function M:UpdateButton()
         b:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 1)
     else
         b.fill:SetVertexColor(0, 0, 0, 0)
-        b:SetBackdropBorderColor(0.16, 0.24, 0.29, 1)
+        b:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1)
     end
 end
 

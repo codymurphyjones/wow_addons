@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local C = ns.Compat
 
 -- Your history with someone, where you meet them: on their tooltip, and as a line in chat the first
@@ -17,7 +18,7 @@ local function OnUnitTooltip(tooltip)
     local full = C.UnitFull(unit)
     local text = full and ns.History:Summary(full, true)
     if not text then return end
-    tooltip:AddLine("Group History", 0.33, 0.92, 0.78)
+    tooltip:AddLine("Group History", PAL.accent[1], PAL.accent[2], PAL.accent[3])
     tooltip:AddLine(text, 0.85, 0.9, 0.95, true)
     tooltip:Show()
 end

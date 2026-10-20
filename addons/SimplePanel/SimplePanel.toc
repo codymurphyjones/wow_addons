@@ -5,6 +5,7 @@
 ## Version: 0.1.4
 ## SavedVariables: SimplePanelDB
 ## SavedVariablesPerCharacter: SimplePanelCharDB
+## OptionalDeps: GroupHistory
 ## IconTexture: Interface\AddOns\SimplePanel\Media\Icon
 ## Category: Interface Enhancements
 ## AddonCompartmentFunc: SimplePanel_OnCompartmentClick
@@ -18,13 +19,19 @@ Characters.lua
 Widgets.lua
 Tooltip.lua
 Menu.lua
+GroupHistory.lua
 Chart.lua
 ChartWindow.lua
 PluginKit.lua
 Bar.lua
 SecureClick.lua
+Panels.lua
 Launchers.lua
 LDB.lua
+CharacterSheet.lua
+ProfessionsPanel.lua
+SocialWindow.lua
+SocialGuild.lua
 Options.lua
 Config.lua
 ReputationWatch.lua

@@ -4,6 +4,7 @@
 ## Author: Dinoblankie + Claude
 ## Version: 1.0.0
 ## Category: Map
+## OptionalDeps: Waypoint
 ## IconTexture: Interface\AddOns\Convergence\Media\Icon
 
 Data.lua

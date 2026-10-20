@@ -226,7 +226,7 @@ function Chain:RemoveNearest(mapID, cx, cy, aspect)
     aspect = aspect or 1
     local best, bestD
     for _, p in ipairs(Points()) do
-        local px, py = ns.Nav:Project(p.mapID, p.x, p.y, mapID)
+        local px, py = ns.Nav:OnCanvas(p.mapID, p.x, p.y, mapID)
         if px then
             local dx, dy = (px - cx) * aspect, py - cy
             local d = dx * dx + dy * dy

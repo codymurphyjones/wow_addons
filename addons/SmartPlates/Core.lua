@@ -136,6 +136,8 @@ ns.DEFAULTS = {
         totems = true,
         classIcon = true,
         social = true,
+        nemesis = true,   -- BattleRecap: players who've killed you most
+        revenge = true,   -- BattleRecap: whoever killed you last
         experience = false,
         resource = true,
     },

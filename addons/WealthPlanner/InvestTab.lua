@@ -37,10 +37,10 @@ end
 
 -- A number box with a label in front and a unit after; saves to options[key] on Enter or focus loss.
 local function Setting(parent, y, title, key, unit, hint, min, max)
-    Label(parent, title, "GameFontHighlightSmall", 0, y, 130)
+    Label(parent, title, "WealthPlannerGameFontHighlightSmall", 0, y, 130)
     local box = W.MakeNumberBox(parent, 50)
     box:SetPoint("TOPLEFT", 140, y + 6)
-    Muted(Label(parent, unit, "GameFontHighlightSmall", 196, y, 100))
+    Muted(Label(parent, unit, "WealthPlannerGameFontHighlightSmall", 196, y, 100))
     local function Save(self)
         local v = self:GetValue()
         if v then
@@ -69,8 +69,8 @@ local function Build()
     -- Left: where you stand and your target.
     local left = CreateFrame("Frame", nil, panel)
     left:SetPoint("TOPLEFT", 12, -10); left:SetPoint("BOTTOMLEFT", 12, 10); left:SetWidth(LEFT_W)
-    Label(left, "Invested", "GameFontNormal", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    panel.pct = Label(left, "", "GameFontHighlightLarge", 0, -18, LEFT_W)
+    Label(left, "Invested", "WealthPlannerGameFontNormal", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    panel.pct = Label(left, "", "WealthPlannerGameFontHighlightLarge", 0, -18, LEFT_W)
 
     local bar = CreateFrame("Frame", nil, left)
     bar:SetSize(LEFT_W, 10); bar:SetPoint("TOPLEFT", 0, -44)
@@ -81,13 +81,13 @@ local function Build()
 
     panel.lines = {}
     for i = 1, 5 do
-        local k = Muted(Label(left, "", "GameFontHighlightSmall", 0, -62 - (i - 1) * 16, 140))
-        local v = Label(left, "", "GameFontHighlightSmall", 140, -62 - (i - 1) * 16, 160)
+        local k = Muted(Label(left, "", "WealthPlannerGameFontHighlightSmall", 0, -62 - (i - 1) * 16, 140))
+        local v = Label(left, "", "WealthPlannerGameFontHighlightSmall", 140, -62 - (i - 1) * 16, 160)
         v:SetJustifyH("RIGHT")
         panel.lines[i] = { k, v }
     end
 
-    Label(left, "Your target", "GameFontNormal", 0, -150):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Label(left, "Your target", "WealthPlannerGameFontNormal", 0, -150):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     panel.target = Setting(left, -174, "Keep invested", "investTarget", "% of wealth",
         "The share of your wealth (gold + goods + auctions) Wealth Planner keeps invested in goods and auctions.", 0, 100)
     panel.reserve = Setting(left, -200, "Cash reserve", "cashReserve", "gold",
@@ -117,10 +117,10 @@ local function Build()
     panel.sent:SetScript("OnClick", function() panel.mode = panel.mode ~= "sent" and "sent" or nil; Tab:Refresh() end)
     Hint(panel.sent, "Sent plans", "Every plan you sent to Quartermaster, newest first: each idea, what it's for and what it should earn.")
     -- The buttons have the top line; the heading and its explanation go under them.
-    panel.head = Label(right, "", "GameFontNormal", 0, -32)
+    panel.head = Label(right, "", "WealthPlannerGameFontNormal", 0, -32)
     panel.head:SetPoint("RIGHT", right, "RIGHT", -4, 0)
     panel.head:SetJustifyH("LEFT"); panel.head:SetWordWrap(false)
-    panel.sub = Muted(Label(right, "", "GameFontHighlightSmall", 0, -50))
+    panel.sub = Muted(Label(right, "", "WealthPlannerGameFontHighlightSmall", 0, -50))
     panel.sub:SetPoint("RIGHT", right, "RIGHT", -4, 0)
     panel.sub:SetJustifyH("LEFT")
     panel.list = W.CreateRowList(right, -88, { rowHeight = 34 })

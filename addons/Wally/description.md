@@ -123,7 +123,7 @@ With **Protect possible upgrades** on, Wally won't sell a grey or white weapon o
 - An item for an **empty slot** is always kept.
 - Any extra stat (Strength, Stamina, ...) beats a piece with **only armor**.
 - Between two pieces with only armor, **higher armor wins**. For weapons, **higher DPS wins**.
-- When both pieces have extra stats, Wally doesn't try to judge and doesn't protect the item.
+- When both pieces have extra stats, Wally doesn't try to judge and doesn't protect the item, unless **Tape Measure** is installed: then Tape Measure scores both by your StatLedger stat priority, and anything it calls an upgrade is kept.
 - Rings, trinkets and one-handers (if you can dual wield) count as upgrades if they beat the **weaker** of your two equipped items. Off-hand items aren't protected while you wield a two-hander.
 - Items your character can't use are never "upgrades". **Level requirements are ignored**, because you'll grow into the item.
 
@@ -238,7 +238,7 @@ Wally adds a **Wally** tab to the auction house window.
 - Prices older than **Stale price after** (default 3 days) are shown in yellow.
 
 ### Duration
-Wally uses your **default duration** (12, 24 or 48 hours; default 24h) until you post an item by hand. From then on it uses whatever duration you picked for that item.
+Wally uses your **default duration** (12, 24 or 48 hours; default 24h. On the Forever client the auction house only offers 2, 8 or 24 hours, and Wally shows those) until you post an item by hand. From then on it uses whatever duration you picked for that item.
 
 ### Taking items off the list
 If you remove an item from the Auction List while it has auctions up, Wally asks whether to **cancel those auctions too** (deposits aren't refunded). If you say yes, the cancels go first, one Post click each.

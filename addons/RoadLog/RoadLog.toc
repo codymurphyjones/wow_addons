@@ -13,4 +13,9 @@ Core.lua
 Nav.lua
 Recorder.lua
 Minimap.lua
+Smooth.lua
+Data\Caves.lua
+Caves.lua
 MapLines.lua
+Marks.lua
+Settings.lua

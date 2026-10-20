@@ -9,6 +9,8 @@
 ## Category: Combat
 ## AddonCompartmentFunc: MrMiyagi_OnCompartmentClick
 
+Fonts.lua
+Palette.lua
 Compat.lua
 Core.lua
 Widgets.lua

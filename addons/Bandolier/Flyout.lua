@@ -67,7 +67,7 @@ local function CreateButton(bar, i)
     b.icon:SetAllPoints()
     b.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 
-    b.count = b:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    b.count = b:CreateFontString(nil, "OVERLAY", "BandolierNumberFontNormal")
     b.count:SetPoint("BOTTOMRIGHT", -2, 2)
 
     b.cooldown = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")

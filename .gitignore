@@ -9,3 +9,6 @@ yarn.lock
 tools/*/.wowhead_cache/
 tools/*/.cache/
 tools/*/*.tar.xz.tmp
+
+# Signed-in browser profile for tools/curseforge/update_descriptions.py.
+tools/curseforge/.profile/

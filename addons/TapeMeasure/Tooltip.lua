@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Item tooltips: the verdict, what it was compared with, and the stats behind it.
 local GREEN = { 0.35, 0.96, 0.55 }
@@ -7,7 +8,7 @@ local YELLOW = { 1, 0.82, 0.3 }
 local BLUE = { 0.4, 0.8, 1 }
 local MUTED = { 0.55, 0.64, 0.70 }
 local WARN = { 1, 0.6, 0.25 }
-local ACCENT = { 0.33, 0.92, 0.78 }
+local ACCENT = PAL.accent
 
 local VERDICT = {
     upgrade = { "Upgrade", GREEN },

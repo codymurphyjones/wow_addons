@@ -2,6 +2,12 @@ local _, ns = ...
 
 -- A tab on the Character window. It shows your ranked gear list in the
 -- window's right-hand pane, next to the paper doll.
+--
+-- The same list can live in another addon's window instead (SpyGlass:
+-- EmbedGearList, used by SimplePanel's character sheet): the panel moves into
+-- the frame it's given, and that window's own slot buttons do what the covers
+-- do here (filter by slot, show the grade), asking CP:SlotInfo and
+-- CP:ClickSlot. It comes back here when released, or when you open this tab.
 local CP = {}
 ns.CharPanel = CP
 
@@ -11,6 +17,7 @@ local SOURCES = { "Dungeons", "Raids", "All" }
 
 local tab, panel
 local active, expandedByUs
+local embedHost, onEmbedChange -- the frame the list is embedded in, and what to tell it on changes
 local search = ""
 local scrollToTop
 
@@ -37,16 +44,16 @@ local function InitRow(row, data)
         row.worn:SetVertexColor(0.25, 1, 0.25)
         row.worn:SetSize(60, 60)
         row.worn:SetPoint("CENTER", row.icon, "CENTER")
-        row.score = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        row.score = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlight")
         row.score:SetPoint("TOPRIGHT", -4, -5)
-        row.upgrade = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.upgrade = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
         row.upgrade:SetPoint("BOTTOMRIGHT", -4, 5)
-        row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        row.name = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormalSmall")
         row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 6, -2)
         row.name:SetPoint("RIGHT", row, "RIGHT", -44, 0)
         row.name:SetJustifyH("LEFT")
         row.name:SetWordWrap(false)
-        row.detail = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        row.detail = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisableSmall")
         row.detail:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 6, 2)
         row.detail:SetPoint("RIGHT", row, "RIGHT", -44, 0)
         row.detail:SetJustifyH("LEFT")
@@ -117,7 +124,7 @@ function CP:LayoutSources()
         if not button then
             button = CreateFrame("Button", nil, panel.sourceBar)
             button:SetHeight(20)
-            button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            button.text = button:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormalSmall")
             button.text:SetPoint("CENTER")
             button.bar = button:CreateTexture(nil, "ARTWORK")
             button.bar:SetColorTexture(1, 0.82, 0, 0.8)
@@ -238,7 +245,7 @@ local function BuildCovers()
 end
 
 function CP:UpdateSlotCovers()
-    local on = panel and panel:IsShown()
+    local on = panel and panel:IsShown() and not embedHost
     local slot = Settings().slot
     for _, cover in ipairs(covers) do
         cover:SetShown(on and true or false)
@@ -256,6 +263,21 @@ end
 -- whole ranked list, so it runs at most every couple of seconds.
 local GRADE_EVERY = 2
 local lastGrades, gradePending = 0, false
+local slotGrades = {} -- [slotID] = { grade, text }
+
+-- The equipment slot each inventory slot filters the list to.
+local SLOT_GROUP = {
+    [1] = "HEAD", [2] = "NECK", [3] = "SHOULDER", [15] = "BACK", [5] = "CHEST", [9] = "WRIST",
+    [10] = "HANDS", [6] = "WAIST", [7] = "LEGS", [8] = "FEET", [11] = "FINGER", [12] = "FINGER",
+    [13] = "TRINKET", [14] = "TRINKET", [16] = "MAINHAND", [17] = "OFFHAND", [18] = "RANGED",
+}
+
+local function Notify()
+    if embedHost and onEmbedChange then
+        local ok, err = pcall(onEmbedChange)
+        if not ok and geterrorhandler then geterrorhandler()(err) end
+    end
+end
 function CP:UpdateSlotGrades()
     if not (panel and panel:IsShown()) then return end
     local now = GetTime()
@@ -270,34 +292,56 @@ function CP:UpdateSlotGrades()
         return
     end
     lastGrades = now
-    local grades = ns.List:SlotGrades()
+    wipe(slotGrades)
+    for slotID, g in pairs(ns.List:SlotGrades()) do
+        local text
+        if g.grade == "green" then
+            text = "The best you can wear now."
+        elseif not g.wornScore then
+            text = string.format("Empty. Best you can wear now: %s (%.1f).", ItemName(g.target[1]), g.target[2])
+        else
+            text = string.format("Best you can wear now: %s (%.1f). Yours: %.1f (%d%%).",
+                ItemName(g.target[1]), g.target[2], g.wornScore, math.floor(g.wornScore / g.target[2] * 100 + 0.5))
+        end
+        slotGrades[slotID] = { grade = g.grade, text = text }
+    end
     for _, cover in ipairs(covers) do
-        local g = grades[cover.slotID]
-        cover.gradeKey, cover.gradeText = g and g.grade, nil
+        local g = slotGrades[cover.slotID]
+        cover.gradeKey, cover.gradeText = g and g.grade, g and g.text
         if g then
             local c = GRADE_COLORS[g.grade]
             cover.grade:SetVertexColor(c[1], c[2], c[3])
             cover.grade:Show()
-            if g.grade == "green" then
-                cover.gradeText = "The best you can wear now."
-            elseif not g.wornScore then
-                cover.gradeText = string.format("Empty. Best you can wear now: %s (%.1f).",
-                    ItemName(g.target[1]), g.target[2])
-            else
-                cover.gradeText = string.format("Best you can wear now: %s (%.1f). Yours: %.1f (%d%%).",
-                    ItemName(g.target[1]), g.target[2], g.wornScore, math.floor(g.wornScore / g.target[2] * 100 + 0.5))
-            end
         else
             cover.grade:Hide()
         end
     end
+    Notify()
 end
 
-local function Build()
-    local host = CharacterFrame.RightPaneHost
+-- For a window the list is embedded in: what slotID's button should show.
+-- { group, selected, grade = "green" | "yellow" | "red" | nil, text, color = { r, g, b } }, or nil
+-- for a slot the list doesn't filter by (shirt, tabard).
+function CP:SlotInfo(slotID)
+    local group = SLOT_GROUP[slotID]
+    if not group then return nil end
+    local g = slotGrades[slotID]
+    return { group = group, label = SlotLabel(group), selected = Settings().slot == group,
+        grade = g and g.grade, text = g and g.text, color = g and GRADE_COLORS[g.grade] }
+end
+
+-- A click on slotID's button in the embedding window: show that slot's loot (again: all slots).
+function CP:ClickSlot(slotID)
+    local group = SLOT_GROUP[slotID]
+    if not group then return end
+    SetSlot(Settings().slot == group and "ALL" or group)
+end
+
+local function Build(parent)
+    local host = parent or CharacterFrame.RightPaneHost
     panel = CreateFrame("Frame", "SpyGlassCharacterPanel", host)
     panel:SetAllPoints(host)
-    panel:SetFrameLevel(650) -- above the stats panes
+    panel:SetFrameLevel(parent and host:GetFrameLevel() + 5 or 650) -- above the stats panes
     panel:EnableMouse(true)
     panel:Hide()
 
@@ -305,7 +349,7 @@ local function Build()
     bg:SetAllPoints()
     bg:SetColorTexture(0.04, 0.045, 0.07, 0.97)
 
-    local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local title = panel:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormal")
     title:SetPoint("TOP", 0, -8)
     title:SetText(ns.IconMarkup(16) .. " SpyGlass")
 
@@ -332,7 +376,7 @@ local function Build()
     priority:SetPoint("TOPLEFT", 10, -26)
     priority:SetPoint("TOPRIGHT", -10, -26)
     priority:SetHeight(14)
-    priority.text = priority:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    priority.text = priority:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     priority.text:SetAllPoints()
     priority.text:SetJustifyH("LEFT")
     priority.text:SetWordWrap(false)
@@ -375,13 +419,13 @@ local function Build()
     panel.clearSlot:SetPoint("TOPLEFT", 8, -95)
     panel.clearSlot:SetText(ALL or "All")
     panel.clearSlot:SetScript("OnClick", function() SetSlot("ALL") end)
-    panel.slotLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.slotLabel = panel:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     panel.slotLabel:SetPoint("LEFT", panel.clearSlot, "RIGHT", 6, 0)
     panel.slotLabel:SetPoint("RIGHT", panel, "RIGHT", -10, 0)
     panel.slotLabel:SetJustifyH("LEFT")
     panel.slotLabel:SetWordWrap(false)
 
-    panel.status = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    panel.status = panel:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisableSmall")
     panel.status:SetPoint("TOPLEFT", 10, -122)
     panel.status:SetPoint("TOPRIGHT", -10, -122)
     panel.status:SetJustifyH("LEFT")
@@ -390,7 +434,7 @@ local function Build()
     panel.list = ns.Widgets.MakeList(panel, ROW_H, InitRow)
     panel.list:SetPoint("TOPLEFT", 6, -138)
     panel.list:SetPoint("BOTTOMRIGHT", -20, 30)
-    panel.empty = panel:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    panel.empty = panel:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisable")
     panel.empty:SetPoint("TOPLEFT", panel.list, "TOPLEFT", 10, -20)
     panel.empty:SetPoint("TOPRIGHT", panel.list, "TOPRIGHT", -10, -20)
 
@@ -418,6 +462,7 @@ function CP:Refresh()
     end
     CP:UpdateSlotCovers()
     CP:LayoutSources()
+    Notify()
 
     local toTop = scrollToTop
     scrollToTop = false
@@ -430,7 +475,7 @@ function CP:Refresh()
     if not items then
         ns.Widgets.SetList(panel.list, {}, true)
         panel.status:SetText("")
-        panel.empty:SetText(panel.loadError or "Loading AtlasLoot...")
+        panel.empty:SetText(panel.loadError or "Loading loot data...")
         panel.empty:Show()
         return
     end
@@ -447,7 +492,7 @@ function CP:Refresh()
     panel.status:SetText(status)
     if #items == 0 then
         panel.empty:SetText(loading > 0 and ("Loading item information... (" .. loading .. " left)")
-            or "None of this fits your character yet. The journal and AtlasLoot list everything.")
+            or "None of this fits your character yet. The journal lists everything.")
         panel.empty:Show()
     else
         panel.empty:Hide()
@@ -467,6 +512,7 @@ local function SetActive(on)
     if on == (active or false) then return end
     active = on
     if on then
+        CP:Release()
         if not panel then Build() end
         -- The list lives in the right pane: open it if it's collapsed, and
         -- collapse it again when the list closes.
@@ -515,6 +561,50 @@ local function Place()
         tab:SetPoint("TOPLEFT", CharacterFrame.ModeTabs, "TOPLEFT")
     end
 end
+
+-- Puts the list in host (another addon's window), filling it; onChange() runs when the slot
+-- filter or the grades change, so that window can redraw its slot buttons. Returns true, or
+-- false and why.
+function CP:Embed(host, onChange)
+    if type(host) ~= "table" or not host.GetObjectType then return false, "no frame to show it in" end
+    if active then SetActive(false) end
+    if not panel then Build(host) end
+    panel:SetParent(host)
+    panel:ClearAllPoints()
+    panel:SetAllPoints(host)
+    panel:SetFrameLevel(host:GetFrameLevel() + 5)
+    local fresh = embedHost ~= host
+    embedHost, onEmbedChange = host, onChange
+    if fresh then
+        -- As on the game's window: open on the slot most likely to have an upgrade.
+        Settings().slot = ns.Scoring:WeakestSlot() or "HEAD"
+        scrollToTop = true
+    end
+    panel:Show()
+    local ok, reason = ns.AtlasData:Load(function() CP:Refresh() end)
+    panel.loadError = (not ok) and reason or nil
+    lastGrades = 0
+    CP:Refresh()
+    return true
+end
+
+-- Takes the list back from the window it was embedded in (hidden until its tab opens again).
+function CP:Release()
+    if not embedHost then return end
+    embedHost, onEmbedChange = nil, nil
+    if not panel then return end
+    panel:Hide()
+    local home = CharacterFrame and CharacterFrame.RightPaneHost
+    if home then
+        panel:SetParent(home)
+        panel:ClearAllPoints()
+        panel:SetAllPoints(home)
+        panel:SetFrameLevel(650)
+    end
+end
+
+function CP:IsEmbedded() return embedHost ~= nil end
+function CP:Host() return embedHost end
 
 -- /sg: open the Character window on this list, or close it.
 function CP:Toggle()

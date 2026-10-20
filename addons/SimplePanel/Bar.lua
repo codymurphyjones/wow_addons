@@ -368,10 +368,16 @@ end
 -- Layout
 -- ---------------------------------------------------------------------------
 
+-- Plugins WallyHUD's density preset hides for now (SimplePanel.SetDensityHidden); the saved
+-- layout doesn't change.
+local function DensityHidden(p) return SimplePanel.densityHidden and SimplePanel.densityHidden[p.id] end
+
 local function ZoneButtons(zone, skip)
     local out = {}
     for _, p in pairs(PK.plugins) do
-        if p.enabled and p.button and p.button ~= skip and p:Layout().zone == zone then out[#out + 1] = p end
+        if p.enabled and p.button and p.button ~= skip and p:Layout().zone == zone then
+            if DensityHidden(p) then p.button:Hide() else out[#out + 1] = p end
+        end
     end
     table.sort(out, function(a, b)
         local oa, ob = a:Layout().order or 0, b:Layout().order or 0
@@ -379,6 +385,20 @@ local function ZoneButtons(zone, skip)
         return a.id < b.id
     end)
     return out
+end
+
+-- Plugins that can also sit on top of the minimap (def.minimapZone, the Location plugin) and are
+-- set to: the Minimap plugin holds them in a strip between the bar and its square while it's on
+-- and showing (Bar.minimapHost); otherwise they stay on the bar, first in the right section.
+local function MinimapZone(zones)
+    local list = ZoneButtons("minimap")
+    local host = Bar.minimapHost
+    if host and host:IsActive() then
+        host:Place(list)
+        return
+    end
+    if host then host:Place({}) end
+    for i = #list, 1, -1 do table.insert(zones.right, 1, list[i]) end
 end
 
 -- The hidden plugins in bar order: left, center, right.
@@ -482,6 +502,7 @@ function Bar:Layout()
     frame.bg:SetAlpha(ns.Clamp(Opt().alpha, 0, 1))
     local zones = {}
     for _, zone in ipairs(ZONES) do zones[zone] = ZoneButtons(zone) end
+    MinimapZone(zones)
     -- In combat the hidden set stays as it is: a secure click button can't follow a plugin that
     -- appears or disappears then.
     if not InCombatLockdown() then Fit(zones, h) end
@@ -512,9 +533,11 @@ function Bar:Layout()
         local items, x = zones[zone], start[zone]
         for i, p in ipairs(items) do
             local b = p.button
+            if b:GetParent() ~= frame then b:SetParent(frame) end -- back from the minimap
             b:SetHeight(h)
             b:ClearAllPoints(); b:SetPoint("LEFT", frame, "LEFT", x, 0)
-            b.divider:SetShown(Opt().divider and i < #items)
+            -- No dividers in the suite's look (WallyHUD): space separates, not punctuation.
+            b.divider:SetShown(Opt().divider and not WallyHUD and i < #items)
             if Bar.editMode then Decorate(b, true) end
             x = x + b:GetWidth()
         end

@@ -10,6 +10,7 @@
 ## Category: Quests
 ## AddonCompartmentFunc: FieldGuide_OnCompartmentClick
 
+Fonts.lua
 Core.lua
 Guides\Data.lua
 Guides\Alliance.lua

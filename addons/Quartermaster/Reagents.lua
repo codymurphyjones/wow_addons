@@ -47,12 +47,19 @@ local function ItemCount(id)
     return fn and fn(id) or 0
 end
 
+-- SimplePanel's own professions window (Own Panels), when it holds the profession: the game's
+-- window is kept open there but out of sight, so the section goes under SimplePanel's instead.
+local function SimplePanelCrafting()
+    local api = SimplePanelProfessions
+    return api and api.IsCrafting and api.IsCrafting() or false
+end
+
 local PROFESSIONS = {
     name = "ProfessionsFrame",
     Frame = function() return ProfessionsFrame end,
     Active = function()
         local page = ProfessionsFrame and ProfessionsFrame.CraftingPage
-        return page and page:IsVisible()
+        return page and page:IsVisible() and not SimplePanelCrafting()
     end,
     Key = SelectedRecipeID,
     Read = function()
@@ -129,8 +136,43 @@ local function Legacy(frameName, prefix, hooks)
     }
 end
 
+-- The recipe's basic reagents, as the game's window kind reads them.
+local function ReadRecipe(recipeID)
+    local api = C_TradeSkillUI
+    if not (recipeID and api and api.GetRecipeSchematic) then return {} end
+    local schematic = api.GetRecipeSchematic(recipeID, false)
+    local out = {}
+    for _, slot in ipairs(schematic and schematic.reagentSlotSchematics or {}) do
+        local first = slot.reagents and slot.reagents[1]
+        local basic = slot.required or not BASIC or slot.reagentType == BASIC
+        if basic and first and first.itemID then
+            local id = first.itemID
+            local name, link, _, _, _, _, _, _, _, icon = C.GetItemInfo(id)
+            if not name then C.RequestItem(id) end
+            out[#out + 1] = { itemID = id, name = name, link = link,
+                texture = icon or select(5, C.GetItemInfoInstant(id)),
+                need = slot.quantityRequired or 0, have = ItemCount(id) }
+        end
+    end
+    return out
+end
+
+local SIMPLEPANEL = {
+    name = "SimplePanelProfessions",
+    Frame = function() return SimplePanelProfessions and SimplePanelProfessions.GetFrame() end,
+    Active = SimplePanelCrafting,
+    Key = function() return SimplePanelProfessions and SimplePanelProfessions.GetSelectedRecipeID() end,
+    Read = function() return ReadRecipe(SimplePanelProfessions.GetSelectedRecipeID()) end,
+    Hook = function(kind)
+        if kind.hooked or not (SimplePanelProfessions and SimplePanelProfessions.RegisterCallback) then return end
+        kind.hooked = true
+        SimplePanelProfessions.RegisterCallback("Quartermaster", function() Reagents:Refresh() end)
+    end,
+}
+
 local KINDS = {
     PROFESSIONS,
+    SIMPLEPANEL,
     Legacy("TradeSkillFrame", "TradeSkill", { "TradeSkillFrame_SetSelection", "TradeSkillFrame_Update" }),
     Legacy("CraftFrame", "Craft", { "CraftFrame_SetSelection", "CraftFrame_Update" }),
 }
@@ -209,22 +251,36 @@ local function Vendors()
 end
 
 -- One click's additions: { { item, qty, name } }. Auction reagents go to the Cart as always;
--- vendor ones go to Waypoint's popup, once per click.
-local function AddBatch(adds)
-    local wp, vendor = Vendors(), {}
+-- vendor ones go to Waypoint's popup, once per click. kind: the recipe's window, so the trip
+-- Navigate plans also ends at the auction house for its reagents still to buy there (on the Cart
+-- from an earlier click too, not only this one's).
+local function AddBatch(adds, kind)
+    local wp, vendor, auction, seen = Vendors(), {}, {}, {}
     for _, a in ipairs(adds) do
         if a.qty > 0 then
             if wp and type(a.item) == "number" and wp:SoldByVendors(a.item) > 0 then
                 vendor[#vendor + 1] = { id = a.item, qty = a.qty, name = a.name }
             else
                 Adjust(a.item, a.qty)
+                auction[#auction + 1] = { id = type(a.item) == "number" and a.item or nil, name = a.name }
+                seen[a.item] = true
+            end
+        end
+    end
+    if #vendor > 0 and kind then
+        for _, d in ipairs(ReadReagents(kind)) do
+            local key = d.itemID or d.name
+            if key and not seen[key] and d.qty > 0 and not (d.itemID and wp:SoldByVendors(d.itemID) > 0) then
+                auction[#auction + 1] = { id = d.itemID, name = d.name }
+                seen[key] = true
             end
         end
     end
     if #vendor > 0 then
+        -- Navigate: the vendors, then the auction house for this recipe's reagents bought there.
         wp:PromptVendors(vendor, function(items)
             for _, it in ipairs(items) do Adjust(it.id, it.qty) end
-        end, "Quartermaster")
+        end, "Quartermaster", auction)
     end
 end
 
@@ -255,13 +311,13 @@ local function MakeRow(panel, i)
     iconBox:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     local plus = W.MakeButton(row, "+", 22, 22); plus:SetPoint("RIGHT")
-    row.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    row.count = row:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlight")
     row.count:SetWidth(34); row.count:SetJustifyH("CENTER")
     row.count:SetPoint("RIGHT", plus, "LEFT", -2, 0)
     local minus = W.MakeButton(row, "-", 22, 22); minus:SetPoint("RIGHT", row.count, "LEFT", -2, 0)
     plus:SetScript("OnClick", function()
         local d = row.data
-        if d and (d.itemID or d.name) then AddBatch({ { item = d.itemID or d.name, qty = Step(), name = d.name } }) end
+        if d and (d.itemID or d.name) then AddBatch({ { item = d.itemID or d.name, qty = Step(), name = d.name } }, panel.kind) end
     end)
     minus:SetScript("OnClick", function()
         local d = row.data
@@ -271,15 +327,15 @@ local function MakeRow(panel, i)
     W.Hint(minus, "Take off cart", "Removes 1 (Shift: 5). Never below what you've already bought.")
 
     -- What's left of this reagent after crafting as many as the reagents cover (bags + cart).
-    row.left = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.left = row:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     row.left:SetWidth(LEFT_W); row.left:SetJustifyH("RIGHT")
     row.left:SetPoint("RIGHT", minus, "LEFT", -10, 0)
 
-    row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.name = row:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     row.name:SetPoint("TOPLEFT", iconBox, "TOPRIGHT", 8, -1)
     row.name:SetPoint("RIGHT", row.left, "LEFT", -8, 0)
     row.name:SetJustifyH("LEFT"); row.name:SetWordWrap(false)
-    row.detail = W.Muted(row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    row.detail = W.Muted(row:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     row.detail:SetPoint("BOTTOMLEFT", iconBox, "BOTTOMRIGHT", 8, 1)
     row.detail:SetPoint("RIGHT", row.left, "LEFT", -8, 0)
     row.detail:SetJustifyH("LEFT"); row.detail:SetWordWrap(false)
@@ -293,12 +349,13 @@ local function BuildPanel(kind, parent)
     W.SetBackdrop(panel, 0.95)
     panel:EnableMouse(true)
     panel:Hide()
+    panel.kind = kind
 
     local logo = panel:CreateTexture(nil, "ARTWORK"); logo:SetSize(20, 20)
     logo:SetPoint("TOPLEFT", 10, -7); logo:SetTexture(ns.ICON)
-    local title = W.Label(panel, "Quartermaster", "GameFontNormal", 36, -10)
+    local title = W.Label(panel, "Quartermaster", "QuartermasterGameFontNormal", 36, -10)
     title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    panel.target = W.Muted(panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    panel.target = W.Muted(panel:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     panel.target:SetPoint("LEFT", title, "RIGHT", 10, 0)
 
     local all = W.MakeButton(panel, "Add all", 70, 22); all:SetPoint("TOPRIGHT", -10, -6)
@@ -308,7 +365,7 @@ local function BuildPanel(kind, parent)
             local d = row:IsShown() and row.data
             if d and d.need > 0 and (d.itemID or d.name) then adds[#adds + 1] = { item = d.itemID or d.name, qty = d.need * times, name = d.name } end
         end
-        AddBatch(adds)
+        AddBatch(adds, kind)
     end)
     W.Hint(all, "Add all reagents", "Adds what one craft needs of every reagent (Shift: five crafts).")
 
@@ -330,7 +387,7 @@ local function BuildPanel(kind, parent)
             local missing = crafts * d.need - (d.have + d.qty)
             if missing > 0 then adds[#adds + 1] = { item = d.itemID or d.name, qty = missing, name = d.name } end
         end
-        AddBatch(adds)
+        AddBatch(adds, kind)
     end)
     W.Hint(needed, "Add needed reagents", "Evens out your reagents one craft at a time: counts how many crafts each reagent covers "
         .. "(in your bags plus on the cart), then adds only what's missing for one more craft than the lowest (Shift: five more).")
@@ -360,14 +417,14 @@ local function BuildPanel(kind, parent)
 
     panel.rows = {}
     for i = 1, MAX_ROWS do panel.rows[i] = MakeRow(panel, i) end
-    panel.empty = W.Muted(panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    panel.empty = W.Muted(panel:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     panel.empty:SetPoint("TOPLEFT", 12, -HEADER_H)
     panel.empty:SetText("Pick a recipe to see its reagents.")
     -- How many the reagents cover, right under the "left over" column.
-    panel.crafts = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.crafts = panel:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     panel.crafts:SetPoint("BOTTOMRIGHT", -(10 + BUTTONS_W), 9)
     panel.crafts:SetJustifyH("RIGHT")
-    panel.total = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.total = panel:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     panel.total:SetPoint("BOTTOMLEFT", 12, 9)
     panel.total:SetPoint("RIGHT", panel.crafts, "LEFT", -10, 0)
     panel.total:SetJustifyH("LEFT")

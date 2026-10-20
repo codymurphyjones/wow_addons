@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- The one filter bar used everywhere: the Browse page (offline, Auctionator's prices), the Auction
 -- tab and the Cart's Find panel (live auction house). Same controls as the Blizzard Browse tab on
@@ -80,7 +81,7 @@ function W.MakeFilterBar(parent, opts)
         subDrop:SetEnabled(hasSubs and true or false); subDrop:SetAlpha(hasSubs and 1 or 0.4)
     end
     if catRow then
-        local catLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+        local catLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
         catLabel:SetPoint("TOPLEFT", 0, -ROW - 7); catLabel:SetText("Category")
         catDrop = W.MakeDropdown(bar, 150, function()
             local o = { { -1, "All categories" } }
@@ -121,7 +122,7 @@ function W.MakeFilterBar(parent, opts)
     local anchor = price
     local maxAge, priced
     if not live then
-        local ageLabel = Muted(adv:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+        local ageLabel = Muted(adv:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
         ageLabel:SetPoint("LEFT", price, "RIGHT", 10, 0); ageLabel:SetText("Max age")
         maxAge = MakeNumberBox(adv, 36, "days")
         maxAge:SetPoint("LEFT", ageLabel, "RIGHT", 6, 0)
@@ -340,9 +341,9 @@ function W.AttachSuggestions(box, opts)
     local function Highlight()
         for i, row in ipairs(popup.rows) do
             if i == index then
-                row:SetBackdropColor(0.10, 0.19, 0.21, 1); row:SetBackdropBorderColor(W.ACCENT[1], W.ACCENT[2], W.ACCENT[3], 1)
+                row:SetBackdropColor(PAL.hover[1], PAL.hover[2], PAL.hover[3], 1); row:SetBackdropBorderColor(W.ACCENT[1], W.ACCENT[2], W.ACCENT[3], 1)
             else
-                row:SetBackdropColor(0.055, 0.08, 0.10, 1); row:SetBackdropBorderColor(0, 0, 0, 0)
+                row:SetBackdropColor(PAL.row[1], PAL.row[2], PAL.row[3], 1); row:SetBackdropBorderColor(0, 0, 0, 0)
             end
         end
     end
@@ -364,9 +365,9 @@ function W.AttachSuggestions(box, opts)
                 W.SetBackdrop(row)
                 row.icon = row:CreateTexture(nil, "ARTWORK"); row.icon:SetSize(18, 18); row.icon:SetPoint("LEFT", 3, 0)
                 row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-                row.right = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                row.right = row:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
                 row.right:SetPoint("RIGHT", -6, 0); row.right:SetJustifyH("RIGHT"); row.right:SetWordWrap(false)
-                row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                row.text = row:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
                 row.text:SetPoint("LEFT", 26, 0); row.text:SetPoint("RIGHT", row.right, "LEFT", -6, 0)
                 row.text:SetJustifyH("LEFT"); row.text:SetWordWrap(false)
                 row:SetScript("OnEnter", function(self) index = self.index; Highlight() end)

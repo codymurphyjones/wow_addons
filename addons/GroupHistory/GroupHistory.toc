@@ -9,6 +9,8 @@
 ## Category: Social
 ## AddonCompartmentFunc: GroupHistory_OnCompartmentClick
 
+Fonts.lua
+Palette.lua
 Compat.lua
 Core.lua
 Data.lua

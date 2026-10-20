@@ -60,6 +60,7 @@ def _saved(addon):
 # (addon, script, args, what it does, [checks that return a reason to skip, or None]).
 STEPS = [
     ("Waypoint", "build_places.py", [], "places, vendors and towns for Navigate To", [_questiedb]),
+    ("Waypoint", "build_water.py", [], "land and water map for route planning (the game's map tiles, wago.tools)", [_module("numpy")]),
     ("WealthPlanner", "build_vendor_items.py", [], "which items vendors sell", [_questiedb]),
     ("WealthPlanner", "fetch_farms.py", [], "farming drops and spawns (Wowhead)", []),
     ("WealthPlanner", "fetch_crafts.py", [], "recipes and reagents (Wowhead)", []),
@@ -67,6 +68,7 @@ STEPS = [
     ("FieldGuide", "build_guides.py", [], "the leveling guides", [_questiedb]),
     ("MrMiyagi", "fetch_mobs.py", [], "mob abilities (CMaNGOS, wago.tools)", []),
     ("Spyglass", "fetch_wowhead_quests.py", [], "SpyglassPluginQuests' quest database (Wowhead)", []),
+    ("Spyglass", "build_loot.py", [], "dungeon and raid loot (AtlasLoot Continued + the harvest; needs the quest database)", [_module("lupa")]),
     ("Spyglass", "fetch_wowhead_professions.py", [], "professions (Wowhead)", []),
     ("Spyglass", "fetch_wowhead.py", [], "item equip effects (Wowhead)", []),
     ("Spyglass", "fetch_pulls.py", [], "dungeon pull maps (Wowhead, wago.tools)", []),
@@ -79,6 +81,10 @@ DEV_STEPS = [
     ("Spyglass", "fetch_web_loot.py", [], "loot AtlasLoot lacks (wowtbc.gg)", []),
     ("Spyglass", "ingest_contrib.py", [], "players' contributed vendors and NPCs", [_saved("Spyglass")]),
     ("Spyglass", "export_anchors.py", [], "the sync history for a release", [_saved("Spyglass")]),
+    ("RoadLog", "build_caves.py", [], "heights along the caves you logged (the caves' floors in the game files)",
+     [_module("numpy"), _module("lupa"), _saved("RoadLog")]),
+    ("Waypoint", "build_roads.py", [], "the roads, blockers and passes logged with RoadLog, packaged for every Waypoint user",
+     [_module("numpy"), _module("lupa"), _saved("RoadLog")]),
 ]
 
 # Never run here: SimplePanel/make_defaults.py takes your saved layout and an output path.

@@ -136,8 +136,8 @@ end
 local function Create()
     BattleRecapDB.matchPos = BattleRecapDB.matchPos or { point = "CENTER", x = 0, y = 60 }
     f = W.MakeWindow("BattleRecapMatch", WIDTH, HEIGHT, "Match summary", BattleRecapDB.matchPos)
-    f.result = W.Label(f, "", "GameFontNormalLarge", 12, -36, WIDTH - 24)
-    f.score = W.Label(f, "", "GameFontHighlightSmall", 12, -60, WIDTH - 24)
+    f.result = W.Label(f, "", "BattleRecapGameFontNormalLarge", 12, -36, WIDTH - 24)
+    f.score = W.Label(f, "", "BattleRecapGameFontHighlightSmall", 12, -60, WIDTH - 24)
     f.score:SetSpacing(3)
     local holder = CreateFrame("Frame", nil, f)
     holder:SetPoint("TOPLEFT", 10, -104); holder:SetPoint("BOTTOMRIGHT", -6, 10)

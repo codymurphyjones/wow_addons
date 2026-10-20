@@ -347,9 +347,54 @@ function ns:AddRecap(recap)
     table.insert(history, 1, recap)
     while #history > ns.MAX_HISTORY do table.remove(history) end
     ns.HistoryMenu:RefreshIfShown()
+    ns:Announce(recap)
 end
 
 function ns:History() return BattleRecapDB.history end
+
+-- For other addons (SmartPlates' nemesis marks). BattleRecapAPI.OnRecap(fn) calls fn(recap) each
+-- time a recap is saved, after its death is counted in the stats.
+BattleRecapAPI = BattleRecapAPI or {}
+local listeners = {}
+
+function BattleRecapAPI.OnRecap(fn)
+    if type(fn) == "function" then listeners[#listeners + 1] = fn end
+end
+
+function ns:Announce(recap)
+    for _, fn in ipairs(listeners) do
+        local ok, err = pcall(fn, recap)
+        if not ok then geterrorhandler()(err) end -- another addon's error: reported, never fatal here
+    end
+end
+
+-- The enemy players who've killed you, most kills first: { key = "Name" or "Name-Realm", name, class,
+-- kills, last }. Pets and NPCs (battleground guards) are left out.
+function BattleRecapAPI.Nemeses()
+    local out = {}
+    local killers = BattleRecapDB and BattleRecapDB.stats and BattleRecapDB.stats.killers
+    for key, e in pairs(killers or {}) do
+        if e.class and not e.pet then
+            out[#out + 1] = { key = key, name = e.name, class = e.class, kills = e.kills or 0, last = e.last }
+        end
+    end
+    table.sort(out, function(a, b)
+        if a.kills ~= b.kills then return a.kills > b.kills end
+        return (a.last or 0) > (b.last or 0)
+    end)
+    return out
+end
+
+-- Who the Revenge key targets: whoever killed you last ("Name-Realm" when the game gave it), or nil.
+function BattleRecapAPI.RevengeTarget()
+    if ns.Revenge.name then return ns.Revenge.name end
+    for _, r in ipairs(BattleRecapDB and BattleRecapDB.history or {}) do
+        local k = r.killer
+        if not r.test and r.kind ~= "duel" then
+            return k and not k.env and (k.fullName or k.name) or nil
+        end
+    end
+end
 
 ---------------------------------------------------------------------------
 -- Events

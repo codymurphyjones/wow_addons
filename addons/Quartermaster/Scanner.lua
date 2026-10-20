@@ -77,7 +77,7 @@ function Scanner:ReadPage(name, page)
         if lname and info[1]:lower() ~= lname then return false end
         rows[#rows + 1] = {
             index = index, page = page, link = link, name = info[1],
-            itemID = info[I_ITEM_ID],
+            itemID = info[I_ITEM_ID], variant = ns.Catalog:Variant(link),
             count = info[I_COUNT] or 1,
             buyout = info[I_BUYOUT] or 0,
             bidAmount = info[I_BID_AMOUNT] or 0,
@@ -136,13 +136,14 @@ function Scanner:FocusPage(name, page, cb)
 end
 
 -- Every listing of an item, cheapest unit price first. cb(listings) with
--- listing = { page, index, link, itemID, count, buyout, unit, owner }
-function Scanner:ScanAll(name, cb, onProgress)
+-- listing = { page, index, link, itemID, variant, count, buyout, unit, owner }
+-- variant (Catalog:Variant): only copies with that enchant/suffix; nil for every copy.
+function Scanner:ScanAll(name, cb, onProgress, variant)
     local all = {}
     local me = UnitName("player")
     local function OnPage(rows, page, total)
         for _, r in ipairs(rows) do
-            if r.buyout > 0 and not r.sold and r.owner ~= me then
+            if r.buyout > 0 and not r.sold and r.owner ~= me and (not variant or r.variant == variant) then
                 r.unit = r.buyout / r.count
                 all[#all + 1] = r
             end
@@ -171,8 +172,9 @@ local SORTS = { { sortOrder = Enum and Enum.AuctionHouseSortOrder and Enum.Aucti
 
 -- Every listing of an item, cheapest unit price first, or nil if no answer came. cb(listings) with
 -- commodity listing = { unit, count, buyout, commodity = true }
--- item listing      = { unit, count, buyout, auctionID, link }
+-- item listing      = { unit, count, buyout, auctionID, link, variant }
 -- item is an itemID, or the server's itemKey from a browse result (preferred when known).
+-- variant (Catalog:Variant): only copies with that enchant/suffix; nil for every copy.
 --
 -- Blizzard often ignores a search for an item whose key info isn't cached yet, and sometimes answers
 -- with no results when there are some (Auctionator's Source_ModernAH/AH/Mixins/SearchScan.lua works
@@ -187,7 +189,7 @@ local function HasKeyInfo(key)
     return C_AuctionHouse.GetItemKeyInfo(key) ~= nil
 end
 
-function Scanner:SearchModern(item, cb)
+function Scanner:SearchModern(item, cb, variant)
     local key = type(item) == "table" and item or C_AuctionHouse.MakeItemKey(item)
     local itemID = key.itemID
     local mine = generation
@@ -202,7 +204,7 @@ function Scanner:SearchModern(item, cb)
             return C_Timer.After(0.2, Send)
         end
         tries = tries + 1
-        local w = { id = itemID, key = key, cb = cb, retry = tries < SEARCH_TRIES and Send or nil }
+        local w = { id = itemID, key = key, cb = cb, variant = variant, retry = tries < SEARCH_TRIES and Send or nil }
         waiting = w
         BeforeQuery()
         C_AuctionHouse.SendSearchQuery(key, SORTS, false)
@@ -243,7 +245,9 @@ ns:On("COMMODITY_SEARCH_RESULTS_UPDATED", function(id)
     local quantity = Call(C_AuctionHouse.GetCommoditySearchResultsQuantity, id)
     if RetryIfEmpty(has, full, quantity) then return end
     local listings = {}
-    for i = 1, C_AuctionHouse.GetNumCommoditySearchResults(id) or 0 do
+    -- Trade goods have no enchants: a search for an enchanted variant finds none of them.
+    local count = ns.Catalog:IsPlain(waiting.variant) and C_AuctionHouse.GetNumCommoditySearchResults(id) or 0
+    for i = 1, count do
         local r = C_AuctionHouse.GetCommoditySearchResultInfo(id, i)
         if r and r.unitPrice and r.quantity and r.quantity > 0 and not r.containsOwnerItem then
             listings[#listings + 1] = { unit = r.unitPrice, count = r.quantity, buyout = r.unitPrice * r.quantity,
@@ -266,9 +270,11 @@ ns:On("ITEM_SEARCH_RESULTS_UPDATED", function(itemKey)
     -- So a listing is one purchase (count 1 at unit = buyout), with `available` at that price.
     for i = 1, C_AuctionHouse.GetNumItemSearchResults(itemKey) or 0 do
         local r = C_AuctionHouse.GetItemSearchResultInfo(itemKey, i)
-        if r and r.buyoutAmount and r.buyoutAmount > 0 and not r.containsOwnerItem then
+        local variant = r and (ns.Catalog:Variant(r.itemLink) or tostring(id))
+        if r and r.buyoutAmount and r.buyoutAmount > 0 and not r.containsOwnerItem
+            and (not waiting.variant or variant == waiting.variant) then
             listings[#listings + 1] = { unit = r.buyoutAmount, count = 1, available = r.quantity or 1, buyout = r.buyoutAmount,
-                auctionID = r.auctionID, link = r.itemLink, itemID = id }
+                auctionID = r.auctionID, link = r.itemLink, itemID = id, variant = variant }
         end
     end
     Answer(id, listings)
@@ -276,8 +282,9 @@ end)
 
 -- ---------------------------------------------------------------------------
 -- Browse searches with the shared filters (Search.lua): everything matching, grouped by item.
--- cb(groups) with group = { itemID, link, name, minUnit, available, ownerHas, ilvl }, cheapest
--- first, or nil if no answer came. Filters the server can't apply are checked here.
+-- cb(groups) with group = { itemID, variant, link, name, minUnit, available, ownerHas, ilvl }, cheapest
+-- first, or nil if no answer came. Filters the server can't apply are checked here. Classic groups
+-- are one variant each (enchant/suffix); modern ones are the server's itemKeys, variant unknown.
 -- ---------------------------------------------------------------------------
 
 local MAX_BROWSE_GROUPS = 500
@@ -305,7 +312,8 @@ local function FinishBrowse(groups, f, cb, mine)
         end
         table.sort(out, function(a, b)
             if a.minUnit ~= b.minUnit then return a.minUnit < b.minUnit end
-            return a.itemID < b.itemID
+            if a.itemID ~= b.itemID then return a.itemID < b.itemID end
+            return (a.variant or "") < (b.variant or "")
         end)
         cb(out)
     end
@@ -408,10 +416,12 @@ local function BrowseLegacy(f, cb, onProgress)
         if generation ~= mine then return end
         for _, r in ipairs(rows) do
             if r.itemID and r.buyout > 0 and not r.sold then
-                local g = byItem[r.itemID]
+                -- One group per variant: an enchant or suffix makes it a different item to buy.
+                local variant = r.variant or tostring(r.itemID)
+                local g = byItem[variant]
                 if not g then
-                    g = { itemID = r.itemID, link = r.link, name = r.name, minUnit = math.huge, available = 0 }
-                    byItem[r.itemID] = g
+                    g = { itemID = r.itemID, variant = variant, link = r.link, name = r.name, minUnit = math.huge, available = 0 }
+                    byItem[variant] = g
                     groups[#groups + 1] = g
                 end
                 if r.owner == me then g.ownerHas = true
@@ -440,9 +450,11 @@ function Scanner:Browse(f, cb, onProgress)
 end
 
 -- Every listing of one item from a browse result, cheapest first (same shapes as SearchModern/ScanAll).
-function Scanner:Listings(group, cb, onProgress)
-    if self:Modern() then return self:SearchModern(group.itemKey or group.itemID, cb) end
+-- variant: only those copies (default: the group's own variant, if it has one).
+function Scanner:Listings(group, cb, onProgress, variant)
+    variant = variant or group.variant
+    if self:Modern() then return self:SearchModern(group.itemKey or group.itemID, cb, variant) end
     local name = group.name or (ns.Catalog:Get(group.itemID) or {}).name
     if not name then return cb(nil) end
-    self:ScanAll(name, cb, onProgress)
+    self:ScanAll(name, cb, onProgress, variant)
 end

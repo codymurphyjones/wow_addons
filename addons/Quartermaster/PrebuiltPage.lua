@@ -11,8 +11,8 @@ local LEFT_W = 210
 local function Build(p)
     local selectedID, selectedEntry
 
-    Label(p, "Prebuilt", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "Lists you restock again and again, like Raid Night. Set a target for each item; in the Cart tab at the auction house, tick the lists and Quartermaster buys only what you're missing.", "GameFontHighlightSmall", 0, -24, 640))
+    Label(p, "Prebuilt", "QuartermasterGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "Lists you restock again and again, like Raid Night. Set a target for each item; in the Cart tab at the auction house, tick the lists and Quartermaster buys only what you're missing.", "QuartermasterGameFontHighlightSmall", 0, -24, 640))
     p.summary:SetWordWrap(true)
 
     -- Left column: create / rename / delete, then the lists themselves.
@@ -30,18 +30,18 @@ local function Build(p)
     -- Right side: the selected list's items.
     local right = CreateFrame("Frame", nil, p)
     right:SetPoint("TOPLEFT", LEFT_W + 36, -56); right:SetPoint("BOTTOMRIGHT", 0, 0)
-    right.title = Label(right, "", "GameFontNormal", 0, 0)
+    right.title = Label(right, "", "QuartermasterGameFontNormal", 0, 0)
     right.title:SetPoint("RIGHT", 0, 0); right.title:SetWordWrap(false)
     local items = W.CreateRowList(right, -24, { bottom = 40 })
 
     local bar = CreateFrame("Frame", nil, right)
     bar:SetPoint("BOTTOMLEFT", 0, 0); bar:SetPoint("BOTTOMRIGHT", 0, 0); bar:SetHeight(32)
-    local selText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local selText = bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     selText:SetPoint("LEFT", 0, 0); selText:SetWidth(130); selText:SetJustifyH("LEFT"); selText:SetWordWrap(false)
-    local targetLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    local targetLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     targetLabel:SetPoint("LEFT", selText, "RIGHT", 6, 0); targetLabel:SetText("Target")
     local target = MakeNumberBox(bar, 46); target:SetPoint("LEFT", targetLabel, "RIGHT", 4, 0)
-    local tolLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    local tolLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     tolLabel:SetPoint("LEFT", target, "RIGHT", 10, 0); tolLabel:SetText("Tolerance %")
     local tol = MakeNumberBox(bar, 46); tol:SetPoint("LEFT", tolLabel, "RIGHT", 4, 0)
     Hint(tol, "Tolerance for this item", "How far over market this item may go. Leave empty to use the default from Settings.")
@@ -165,15 +165,15 @@ local function Build(p)
             selText:SetText("")
         else
             right.title:SetText(("%s  |cff8fa3b3(%s)|r"):format(t.name, scope == "account" and "account" or "this character"))
-            if selectedEntry and not ns.Lists:Find(t, selectedEntry.itemID) then selectedEntry = nil end
+            if selectedEntry and not ns.Lists:Contains(t, selectedEntry) then selectedEntry = nil end
             local list = {}
             for _, entry in ipairs(t.entries) do
                 local e = ns.Catalog:Get(entry.itemID)
-                local market = ns.Catalog:PriceFor(entry.itemID)
+                local market, seen = ns.Lists:Price(entry)
                 local have = ns.Stock:Have(entry.itemID)
                 local need = math.max(0, entry.qty - have)
-                local detail = ("target %d  ·  have %d (%s)  ·  market %s"):format(entry.qty, have,
-                    ns.Stock:Describe(entry.itemID), W.Money(market))
+                local detail = ("target %d  ·  have %d (%s)  ·  %s %s"):format(entry.qty, have,
+                    ns.Stock:Describe(entry.itemID), seen and "seen at" or "market", W.Money(market))
                 if entry.tolerance then detail = detail .. ("  ·  +%d%%"):format(entry.tolerance) end
                 list[#list + 1] = {
                     icon = W.IconFor(e or entry), link = entry.link or (e and e.link),

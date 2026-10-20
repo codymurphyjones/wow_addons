@@ -70,8 +70,10 @@ W.SCHEMES = {
 local function Mix(a, b, t) return { a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, a[3] + (b[3] - a[3]) * t } end
 local function Scale(c, k) return { math.min(1, c[1] * k), math.min(1, c[2] * k), math.min(1, c[3] * k) } end
 
--- The full palette for a scheme, built from its accent and base the same way Wally's relate.
+-- The full palette for a scheme, built from its accent and base the same way Wally's relate. With
+-- WallyHUD installed, the "Wally" scheme is the suite's shared look (WallyHUD's tokens).
 local function Palette(s)
+    if s.id == "wally" and WallyHUD and WallyHUD.SimplePanelPalette then return WallyHUD.SimplePanelPalette() end
     if not s.base then return WALLY end
     local b, a = s.base, s.accent
     local pal = { accent = a, base = b, side = Scale(b, 1.35), row = Scale(b, 1.65), button = Scale(b, 2.15),
@@ -107,9 +109,14 @@ for name, source in pairs(FONTS) do
     fontBase[name] = { f:GetFont() }
 end
 
+-- With WallyHUD the suite's one font family (its numerals line up, so values don't jitter): titles
+-- and headers in its strong weight, everything else in its text weight.
+local WEIGHT = { SimplePanelFontTitle = "semibold", SimplePanelFontHeader = "semibold", SimplePanelFontLarge = "semibold" }
 local function ApplyFontScale(scale)
+    local Face = WallyHUD and WallyHUD.Face
     for name, base in pairs(fontBase) do
-        if base[1] then _G[name]:SetFont(base[1], base[2] * scale, base[3] or "") end
+        local face = Face and Face(WEIGHT[name] or "medium") or base[1]
+        if face then _G[name]:SetFont(face, base[2] * scale, base[3] or "") end
     end
 end
 
@@ -122,6 +129,15 @@ function W.ApplyDesign()
         local c = pal[k]
         T[k][1], T[k][2], T[k][3] = c[1], c[2], c[3]
     end
+    -- The suite's look (WallyHUD): its text ramp and state colours, so a value is only coloured
+    -- when it means something.
+    if pal.text then
+        for _, k in ipairs({ "text", "green", "yellow", "red" }) do
+            T[k][1], T[k][2], T[k][3] = pal[k][1], pal[k][2], pal[k][3]
+        end
+        MUTED[1], MUTED[2], MUTED[3] = pal.muted[1], pal.muted[2], pal.muted[3]
+        T.hex.muted, T.hex.green, T.hex.yellow, T.hex.red = W.Hex(MUTED), W.Hex(T.green), W.Hex(T.yellow), W.Hex(T.red)
+    end
     if o.classAccent then
         local _, class = UnitClass("player")
         local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
@@ -133,7 +149,8 @@ function W.ApplyDesign()
     if ns.Bar and ns.Bar.ApplyTheme then ns.Bar:ApplyTheme() end
 end
 ns:OnLoad(W.ApplyDesign)
-ns:On("PLAYER_LOGIN", function() if ns.db.options.classAccent then W.ApplyDesign() end end)
+-- Again at login: by then a class accent is known, and WallyHUD (which loads after us) is there.
+ns:On("PLAYER_LOGIN", function() W.ApplyDesign() end)
 
 -- Panels (window, menus, tooltips, drawer, charts) share one background opacity.
 local function PanelAlpha() return ns.db and ns.Clamp(ns.db.options.panelAlpha, 0.3, 1) or 1 end

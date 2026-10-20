@@ -37,7 +37,7 @@ local function CreateSlotButton(row, index)
     btn.selected:SetBlendMode("ADD")
     btn.selected:SetAllPoints()
 
-    btn.badge = btn:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+    btn.badge = btn:CreateFontString(nil, "OVERLAY", "ModifiedNumberFontNormalSmall")
     btn.badge:SetPoint("TOPRIGHT", -1, -2)
     btn.badge:SetText("|cffffd100M|r")
 
@@ -72,7 +72,7 @@ function UI:GetRow(i)
     row = CreateFrame("Frame", nil, self.content)
     row:SetSize(LIST_WIDTH, ROW_HEIGHT)
     row:SetPoint("TOPLEFT", 0, -(i - 1) * ROW_HEIGHT)
-    row.label = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    row.label = row:CreateFontString(nil, "OVERLAY", "ModifiedGameFontNormal")
     row.label:SetPoint("TOPLEFT", 2, -2)
     row.buttons = {}
     for b = 1, ns.Bars.BUTTONS_PER_BAR do
@@ -108,7 +108,7 @@ function UI:Create()
     tinsert(UISpecialFrames, f:GetName())
     self.frame = f
 
-    local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local title = f:CreateFontString(nil, "OVERLAY", "ModifiedGameFontHighlight")
     title:SetPoint("TOP", 0, -5)
     title:SetText("Modified - Modifier Macro Designer")
     local titleIcon = f:CreateTexture(nil, "OVERLAY")
@@ -123,12 +123,12 @@ function UI:Create()
         ns.db.showEmpty = self:GetChecked() and true or false
         UI:Refresh()
     end)
-    local showEmptyLabel = showEmpty:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local showEmptyLabel = showEmpty:CreateFontString(nil, "OVERLAY", "ModifiedGameFontNormalSmall")
     showEmptyLabel:SetPoint("LEFT", showEmpty, "RIGHT", 2, 0)
     showEmptyLabel:SetText("Show empty bars")
     self.showEmpty = showEmpty
 
-    self.counter = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    self.counter = f:CreateFontString(nil, "OVERLAY", "ModifiedGameFontHighlightSmall")
     self.counter:SetPoint("TOPLEFT", 150, -34)
 
     local settings = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")

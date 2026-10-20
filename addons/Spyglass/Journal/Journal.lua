@@ -39,7 +39,7 @@ J.state = { view = "home", inst = nil, boss = 0, search = "" }
 
 function J.TitleText(parent, size, layer)
     local text = parent:CreateFontString(nil, layer or "OVERLAY")
-    if not text:SetFont(J.TITLE_FONT, size, "") then text:SetFontObject("GameFontNormalLarge") end
+    if not text:SetFont(J.TITLE_FONT, size, "") then text:SetFontObject("SpyglassGameFontNormalLarge") end
     text:SetShadowColor(0, 0, 0, 1)
     text:SetShadowOffset(1, -1)
     return text
@@ -164,10 +164,10 @@ local function BuildCrumbs()
     for i = 1, 3 do
         local part = CreateFrame("Button", nil, bar)
         part:SetHeight(24)
-        part.text = part:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        part.text = part:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormal")
         part.text:SetPoint("LEFT", 10, 0)
         part:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-        part.arrow = part:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        part.arrow = part:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormal")
         part.arrow:SetPoint("LEFT", part.text, "RIGHT", 8, 0)
         part.arrow:SetText(">")
         part.arrow:SetTextColor(0.6, 0.48, 0.2)

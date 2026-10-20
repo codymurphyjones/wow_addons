@@ -1,10 +1,15 @@
 local _, ns = ...
 local D = ns.Data
 
--- AtlasLoot's own window serves as the loot journal: open it, or open it on the
--- instance and boss an item drops from.
+-- AtlasLoot's own window, when AtlasLoot is installed (it's optional: SpyGlass
+-- ships its own loot): open it, or open it on the instance and boss an item
+-- drops from.
 local A = {}
 ns.Atlas = A
+
+function A:Available()
+    return (AtlasLoot and AtlasLoot.GUI or SlashCmdList.ATLASLOOT) and true or false
+end
 
 local function Frame()
     local gui = AtlasLoot and AtlasLoot.GUI
@@ -21,7 +26,7 @@ function A:Open()
         SlashCmdList.ATLASLOOT("")
         return true
     end
-    ns:Print("AtlasLoot's window isn't available.")
+    ns:Print("AtlasLoot isn't installed. SpyGlass's journal (/sgj) has the same loot.")
     return false
 end
 

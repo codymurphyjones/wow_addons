@@ -8,6 +8,14 @@ local CC = C_Container
 local CI = C_Item
 
 Compat.NUM_BAGS = NUM_BAG_SLOTS or 4
+
+-- Auction durations 1-3 post for 12/24/48 hours on retail, but 2/8/24 on the Forever client,
+-- and the time-left bands of your listings shrink to match.
+local build = select(4, GetBuildInfo()) or 0
+Compat.IS_FOREVER = (WOW_PROJECT_CAMELOT ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT) or (build >= 16000 and build < 20000)
+Compat.AUCTION_HOURS = Compat.IS_FOREVER and { 2, 8, 24 } or { 12, 24, 48 }
+Compat.AUCTION_TIME_BAND = Compat.IS_FOREVER and { [0] = "<30m", "30m-2h", "2-8h", "8-24h" }
+    or { [0] = "<30m", "30m-2h", "2-12h", "12-48h" }
 Compat.NUM_REAGENT_BAGS = NUM_REAGENTBAG_SLOTS or 0
 
 function Compat.GetNumSlots(bag)

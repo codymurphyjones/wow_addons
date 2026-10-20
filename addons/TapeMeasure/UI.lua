@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local C = ns.Compat
 
 -- The Tape Measure window (Upgrades, Equipped, Stat Priority, Help) and the
@@ -43,8 +44,8 @@ end
 
 local function CreateUpgradesPage()
     local p = NewPage("upgrades")
-    Label(p, "Upgrades in your bags", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 460))
+    Label(p, "Upgrades in your bags", "TapeMeasureGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "TapeMeasureGameFontHighlightSmall", 0, -24, 460))
     local rescan = MakeButton(p, "Rescan", 84, 26); rescan:SetPoint("TOPRIGHT", 0, 4)
     rescan:SetScript("OnClick", function() C.ResetRequests(); ns.Stats:ClearCache(); ns:Changed() end)
     Hint(rescan, "Rescan", "Reads every item again, including ones that hadn't loaded.")
@@ -74,8 +75,8 @@ end
 
 local function CreateEquippedPage()
     local p = NewPage("equipped")
-    Label(p, "What you wear", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    Label(p, "What you wear", "TapeMeasureGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "TapeMeasureGameFontHighlightSmall", 0, -24, 560))
     p.list = CreateRowList(p, -50, { rowHeight = 32 })
 
     p.Refresh = function()
@@ -114,8 +115,8 @@ end
 
 local function CreatePriorityPage()
     local p = NewPage("priority")
-    Label(p, "Stat priority", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 420))
+    Label(p, "Stat priority", "TapeMeasureGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "TapeMeasureGameFontHighlightSmall", 0, -24, 420))
     local edit = MakeButton(p, "Edit in StatLedger", 140, 26); edit:SetPoint("TOPRIGHT", 0, 4)
     edit:SetScript("OnClick", function() ns:OpenStatLedger() end)
     Hint(edit, "StatLedger", "Your stat order lives in the StatLedger addon and is shared with your other addons. Tape Measure updates as soon as you change it.")
@@ -150,14 +151,14 @@ end
 
 local function CreateHelpPage()
     local p = NewPage("help")
-    Label(p, "How Tape Measure decides", "GameFontNormalLarge", 0, 0)
+    Label(p, "How Tape Measure decides", "TapeMeasureGameFontNormalLarge", 0, 0)
     local text = Label(p,
         "|cff55d6beYour stat priority|r\nTape Measure has no weights of its own. It reads your order from StatLedger (/statledger), the same list your other addons use. Rank 1 weighs 1.0, the last rank 0.1, and stats you haven't ranked count for nothing.\n\n" ..
         "|cff55d6beFair across stats|r\nOne percent of crit is worth far more than one Strength, so each stat is first converted to item budget: main stats 1, attack power 0.5, spell power 0.86, school spell power 0.7, healing 0.45, mp5 2.5, crit / spell crit / hit 14 per %, dodge 12 per %, parry 20 per %, weapon DPS 3, armor 0.04. The conversion is the same for everyone; only the ranks are yours.\n\n" ..
         "|cff55d6beThe tooltip|r\nShows Upgrade, Downgrade or Sidegrade (within " .. "your sidegrade band), the item it was compared with, and each stat that moves the score with its rank. Grey stats change but aren't on your list. Hold Shift for every line.\n\n" ..
         "|cff55d6beWhat it compares|r\nRings and trinkets: the weaker one you wear. Two-handers: main hand plus off hand. One-handers: either hand if you can dual wield, but never against a shield.\n\n" ..
         "|cffffcf73Not counted|r\nUse, Equip and Chance on hit effects, set bonuses and resistances. The tooltip says when an item has an effect Tape Measure can't score.",
-        "GameFontHighlightSmall", 0, -34, 560)
+        "TapeMeasureGameFontHighlightSmall", 0, -34, 560)
     text:SetSpacing(3); text:SetJustifyV("TOP")
 end
 
@@ -185,7 +186,7 @@ local settingsPanel, settingsCategory
 local function BuildSettings(p)
     local logo = p:CreateTexture(nil, "ARTWORK"); logo:SetSize(28, 28)
     logo:SetPoint("TOPLEFT", 0, 6); logo:SetTexture(ns.ICON)
-    Label(p, "Tape Measure", "GameFontNormalLarge", 36, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Label(p, "Tape Measure", "TapeMeasureGameFontNormalLarge", 36, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     local prio = MakeButton(p, "Edit stat priority", 130, 26); prio:SetPoint("TOPRIGHT", 0, 4)
     prio:SetScript("OnClick", function() ns:OpenStatLedger() end)
     Hint(prio, "StatLedger", "Tape Measure's weights come from your stat order in StatLedger.")
@@ -198,7 +199,7 @@ local function BuildSettings(p)
         local y = -34 - (i - 1) * 44
         local b = MakeCheckbox(p, d[2]); b:SetPoint("TOPLEFT", -4, y)
         b:SetScript("OnClick", function(self) ns.db[d[1]] = self:GetChecked() and true or false; ns:Changed() end)
-        Muted(Label(p, d[3], "GameFontHighlightSmall", 27, y - 25, 270))
+        Muted(Label(p, d[3], "TapeMeasureGameFontHighlightSmall", 27, y - 25, 270))
         p.checks[d[1]] = b
     end
     local mini = MakeCheckbox(p, "Minimap button"); mini:SetPoint("TOPLEFT", -4, -34 - #OPTION_DEFS * 44)
@@ -212,7 +213,7 @@ local function BuildSettings(p)
     p.numbers = {}
     for i, d in ipairs(NUMBER_DEFS) do
         local y = -38 - (i - 1) * 64
-        Label(p, d[2], "GameFontHighlight", col, y)
+        Label(p, d[2], "TapeMeasureGameFontHighlight", col, y)
         local box = MakeEditBox(p, 60); box:SetPoint("TOPLEFT", col + 180, y + 6)
         box:SetJustifyH("CENTER")
         box:SetScript("OnEditFocusLost", function(self)
@@ -221,7 +222,7 @@ local function BuildSettings(p)
             self:SetText(tostring(ns.db[d[1]]))
             ns:Changed()
         end)
-        Muted(Label(p, d[3], "GameFontHighlightSmall", col, y - 20, 260))
+        Muted(Label(p, d[3], "TapeMeasureGameFontHighlightSmall", col, y - 20, 260))
         p.numbers[d[1]] = box
     end
 
@@ -305,14 +306,14 @@ local function CreateMainFrame()
 
     local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
     logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "Tape Measure", "GameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Measures your gear against what you wear", "GameFontHighlightSmall", 70, -42))
+    Label(frame, "Tape Measure", "TapeMeasureGameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Muted(Label(frame, "Measures your gear against what you wear", "TapeMeasureGameFontHighlightSmall", 70, -42))
     local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
     close:SetScript("OnClick", function() frame:Hide() end)
 
     local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    SetBackdrop(side); side:SetBackdropColor(0.045, 0.065, 0.085, 1)
+    SetBackdrop(side); side:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
     for i, d in ipairs(TABS) do
         local b = MakeButton(side, d[2], 147, 40); b:SetPoint("TOPLEFT", 9, -12 - (i - 1) * 46)
         b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
@@ -320,7 +321,7 @@ local function CreateMainFrame()
         icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
         b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(0.075, 0.105, 0.13, 1) end end)
+        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end end)
         if d[1] == "settings" then
             b:SetScript("OnClick", function() UI:OpenSettings() end)
             Hint(b, "Settings", "Opens Options > AddOns > Tape Measure.")
@@ -329,8 +330,8 @@ local function CreateMainFrame()
         end
         tabs[d[1]] = b
     end
-    Muted(Label(side, "Hover any gear to see\nwhy it's better or worse.\n\nHold Shift on a tooltip\nfor every stat line.", "GameFontHighlightSmall", 12, -14 - #TABS * 46, 145))
-    Label(side, "v" .. ns.VERSION, "GameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
+    Muted(Label(side, "Hover any gear to see\nwhy it's better or worse.\n\nHold Shift on a tooltip\nfor every stat line.", "TapeMeasureGameFontHighlightSmall", 12, -14 - #TABS * 46, 145))
+    Label(side, "v" .. ns.VERSION, "TapeMeasureGameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
 
     CreateUpgradesPage(); CreateEquippedPage(); CreatePriorityPage(); CreateHelpPage()
     ShowTab(activeTab); frame:Hide()

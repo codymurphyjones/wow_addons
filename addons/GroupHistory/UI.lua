@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local C = ns.Compat
 
 -- The Group History window: Players (everyone you've run with, and each one's page), Runs (each
@@ -62,8 +63,8 @@ local SORTS = { { "recent", "Most recent" }, { "runs", "Most runs" }, { "fault",
 local function CreatePlayersPage()
     local p = NewPage("players")
     p.sort = "recent"
-    Label(p, "Players", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    Label(p, "Players", "GroupHistoryGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "GroupHistoryGameFontHighlightSmall", 0, -24, 560))
     p.search = W.MakeEditBox(p, 200, "Search...")
     p.search:SetPoint("TOPLEFT", 0, -46)
     p.search:SetScript("OnTextChanged", function() p.Refresh() end)
@@ -80,15 +81,15 @@ local function CreatePlayersPage()
     local d = CreateFrame("Frame", nil, p); d:SetAllPoints(); d:Hide()
     local back = MakeButton(d, "< Players", 90, 24); back:SetPoint("TOPLEFT", 0, 0)
     back:SetScript("OnClick", function() p.full = nil; p.Refresh() end)
-    d.name = Label(d, "", "GameFontNormalLarge", 100, -2, 300)
+    d.name = Label(d, "", "GroupHistoryGameFontNormalLarge", 100, -2, 300)
     d.up = MakeButton(d, "+", 26, 24); d.up:SetPoint("TOPRIGHT", -30, 0)
     d.down = MakeButton(d, "-", 26, 24); d.down:SetPoint("TOPRIGHT", 0, 0)
     d.up:SetScript("OnClick", function() ns.History:SetRating(p.full, 1) end)
     d.down:SetScript("OnClick", function() ns.History:SetRating(p.full, -1) end)
     Hint(d.up, "Thumbs up", "Shown with their history.")
     Hint(d.down, "Thumbs down", "Shown with their history.")
-    d.info = Muted(Label(d, "", "GameFontHighlightSmall", 0, -32, 580))
-    d.totals = Label(d, "", "GameFontHighlightSmall", 0, -50, 580); d.totals:SetWordWrap(true)
+    d.info = Muted(Label(d, "", "GroupHistoryGameFontHighlightSmall", 0, -32, 580))
+    d.totals = Label(d, "", "GroupHistoryGameFontHighlightSmall", 0, -50, 580); d.totals:SetWordWrap(true)
     d.note = W.MakeEditBox(d, 420, "Your note about them (Enter to save)")
     d.note:SetPoint("TOPLEFT", 0, -84)
     d.note:SetScript("OnEnterPressed", function(self) ns.History:SetNote(p.full, self:GetText()); self:ClearFocus() end)
@@ -173,15 +174,15 @@ end
 
 local function CreateRunsPage()
     local p = NewPage("runs")
-    Label(p, "Runs", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    Label(p, "Runs", "GroupHistoryGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "GroupHistoryGameFontHighlightSmall", 0, -24, 560))
     p.list = W.CreateRowList(p, -50)
 
     local d = CreateFrame("Frame", nil, p); d:SetAllPoints(); d:Hide()
     local back = MakeButton(d, "< Runs", 80, 24); back:SetPoint("TOPLEFT", 0, 0)
     back:SetScript("OnClick", function() p.runID, p.death = nil, nil; p.Refresh() end)
-    d.title = Label(d, "", "GameFontNormalLarge", 90, -2, 480)
-    d.text = Label(d, "", "GameFontHighlightSmall", 0, -32, 580); d.text:SetJustifyH("LEFT"); d.text:SetSpacing(2)
+    d.title = Label(d, "", "GroupHistoryGameFontNormalLarge", 90, -2, 480)
+    d.text = Label(d, "", "GroupHistoryGameFontHighlightSmall", 0, -32, 580); d.text:SetJustifyH("LEFT"); d.text:SetSpacing(2)
     d.list = W.CreateRowList(d, -200, { rowHeight = 40 })
     p.detail = d
 
@@ -257,7 +258,7 @@ end
 local function CreateSettingsPage()
     local p = NewPage("settings")
     local o = ns.db.options
-    Label(p, "Settings", "GameFontNormalLarge", 0, 0)
+    Label(p, "Settings", "GroupHistoryGameFontNormalLarge", 0, 0)
     local checks = {
         { "popup", "Show the party popup when you join a group", "Your history with each member, as soon as you join." },
         { "whisper", "History line in chat when you whisper someone you know" },
@@ -273,10 +274,10 @@ local function CreateSettingsPage()
         p.boxes[c[1]] = b
     end
     local function Number(y, title, key, unit, hint)
-        Label(p, title, "GameFontHighlightSmall", 0, y, 220)
+        Label(p, title, "GroupHistoryGameFontHighlightSmall", 0, y, 220)
         local box = W.MakeEditBox(p, 50, "")
         box:SetPoint("TOPLEFT", 230, y + 6)
-        Muted(Label(p, unit, "GameFontHighlightSmall", 290, y, 260))
+        Muted(Label(p, unit, "GroupHistoryGameFontHighlightSmall", 290, y, 260))
         box:SetScript("OnEnterPressed", function(self)
             local v = tonumber(self:GetText())
             if v then o[key] = math.max(0, math.floor(v)) end
@@ -288,7 +289,7 @@ local function CreateSettingsPage()
     Number(-176, "Party popup closes after", "popupSeconds", "seconds (0 = stays open)", "It stays open while your mouse is over it.")
     Number(-202, "Over-pull at", "overpull", "mobs in combat at once", "A pull with this many mobs counts as an over-pull when blaming deaths.")
     Muted(Label(p, "How blame works: every death is checked against what the game lets addons see on this client: the death's last hits (who, what, melee or not), Blizzard's damage meter for the fight (damage, healing, avoidable damage, interrupts), who pulled, how many mobs came, and who died first. Each rule that fits gives someone a share with a reason. It's a best guess; the death page says how sure it is.",
-        "GameFontHighlightSmall", 0, -240, 560)):SetWordWrap(true)
+        "GroupHistoryGameFontHighlightSmall", 0, -240, 560)):SetWordWrap(true)
     p.Refresh = function()
         for key, b in pairs(p.boxes) do b:SetChecked(o[key]) end
         for _, key in ipairs({ "popupSeconds", "overpull" }) do if not p[key]:HasFocus() then p[key]:SetText(tostring(o[key])) end end
@@ -327,14 +328,14 @@ local function CreateMainFrame()
 
     local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
     logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "Group History", "GameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Everyone you've run dungeons with, and how it went", "GameFontHighlightSmall", 70, -42))
+    Label(frame, "Group History", "GroupHistoryGameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Muted(Label(frame, "Everyone you've run dungeons with, and how it went", "GroupHistoryGameFontHighlightSmall", 70, -42))
     local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
     close:SetScript("OnClick", function() frame:Hide() end)
 
     local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    SetBackdrop(side); side:SetBackdropColor(0.045, 0.065, 0.085, 1)
+    SetBackdrop(side); side:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
     for i, d in ipairs(TABS) do
         local b = MakeButton(side, d[2], 147, 40); b:SetPoint("TOPLEFT", 9, -12 - (i - 1) * 46)
         b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
@@ -342,12 +343,12 @@ local function CreateMainFrame()
         icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
         b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(0.075, 0.105, 0.13, 1) end end)
+        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end end)
         b:SetScript("OnClick", function() ShowTab(d[1]); UI:Refresh() end)
         tabs[d[1]] = b
     end
-    side.current = Muted(Label(side, "", "GameFontHighlightSmall", 12, -20 - #TABS * 46, 145))
-    Label(side, "v" .. ns.VERSION, "GameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
+    side.current = Muted(Label(side, "", "GroupHistoryGameFontHighlightSmall", 12, -20 - #TABS * 46, 145))
+    Label(side, "v" .. ns.VERSION, "GroupHistoryGameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
     UI.side = side
 
     CreatePlayersPage(); CreateRunsPage(); CreateSettingsPage()

@@ -3,60 +3,71 @@ local _, Z = ...
 Z.VERSION = "1.1.2"
 -- How close (in yards) you must stand to a dock for its sign to show. The two
 -- Grom'gol zeppelin masters are only ~17 yards apart, so zeppelins stay below that.
-Z.RADIUS = { zeppelin = 15, ship = 30 }
+-- Ship piers are long, so ports show from further out. Mousing over a master has
+-- no range limit.
+Z.RADIUS = { zeppelin = 15, ship = 60 }
 -- How far /zep mark and /zep remove look for the sign to change.
 Z.MARK_RANGE = 60
 Z.TICK = 0.25
 
 local KIND_LABEL = { zeppelin = "Zeppelin", ship = "Ship" }
+Z.KIND_LABEL = KIND_LABEL
 
 -- Built-in signs (zone %, uiMapID). Zeppelin masters come from Wowhead's NPC data,
 -- docks from Wowhead's Forever world map. npc = a master you can also mouse over
--- or look at to see the sign.
+-- or look at to see the sign. place = the town the dock is in (a ride lands at a
+-- dock whose place is its dest, Rides.lua).
 local SIGNS = {
     -- Horde zeppelin towers
-    { key = "zep:orgrimmar:undercity",   kind = "zeppelin", dest = "Undercity",  mapID = 1411, x = 50.8, y = 13.5, npc = 9564 },  -- Frezza
-    { key = "zep:orgrimmar:gromgol",     kind = "zeppelin", dest = "Grom'gol",   mapID = 1411, x = 50.6, y = 12.8, npc = 12136 }, -- Snurk Bucksquick
-    { key = "zep:undercity:orgrimmar",   kind = "zeppelin", dest = "Orgrimmar",  mapID = 1420, x = 60.8, y = 58.8, npc = 9566 },  -- Zapetta
-    { key = "zep:undercity:gromgol",     kind = "zeppelin", dest = "Grom'gol",   mapID = 1420, x = 61.8, y = 59.0, npc = 3150 },  -- Hin Denburg
-    { key = "zep:gromgol:orgrimmar",     kind = "zeppelin", dest = "Orgrimmar",  mapID = 1434, x = 31.4, y = 29.8, npc = 3149 },  -- Nez'raz
-    { key = "zep:gromgol:undercity",     kind = "zeppelin", dest = "Undercity",  mapID = 1434, x = 31.5, y = 29.4, npc = 12137 }, -- Squibby Overspeck
+    { key = "zep:orgrimmar:undercity",   kind = "zeppelin", place = "Orgrimmar", dest = "Undercity",  mapID = 1411, x = 50.8, y = 13.5, npc = 9564 },  -- Frezza
+    { key = "zep:orgrimmar:gromgol",     kind = "zeppelin", place = "Orgrimmar", dest = "Grom'gol",   mapID = 1411, x = 50.6, y = 12.8, npc = 12136 }, -- Snurk Bucksquick
+    { key = "zep:undercity:orgrimmar",   kind = "zeppelin", place = "Undercity", dest = "Orgrimmar",  mapID = 1420, x = 60.8, y = 58.8, npc = 9566 },  -- Zapetta
+    { key = "zep:undercity:gromgol",     kind = "zeppelin", place = "Undercity", dest = "Grom'gol",   mapID = 1420, x = 61.8, y = 59.0, npc = 3150 },  -- Hin Denburg
+    { key = "zep:gromgol:orgrimmar",     kind = "zeppelin", place = "Grom'gol", dest = "Orgrimmar",  mapID = 1434, x = 31.4, y = 29.8, npc = 3149 },  -- Nez'raz
+    { key = "zep:gromgol:undercity",     kind = "zeppelin", place = "Grom'gol", dest = "Undercity",  mapID = 1434, x = 31.5, y = 29.4, npc = 12137 }, -- Squibby Overspeck
     -- Forever's skyships
-    { key = "zep:skywatcher:valanaar",   kind = "zeppelin", dest = "Valanaar",      mapID = 1412, x = 34.3, y = 26.1 },
-    { key = "zep:valanaar:thunderbluff", kind = "zeppelin", dest = "Thunder Bluff", mapID = 2521, x = 57.7, y = 81.0 },
-    { key = "zep:valanaar:dalaran",      kind = "zeppelin", dest = "Dalaran",       mapID = 2521, x = 65.8, y = 83.8 },
-    { key = "zep:dalaran:valanaar",      kind = "zeppelin", dest = "Valanaar",      mapID = 1416, x = 12.8, y = 51.2 },
+    { key = "zep:skywatcher:valanaar",   kind = "zeppelin", place = "Skywatcher", dest = "Valanaar",      mapID = 1412, x = 34.3, y = 26.1 },
+    { key = "zep:valanaar:thunderbluff", kind = "zeppelin", place = "Valanaar", dest = "Thunder Bluff", mapID = 2521, x = 57.7, y = 81.0 },
+    { key = "zep:valanaar:dalaran",      kind = "zeppelin", place = "Valanaar", dest = "Dalaran",       mapID = 2521, x = 65.8, y = 83.8 },
+    { key = "zep:dalaran:valanaar",      kind = "zeppelin", place = "Dalaran", dest = "Valanaar",      mapID = 1416, x = 12.8, y = 51.2 },
     -- Ships
-    { key = "ship:ratchet:bootybay",       kind = "ship", dest = "Booty Bay",          mapID = 1413, x = 63.8, y = 38.8, npc = 9558 },   -- Grimble
-    { key = "ship:bootybay:ratchet",       kind = "ship", dest = "Ratchet",            mapID = 1434, x = 25.7, y = 73.1, npc = 9559 },   -- Grizzlowe
-    { key = "ship:theramore:menethil",     kind = "ship", dest = "Menethil Harbor",    mapID = 1445, x = 71.7, y = 56.7 },
-    { key = "ship:menethil:theramore",     kind = "ship", dest = "Theramore Isle",     mapID = 1437, x = 4.7,  y = 63.8 },
-    { key = "ship:menethil:southshore",    kind = "ship", dest = "Southshore",         mapID = 1437, x = 4.5,  y = 56.7 },
-    { key = "ship:southshore:auberdine",   kind = "ship", dest = "Auberdine",          mapID = 1424, x = 50.7, y = 70.4, npc = 276316 }, -- Raul Sweete
-    { key = "ship:ruttheran:auberdine",    kind = "ship", dest = "Auberdine",          mapID = 1438, x = 54.8, y = 97.2 },
-    { key = "ship:auberdine:ruttheran",    kind = "ship", dest = "Rut'theran Village", mapID = 1439, x = 33.3, y = 39.8 },
-    { key = "ship:auberdine:menethil",     kind = "ship", dest = "Menethil Harbor",    mapID = 1439, x = 32.3, y = 44.1 },
-    { key = "ship:auberdine:stormwind",    kind = "ship", dest = "Stormwind Harbor",   mapID = 1439, x = 30.5, y = 40.9 },
-    { key = "ship:stormwind:auberdine",    kind = "ship", dest = "Auberdine",          mapID = 1453, x = 21.8, y = 56.9 },
-    { key = "ship:steamwheedle:powderfuse", kind = "ship", dest = "Powderfuse Port",   mapID = 1446, x = 68.6, y = 23.0 },
-    { key = "ship:powderfuse:gadgetzan",   kind = "ship", dest = "Gadgetzan",          mapID = 2548, x = 80.6, y = 54.6 },
-    -- Wowhead only marks one end of this ferry; add the other with /zep mark new.
-    { key = "ship:feathermoon",            kind = "ship", dest = "Feathermoon Ferry",  mapID = 1444, x = 31.0, y = 39.5 },
+    { key = "ship:ratchet:bootybay",       kind = "ship", place = "Ratchet", dest = "Booty Bay",          mapID = 1413, x = 63.8, y = 38.8, npc = 9558 },   -- Grimble
+    { key = "ship:bootybay:ratchet",       kind = "ship", place = "Booty Bay", dest = "Ratchet",            mapID = 1434, x = 25.7, y = 73.1, npc = 9559 },   -- Grizzlowe
+    { key = "ship:theramore:menethil",     kind = "ship", place = "Theramore Isle", dest = "Menethil Harbor",    mapID = 1445, x = 71.7, y = 56.7 },
+    { key = "ship:menethil:theramore",     kind = "ship", place = "Menethil Harbor", dest = "Theramore Isle",     mapID = 1437, x = 4.7,  y = 63.8 },
+    { key = "ship:menethil:southshore",    kind = "ship", place = "Menethil Harbor", dest = "Southshore",         mapID = 1437, x = 4.5,  y = 56.7 },
+    { key = "ship:southshore:auberdine",   kind = "ship", place = "Southshore", dest = "Auberdine",          mapID = 1424, x = 50.7, y = 70.4, npc = 276316 }, -- Raul Sweete
+    { key = "ship:ruttheran:auberdine",    kind = "ship", place = "Rut'theran Village", dest = "Auberdine",          mapID = 1438, x = 54.8, y = 97.2 },
+    { key = "ship:auberdine:ruttheran",    kind = "ship", place = "Auberdine", dest = "Rut'theran Village", mapID = 1439, x = 33.3, y = 39.8 },
+    { key = "ship:auberdine:menethil",     kind = "ship", place = "Auberdine", dest = "Menethil Harbor",    mapID = 1439, x = 32.3, y = 44.1 },
+    { key = "ship:auberdine:stormwind",    kind = "ship", place = "Auberdine", dest = "Stormwind Harbor",   mapID = 1439, x = 30.5, y = 40.9 },
+    { key = "ship:stormwind:auberdine",    kind = "ship", place = "Stormwind Harbor", dest = "Auberdine",          mapID = 1453, x = 21.8, y = 56.9 },
+    { key = "ship:steamwheedle:powderfuse", kind = "ship", place = "Steamwheedle Port", dest = "Powderfuse Port",   mapID = 1446, x = 68.6, y = 23.0 },
+    { key = "ship:powderfuse:gadgetzan",   kind = "ship", place = "Powderfuse Port", dest = "Gadgetzan",          mapID = 2548, x = 80.6, y = 54.6 },
+    -- The Feathermoon ferry, between Sardor Isle and the Forgotten Coast (Feralas). The coast's
+    -- pier was marked in game at 44, 43.
+    { key = "ship:feathermoon:forgottencoast", kind = "ship", place = "Feathermoon Stronghold", dest = "The Forgotten Coast",    mapID = 1444, x = 31.0, y = 39.5 },
+    { key = "ship:forgottencoast:feathermoon", kind = "ship", place = "The Forgotten Coast", dest = "Feathermoon Stronghold", mapID = 1444, x = 44.0, y = 43.0 },
 }
+
+Z.SIGNS = SIGNS
 
 local LIVE_UNITS = { "mouseover", "softinteract", "softfriend", "target" }
 
-local spots = {}     -- { sign, continent, wx, wy }, rebuilt by BuildSpots()
+local spots = {}     -- { sign, continent, wx, wy, mapID, x, y (0-1) }, rebuilt by BuildSpots()
+Z.spots = spots
 local signByNpc = {} -- NPC ID -> sign
 local testUntil = 0
 
 local function Print(msg)
     print("|cff33ff99Zeppelin Signs|r " .. msg)
 end
+Z.Print = Print
 
 local function Label(sign)
     return KIND_LABEL[sign.kind] .. ": " .. sign.dest
 end
+Z.Label = Label
 
 local function WorldPos(mapID, x, y)
     if not mapID or not x then return end
@@ -73,11 +84,12 @@ local function PlayerWorldPos()
     local continent, wx, wy = WorldPos(mapID, pos.x, pos.y)
     return continent, wx, wy, mapID, pos.x, pos.y
 end
+Z.WorldPos, Z.PlayerWorldPos = WorldPos, PlayerWorldPos
 
 local function AddSpot(sign, mapID, x, y)
     local continent, wx, wy = WorldPos(mapID, x, y)
     if continent then
-        spots[#spots + 1] = { sign = sign, continent = continent, wx = wx, wy = wy }
+        spots[#spots + 1] = { sign = sign, continent = continent, wx = wx, wy = wy, mapID = mapID, x = x, y = y }
     end
 end
 
@@ -153,6 +165,9 @@ sign:Hide()
 
 local function ShowText(text)
     if text then
+        -- the suite's face (WallyHUD) when it's there; read here, since WallyHUD loads after us
+        local face = WallyHUD and WallyHUD.SuiteFace and WallyHUD.SuiteFace("semibold")
+        sign.text:SetFont(face or STANDARD_TEXT_FONT, 28, "OUTLINE")
         sign.text:SetText(text)
         sign:Show()
     else
@@ -246,7 +261,7 @@ local function ShowMarkPopup()
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
     tinsert(UISpecialFrames, "ZeppelinSignsMarkFrame")
 
-    local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local title = f:CreateFontString(nil, "OVERLAY", "ZeppelinSignsGameFontHighlight")
     title:SetPoint("TOP", 0, -5)
     title:SetText("New Sign")
 
@@ -256,7 +271,7 @@ local function ShowMarkPopup()
         local cb = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
         cb:SetSize(24, 24)
         cb:SetPoint("TOPLEFT", xOff, -34)
-        local label = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        local label = f:CreateFontString(nil, "OVERLAY", "ZeppelinSignsGameFontHighlight")
         label:SetPoint("LEFT", cb, "RIGHT", 2, 0)
         label:SetText(KIND_LABEL[kind])
         cb:SetScript("OnClick", function()
@@ -269,7 +284,7 @@ local function ShowMarkPopup()
     Radio("zeppelin", 140)
     radios.ship:SetChecked(true)
 
-    local destLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local destLabel = f:CreateFontString(nil, "OVERLAY", "ZeppelinSignsGameFontNormal")
     destLabel:SetPoint("TOPLEFT", 22, -70)
     destLabel:SetText("Destination:")
     local edit = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
@@ -322,7 +337,10 @@ events:SetScript("OnEvent", function(_, event)
         ZeppelinSignsDB.moved = ZeppelinSignsDB.moved or {}
         ZeppelinSignsDB.custom = ZeppelinSignsDB.custom or {}
         ZeppelinSignsDB.learned = nil -- 1.0.0's guessed Gaznik Gearsnaps spot
+        ZeppelinSignsDB.rides = ZeppelinSignsDB.rides or {} -- timed rides (Rides.lua)
+        if ZeppelinSignsDB.timer == nil then ZeppelinSignsDB.timer = true end
         BuildSpots()
+        Z.Rides:Init()
         C_Timer.NewTicker(Z.TICK, Z.Update)
         for _, e in ipairs({ "UPDATE_MOUSEOVER_UNIT", "PLAYER_TARGET_CHANGED",
                              "PLAYER_SOFT_FRIEND_CHANGED", "PLAYER_SOFT_INTERACT_CHANGED" }) do
@@ -345,6 +363,14 @@ SlashCmdList.ZEPPELINSIGNS = function(msg)
         ShowMarkPopup()
     elseif msg == "remove" then
         RemoveNearest()
+    elseif msg == "timer" then
+        ZeppelinSignsDB.timer = not ZeppelinSignsDB.timer
+        Print("Ride timer " .. (ZeppelinSignsDB.timer and "on." or "off."))
+        Z.Rides:Refresh()
+    elseif msg == "rides" then
+        Z.Rides:List()
+    elseif msg == "test ride" then
+        Z.Rides:Test()
     elseif msg == "" then
         ZeppelinSignsDB.enabled = not ZeppelinSignsDB.enabled
         Print(ZeppelinSignsDB.enabled and "on." or "off.")
@@ -355,6 +381,9 @@ SlashCmdList.ZEPPELINSIGNS = function(msg)
         print("  /zep mark - move the nearest sign to where you stand")
         print("  /zep mark new - add a new ship or zeppelin sign")
         print("  /zep remove - delete the nearest added sign, or reset a moved one")
+        print("  /zep timer - turn the on-screen ride timer on/off")
+        print("  /zep rides - how long each ride you've taken lasts")
+        print("  /zep test ride - show a sample ride timer")
     end
     Z.Update()
 end

@@ -11,6 +11,8 @@
 ## Category: Auction & Economy
 ## AddonCompartmentFunc: WealthPlanner_OnCompartmentClick
 
+Fonts.lua
+Palette.lua
 Compat.lua
 Core.lua
 Widgets.lua

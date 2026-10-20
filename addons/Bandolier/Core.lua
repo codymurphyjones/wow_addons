@@ -360,6 +360,7 @@ function ns:Refresh()
     -- The buffs you had going into a fight, for LearnAfterCombat.
     if ns.CanReadAuras() then self.buffSnapshot = BuffSnapshot() end
     self.list = self.Scanner:Scan()
+    self.Usage:Update(self.list) -- what was used up since the last scan (API.lua)
     self.Flyout:UpdateVisuals() -- counts and cooldowns are safe in combat
     local deferred = InCombatLockdown()
     self:RunOutOfCombat("rebuild", function()
@@ -531,6 +532,11 @@ SlashCmdList.BANDOLIER = function(msg)
         end)
     elseif msg == "options" or msg == "settings" then
         ns.Settings:Open()
+    elseif msg == "stock" then
+        -- Quartermaster's Consumables page: minimum stock for each consumable, restocked at the AH.
+        if not (QuartermasterAPI and QuartermasterAPI.ShowConsumables and QuartermasterAPI.ShowConsumables()) then
+            ns:Print("Keeping consumables stocked needs the Quartermaster addon.")
+        end
     elseif msg == "stats" then
         local order, source = ns.Stats:Describe()
         ns:Print(("Stat priority (%s): %s"):format(source, order))
@@ -573,7 +579,7 @@ SlashCmdList.BANDOLIER = function(msg)
             end
         end
     elseif msg == "help" then
-        ns:Print("/bandolier - list consumables in priority order, /bandolier reset - recreate the macro, /bandolier debug - show the macro text and bar state, /bandolier trace - report each plain press, /bandolier boss - treat every fight as a boss fight, /bandolier stats - show your stat priority, /bandolier options - open settings")
+        ns:Print("/bandolier - list consumables in priority order, /bandolier reset - recreate the macro, /bandolier debug - show the macro text and bar state, /bandolier trace - report each plain press, /bandolier boss - treat every fight as a boss fight, /bandolier stats - show your stat priority, /bandolier stock - keep consumables stocked (with Quartermaster), /bandolier options - open settings")
     else
         ns:Refresh()
         if #ns.list == 0 then

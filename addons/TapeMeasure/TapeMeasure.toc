@@ -11,6 +11,8 @@
 ## AddonCompartmentFunc: TapeMeasure_OnCompartmentClick
 ## X-Curse-Project-ID: 1735039
 
+Fonts.lua
+Palette.lua
 Compat.lua
 Core.lua
 Stats.lua

@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- The dojo window: every death with its lessons, your patterns across fights, and settings.
 -- Same frame and sidebar as Wally's window.
@@ -27,8 +28,8 @@ end
 
 local function CreateDeaths()
     local p = NewPage("deaths")
-    Label(p, "Lessons", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    Label(p, "Lessons", "MrMiyagiGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "MrMiyagiGameFontHighlightSmall", 0, -24, 560))
     p.list = W.CreateRowList(p, -50)
     p.Refresh = function()
         local items = {}
@@ -53,12 +54,12 @@ end
 
 local function CreatePatterns()
     local p = NewPage("patterns")
-    Label(p, "Patterns", "GameFontNormalLarge", 0, 0)
+    Label(p, "Patterns", "MrMiyagiGameFontNormalLarge", 0, 0)
     local scroll = CreateFrame("ScrollFrame", nil, p, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 0, -30); scroll:SetPoint("BOTTOMRIGHT", -26, 0)
     local body = CreateFrame("Frame", nil, scroll); body:SetSize(540, 10)
     scroll:SetScrollChild(body)
-    local text = body:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local text = body:CreateFontString(nil, "OVERLAY", "MrMiyagiGameFontHighlight")
     text:SetPoint("TOPLEFT"); text:SetWidth(540); text:SetJustifyH("LEFT"); text:SetSpacing(3)
     p.Refresh = function()
         text:SetText(table.concat(ns.Dojo:Patterns(), "\n"))
@@ -69,7 +70,7 @@ end
 local function CreateSettings()
     local p = NewPage("settings")
     local o = ns.db.options
-    Label(p, "Settings", "GameFontNormalLarge", 0, 0)
+    Label(p, "Settings", "MrMiyagiGameFontNormalLarge", 0, 0)
     local checks = {
         { "autoOpen", "Open the coach window after a death to mobs" },
         { "bindings", "Name the key each suggested spell is bound to" },
@@ -81,7 +82,7 @@ local function CreateSettings()
         b:SetScript("OnClick", function(self) o[c[1]] = self:GetChecked() and true or false end)
         p.boxes[c[1]] = b
     end
-    Label(p, "Lessons shown before \"All lessons\"", "GameFontHighlightSmall", 0, -118, 260)
+    Label(p, "Lessons shown before \"All lessons\"", "MrMiyagiGameFontHighlightSmall", 0, -118, 260)
     p.count = W.MakeEditBox(p, 40, "")
     p.count:SetPoint("TOPLEFT", 270, -112)
     p.count:SetScript("OnEnterPressed", function(self)
@@ -93,7 +94,7 @@ local function CreateSettings()
     kit:SetScript("OnClick", function() ns.Kit:Print() end)
     W.Hint(kit, "Your kit", "Prints each of your spells, pet spells and bag items with what Mr. Miyagi understood it to do, from its own tooltip. Use it to spot a misread.")
     Muted(Label(p, "Mr. Miyagi only ever suggests what your character has: your spells at their ranks, your talents' effect on them, the items in your bags. He never tells you to change your stats, gear or talents. Odds are estimates from the fight's own numbers.",
-        "GameFontHighlightSmall", 0, -192, 560)):SetWordWrap(true)
+        "MrMiyagiGameFontHighlightSmall", 0, -192, 560)):SetWordWrap(true)
     p.Refresh = function()
         for key, b in pairs(p.boxes) do b:SetChecked(o[key]) end
         if not p.count:HasFocus() then p.count:SetText(tostring(o.lessons)) end
@@ -127,13 +128,13 @@ local function CreateMainFrame()
     tinsert(UISpecialFrames, "MrMiyagiWindow")
     local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
     logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "Mr. Miyagi's Dojo", "GameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Lose a fight, learn a lesson", "GameFontHighlightSmall", 70, -42))
+    Label(frame, "Mr. Miyagi's Dojo", "MrMiyagiGameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Muted(Label(frame, "Lose a fight, learn a lesson", "MrMiyagiGameFontHighlightSmall", 70, -42))
     local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
     close:SetScript("OnClick", function() frame:Hide() end)
     local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    SetBackdrop(side); side:SetBackdropColor(0.045, 0.065, 0.085, 1)
+    SetBackdrop(side); side:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
     for i, d in ipairs(TABS) do
         local b = MakeButton(side, d[2], 147, 40); b:SetPoint("TOPLEFT", 9, -12 - (i - 1) * 46)
         b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
@@ -141,11 +142,11 @@ local function CreateMainFrame()
         icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
         b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(0.075, 0.105, 0.13, 1) end end)
+        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end end)
         b:SetScript("OnClick", function() ShowTab(d[1]); UI:Refresh() end)
         tabs[d[1]] = b
     end
-    Label(side, "v" .. ns.VERSION, "GameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
+    Label(side, "v" .. ns.VERSION, "MrMiyagiGameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
     CreateDeaths(); CreatePatterns(); CreateSettings()
     ShowTab(activeTab); frame:Hide()
 end

@@ -61,11 +61,11 @@ local function Text(text, font, color, y, indent)
 end
 
 local function Heading(text, y)
-    return Text(text, _G.QuestTitleFont and "QuestTitleFont" or "GameFontNormalLarge", HEADING, y - 6)
+    return Text(text, _G.QuestTitleFont and "QuestTitleFont" or "SpyglassPluginQuestsGameFontNormalLarge", HEADING, y - 6)
 end
 
 local function Body(text, y, indent)
-    return Text(text, _G.QuestFont and "QuestFont" or "GameFontHighlight", INK, y, indent)
+    return Text(text, _G.QuestFont and "SpyglassPluginQuestsQuestFont" or "SpyglassPluginQuestsGameFontHighlight", INK, y, indent)
 end
 
 -- A reward item, like the quest frame's: icon in a slot, name in its rarity colour.
@@ -87,7 +87,7 @@ local function RewardItem(itemID, x, y, highlight)
         button.glow:SetPoint("BOTTOMRIGHT", button.icon, 3, -3)
         button.glow:SetTexture("Interface\\Buttons\\CheckButtonHilight")
         button.glow:SetBlendMode("ADD")
-        button.name = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        button.name = button:CreateFontString(nil, "OVERLAY", "SpyglassPluginQuestsGameFontHighlightSmall")
         button.name:SetPoint("LEFT", button.icon, "RIGHT", 6, 0)
         button.name:SetWidth(104)
         button.name:SetJustifyH("LEFT")
@@ -220,7 +220,7 @@ local function Draw()
     content:SetWidth(f.scroll:GetWidth())
     local y = -4
 
-    y = Text(Q:Title(step), _G.QuestTitleFont and "QuestTitleFont" or "GameFontNormalLarge", HEADING, y)
+    y = Text(Q:Title(step), _G.QuestTitleFont and "QuestTitleFont" or "SpyglassPluginQuestsGameFontNormalLarge", HEADING, y)
     local level = Q.Get(step, "questLevel")
     local minLevel = Q.Get(step, "requiredLevel")
     local levelText = (level and level > 0) and ("Level " .. level .. " quest") or "Quest"

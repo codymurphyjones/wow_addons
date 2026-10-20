@@ -70,12 +70,17 @@ function Lists:Delete(list)
     ns:Changed()
 end
 
--- Accepts an itemID, an item link or an item name (looked up in the catalog).
+-- Accepts an itemID, an item link or an item name (looked up in the catalog). Returns the itemID,
+-- and for a link to an enchanted (or random-suffix, or socketed) copy also its variant key.
 local function Resolve(item)
     if type(item) == "number" then return item end
     if type(item) ~= "string" then return nil end
     local id = C.IDFromLink(item) or tonumber(item)
-    if id then return id end
+    if id then
+        local variant = C.IDFromLink(item) and ns.Catalog:Variant(item)
+        if variant and not ns.Catalog:IsPlain(variant) then return id, variant end
+        return id
+    end
     local lname = ns.Trim(item):lower()
     ns.Catalog:EnsureBuilt()
     for _, e in ipairs(ns.Catalog.entries) do
@@ -85,31 +90,56 @@ local function Resolve(item)
     return C.IDFromLink(link)
 end
 
-function Lists:Find(list, itemID)
+-- What tells entries apart: the variant key (Catalog:Variant) for an enchanted, random-suffix or
+-- socketed copy, else the itemID as a string (the same key a plain copy's link gives).
+function Lists:Key(entry)
+    return entry.variant or (entry.itemID and tostring(entry.itemID))
+end
+
+-- variant: nil (or a plain key) means the plain item; entries saved before variants are plain too.
+function Lists:Find(list, itemID, variant)
     if not itemID then return nil end
+    if ns.Catalog:IsPlain(variant) then variant = nil end
     for i, entry in ipairs(list.entries) do
-        if entry.itemID == itemID then return entry, i end
+        if entry.itemID == itemID and entry.variant == variant then return entry, i end
     end
 end
 
--- Adding an item that is already on the list raises its quantity.
-function Lists:AddItem(item, qty, list)
+-- The price an entry is judged by: Auctionator's market price for its variant (Catalog:MarketFor),
+-- else, for an enchanted copy Auctionator can't price, the cheapest listing seen when it was added.
+-- Returns the price and whether it is that seen price.
+function Lists:Price(entry)
+    local market = ns.Catalog:MarketFor(entry.itemID, entry.variant, entry.link)
+    if market then return market, false end
+    if entry.seenUnit then return entry.seenUnit, true end
+end
+
+-- Adding an item that is already on the list raises its quantity. item can be a link to an
+-- enchanted copy: that enchant then goes on the list as its own item. seenUnit: the cheapest price
+-- it was seen at (Buying tab), for variants Auctionator has no price for.
+function Lists:AddItem(item, qty, list, seenUnit)
     list = list or self:AddTarget()
     qty = math.max(1, math.floor(tonumber(qty) or 1))
-    local id = Resolve(item)
+    local id, variant = Resolve(item)
     if not id then
         ns:Print("Couldn't find an item called " .. tostring(item) .. ".", true)
         return nil
     end
-    local entry = self:Find(list, id)
+    local entry = self:Find(list, id, variant)
     local e = ns.Catalog:Get(id)
     if entry then
         entry.qty = entry.qty + qty
+        entry.finishedAt = nil -- more to buy: not done any more
+        if variant and seenUnit then entry.seenUnit = seenUnit end
+    elseif variant then
+        entry = { itemID = id, variant = variant, name = C.NameFromLink(item) or (e and e.name), link = item,
+            qty = qty, bought = 0, seenUnit = seenUnit }
+        table.insert(list.entries, entry)
     else
         entry = { itemID = id, name = e and e.name, link = e and e.link, qty = qty, bought = 0 }
         table.insert(list.entries, entry)
     end
-    ns:Print(("Added %dx %s to %s (%d %s)."):format(qty, entry.link or entry.name or ("item " .. id), list.name, entry.qty,
+    ns:Print(("Added %dx %s to %s (%d %s)."):format(qty, self:Describe(entry), list.name, entry.qty,
         list.id and "target" or "wanted"))
     ns:Changed()
     return entry
@@ -159,7 +189,7 @@ function Lists:Clear(list)
 end
 
 function Lists:ResetProgress(list)
-    for _, entry in ipairs(list.entries) do entry.bought = 0 end
+    for _, entry in ipairs(list.entries) do entry.bought, entry.finishedAt = 0, nil end
     ns:Print("Progress on " .. list.name .. " reset.", true)
     ns:Changed()
 end
@@ -171,7 +201,9 @@ function Lists:Describe(entry)
         local e = ns.Catalog:Get(entry.itemID)
         if e and e.link then entry.name, entry.link = e.name, e.link end
     end
-    return entry.link or entry.name or ("item:" .. entry.itemID)
+    local text = entry.link or entry.name or ("item:" .. entry.itemID)
+    if entry.variant and entry.link then text = text .. ns.Catalog:VariantTag(entry.link) end
+    return text
 end
 
 function Lists:Tolerance(entry)
@@ -182,11 +214,27 @@ function Lists:Remaining(entry)
     return math.max(0, entry.qty - (entry.bought or 0))
 end
 
+-- When an entry was finished (time()): the purchase that finished it (Buyer), or 0 for one done
+-- without a time (finished before times were kept: long ago). nil while it isn't done.
+function Lists:DoneAt(entry)
+    entry.doneAt = nil -- (an earlier version's stamp: when it was first seen, not when it was bought)
+    if self:Remaining(entry) > 0 then
+        entry.finishedAt = nil
+        return nil
+    end
+    return entry.finishedAt or 0
+end
+
+-- Marks an entry finished now (the purchase that bought the last of it).
+function Lists:Finished(entry)
+    if self:Remaining(entry) <= 0 then entry.finishedAt = time() end
+end
+
 -- Market price per unit and the estimated cost of what's still needed.
 function Lists:Estimate(list)
     local total, unknown = 0, 0
     for _, entry in ipairs(list.entries) do
-        local price = entry.filter and entry.filter.maxPrice or ns.Catalog:PriceFor(entry.itemID)
+        local price = entry.filter and entry.filter.maxPrice or (not entry.filter and self:Price(entry))
         local remaining = self:Remaining(entry)
         if price then total = total + price * remaining
         elseif remaining > 0 then unknown = unknown + 1 end

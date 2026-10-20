@@ -11,6 +11,7 @@
 ## Category: Equipment
 ## X-Curse-Project-ID: 1735122
 
+Fonts.lua
 Data\QuestDB.lua
 Data\Sources.lua
 Data\SourcesWowhead.lua

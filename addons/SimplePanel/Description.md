@@ -8,13 +8,13 @@ SimplePanel puts the things you check all the time into one thin bar along the t
 
 ## Getting started
 
-1. **Log in.** The bar appears across the top of the screen with a sensible set of plugins already on it, and SimplePanel says *"Type /sb for settings; right-click the bar for options"* in chat.
+1. **Log in.** The bar appears across the top of the screen with a sensible set of plugins already on it, and SimplePanel says *"Type /spanel for settings; right-click the bar for options"* in chat.
 2. **Hover** any plugin to see its tooltip.
 3. **Left-click** a plugin for its action: open your bags, the character sheet, the world map, a chart, a menu of switches and so on.
 4. **Right-click** a plugin for its options. Every plugin's menu ends with **Display** (icon, colors, progress bar, section) and **Hide**.
 5. **Right-click empty bar space** for the bar's own options and a list of every plugin to turn on or off.
-6. **Type `/sb edit`** (or tick **Edit the bar** in that menu) to drag plugins around, and click **Done** when you're happy.
-7. **Type `/sb`** to open the SimplePanel window with every plugin, your launchers, profiles and reset buttons.
+6. **Type `/spanel edit`** (or tick **Edit the bar** in that menu) to drag plugins around, and click **Done** when you're happy.
+7. **Type `/spanel`** to open the SimplePanel window with every plugin, your launchers, profiles and reset buttons.
 
 ---
 
@@ -22,7 +22,7 @@ SimplePanel puts the things you check all the time into one thin bar along the t
 
 ### The bar
 - **Three sections:** left, center and right. Plugins line up from the left edge, from the right edge, and around the middle of the screen.
-- **Edit mode** (`/sb edit`, **Edit the bar** on the bar menu or in the Plugins tab, or the game's own Edit Mode) outlines the three sections:
+- **Edit mode** (`/spanel edit`, **Edit the bar** on the bar menu or in the Plugins tab, or the game's own Edit Mode) outlines the three sections:
   - **Drag** plugins within a section or into another one.
   - Click a plugin's **×** to hide it.
   - **Right-click** a plugin for its options.
@@ -35,6 +35,7 @@ SimplePanel puts the things you check all the time into one thin bar along the t
 - **Auto-hide:** the bar slides away after a moment and comes back when your mouse touches the top of the screen. It stays put while you're using a menu, a tooltip or the drawer.
 - **Hide in combat:** the bar steps aside during fights.
 - **Push minimap and buffs down:** moves the minimap and your buffs below the bar so it doesn't cover them.
+- **Own Panels** (Options → AddOns → SimplePanel): clicking the Durability plugin opens SimplePanel's own character sheet in Wally's style, latched to the plugin: your gear around your 3D model with durability on every slot, the repair bill, your stats, and the Pet, Reputation, Skills and Honor tabs. Tabs other add-ons add to the game's sheet open the game's window on that tab. SimplePanel's panels (the sheet, the launcher drawer) hang from their plugin, lined up with it, and move aside so they never cover each other.
 - **Size and look:** height, background opacity, dividers between plugins, small or normal font, and a **Scale** setting that grows the bar and its charts together.
 - **Flashes:** a plugin briefly lights up when something happens: new mail, a skill-up, a quest done, ammo running low.
 
@@ -89,8 +90,9 @@ Every plugin has its own options on its right-click menu. Here's what each one s
 
 **Blocks and filters.** The Social plugin's switches act for you and keep working even if the button is hidden:
 - Decline duels.
-- Decline group invites from strangers.
+- Decline group invites from strangers. While you're listed in Looking for Group this steps aside: invites from players who are also listed get through, anyone else is still declined.
 - Accept group invites from friends and guild.
+- With Group History installed: treat past groupmates you rated up as known, and decline invites from anyone you rated down.
 - Decline guild invites.
 - Block trades and block channel invites.
 - Hide whispers from strangers (GMs always get through).
@@ -100,7 +102,7 @@ Every plugin has its own options on its right-click menu. Here's what each one s
 Tick **Say in chat when something is declined** to see what it did for you.
 
 ### Charts
-- Many plugins keep a history and open a **chart window**: Gold, Experience, Performance, Memory, Ammo, Regen and Session. Left-click the plugin, choose **Open chart** from its menu, or type `/sb chart <plugin>`.
+- Many plugins keep a history and open a **chart window**: Gold, Experience, Performance, Memory, Ammo, Regen and Session. Left-click the plugin, choose **Open chart** from its menu, or type `/spanel chart <plugin>`.
 - Chart windows can be **dragged**, **resized** from the corner and **pinned** (a pinned window stays put and doesn't close with Escape).
 - Each plugin offers its own **ranges**, such as Session, 24 hours, 7 days and 30 days for gold.
 - **Hover** the chart for exact values at any point.
@@ -116,12 +118,13 @@ Your add-ons' minimap buttons, gathered into one drawer:
   - **In the drawer**;
   - **Pinned to the bar**;
   - **On the minimap**, left exactly where it was;
+  - **Anywhere on screen**: its own icon that you drag wherever you like (lock it in place from the same menu);
   - **Hidden**.
-- The **Launchers** tab in the SimplePanel window shows the same four places as boxes. Drag launchers between them.
+- The **Launchers** tab in the SimplePanel window shows the same five places as boxes. Drag launchers between them.
 - **Sort** by name or most used first, and choose the tile size and number of columns.
 - Placement can be shared by all characters or set for one character only.
 - **Left alone on purpose:** Blizzard's own minimap controls and map-pin add-ons such as Questie, GatherMate, HandyNotes, pfQuest and TomTom.
-- **New buttons:** buttons from add-ons that load later are picked up on their own. **Rescan minimap** (or `/sb scan`) looks right away.
+- **New buttons:** buttons from add-ons that load later are picked up on their own. **Rescan minimap** (or `/spanel scan`) looks right away.
 
 ### Broker (LibDataBroker) plugins
 If another add-on provides LibDataBroker data, SimplePanel can show it:
@@ -168,7 +171,7 @@ Most settings sit right on the bar.
 | **Right-click any plugin** | Its own options, then **Display** (Show icon, Show label, Colored values, Inline sparkline, Progress bar: Fill or Underline and Bar width, Position: Left, Center or Right) and **Hide** |
 | **Appearance plugin** | Color scheme, Accent in my class color, Window opacity, Text size |
 | **Launchers plugin (right-click)** | Sort, Tile size, Columns, Show hidden launchers, Placement for this character only, Every launcher, Rescan minimap |
-| **SimplePanel window (`/sb`)** | **Bar** (where everything lives, and the reset buttons), **Plugins**, **Launchers**, **Profiles**, **About**. One search box searches every page. |
+| **SimplePanel window (`/spanel`)** | **Bar** (where everything lives, and the reset buttons), **Plugins**, **Launchers**, **Profiles**, **About**. One search box searches every page. |
 
 **Reset buttons** (Bar tab):
 
@@ -187,19 +190,19 @@ SimplePanel also appears under **Options > AddOns > SimplePanel** and in the gam
 
 | | |
 |---|---|
-| `/sb` or `/simplepanel` | Open or close the SimplePanel window |
-| `/sb edit` | Edit the bar: drag plugins between sections, hide them |
-| `/sb show` / `/sb hide` | Show or hide the bar |
-| `/sb autohide` | Turn auto-hide on or off |
-| `/sb lock` | Lock or unlock shift-dragging plugins |
-| `/sb plugins` | List every plugin, its id and whether it's on |
-| `/sb chart <plugin>` | Open a plugin's chart, e.g. `/sb chart gold` |
-| `/sb scan` | Look for new minimap buttons for the drawer |
-| `/sb profile` | Show your profiles |
-| `/sb profile <name>` | Switch to a profile (the UI reloads) |
-| `/sb reset` | Reset the plugin layout |
-| `/sb errors` | List any plugin errors |
-| `/sb reload` | Reload the UI |
+| `/spanel` or `/simplepanel` | Open or close the SimplePanel window |
+| `/spanel edit` | Edit the bar: drag plugins between sections, hide them |
+| `/spanel show` / `/spanel hide` | Show or hide the bar |
+| `/spanel autohide` | Turn auto-hide on or off |
+| `/spanel lock` | Lock or unlock shift-dragging plugins |
+| `/spanel plugins` | List every plugin, its id and whether it's on |
+| `/spanel chart <plugin>` | Open a plugin's chart, e.g. `/spanel chart gold` |
+| `/spanel scan` | Look for new minimap buttons for the drawer |
+| `/spanel profile` | Show your profiles |
+| `/spanel profile <name>` | Switch to a profile (the UI reloads) |
+| `/spanel reset` | Reset the plugin layout |
+| `/spanel errors` | List any plugin errors |
+| `/spanel reload` | Reload the UI |
 
 ---
 
@@ -241,7 +244,7 @@ Settings saved with `p:Get`/`p:Set` follow the user's profile. The full API is d
 The bar was too full, so it stepped into the **»** button. Hover **»** to see it, hide a plugin you don't need, or lower **Scale**.
 
 **How do I get a hidden plugin back?**
-Right-click empty bar space > **Plugins**, or **Add plugin** on the edit toolbar, or the **Plugins** tab in `/sb`.
+Right-click empty bar space > **Plugins**, or **Add plugin** on the edit toolbar, or the **Plugins** tab in `/spanel`.
 
 **Professions shows nothing.**
 Open your Skills tab and make sure the Professions section is expanded. If it still shows nothing, right-click the plugin and choose **Report what the game returned**, and include that in a bug report.
@@ -253,13 +256,13 @@ By default it lists only quests in your zone and the ones you track. Tick **Show
 Some game windows can't be opened by add-ons during a fight. Use the game's own key for it, or try again once combat ends.
 
 **I made a mess of the layout.**
-`/sb reset`, or **Reset layout** on the edit toolbar, puts every plugin back where it started.
+`/spanel reset`, or **Reset layout** on the edit toolbar, puts every plugin back where it started.
 
 **A minimap button isn't in the drawer.**
-Type `/sb scan`. Blizzard's own controls and map-pin add-ons are left on the minimap on purpose. Check the **Hidden** and **On the minimap** boxes in the Launchers tab.
+Type `/spanel scan`. Blizzard's own controls and map-pin add-ons are left on the minimap on purpose. Check the **Hidden** and **On the minimap** boxes in the Launchers tab.
 
 **A plugin shows `<?>` in red.**
-It hit an error. `/sb errors` lists the details, which are useful in a bug report.
+It hit an error. `/spanel errors` lists the details, which are useful in a bug report.
 
 ---
 

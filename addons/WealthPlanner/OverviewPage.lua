@@ -14,15 +14,15 @@ local function ItemName(id)
 end
 
 UI:RegisterPage("overview", function(p)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, 0, 586))
+    p.summary = Muted(Label(p, "", "WealthPlannerGameFontHighlightSmall", 0, 0, 586))
 
     -- Big numbers across the top.
     local tiles = {}
     local TILE_W = 142
     for i, title in ipairs({ "Net worth", "Invested", "Goods held", "Profit, 30 days" }) do
         local t = UI.Panel(p); t:SetSize(TILE_W, 56); t:SetPoint("TOPLEFT", (i - 1) * (TILE_W + 6), -22)
-        Muted(Label(t, title, "GameFontHighlightSmall", 10, -8))
-        t.value = Label(t, "", "GameFontHighlightLarge", 10, -26, TILE_W - 16)
+        Muted(Label(t, title, "WealthPlannerGameFontHighlightSmall", 10, -8))
+        t.value = Label(t, "", "WealthPlannerGameFontHighlightLarge", 10, -26, TILE_W - 16)
         tiles[i] = t
     end
 
@@ -35,7 +35,7 @@ UI:RegisterPage("overview", function(p)
     for i = 1, 6 do
         local b = CreateFrame("Button", nil, p)
         b:SetSize(286, 18); b:SetPoint("TOPLEFT", 0, -246 - (i - 1) * 20)
-        b.text = Label(b, "", "GameFontHighlightSmall", 0, -2, 286); b.text:SetWordWrap(false)
+        b.text = Label(b, "", "WealthPlannerGameFontHighlightSmall", 0, -2, 286); b.text:SetWordWrap(false)
         b:SetScript("OnClick", function(self) if self.id then UI:Show("market", self.id) end end)
         p.signals[i] = b
     end
@@ -44,7 +44,7 @@ UI:RegisterPage("overview", function(p)
     for i = 1, 6 do
         local b = CreateFrame("Button", nil, p)
         b:SetSize(286, 18); b:SetPoint("TOPLEFT", 300, -246 - (i - 1) * 20)
-        b.text = Label(b, "", "GameFontHighlightSmall", 0, -2, 286); b.text:SetWordWrap(false)
+        b.text = Label(b, "", "WealthPlannerGameFontHighlightSmall", 0, -2, 286); b.text:SetWordWrap(false)
         b:SetScript("OnClick", function(self) if self.key then UI:Show("jobs", self.key) end end)
         p.jobs[i] = b
     end

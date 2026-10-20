@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Draggable minimap button: left-click opens Wally, right-click opens In Bags.
 local MapButton = {}
@@ -102,7 +103,7 @@ function MapButton:Initialize()
         if self.dragging then return end
         local count, total = ns.JunkFilter:Report()
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Wally", 0.33, 0.92, 0.78)
+        GameTooltip:AddLine("Wally", PAL.accent[1], PAL.accent[2], PAL.accent[3])
         GameTooltip:AddLine(("%d junk item%s in bags (%s)"):format(count, count == 1 and "" or "s", ns.Compat.Money(total)), 0.82, 0.89, 0.93)
         GameTooltip:AddLine("Left-click: open Wally", 0.75, 0.8, 0.85)
         GameTooltip:AddLine("Right-click: what's in your bags", 0.75, 0.8, 0.85)

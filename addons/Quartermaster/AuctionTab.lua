@@ -35,10 +35,10 @@ local function Build(parent)
 
     local logo = panel:CreateTexture(nil, "ARTWORK"); logo:SetSize(24, 24)
     logo:SetPoint("TOPLEFT", 10, -6); logo:SetTexture(ns.ICON)
-    local title = Label(panel, "Buying", "GameFontNormalLarge", 40, -10)
+    local title = Label(panel, "Buying", "QuartermasterGameFontNormalLarge", 40, -10)
     title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     -- Background full scan (FullScan.lua), right after the title: progress, paused, or up to date.
-    panel.scan = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.scan = panel:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     panel.scan:SetPoint("LEFT", title, "RIGHT", 12, 0); panel.scan:SetJustifyH("LEFT")
     view = ns.AuctionSearch:Create(panel, {})
     view:SetPoint("TOPLEFT", 10, -34); view:SetPoint("BOTTOMRIGHT", -10, 8)

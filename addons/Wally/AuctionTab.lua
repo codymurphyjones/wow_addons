@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local C = ns.Compat
 
 -- Wally's auction house tab. Left: History / Auction List / Learning. Right: "Ready to Post",
@@ -17,9 +18,10 @@ local TAB_ID = "Wally"
 local ROW_H = 30
 local READY = "Interface\\RaidFrame\\ReadyCheck-Ready"
 local NOT_READY = "Interface\\RaidFrame\\ReadyCheck-NotReady"
-local DURATION_LABEL = { "12h", "24h", "48h" }
+local DURATION_LABEL = {}
+for i, h in ipairs(ns.Compat.AUCTION_HOURS) do DURATION_LABEL[i] = h .. "h" end
 local VIEWS = { { "history", "History", 64 }, { "list", "Auction List", 84 }, { "learning", "Learning", 66 }, { "active", "Active", 72 } }
-local TIME_BAND = { [0] = "<30m", "30m-2h", "2-12h", "12-48h" }
+local TIME_BAND = ns.Compat.AUCTION_TIME_BAND
 local YELLOW, RED, GREEN, ORANGE = "|cffffd24d", "|cffd9736b", "|cff59f28c", "|cffff9933"
 
 local lib, panel
@@ -250,7 +252,7 @@ local function PaintPost(post)
         post.text:SetText(ns.AuctionScan:IsWaiting() and "Waiting for scan..."
             or ("Scanning... %d%%"):format(math.floor((ns.AuctionScan.progress or 0) * 100)))
         post.fill:SetVertexColor(0, 0, 0, 0)
-        post:SetBackdropBorderColor(0.16, 0.24, 0.29, 1)
+        post:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1)
         post:SetEnabled(false); post:SetAlpha(0.75)
     elseif A:CanPost() then
         post:SetScript("OnUpdate", nil)
@@ -277,7 +279,7 @@ local function PaintPost(post)
         post:SetScript("OnUpdate", nil)
         post.text:SetText(A.posts > 0 and "All posted" or "Post")
         post.fill:SetVertexColor(0, 0, 0, 0)
-        post:SetBackdropBorderColor(0.16, 0.24, 0.29, 1)
+        post:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1)
         post:SetEnabled(false); post:SetAlpha(0.45)
     end
 end
@@ -443,7 +445,7 @@ local function Build()
     -- Right pane.
     local right = CreateFrame("Frame", nil, panel)
     right:SetPoint("TOPLEFT", left, "TOPRIGHT", 14, 0); right:SetPoint("BOTTOMRIGHT", -10, 10)
-    Label(right, "Ready to Post", "GameFontNormalLarge", 0, -2):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Label(right, "Ready to Post", "WallyGameFontNormalLarge", 0, -2):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     local skipAll = MakeButton(right, "Unapprove all", 92, 24); skipAll:SetPoint("TOPRIGHT", 0, 0)
     skipAll:SetScript("OnClick", function() ns.Auction:RejectAll() end)
     Hint(skipAll, "Unapprove all", "Red-circle every item. Nothing posts until you approve it again.")
@@ -464,9 +466,9 @@ local function Build()
     end
     local drop = CreateFrame("Button", nil, right, "BackdropTemplate")
     drop:SetPoint("TOPLEFT", 0, -32); drop:SetPoint("TOPRIGHT", 0, -32); drop:SetHeight(40)
-    SetBackdrop(drop); drop:SetBackdropColor(0.02, 0.03, 0.04, 1)
+    SetBackdrop(drop); drop:SetBackdropColor(PAL.field[1], PAL.field[2], PAL.field[3], 1)
     drop:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 0.6)
-    local dropText = Muted(Label(drop, "Drop items here to add them to your Auction List", "GameFontHighlightSmall", 0, 0))
+    local dropText = Muted(Label(drop, "Drop items here to add them to your Auction List", "WallyGameFontHighlightSmall", 0, 0))
     dropText:ClearAllPoints(); dropText:SetPoint("CENTER")
     drop:SetScript("OnReceiveDrag", DropOnList)
     drop:SetScript("OnMouseUp", DropOnList)
@@ -479,7 +481,7 @@ local function Build()
         GameTooltip:Show()
     end)
     drop:SetScript("OnLeave", function(self)
-        self:SetBackdropColor(0.02, 0.03, 0.04, 1)
+        self:SetBackdropColor(PAL.field[1], PAL.field[2], PAL.field[3], 1)
         self:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 0.6)
         GameTooltip:Hide()
     end)
@@ -498,26 +500,26 @@ local function Build()
     -- Next up card.
     local card = CreateFrame("Frame", nil, right, "BackdropTemplate")
     card:SetPoint("BOTTOMLEFT", 0, 62); card:SetPoint("BOTTOMRIGHT", 0, 62); card:SetHeight(72)
-    SetBackdrop(card); card:SetBackdropColor(0.055, 0.08, 0.10, 1)
+    SetBackdrop(card); card:SetBackdropColor(PAL.row[1], PAL.row[2], PAL.row[3], 1)
     card:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 0.8)
-    Muted(Label(card, "NEXT UP", "GameFontHighlightSmall", 10, -6))
+    Muted(Label(card, "NEXT UP", "WallyGameFontHighlightSmall", 10, -6))
     card.icon = card:CreateTexture(nil, "ARTWORK"); card.icon:SetSize(40, 40); card.icon:SetPoint("TOPLEFT", 10, -22)
     card.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    card.title = Label(card, "", "GameFontHighlight", 58, -22)
-    card.line1 = Label(card, "", "GameFontHighlightSmall", 58, -40)
-    card.line2 = Muted(Label(card, "", "GameFontHighlightSmall", 58, -54))
+    card.title = Label(card, "", "WallyGameFontHighlight", 58, -22)
+    card.line1 = Label(card, "", "WallyGameFontHighlightSmall", 58, -40)
+    card.line2 = Muted(Label(card, "", "WallyGameFontHighlightSmall", 58, -54))
     for _, fs in ipairs({ card.title, card.line1, card.line2 }) do fs:SetPoint("RIGHT", card, "RIGHT", -50, 0); fs:SetWordWrap(false) end
-    card.duration = Label(card, "", "GameFontNormal", 0, 0); card.duration:ClearAllPoints()
+    card.duration = Label(card, "", "WallyGameFontNormal", 0, 0); card.duration:ClearAllPoints()
     card.duration:SetPoint("RIGHT", -12, 0)
-    card.empty = Muted(Label(card, "Nothing approved to post.", "GameFontHighlight", 0, 0))
+    card.empty = Muted(Label(card, "Nothing approved to post.", "WallyGameFontHighlight", 0, 0))
     card.empty:ClearAllPoints(); card.empty:SetPoint("CENTER", 0, -6)
     -- Post [ n ] of N: type how many to post; the rest stay in your bags, for this item from now on.
-    card.amountOf = Muted(Label(card, "", "GameFontHighlightSmall", 0, 0)); card.amountOf:ClearAllPoints()
+    card.amountOf = Muted(Label(card, "", "WallyGameFontHighlightSmall", 0, 0)); card.amountOf:ClearAllPoints()
     card.amountOf:SetPoint("TOPRIGHT", -12, -6)
     card.amount = MakeEditBox(card, 48, ""); card.amount:SetHeight(18)
     card.amount:SetNumeric(true); card.amount:SetMaxLetters(6); card.amount:SetJustifyH("CENTER")
     card.amount:SetPoint("RIGHT", card.amountOf, "LEFT", -4, 0)
-    card.amountLabel = Label(card, "Post", "GameFontHighlightSmall", 0, 0); card.amountLabel:ClearAllPoints()
+    card.amountLabel = Label(card, "Post", "WallyGameFontHighlightSmall", 0, 0); card.amountLabel:ClearAllPoints()
     card.amountLabel:SetPoint("RIGHT", card.amount, "LEFT", -4, 0)
     -- Takes effect as you type: nothing waits for Enter, so a Post click never misses it.
     card.amount:SetScript("OnTextChanged", function(self, userInput) if userInput then CommitAmount(self) end end)
@@ -529,7 +531,7 @@ local function Build()
 
     -- Footer.
     local post = MakeButton(right, "Post", 150, 30); post:SetPoint("BOTTOMRIGHT", 0, 0)
-    post.text:SetFontObject("GameFontNormal")
+    post.text:SetFontObject("WallyGameFontNormal")
     -- A tint layer of its own: the button's hover handlers reset the backdrop color.
     post.fill = post:CreateTexture(nil, "BACKGROUND", nil, 1)
     post.fill:SetPoint("TOPLEFT", 1, -1); post.fill:SetPoint("BOTTOMRIGHT", -1, 1)
@@ -552,7 +554,7 @@ local function Build()
     end)
     Hint(post, "Post", "Posts the Next up item. Auctions of items you removed from the Auction List are cancelled first. One click each: the game requires a click for every post and cancel.")
     panel.post = post
-    panel.total = Label(right, "", "GameFontHighlightSmall", 0, 0); panel.total:ClearAllPoints()
+    panel.total = Label(right, "", "WallyGameFontHighlightSmall", 0, 0); panel.total:ClearAllPoints()
     panel.total:SetPoint("BOTTOMLEFT", 0, 40)
     panel.total:SetPoint("RIGHT", post, "LEFT", -10, 0)
 
@@ -602,7 +604,7 @@ function Tab:Refresh()
     local view = ns.char.auctionView or "history"
     for key, b in pairs(panel.viewButtons) do
         if key == view then b:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 1)
-        else b:SetBackdropBorderColor(0.16, 0.24, 0.29, 1) end
+        else b:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1) end
     end
     panel.viewButtons.active.text:SetText(A.owned and ("Active (%d)"):format(#A.owned) or "Active")
     panel.left:Set(LeftItems(view))
@@ -630,7 +632,7 @@ function Tab:Refresh()
     panel.undercut:SetShown(o.undercutOn); panel.mode:SetShown(o.undercutOn)
     if not panel.undercut:HasFocus() then panel.undercut:SetText(tostring(o.undercut or 0)) end
     panel.mode.text:SetText(o.undercutMode == "copper" and "c" or "%")
-    panel.duration.text:SetText("Default " .. (DURATION_LABEL[o.duration] or "24h"))
+    panel.duration.text:SetText("Default " .. (DURATION_LABEL[o.duration] or DURATION_LABEL[2]))
 end
 
 -- Shows the tab. Returns true when it could (the auction house is open).

@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Draggable minimap button (from Wally): left-click opens Tape Measure, right-click opens Upgrades.
 local MapButton = {}
@@ -102,7 +103,7 @@ function MapButton:Initialize()
         if self.dragging then return end
         local count = #ns.Scoring:ScanBags()
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine(ns.IconMarkup(16) .. " Tape Measure", 0.33, 0.92, 0.78)
+        GameTooltip:AddLine(ns.IconMarkup(16) .. " Tape Measure", PAL.accent[1], PAL.accent[2], PAL.accent[3])
         GameTooltip:AddLine(ns:ColoredSpecText(), 1, 1, 1)
         GameTooltip:AddLine(("%d upgrade%s in your bags"):format(count, count == 1 and "" or "s"), 0.82, 0.89, 0.93)
         GameTooltip:AddLine("Left-click: open Tape Measure", 0.75, 0.8, 0.85)

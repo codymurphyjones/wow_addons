@@ -20,8 +20,8 @@ end
 local function Build(p)
     local state = { page = 1, sortKey = "name", desc = false, filters = {}, results = {} }
 
-    Label(p, "Browse", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 620))
+    Label(p, "Browse", "QuartermasterGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "QuartermasterGameFontHighlightSmall", 0, -24, 620))
 
     -- Filters: the shared bar (SearchBar.lua); the category tree below feeds it.
     local qty
@@ -77,7 +77,7 @@ local function Build(p)
     local bar = CreateFrame("Frame", nil, body)
     bar:SetPoint("BOTTOMLEFT", 0, 0); bar:SetPoint("BOTTOMRIGHT", 0, 0); bar:SetHeight(32)
     local prev = MakeButton(bar, "< Prev", 60, 26); prev:SetPoint("LEFT", 0, 0)
-    local pageText = Muted(bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    local pageText = Muted(bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     pageText:SetPoint("LEFT", prev, "RIGHT", 8, 0); pageText:SetWidth(84)
     local nextBtn = MakeButton(bar, "Next >", 60, 26); nextBtn:SetPoint("LEFT", pageText, "RIGHT", 8, 0)
     -- Where Add puts things: any list, or a prebuilt list's targets.
@@ -98,9 +98,9 @@ local function Build(p)
     Hint(targetPicker, "Add to", "Choose the shopping list or prebuilt list that Add (and the + on each row) puts items on. For a prebuilt list the Qty raises its target.")
     local addBtn = MakeButton(bar, "Add to", 60, 26); addBtn:SetPoint("RIGHT", targetPicker, "LEFT", -6, 0)
     qty = MakeNumberBox(bar, 48, "1"); qty:SetPoint("RIGHT", addBtn, "LEFT", -6, 0)
-    local qtyLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    local qtyLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     qtyLabel:SetPoint("RIGHT", qty, "LEFT", -6, 0); qtyLabel:SetText("Qty")
-    local selText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local selText = bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     selText:SetPoint("LEFT", nextBtn, "RIGHT", 14, 0); selText:SetPoint("RIGHT", qtyLabel, "LEFT", -10, 0)
     selText:SetJustifyH("RIGHT"); selText:SetWordWrap(false)
 

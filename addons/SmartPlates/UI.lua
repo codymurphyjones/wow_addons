@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local M, W = ns.Media, ns.Widgets
 
 -- The SmartPlates window: Wally's layout (logo header, sidebar tabs, pages), one page per area.
@@ -16,8 +17,8 @@ local LEVEL_NAMES = { LOW = "Low threat", MEDIUM = "Medium threat", HIGH = "High
 local function NewPage(name, title, summary)
     local p = CreateFrame("Frame", nil, frame)
     p:SetPoint("TOPLEFT", 196, -76); p:SetPoint("BOTTOMRIGHT", -18, 18)
-    Label(p, title, "GameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(p, summary, "GameFontHighlightSmall", 0, -24, 560))
+    Label(p, title, "SmartPlatesGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Muted(Label(p, summary, "SmartPlatesGameFontHighlightSmall", 0, -24, 560))
     p:Hide()
     pages[name] = p
     return p
@@ -130,7 +131,7 @@ local function ThreatPage()
         { "slider", "threat.percent.size", "Text size", 6, 28, 1, "%d" },
         { "check", "threat.percent.colored", "Colour it like the threat state" },
     }, function(content, height)
-        local detected = Muted(Label(content, "", "GameFontHighlightSmall", 0, -80, 270))
+        local detected = Muted(Label(content, "", "SmartPlatesGameFontHighlightSmall", 0, -80, 270))
         content.Refresh = function()
             detected:SetText("Detected now: |cffffffff" .. (ns.Role:Get() == "tank" and "Tank" or "DPS / Healer") .. "|r")
         end
@@ -219,7 +220,7 @@ local function CastsPage()
         local y = -height - 16
         local boxes = {}
         for i, d in ipairs({ { "whitelist", "Always show (spell names, comma separated)" }, { "blacklist", "Never show (spell names, comma separated)" } }) do
-            Label(content, d[2], "GameFontHighlightSmall", 0, y)
+            Label(content, d[2], "SmartPlatesGameFontHighlightSmall", 0, y)
             local box = W.MakeEditBox(content, 560, "e.g. Sunder Armor, Hunter's Mark")
             box:SetPoint("TOPLEFT", 0, y - 18)
             local function Save(self)
@@ -253,6 +254,8 @@ local function WidgetsPage()
         { "check", "widgets.healer", "Enemy healers", "A green cross on enemy players seen healing others." },
         { "check", "widgets.classIcon", "Class icons", "On enemy players. Friendly plates are class-coloured instead." },
         { "check", "widgets.social", "Friends and guild", "A marker next to friends and guild members." },
+        { "check", "widgets.nemesis", "Nemeses", "A skull and kill count on the 5 enemy players who've killed you most (twice or more). Needs BattleRecap." },
+        { "check", "widgets.revenge", "Revenge target", "A red skull on whoever killed you last, the one BattleRecap's Revenge key targets. Needs BattleRecap." },
         { "header", "Questing" },
         { "check", "widgets.quest", "Quest mobs", "A ! on mobs you still need for a quest." },
         { "check", "widgets.experience", "Experience bar", "Your XP under your target's plate." },
@@ -289,7 +292,7 @@ local function VisibilityPage()
         { "slider", "general.smallWidth", "Width", 30, 150, 1, "%d" },
         { "slider", "general.smallHeight", "Height", 2, 20, 1, "%d" },
     }, function(content, height)
-        local status = Muted(Label(content, "", "GameFontHighlightSmall", 0, -334, 270)) -- under the two spacing sliders
+        local status = Muted(Label(content, "", "SmartPlatesGameFontHighlightSmall", 0, -334, 270)) -- under the two spacing sliders
         content.Refresh = function() status:SetText(ns.CVars:Status()) end
         return height
     end)
@@ -320,16 +323,16 @@ local function CustomPage()
     local content = W.ScrollPage(p)
     content:GetParent():SetPoint("TOPLEFT", 0, -90)
     local rows = {}
-    local empty = Muted(Label(content, "No custom plates yet.", "GameFontHighlightSmall", 0, -4))
+    local empty = Muted(Label(content, "No custom plates yet.", "SmartPlatesGameFontHighlightSmall", 0, -4))
     p.Refresh = function()
         local list = ns.db.custom
         for i, e in ipairs(list) do
             local r = rows[i]
             if not r then
                 r = CreateFrame("Frame", nil, content, "BackdropTemplate")
-                r:SetSize(560, 34); W.SetBackdrop(r); r:SetBackdropColor(0.055, 0.08, 0.10, 1)
+                r:SetSize(560, 34); W.SetBackdrop(r); r:SetBackdropColor(PAL.row[1], PAL.row[2], PAL.row[3], 1)
                 r:SetPoint("TOPLEFT", 0, -(i - 1) * 38)
-                r.name = Label(r, "", "GameFontHighlight", 10, -10, 200)
+                r.name = Label(r, "", "SmartPlatesGameFontHighlight", 10, -10, 200)
                 r.hide = W.MakeCheckbox(r, "Hide"); r.hide:SetPoint("LEFT", 215, 0)
                 r.swatch = W.MakeSwatch(r); r.swatch:SetPoint("LEFT", 285, 0)
                 r.clear = MakeButton(r, "No colour", 70, 22); r.clear:SetPoint("LEFT", r.swatch, "RIGHT", 6, 0)
@@ -367,7 +370,7 @@ local function ProfilePage()
     local p = NewPage("profile", "Profile", "Settings live in profiles shared by all your characters; each character picks one. The role is per character.")
 
     -- Profiles: list with Use / Delete, then new, export and import.
-    local current = Label(p, "", "GameFontHighlight", 0, -52)
+    local current = Label(p, "", "SmartPlatesGameFontHighlight", 0, -52)
     local rows = {}
     local listTop = -76
     local VISIBLE = 4 -- rows shown before the list scrolls, so the page never overflows
@@ -383,7 +386,7 @@ local function ProfilePage()
     local text = W.MakeMultiLine(p, 560, 70)
     local export = MakeButton(p, "Export", 90, 26)
     local import = MakeButton(p, "Import", 90, 26)
-    local msg = Muted(Label(p, "", "GameFontHighlightSmall", 0, 0, 560))
+    local msg = Muted(Label(p, "", "SmartPlatesGameFontHighlightSmall", 0, 0, 560))
 
     local function Say(s) msg:SetText(s or "") end
     create:SetScript("OnClick", function()
@@ -413,8 +416,8 @@ local function ProfilePage()
             local r = rows[i]
             if not r then
                 r = CreateFrame("Frame", nil, listContent, "BackdropTemplate")
-                r:SetSize(400, 28); W.SetBackdrop(r); r:SetBackdropColor(0.055, 0.08, 0.10, 1)
-                r.name = Label(r, "", "GameFontHighlightSmall", 10, -8, 220)
+                r:SetSize(400, 28); W.SetBackdrop(r); r:SetBackdropColor(PAL.row[1], PAL.row[2], PAL.row[3], 1)
+                r.name = Label(r, "", "SmartPlatesGameFontHighlightSmall", 10, -8, 220)
                 r.use = MakeButton(r, "Use", 60, 22); r.use:SetPoint("RIGHT", -70, 0)
                 r.delete = MakeButton(r, "Delete", 60, 22); r.delete:SetPoint("RIGHT", -4, 0)
                 rows[i] = r
@@ -456,7 +459,7 @@ local function ProfilePage()
         ns.char.minimap.hide = not self:GetChecked()
         if ns.MinimapButton then ns.MinimapButton:Refresh() end
     end)
-    local credit = Muted(Label(p, "SmartPlates is inspired by Threat Plates (Suicidal Katt, Blacksalsify) and Tidy Plates (danltiger).", "GameFontHighlightSmall", 0, 0, 540))
+    local credit = Muted(Label(p, "SmartPlates is inspired by Threat Plates (Suicidal Katt, Blacksalsify) and Tidy Plates (danltiger).", "SmartPlatesGameFontHighlightSmall", 0, 0, 540))
     p.Refresh = function()
         Layout()
         test:ClearAllPoints(); test:SetPoint("TOPLEFT", 0, p.bottom)
@@ -510,8 +513,8 @@ local function CreateMainFrame()
 
     local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
     logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "SmartPlates", "GameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Threat-reactive nameplates with an aggro percentage", "GameFontHighlightSmall", 70, -42))
+    Label(frame, "SmartPlates", "SmartPlatesGameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Muted(Label(frame, "Threat-reactive nameplates with an aggro percentage", "SmartPlatesGameFontHighlightSmall", 70, -42))
     local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
     close:SetScript("OnClick", function() frame:Hide() end)
     local preview = MakeButton(frame, "Preview", 80, 26); preview:SetPoint("RIGHT", close, "LEFT", -8, 0)
@@ -519,7 +522,7 @@ local function CreateMainFrame()
 
     local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    W.SetBackdrop(side); side:SetBackdropColor(0.045, 0.065, 0.085, 1)
+    W.SetBackdrop(side); side:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
     for i, d in ipairs(TABS) do
         local b = MakeButton(side, d[2], 147, 36); b:SetPoint("TOPLEFT", 9, -10 - (i - 1) * 40)
         b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
@@ -527,12 +530,12 @@ local function CreateMainFrame()
         icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
         b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(0.075, 0.105, 0.13, 1) end end)
+        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end end)
         b:SetScript("OnClick", function() ShowTab(d[1]) end)
         tabs[d[1]] = b
         d[4]()
     end
-    local version = side:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local version = side:CreateFontString(nil, "OVERLAY", "SmartPlatesGameFontHighlightSmall")
     version:SetPoint("BOTTOMLEFT", 12, 8); version:SetText("v" .. ns.VERSION)
     version:SetTextColor(0.38, 0.50, 0.57)
     ShowTab(activeTab); frame:Hide()
@@ -562,8 +565,8 @@ ns:OnLoad(function()
     local panel = CreateFrame("Frame", "SmartPlatesSettingsPanel")
     panel.name = "SmartPlates"
     panel:Hide()
-    Label(panel, "SmartPlates", "GameFontNormalLarge", 16, -16):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(panel, "All settings are in the SmartPlates window.", "GameFontHighlightSmall", 16, -42, 400))
+    Label(panel, "SmartPlates", "SmartPlatesGameFontNormalLarge", 16, -16):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Muted(Label(panel, "All settings are in the SmartPlates window.", "SmartPlatesGameFontHighlightSmall", 16, -42, 400))
     local open = MakeButton(panel, "Open SmartPlates", 150, 28); open:SetPoint("TOPLEFT", 16, -70)
     open:SetScript("OnClick", function()
         if SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end

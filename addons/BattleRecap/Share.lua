@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local W = ns.Widgets
 
 -- Sharing a recap: a one-line summary to send to chat, and a longer text to copy (for Discord and
@@ -161,7 +162,7 @@ local f
 
 local function Box(parent, multi, height)
     local box = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    W.SetBackdrop(box); box:SetBackdropColor(0.02, 0.03, 0.04, 1)
+    W.SetBackdrop(box); box:SetBackdropColor(PAL.field[1], PAL.field[2], PAL.field[3], 1)
     box:SetHeight(height)
     local edit
     if multi then
@@ -174,7 +175,7 @@ local function Box(parent, multi, height)
         edit = CreateFrame("EditBox", nil, box)
         edit:SetPoint("TOPLEFT", 6, 0); edit:SetPoint("BOTTOMRIGHT", -6, 0)
     end
-    edit:SetAutoFocus(false); edit:SetFontObject("GameFontHighlightSmall")
+    edit:SetAutoFocus(false); edit:SetFontObject("BattleRecapGameFontHighlightSmall")
     edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     -- Read-only: typing puts the text back.
     edit:SetScript("OnTextChanged", function(self, user) if user and self.value then self:SetText(self.value); self:HighlightText() end end)
@@ -188,10 +189,10 @@ local function Create()
     BattleRecapDB.sharePos = BattleRecapDB.sharePos or { point = "CENTER", x = 0, y = 100 }
     f = W.MakeWindow("BattleRecapShare", WIDTH, HEIGHT, "Share recap", BattleRecapDB.sharePos)
     f:SetFrameLevel(30)
-    W.Muted(W.Label(f, "One line, for chat (click it, then Ctrl+C to copy):", "GameFontHighlightSmall", 12, -36))
+    W.Muted(W.Label(f, "One line, for chat (click it, then Ctrl+C to copy):", "BattleRecapGameFontHighlightSmall", 12, -36))
     f.line = Box(f, false, 24)
     f.line:SetPoint("TOPLEFT", 10, -52); f.line:SetPoint("TOPRIGHT", -10, -52)
-    W.Muted(W.Label(f, "The whole recap, as text:", "GameFontHighlightSmall", 12, -86))
+    W.Muted(W.Label(f, "The whole recap, as text:", "BattleRecapGameFontHighlightSmall", 12, -86))
     f.text = Box(f, true, 160)
     f.text:SetPoint("TOPLEFT", 10, -102); f.text:SetPoint("TOPRIGHT", -10, -102)
 
@@ -209,7 +210,7 @@ local function Create()
     f.send:SetScript("OnClick", function()
         if Share.Send(f.recap, f.chosen) then f:Hide() end
     end)
-    f.reason = W.Label(f, "", "GameFontHighlightSmall", 0, 0, WIDTH - 210)
+    f.reason = W.Label(f, "", "BattleRecapGameFontHighlightSmall", 0, 0, WIDTH - 210)
     f.reason:ClearAllPoints(); f.reason:SetPoint("LEFT", f.send, "RIGHT", 10, 0)
     W.Muted(f.reason)
 end

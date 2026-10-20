@@ -225,6 +225,7 @@ SimplePanel.RegisterPlugin({
     -- Opening a profession is casting its spell, which only the game's secure code may do
     -- (SecureClick.lua).
     secure = function(p)
+        if ns.db.options.ownPanels then return nil end -- SimplePanel's own window opens instead
         local _, spell = ClickTarget(p)
         if spell then return { type1 = "spell", spell = spell } end
     end,
@@ -235,6 +236,10 @@ SimplePanel.RegisterPlugin({
     -- Reached when there's no window to open (or the secure button can't be there): the options.
     onClick = function(p, button)
         if button ~= "LeftButton" then return end
+        -- Own Panels: SimplePanel's professions window, latched to this plugin (ProfessionsPanel.lua).
+        if ns.db.options.ownPanels and ns.ProfessionsPanel and not IsModifierKeyDown() then
+            return ns.ProfessionsPanel:Toggle(p.button)
+        end
         local _, spell = ClickTarget(p)
         if spell and InCombatLockdown() then
             return p:Print("can't open " .. spell .. " from SimplePanel right now; use your spellbook.")

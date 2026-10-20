@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local C = ns.Compat
 
 -- The Wally manager: Junk List, Never Sell, Learning, In Bags, History, Settings.
@@ -39,8 +40,8 @@ local function CreateListPage(name, kind)
     local otherLabel = ns.Lists.LABEL[otherKind]
     p.source = "all"
 
-    Label(p, ns.Lists.LABEL[kind], "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    Label(p, ns.Lists.LABEL[kind], "WallyGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24, 560))
 
     p.search = MakeEditBox(p, 200, "Search...")
     p.search:SetPoint("TOPLEFT", 0, -46)
@@ -140,8 +141,8 @@ end
 
 local function CreateLearningPage()
     local p = NewPage("learning")
-    Label(p, "Learning", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    Label(p, "Learning", "WallyGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24, 560))
     p.search = MakeEditBox(p, 200, "Search...")
     p.search:SetPoint("TOPLEFT", 0, -62)
     p.search:SetScript("OnTextChanged", function() UI:RefreshPage("learning") end)
@@ -181,7 +182,7 @@ end
 
 -- Auction List / Never Auction / Learning (auction habits). Posting happens on the auction house tab.
 local AUCTION_VIEWS = { { "auctionList", "Auction List" }, { "neverAuction", "Never Auction" }, { "learning", "Learning" }, { "market", "On Market" } }
-local TIME_BAND = { [0] = "<30m", "30m-2h", "2-12h", "12-48h" }
+local TIME_BAND = ns.Compat.AUCTION_TIME_BAND
 local BAND_LEFT = { [0] = 1800, 7200, 43200, 172800 }
 
 -- Time left on one of your auctions; a remembered one counts down from when it was seen.
@@ -204,8 +205,8 @@ end
 local function CreateAuctionPage()
     local p = NewPage("auction")
     p.view = "auctionList"
-    Label(p, "Auctions", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    Label(p, "Auctions", "WallyGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24, 560))
 
     p.viewButtons = {}
     for i, v in ipairs(AUCTION_VIEWS) do
@@ -248,7 +249,7 @@ local function CreateAuctionPage()
     p.Refresh = function()
         for key, b in pairs(p.viewButtons) do
             if key == p.view then b:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 1)
-            else b:SetBackdropBorderColor(0.16, 0.24, 0.29, 1) end
+            else b:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1) end
         end
         p.forget:SetShown(p.view == "learning")
         p.add:SetShown(p.view ~= "market"); p.addItem:SetShown(p.view ~= "market")
@@ -328,7 +329,7 @@ local function CreateAuctionPage()
         for _, r in ipairs(ns.Lists:Search(kind, search)) do
             local e, key = r.entry, r.key
             local detail = (e.source == "learned" and "Learned" or "Added by you") .. "  -  " .. When(e.added)
-            local dur = e.duration and ({ "12h", "24h", "48h" })[e.duration]
+            local dur = e.duration and ns.Compat.AUCTION_HOURS[e.duration] and (ns.Compat.AUCTION_HOURS[e.duration] .. "h")
             if dur then detail = detail .. "  -  " .. dur end
             items[#items + 1] = {
                 icon = IconFor(e), text = EntryText(e, key), link = e.link, plainText = e.name or key,
@@ -353,8 +354,8 @@ local VERDICT_COLOR = {
 
 local function CreateBagsPage()
     local p = NewPage("bags")
-    Label(p, "In Bags", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    Label(p, "In Bags", "WallyGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24, 560))
     p.showAll = MakeCheckbox(p, "Show every item")
     p.showAll:SetPoint("TOPLEFT", -4, -46)
     p.showAll:SetScript("OnClick", function() UI:RefreshPage("bags") end)
@@ -413,8 +414,8 @@ end
 
 local function CreateHistoryPage()
     local p = NewPage("history")
-    Label(p, "History", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    Label(p, "History", "WallyGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24, 560))
     local clear = MakeButton(p, "Clear history", 110, 26)
     clear:SetPoint("TOPRIGHT", 0, -46)
     clear:SetScript("OnClick", function() Confirm("Clear the sell / buyback history?", function() wipe(ns.db.history); ns:Changed() end) end)
@@ -469,7 +470,7 @@ end
 
 -- Builds the settings into any parent; it lives in the game's Options > AddOns > Wally panel.
 local function BuildSettings(p)
-    Label(p, "Wally", "GameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Label(p, "Wally", "WallyGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     local history = MakeButton(p, "History", 110, 26); history:SetPoint("TOPRIGHT", 0, 4)
     history:SetScript("OnClick", function() UI:ShowSettingsView("history") end)
     Hint(history, "Sale History", "Everything Wally has sold, grouped by login session.")
@@ -486,7 +487,7 @@ local function BuildSettings(p)
         local y = -34 - (i - 1) * 44
         local b = MakeCheckbox(p, d[2]); b:SetPoint("TOPLEFT", -4, y)
         b:SetScript("OnClick", function(self) ns.db.options[d[1]] = self:GetChecked() and true or false; ns:Changed() end)
-        Muted(Label(p, d[3], "GameFontHighlightSmall", 27, y - 25, 270))
+        Muted(Label(p, d[3], "WallyGameFontHighlightSmall", 27, y - 25, 270))
         p.checks[d[1]] = b
     end
     local mini = MakeCheckbox(p, "Minimap button"); mini:SetPoint("TOPLEFT", -4, -34 - #OPTION_DEFS * 44)
@@ -497,7 +498,7 @@ local function BuildSettings(p)
     p.mini = mini
 
     local col = 310
-    Label(p, "Ask after this habit score", "GameFontHighlight", col, -38)
+    Label(p, "Ask after this habit score", "WallyGameFontHighlight", col, -38)
     local ok, slider = pcall(CreateFrame, "Slider", "WallyThresholdSlider", p, "OptionsSliderTemplate")
     if not ok then
         slider = CreateFrame("Slider", "WallyThresholdSliderPlain", p, "BackdropTemplate")
@@ -510,7 +511,7 @@ local function BuildSettings(p)
     local low, high = _G["WallyThresholdSliderLow"], _G["WallyThresholdSliderHigh"]
     if low then low:SetText("20%") end
     if high then high:SetText("95%") end
-    p.sliderText = Muted(Label(p, "", "GameFontHighlightSmall", col, -96, 270))
+    p.sliderText = Muted(Label(p, "", "WallyGameFontHighlightSmall", col, -96, 270))
     slider:SetScript("OnValueChanged", function(_, value)
         value = math.floor(value * 20 + 0.5) / 20
         if ns.db.options.threshold ~= value then ns.db.options.threshold = value; ns:Changed() end
@@ -518,15 +519,15 @@ local function BuildSettings(p)
     end)
     p.slider = slider
 
-    Label(p, "Import / export lists", "GameFontHighlight", col, -138)
-    Muted(Label(p, "One per line. J: junk, N: never sell, J*: / N*: rules.", "GameFontHighlightSmall", col, -158, 270))
+    Label(p, "Import / export lists", "WallyGameFontHighlight", col, -138)
+    Muted(Label(p, "One per line. J: junk, N: never sell, J*: / N*: rules.", "WallyGameFontHighlightSmall", col, -158, 270))
     local box = CreateFrame("Frame", nil, p, "BackdropTemplate")
     box:SetPoint("TOPLEFT", col, -178); box:SetSize(276, 150)
-    SetBackdrop(box); box:SetBackdropColor(0.02, 0.03, 0.04, 1)
+    SetBackdrop(box); box:SetBackdropColor(PAL.field[1], PAL.field[2], PAL.field[3], 1)
     local scroll = CreateFrame("ScrollFrame", nil, box, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 6, -6); scroll:SetPoint("BOTTOMRIGHT", -26, 6)
     local edit = CreateFrame("EditBox", nil, scroll)
-    edit:SetMultiLine(true); edit:SetAutoFocus(false); edit:SetFontObject("GameFontHighlightSmall")
+    edit:SetMultiLine(true); edit:SetAutoFocus(false); edit:SetFontObject("WallyGameFontHighlightSmall")
     edit:SetWidth(240); edit:SetHeight(140)
     edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     scroll:SetScrollChild(edit)
@@ -558,16 +559,16 @@ end
 
 -- Sale History: Wally's own sales, one entry per login session, inside the settings panel.
 local function BuildSaleHistory(p)
-    Label(p, "Sale History", "GameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Label(p, "Sale History", "WallyGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     local back = MakeButton(p, "Back to settings", 120, 26); back:SetPoint("TOPRIGHT", 0, 4)
     back:SetScript("OnClick", function() UI:ShowSettingsView("settings") end)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24, 560))
 
-    Label(p, "Keep last", "GameFontHighlightSmall", 0, -54)
+    Label(p, "Keep last", "WallyGameFontHighlightSmall", 0, -54)
     local minus = MakeButton(p, "-", 24, 22); minus:SetPoint("TOPLEFT", 58, -48)
-    p.keep = Label(p, "", "GameFontHighlight", 90, -53, 30); p.keep:SetJustifyH("CENTER")
+    p.keep = Label(p, "", "WallyGameFontHighlight", 90, -53, 30); p.keep:SetJustifyH("CENTER")
     local plus = MakeButton(p, "+", 24, 22); plus:SetPoint("TOPLEFT", 124, -48)
-    Label(p, "sessions", "GameFontHighlightSmall", 156, -54)
+    Label(p, "sessions", "WallyGameFontHighlightSmall", 156, -54)
     local S = ns.Sessions
     minus:SetScript("OnClick", function() S:SetKeep(ns.db.options.keepSessions - S.KEEP_STEP) end)
     plus:SetScript("OnClick", function() S:SetKeep(ns.db.options.keepSessions + S.KEEP_STEP) end)
@@ -578,14 +579,14 @@ local function BuildSaleHistory(p)
 
     local left = CreateFrame("Frame", nil, p)
     left:SetPoint("TOPLEFT", 0, -84); left:SetPoint("BOTTOMLEFT", 0, 0); left:SetWidth(236)
-    Label(left, "Sessions", "GameFontHighlight", 0, 0)
+    Label(left, "Sessions", "WallyGameFontHighlight", 0, 0)
     p.sessionList = CreateRowList(left, -20)
 
     local right = CreateFrame("Frame", nil, p)
     right:SetPoint("TOPLEFT", left, "TOPRIGHT", 12, 0); right:SetPoint("BOTTOMRIGHT", 0, 0)
-    p.title = Label(right, "", "GameFontHighlight", 0, 0)
+    p.title = Label(right, "", "WallyGameFontHighlight", 0, 0)
     p.title:SetPoint("RIGHT", -26, 0); p.title:SetWordWrap(false)
-    p.totals = Muted(Label(right, "", "GameFontHighlightSmall", 0, -16))
+    p.totals = Muted(Label(right, "", "WallyGameFontHighlightSmall", 0, -16))
     p.totals:SetPoint("RIGHT", -26, 0); p.totals:SetWordWrap(false)
     p.saleList = CreateRowList(right, -36)
 
@@ -663,7 +664,7 @@ end
 local function OrderRow(parent, x, y, width)
     local r = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     r:SetSize(width, 24); r:SetPoint("TOPLEFT", x, y)
-    SetBackdrop(r); r:SetBackdropColor(0.055, 0.08, 0.10, 1)
+    SetBackdrop(r); r:SetBackdropColor(PAL.row[1], PAL.row[2], PAL.row[3], 1)
     r.down = ArrowButton(r, false); r.down:SetPoint("RIGHT", -2, 0)
     r.up = ArrowButton(r, true); r.up:SetPoint("RIGHT", r.down, "LEFT", -2, 0)
     return r
@@ -692,28 +693,29 @@ local AUCTION_OPTION_DEFS = {
     { "scanFirst", "Scan before first post", "Full Auctionator scan when you first open Wally's tab, unless one ran in the last 4 hours." },
     { "hideTabs", "Hide unused auction tabs", "Hides Buy, Sell, Auctions, Cancelling and Auctionator. Shopping, Selling, Wally and Cart stay." },
 }
-local DURATIONS = { "12 hours", "24 hours", "48 hours" }
+local DURATIONS = {}
+for i, h in ipairs(ns.Compat.AUCTION_HOURS) do DURATIONS[i] = h .. " hours" end
 
 local function BuildAuctionSettings(p)
-    Label(p, "Auctions", "GameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Label(p, "Auctions", "WallyGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     local back = MakeButton(p, "Back to settings", 120, 26); back:SetPoint("TOPRIGHT", 0, 4)
     back:SetScript("OnClick", function() UI:ShowSettingsView("settings") end)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 560))
+    p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24, 560))
 
     p.checks = {}
     for i, d in ipairs(AUCTION_OPTION_DEFS) do
         local y = -64 - (i - 1) * 44
         local b = MakeCheckbox(p, d[2]); b:SetPoint("TOPLEFT", -4, y)
         b:SetScript("OnClick", function(self) ns.db.options.auction[d[1]] = self:GetChecked() and true or false; ns:Changed() end)
-        Muted(Label(p, d[3], "GameFontHighlightSmall", 27, y - 25, 270))
+        Muted(Label(p, d[3], "WallyGameFontHighlightSmall", 27, y - 25, 270))
         p.checks[d[1]] = b
     end
 
     local col = 310
     p.undercutOn = MakeCheckbox(p, "Undercut Auctionator's price"); p.undercutOn:SetPoint("TOPLEFT", col - 4, -60)
-    p.undercutOn.label:SetFontObject("GameFontHighlight")
+    p.undercutOn.label:SetFontObject("WallyGameFontHighlight")
     p.undercutOn:SetScript("OnClick", function(self) ns.Value:SetUndercutOn(self:GetChecked()) end)
-    Muted(Label(p, "Off: price match, 1 below Auctionator. Prices round down to whole silver, never under vendor price.", "GameFontHighlightSmall", col, -84, 270))
+    Muted(Label(p, "Off: price match, 1 below Auctionator. Prices round down to whole silver, never under vendor price.", "WallyGameFontHighlightSmall", col, -84, 270))
     p.undercut = MakeEditBox(p, 70, ""); p.undercut:SetPoint("TOPLEFT", col, -116)
     p.undercut:SetScript("OnEnterPressed", function(self)
         local n = tonumber(self:GetText())
@@ -726,8 +728,8 @@ local function BuildAuctionSettings(p)
         ns.Value:SetUndercut(o.undercut, o.undercutMode == "percent" and "copper" or "percent")
     end)
 
-    Label(p, "Default duration", "GameFontHighlight", col, -160)
-    Muted(Label(p, "Until you post an item by hand; then Wally uses the duration you chose.", "GameFontHighlightSmall", col, -178, 270))
+    Label(p, "Default duration", "WallyGameFontHighlight", col, -160)
+    Muted(Label(p, "Until you post an item by hand; then Wally uses the duration you chose.", "WallyGameFontHighlightSmall", col, -178, 270))
     p.duration = MakeButton(p, "", 100, 26); p.duration:SetPoint("TOPLEFT", col, -210)
     p.duration:SetScript("OnClick", function()
         local o = ns.db.options.auction
@@ -735,14 +737,14 @@ local function BuildAuctionSettings(p)
         ns:Changed()
     end)
 
-    Label(p, "Stale price after", "GameFontHighlight", col, -254)
+    Label(p, "Stale price after", "WallyGameFontHighlight", col, -254)
     p.stale = MakeEditBox(p, 50, ""); p.stale:SetPoint("TOPLEFT", col, -276)
     p.stale:SetScript("OnEnterPressed", function(self)
         local n = tonumber(self:GetText())
         if n then ns.db.options.auction.staleDays = math.max(0, math.floor(n)); ns:Changed() end
         self:ClearFocus()
     end)
-    Muted(Label(p, "days (shown in yellow)", "GameFontHighlightSmall", col + 58, -283))
+    Muted(Label(p, "days (shown in yellow)", "WallyGameFontHighlightSmall", col + 58, -283))
 
     local manage = MakeButton(p, "Auction lists", 120, 26); manage:SetPoint("TOPLEFT", 0, -254)
     manage:SetScript("OnClick", function() UI:Show("auction") end)
@@ -763,10 +765,10 @@ end
 
 local function BuildSortSettings(p)
     local S = ns.Sorter
-    Label(p, "Bag Sorting", "GameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Label(p, "Bag Sorting", "WallyGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     local back = MakeButton(p, "Back to settings", 120, 26); back:SetPoint("TOPRIGHT", 0, 4)
     back:SetScript("OnClick", function() UI:ShowSettingsView("settings") end)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24))
+    p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24))
     p.summary:SetPoint("RIGHT", 0, 0)
     local sortBags = MakeButton(p, "Sort bags now", 120, 26); sortBags:SetPoint("TOPLEFT", 0, -58)
     sortBags:SetScript("OnClick", function() S:Start("bags") end)
@@ -781,8 +783,8 @@ local function BuildSortSettings(p)
     scroll:SetScript("OnSizeChanged", function(_, w) c:SetWidth(w) end)
 
     -- Left column: rule order and options.
-    Label(c, "Sort order", "GameFontHighlight", 0, 0)
-    Muted(Label(c, "The top rule decides first. Tick the rules you want.", "GameFontHighlightSmall", 0, -18, 280))
+    Label(c, "Sort order", "WallyGameFontHighlight", 0, 0)
+    Muted(Label(c, "The top rule decides first. Tick the rules you want.", "WallyGameFontHighlightSmall", 0, -18, 280))
     for i, preset in ipairs(S.PRESETS) do
         local b = MakeButton(c, preset.label, 66, 22); b:SetPoint("TOPLEFT", (i - 1) * 70, -38)
         b:SetScript("OnClick", function() S:ApplyPreset(i) end)
@@ -811,7 +813,7 @@ local function BuildSortSettings(p)
     end
 
     local optTop = -68 - #S.CRITERIA * 28 - 14
-    Label(c, "Options", "GameFontHighlight", 0, optTop)
+    Label(c, "Options", "WallyGameFontHighlight", 0, optTop)
     p.optChecks = {}
     for i, d in ipairs(SORT_OPTIONS) do
         local y = optTop - 20 - (i - 1) * 44
@@ -820,28 +822,28 @@ local function BuildSortSettings(p)
             ns.db.options.sort[d[1]] = self:GetChecked() and true or false
             S:RefreshButtons(); ns:Changed()
         end)
-        Muted(Label(c, d[3], "GameFontHighlightSmall", 27, y - 24, 255))
+        Muted(Label(c, d[3], "WallyGameFontHighlightSmall", 27, y - 24, 255))
         p.optChecks[d[1]] = b
     end
 
     -- Right column: group order and bags to leave alone.
     local R = 300
-    Label(c, "Group order", "GameFontHighlight", R, 0)
-    Muted(Label(c, "Used by the Group rule.", "GameFontHighlightSmall", R, -18, 260))
+    Label(c, "Group order", "WallyGameFontHighlight", R, 0)
+    Muted(Label(c, "Used by the Group rule.", "WallyGameFontHighlightSmall", R, -18, 260))
     p.catRows = {}
     for i = 1, #S.CATEGORIES do
         local r = OrderRow(c, R, -38 - (i - 1) * 26, 260)
-        r.text = Label(r, "", "GameFontHighlightSmall", 8, -6)
+        r.text = Label(r, "", "WallyGameFontHighlightSmall", 8, -6)
         r.up:SetScript("OnClick", function() S:MoveEntry(ns.db.options.sort.categories, i, -1) end)
         r.down:SetScript("OnClick", function() S:MoveEntry(ns.db.options.sort.categories, i, 1) end)
         p.catRows[i] = r
     end
 
     local bagTop = -38 - #S.CATEGORIES * 26 - 14
-    Label(c, "Don't move items in", "GameFontHighlight", R, bagTop)
+    Label(c, "Don't move items in", "WallyGameFontHighlight", R, bagTop)
     p.bagChecks = {}
     local function BagChecks(title, bags, top)
-        Muted(Label(c, title, "GameFontHighlightSmall", R, top))
+        Muted(Label(c, title, "WallyGameFontHighlightSmall", R, top))
         for i, bag in ipairs(bags) do
             local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
             local b = MakeCheckbox(c, "")
@@ -859,7 +861,7 @@ local function BuildSortSettings(p)
 
     -- Left column, under Options: which side of the bag search box the sort button sits on.
     local sideTop = optTop - 20 - #SORT_OPTIONS * 44 - 6
-    Label(c, "Bag button:", "GameFontHighlightSmall", 0, sideTop - 5)
+    Label(c, "Bag button:", "WallyGameFontHighlightSmall", 0, sideTop - 5)
     p.sideButtons = {}
     for i, side in ipairs({ "left", "right" }) do
         local b = MakeButton(c, side == "left" and "Left of search" or "Right of search", 100, 22)
@@ -873,12 +875,12 @@ local function BuildSortSettings(p)
     end
 
     -- Right column, under the bags: valuables.
-    Label(c, "Valuables", "GameFontHighlight", R, valTop)
-    Label(c, "Protect the", "GameFontHighlightSmall", R, valTop - 26)
+    Label(c, "Valuables", "WallyGameFontHighlight", R, valTop)
+    Label(c, "Protect the", "WallyGameFontHighlightSmall", R, valTop - 26)
     local minus = MakeButton(c, "-", 24, 22); minus:SetPoint("TOPLEFT", R + 70, valTop - 20)
-    p.protectTop = Label(c, "", "GameFontHighlight", R + 98, valTop - 25, 30); p.protectTop:SetJustifyH("CENTER")
+    p.protectTop = Label(c, "", "WallyGameFontHighlight", R + 98, valTop - 25, 30); p.protectTop:SetJustifyH("CENTER")
     local plus = MakeButton(c, "+", 24, 22); plus:SetPoint("TOPLEFT", R + 132, valTop - 20)
-    Label(c, "top stacks", "GameFontHighlightSmall", R + 164, valTop - 26)
+    Label(c, "top stacks", "WallyGameFontHighlightSmall", R + 164, valTop - 26)
     minus:SetScript("OnClick", function() ns.Value:SetProtectTop(ns.db.options.sort.protectTop - 1) end)
     plus:SetScript("OnClick", function() ns.Value:SetProtectTop(ns.db.options.sort.protectTop + 1) end)
     Hint(minus, "Protect fewer", "Your most valuable stacks sort first and are never sold as junk. 0 turns this off.")
@@ -891,15 +893,15 @@ local function BuildSortSettings(p)
         local y = valTop - 50 - (i - 1) * 44
         local b = MakeCheckbox(c, d[2]); b:SetPoint("TOPLEFT", R - 4, y)
         b:SetScript("OnClick", function(self) ns.db.options.sort[d[1]] = self:GetChecked() and true or false; ns:Changed() end)
-        Muted(Label(c, d[3], "GameFontHighlightSmall", R + 27, y - 24, 240))
+        Muted(Label(c, d[3], "WallyGameFontHighlightSmall", R + 27, y - 24, 240))
         p.optChecks[d[1]] = b
     end
-    p.worthSource = Muted(Label(c, "", "GameFontHighlightSmall", R, valTop - 142, 260))
+    p.worthSource = Muted(Label(c, "", "WallyGameFontHighlightSmall", R, valTop - 142, 260))
 
     -- Full width: pinned items.
-    Label(c, "Pinned first", "GameFontHighlight", 0, PIN_TOP)
+    Label(c, "Pinned first", "WallyGameFontHighlight", 0, PIN_TOP)
     Muted(Label(c, "These always take the first slots, in this order. Drag an item onto the box, shift-click one, or type its name.",
-        "GameFontHighlightSmall", 0, PIN_TOP - 18, 540))
+        "WallyGameFontHighlightSmall", 0, PIN_TOP - 18, 540))
     p.pinBox = MakeEditBox(c, 260, "Item name or link")
     p.pinBox:SetPoint("TOPLEFT", 0, PIN_TOP - 50)
     local function PinTyped()
@@ -917,7 +919,7 @@ local function BuildSortSettings(p)
     holder:SetPoint("TOPLEFT", 0, PIN_TOP - 86); holder:SetPoint("TOPRIGHT", c, "TOPRIGHT", 0, PIN_TOP - 86)
     holder:SetHeight(1)
     local pinList = { content = holder, rows = {}, onDrop = PinCursorItem }
-    p.pinEmpty = Muted(Label(c, "Nothing pinned. Your hearthstone is a good start.", "GameFontHighlightSmall", 0, PIN_TOP - 92))
+    p.pinEmpty = Muted(Label(c, "Nothing pinned. Your hearthstone is a good start.", "WallyGameFontHighlightSmall", 0, PIN_TOP - 92))
 
     p.Refresh = function()
         local opt = ns.db.options.sort
@@ -942,7 +944,7 @@ local function BuildSortSettings(p)
         for key, b in pairs(p.optChecks) do b:SetChecked(opt[key]) end
         for side, b in pairs(p.sideButtons) do
             if (opt.buttonSide or "left") == side then b:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 1)
-            else b:SetBackdropBorderColor(0.16, 0.24, 0.29, 1) end
+            else b:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1) end
         end
         p.protectTop:SetText(opt.protectTop or 0)
         p.worthSource:SetText(ns.Value:HasAuctionator() and "Worth uses Auctionator's auction prices, with estimates for items it hasn't scanned."
@@ -1080,14 +1082,14 @@ local function CreateMainFrame()
 
     local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
     logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "Wally", "GameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Learns your junk so you don't have to", "GameFontHighlightSmall", 70, -42))
+    Label(frame, "Wally", "WallyGameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Muted(Label(frame, "Learns your junk so you don't have to", "WallyGameFontHighlightSmall", 70, -42))
     local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
     close:SetScript("OnClick", function() frame:Hide() end)
 
     local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    SetBackdrop(side); side:SetBackdropColor(0.045, 0.065, 0.085, 1)
+    SetBackdrop(side); side:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
     local shown = {}
     for _, d in ipairs(TABS) do
         if d[1] == "settings" then
@@ -1107,7 +1109,7 @@ local function CreateMainFrame()
         end
         b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
         b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(0.075, 0.105, 0.13, 1) end end)
+        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end end)
         if d[1] == "settings" then
             b:SetScript("OnClick", function() UI:OpenSettings() end)
             Hint(b, "Settings", "Opens Options > AddOns > Wally.")
@@ -1118,9 +1120,9 @@ local function CreateMainFrame()
     end
     -- With plugin tabs there's no room left for the tips.
     if #pluginTabs == 0 then
-        Muted(Label(side, "Drag items onto a list\nto add them.\n\nShift-click links into\nthe add box.\n\nAt a merchant, drop items\non the Wally button.", "GameFontHighlightSmall", 12, -14 - #shown * 46, 145))
+        Muted(Label(side, "Drag items onto a list\nto add them.\n\nShift-click links into\nthe add box.\n\nAt a merchant, drop items\non the Wally button.", "WallyGameFontHighlightSmall", 12, -14 - #shown * 46, 145))
     end
-    Label(side, "v" .. ns.VERSION, "GameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
+    Label(side, "v" .. ns.VERSION, "WallyGameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
 
     CreateListPage("junk", "inclusions")
     CreateListPage("never", "exclusions")

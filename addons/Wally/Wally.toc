@@ -3,7 +3,7 @@
 ## Notes: Smart junk seller. Learns what you habitually sell, protects possible gear upgrades, and manages junk / never-sell lists.
 ## Author: Dinoblankie + Claude
 ## Version: 0.1.5
-## OptionalDeps: Auctionator
+## OptionalDeps: Auctionator, TapeMeasure, StatLedger
 ## SavedVariables: WallyDB
 ## SavedVariablesPerCharacter: WallyCharDB
 ## IconTexture: Interface\AddOns\Wally\Media\Wally
@@ -11,6 +11,8 @@
 ## AddonCompartmentFunc: Wally_OnCompartmentClick
 ## X-Curse-Project-ID: 1735051
 
+Fonts.lua
+Palette.lua
 Compat.lua
 Core.lua
 Lists.lua

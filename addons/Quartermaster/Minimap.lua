@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Draggable minimap button (same as Wally's): left-click opens Quartermaster, right-click opens Lists.
 local MapButton = {}
@@ -102,7 +103,7 @@ function MapButton:Initialize()
         local list = ns.Lists:Active()
         local total = ns.Lists:Estimate(list)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Quartermaster", 0.33, 0.92, 0.78)
+        GameTooltip:AddLine("Quartermaster", PAL.accent[1], PAL.accent[2], PAL.accent[3])
         GameTooltip:AddLine(("%s: %d item%s, about %s to go"):format(list.name, #list.entries,
             #list.entries == 1 and "" or "s", ns.Compat.Money(total)), 0.82, 0.89, 0.93)
         GameTooltip:AddLine("Left-click: browse items", 0.75, 0.8, 0.85)

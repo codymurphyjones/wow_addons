@@ -3,18 +3,20 @@
 ## Notes: Dungeon and raid gear for your level and class, ranked by your StatLedger stat order, on the Character window, plus a loot journal with boss abilities. /sg, /sgj
 ## Author: Dinoblankie + Claude
 ## Version: 1.0.7
-## Dependencies: AtlasLootClassic, StatLedger
-## OptionalDeps: Waypoint
+## Dependencies: StatLedger
+## OptionalDeps: Waypoint, AtlasLootClassic, AtlasLootContinued
 ## SavedVariables: SpyGlassDB, SpyGlassJournalDB, LootPriorityDB, LootPriorityJournalDB
 ## IconTexture: Interface\AddOns\Spyglass\Media\Icon
 ## Category: Equipment
 ## AddonCompartmentFunc: SpyGlass_Toggle
 ## X-Curse-Project-ID: 1735103
 
+Fonts.lua
 Data.lua
 Data\Items.lua
 Data\Professions.lua
 Data\Anchors.lua
+Data\Loot.lua
 Core.lua
 AtlasData.lua
 Usability.lua

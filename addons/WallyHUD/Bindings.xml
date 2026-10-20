@@ -1,0 +1,5 @@
+<Bindings>
+    <Binding name="WALLYHUD_REPORT" header="WALLYHUD" category="ADDONS">
+        WallyHUD_Report()
+    </Binding>
+</Bindings>

@@ -1,0 +1,20 @@
+## Interface: 16001, 11509, 20506, 50504, 120100
+## Title: WallyHUD
+## Notes: One look for the suite: shared design tokens, a quieter HUD, density presets, and Blizzard's Issue Reporter out of the play field. /whud
+## Author: Dinoblankie + Claude
+## Version: 0.1.0
+## OptionalDeps: Wally, Quartermaster, WealthPlanner, TapeMeasure, GroupHistory, MrMiyagi, SmartPlates, BattleRecap, SimplePanel, SaddleBags, Waypoint, FieldGuide, RoadLog, Spyglass, SpyglassPluginQuests, StatLedger, Bandolier, Modified, ZeppelinSigns, Convergence, MusicLib, Questie
+## SavedVariables: WallyHUDDB
+## SavedVariablesPerCharacter: WallyHUDCharDB
+## Category: User Interface
+
+Tokens.lua
+Core.lua
+Palettes.lua
+Primitives.lua
+Minimap.lua
+Reporter.lua
+Density.lua
+RightColumn.lua
+Questie.lua
+Settings.lua

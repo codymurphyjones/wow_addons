@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local W = ns.Widgets
 
 -- The small recap shown when you die: who killed you and with what, and the damage you took.
@@ -14,10 +15,10 @@ local SPARK_H, SPARK_BARS = 22, 48
 local f, rows, sections
 
 local function Section(text)
-    local s = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local s = f:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontNormalSmall")
     s:SetJustifyH("LEFT"); s:SetText(text)
     local line = f:CreateTexture(nil, "ARTWORK")
-    line:SetColorTexture(0.16, 0.24, 0.29, 1); line:SetHeight(1)
+    line:SetColorTexture(PAL.border[1], PAL.border[2], PAL.border[3], 1); line:SetHeight(1)
     line:SetPoint("LEFT", s, "RIGHT", 6, 0); line:SetPoint("RIGHT", f, "RIGHT", -PAD, 0)
     s.line = line
     return s
@@ -29,9 +30,9 @@ local function NewRow()
     r:SetSize(WIDTH - PAD * 2, ROW_H)
     r.icon = r:CreateTexture(nil, "ARTWORK"); r.icon:SetSize(16, 16); r.icon:SetPoint("LEFT")
     r.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    r.left = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.left = r:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall")
     r.left:SetJustifyH("LEFT"); r.left:SetWordWrap(false)
-    r.right = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.right = r:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall")
     r.right:SetJustifyH("RIGHT"); r.right:SetPoint("RIGHT")
     r.bar = W.MakeBar(r, 96, 6)
     r.bar:SetPoint("RIGHT", -92, 0)
@@ -81,14 +82,14 @@ local function Create()
     end)
     iconHit:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    f.killedBy = W.Label(f, "Killed by", "GameFontHighlightSmall", PAD + 52, -38)
+    f.killedBy = W.Label(f, "Killed by", "BattleRecapGameFontHighlightSmall", PAD + 52, -38)
     W.Muted(f.killedBy)
-    f.killer = W.Label(f, "", "GameFontNormalLarge", PAD + 52, -51, WIDTH - PAD * 2 - 52)
-    f.blow = W.Label(f, "", "GameFontHighlightSmall", PAD + 52, -70, WIDTH - PAD * 2 - 52)
+    f.killer = W.Label(f, "", "BattleRecapGameFontNormalLarge", PAD + 52, -51, WIDTH - PAD * 2 - 52)
+    f.blow = W.Label(f, "", "BattleRecapGameFontHighlightSmall", PAD + 52, -70, WIDTH - PAD * 2 - 52)
 
-    f.nemesis = W.Label(f, "", "GameFontHighlightSmall", PAD, -92, WIDTH - PAD * 2)
+    f.nemesis = W.Label(f, "", "BattleRecapGameFontHighlightSmall", PAD, -92, WIDTH - PAD * 2)
     W.Muted(f.nemesis)
-    f.summary = W.Label(f, "", "GameFontHighlightSmall", PAD, -92, WIDTH - PAD * 2)
+    f.summary = W.Label(f, "", "BattleRecapGameFontHighlightSmall", PAD, -92, WIDTH - PAD * 2)
     f.summary:SetSpacing(3)
 
     -- Health over the death window: thin bars, coloured by how much was left.
@@ -120,13 +121,13 @@ local function Create()
     end)
     f.spark:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    f.notes = W.Label(f, "", "GameFontHighlightSmall", PAD, 0, WIDTH - PAD * 2)
+    f.notes = W.Label(f, "", "BattleRecapGameFontHighlightSmall", PAD, 0, WIDTH - PAD * 2)
     f.notes:SetSpacing(3)
-    f.remedy = W.Label(f, "", "GameFontHighlightSmall", PAD, 0, WIDTH - PAD * 2)
+    f.remedy = W.Label(f, "", "BattleRecapGameFontHighlightSmall", PAD, 0, WIDTH - PAD * 2)
     f.remedy:SetSpacing(3)
-    f.beat = W.Label(f, "", "GameFontHighlightSmall", PAD, 0, WIDTH - PAD * 2)
+    f.beat = W.Label(f, "", "BattleRecapGameFontHighlightSmall", PAD, 0, WIDTH - PAD * 2)
     f.beat:SetSpacing(3)
-    f.revenge = W.Label(f, "", "GameFontHighlightSmall", PAD, 0, WIDTH - PAD * 2)
+    f.revenge = W.Label(f, "", "BattleRecapGameFontHighlightSmall", PAD, 0, WIDTH - PAD * 2)
     W.Muted(f.revenge)
 
     sections = { attackers = Section("Damage taken"), spells = Section(""), dealt = Section("Your damage"), notes = Section("Notes"),
@@ -140,7 +141,7 @@ local function Create()
     f.next:SetPoint("LEFT", f.prev, "RIGHT", 4, 0)
     f.next:SetScript("OnClick", function() P:Show((P.index or 1) - 1) end)
     W.Hint(f.next, "Later death")
-    f.counter = W.Label(f, "", "GameFontHighlightSmall", 0, 0)
+    f.counter = W.Label(f, "", "BattleRecapGameFontHighlightSmall", 0, 0)
     f.counter:ClearAllPoints(); f.counter:SetPoint("LEFT", f.next, "RIGHT", 8, 0)
     W.Muted(f.counter)
 

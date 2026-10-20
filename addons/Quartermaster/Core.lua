@@ -31,7 +31,7 @@ ns.CHAR_DEFAULTS = {
     lists = {},          -- array of { name, entries = { {itemID, name, link, qty, tolerance, bought} } }
     activeList = 1,
     templates = {},      -- prebuilt lists: { id, name, entries = { {itemID, name, link, qty = target, tolerance} } }
-    cart = { mode = "list", ticked = {} }, -- Cart tab: "list" or "prebuilt", and ticked prebuilt ids
+    cart = { mode = "list", ticked = {}, view = "recent" }, -- Cart tab: "list" or "prebuilt", ticked prebuilt ids, and what it lists (CartTab.lua VIEWS)
     addTarget = nil,     -- where Browse adds: { kind = "list", index } or { kind = "template", id }
     stock = { mail = {}, sinceMail = {} }, -- auction wins in the mailbox / bought since it was last opened
     searches = { recent = {} }, -- Buying tab recent searches, newest first
@@ -130,6 +130,7 @@ local function Help()
     ns:Print("/qm - open the item browser and your shopping lists", true)
     ns:Print("/qm lists - open your shopping lists", true)
     ns:Print("/qm prebuilt - open your prebuilt (restock) lists", true)
+    if ns.Consumables and ns.Consumables:Available() then ns:Print("/qm consumables - keep a minimum of each consumable (with Bandolier)", true) end
     ns:Print("/qm cart - open the Cart tab (at the auction house)", true)
     ns:Print("/qm buying [text] - open the Buying tab and search the live auction house", true)
     ns:Print("/qm add <item link or name> [qty] - add to the active list", true)
@@ -150,6 +151,8 @@ SlashCmdList.QUARTERMASTER = function(msg)
         ns.UI:Show("lists")
     elseif cmd == "prebuilt" or cmd == "restock" then
         ns.UI:Show("prebuilt")
+    elseif cmd == "consumables" or cmd == "stock" then
+        if not QuartermasterAPI.ShowConsumables() then ns:Print("The Consumables page needs the Bandolier addon.", true) end
     elseif cmd == "browse" or cmd == "search" then
         ns.UI:Show("browse")
         if rest ~= "" then ns.UI:SearchFor(rest) end

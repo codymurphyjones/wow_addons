@@ -86,11 +86,74 @@ local function IsGuildmate(name, guid)
     return false
 end
 
+-- What the Group History addon knows of a player (GroupHistoryAPI.Get), or nil.
+local function History(name, guid)
+    if not (name and GroupHistoryAPI and GroupHistoryAPI.Get) then return nil end
+    local ok, info = pcall(GroupHistoryAPI.Get, name, guid)
+    return ok and info or nil
+end
+
+local function HasHistory() return GroupHistoryAPI ~= nil and GroupHistoryAPI.Get ~= nil end
+
+-- Past groupmates you gave a thumbs up in Group History count too, while that switch is on.
 local function IsKnown(name, guid)
     if not name then return false end
     if UnitInParty and (UnitInParty(Short(name)) or UnitInRaid(Short(name))) then return true end
-    return IsFriend(name, guid) or IsGuildmate(name, guid)
+    if IsFriend(name, guid) or IsGuildmate(name, guid) then return true end
+    local s = Settings()
+    local h = s and s.knownFromHistory and History(name, guid)
+    return h and (h.rating or 0) > 0 or false
 end
+
+-- ---------------------------------------------------------------------------
+-- Looking for Group: while you're listed, strangers inviting you is the point
+-- ---------------------------------------------------------------------------
+
+local LFG = C_LFGList
+
+local function Readable(v) return not (issecretvalue and issecretvalue(v)) end
+
+-- Every value fn returns, or nothing when it errors.
+local function Call(fn, ...)
+    if not fn then return end
+    local r = { pcall(fn, ...) }
+    if not r[1] then return end
+    return unpack(r, 2, table.maxn(r))
+end
+
+local function SameName(a, b) return type(a) == "string" and Readable(a) and Short(a) == Short(b) end
+
+-- Whether you're listed in the Looking for Group tool yourself.
+local function IsListed()
+    if not LFG then return false end
+    local v = Call(LFG.HasActiveEntryInfo)
+    return Readable(v) and v == true
+end
+
+-- Whether name leads or is in a listing from the last Looking for Group search. A leader who
+-- browses without listing their group can't be seen.
+local function InviterListed(name)
+    if not (LFG and name) then return false end
+    local a, b = Call(LFG.GetSearchResults)
+    local ids = type(a) == "table" and a or b
+    if type(ids) ~= "table" then return false end
+    for _, id in ipairs(ids) do
+        local info = Call(LFG.GetSearchResultInfo, id)
+        if type(info) == "table" and not info.isDelisted then
+            if SameName(info.leaderName, name) then return true end
+            for i = 1, tonumber(info.numMembers) or 0 do
+                -- Clients differ on where the member's name sits, so test every string returned.
+                local r = { Call(LFG.GetSearchResultMemberInfo, id, i) }
+                for j = 1, table.maxn(r) do
+                    if SameName(r[j], name) then return true end
+                end
+            end
+        end
+    end
+    return false
+end
+
+local LFG_PAUSED = "Paused while you're listed in Looking for Group. Invites from players who are also listed get through; others are declined."
 
 -- ---------------------------------------------------------------------------
 -- The switches
@@ -110,9 +173,9 @@ local function CVarSwitch(cvar, text, tooltip, block, short)
     }
 end
 
-local function OwnSwitch(key, text, tooltip, block, short)
+local function OwnSwitch(key, text, tooltip, block, short, paused)
     return {
-        text = text, tooltip = tooltip, block = block, short = short,
+        text = text, tooltip = tooltip, block = block, short = short, paused = paused,
         get = function() return Settings()[key] and true or false end,
         set = function(v) Settings()[key] = v and true or false end,
     }
@@ -125,7 +188,14 @@ end
 
 -- `block = true` marks the switches the bar counts ("3 blocks"); `short` names a switch that's on
 -- ("No duels"); `topic` is the kind of request it blocks ("Duels"), for the Full Social Plugin's
--- row of interaction rules: open or blocked, one per kind.
+-- row of interaction rules: open or blocked, one per kind. `paused` returns why a switch is set
+-- aside for now, if it is; a paused switch neither blocks nor counts, whatever its value.
+
+-- Switches that only exist with the Group History addon.
+local function HistorySwitch(sw)
+    sw.available, sw.hideUnavailable = HasHistory, true
+    return sw
+end
 
 -- Guild invites: the client's own switch where there is one, ours otherwise.
 local function ClientGuildSwitch() return GetAutoDeclineGuildInvites ~= nil and SetAutoDeclineGuildInvites ~= nil end
@@ -135,9 +205,15 @@ local SWITCHES = {
     OwnSwitch("declineDuels", "Decline duels", "Turns every duel request down as it arrives.", true, "No duels"),
 
     OwnSwitch("declineStrangerInvites", "Decline group invites from strangers",
-        "Group invites from anyone who isn't a friend, a Battle.net friend or in your guild are turned down.", true, "No stranger invites"),
+        "Group invites from anyone who isn't a friend, a Battle.net friend or in your guild are turned down. While you're listed in Looking for Group this is set aside: invites from players who are also listed get through, others are declined.",
+        true, "No stranger invites", function() return IsListed() and LFG_PAUSED or nil end),
     OwnSwitch("acceptKnownInvites", "Accept group invites from friends and guild",
         "Joins straight away when a friend, Battle.net friend or guildmate invites you.", false, "Auto-join"),
+    -- With the Group History addon: your thumbs up and down on past groupmates.
+    HistorySwitch(OwnSwitch("knownFromHistory", "Treat players you rated up as known",
+        "Past groupmates you gave a thumbs up in Group History count like friends: their invites aren't declined as a stranger's, their whispers aren't hidden, and Accept group invites joins them too.")),
+    HistorySwitch(OwnSwitch("declineRatedDown", "Decline group invites from players you rated down",
+        "Group invites from anyone you gave a thumbs down in Group History are turned down, even while you're listed in Looking for Group.", true, "No rated-down invites")),
     {
         text = "Decline guild invites", tooltip = "Turns down invitations to join a guild.", block = true, short = "No guild invites",
         get = function()
@@ -188,12 +264,14 @@ local TOPICS = {
 for _, sw in ipairs(SWITCHES) do sw.topic = sw.text and TOPICS[sw.text] end
 
 local function Available(sw) return not sw.available or sw.available() end
+local function Paused(sw) return sw.paused and sw.paused() end
+local PAUSED_TAG = T.hex.yellow .. "Paused (LFG)|r"
 
 -- How many of the blocking switches are on.
 local function ActiveCount()
     local n = 0
     for _, sw in ipairs(SWITCHES) do
-        if sw.block and Available(sw) and sw.get() then n = n + 1 end
+        if sw.block and Available(sw) and not Paused(sw) and sw.get() then n = n + 1 end
     end
     return n
 end
@@ -205,11 +283,12 @@ local function AddSwitches(m, groups)
         if sw.header then
             include = not groups or groups[sw.header]
             if include then m:Header(sw.header) end
-        elseif include then
+        elseif include and (Available(sw) or not sw.hideUnavailable) then
             local ok = Available(sw)
             m:Checkbox({
-                text = sw.text,
-                tooltip = ok and sw.tooltip or "This client doesn't have this setting.",
+                -- A paused switch stays clickable, with the reason after its name.
+                text = function() return Paused(sw) and (sw.text .. "  " .. PAUSED_TAG) or sw.text end,
+                tooltip = ok and (Paused(sw) or sw.tooltip) or "This client doesn't have this setting.",
                 disabled = not ok,
                 get = function() return ok and sw.get() end,
                 set = function(v) ns.SocialShared.SetSwitch(sw, v) end,
@@ -233,15 +312,59 @@ ns:On("DUEL_REQUESTED", function(name)
     Say("declined a duel from " .. tostring(name) .. ".")
 end)
 
+-- A stranger's invite while you're listed: it gets through if they're listed too. When the last
+-- search doesn't show them, the search is run again and the popup waits up to 3 seconds for it.
+local pending -- { name, token }: the invite waiting on that search
+local token = 0
+
+local function SettleLFG(t, listed)
+    if not pending or pending.token ~= t then return end
+    local name = pending.name
+    pending = nil
+    if listed then
+        Say("let a group invite from " .. tostring(name) .. " through: you're both listed in Looking for Group.")
+    elseif not IsInGroup() then
+        DeclineGroup()
+        HidePopup("PARTY_INVITE")
+        Say("declined a group invite from " .. tostring(name) .. ": you're listed in Looking for Group, but they aren't.")
+    end
+end
+
+local function CheckLFGInvite(name)
+    token = token + 1
+    local t = token
+    pending = { name = name, token = t }
+    if InviterListed(name) then return SettleLFG(t, true) end
+    if not (LFG.RefreshResults and pcall(LFG.RefreshResults)) then return SettleLFG(t, false) end
+    C_Timer.After(3, function() SettleLFG(t, InviterListed(name)) end)
+end
+
+ns:On("LFG_LIST_SEARCH_RESULTS_RECEIVED", function()
+    if pending and InviterListed(pending.name) then SettleLFG(pending.token, true) end
+end)
+ns:On("PARTY_INVITE_CANCEL", function() pending = nil end)
+ns:On("GROUP_ROSTER_UPDATE", function() pending = nil end)
+
 ns:On("PARTY_INVITE_REQUEST", function(name, ...)
     local s = Settings()
     if not s then return end
     local guid = select(6, ...)
+    if s.declineRatedDown then
+        local h = History(name, guid)
+        if h and (h.rating or 0) < 0 then
+            DeclineGroup()
+            HidePopup("PARTY_INVITE")
+            Say("declined a group invite from " .. tostring(name) .. ": you rated them down in Group History.")
+            return
+        end
+    end
     local known = IsKnown(name, guid)
     if known and s.acceptKnownInvites then
         AcceptGroup()
         HidePopup("PARTY_INVITE")
         Say("joined " .. tostring(name) .. "'s group.")
+    elseif not known and IsListed() then
+        CheckLFGInvite(name)
     elseif not known and s.declineStrangerInvites then
         DeclineGroup()
         HidePopup("PARTY_INVITE")
@@ -300,7 +423,7 @@ end
 local function Rules()
     local out = {}
     for _, sw in ipairs(SWITCHES) do
-        if sw.topic and Available(sw) then out[#out + 1] = { topic = sw.topic, open = not sw.get(), switch = sw } end
+        if sw.topic and Available(sw) then out[#out + 1] = { topic = sw.topic, open = Paused(sw) ~= nil or not sw.get(), switch = sw } end
     end
     return out
 end
@@ -309,13 +432,13 @@ end
 local function ActiveLabels()
     local out = {}
     for _, sw in ipairs(SWITCHES) do
-        if sw.short and Available(sw) and sw.get() then out[#out + 1] = sw end
+        if sw.short and Available(sw) and not Paused(sw) and sw.get() then out[#out + 1] = sw end
     end
     return out
 end
 
 ns.SocialShared = {
-    SWITCHES = SWITCHES, Available = Available, ActiveCount = ActiveCount, AddSwitches = AddSwitches,
+    SWITCHES = SWITCHES, Available = Available, Paused = Paused, ActiveCount = ActiveCount, AddSwitches = AddSwitches,
     Settings = Settings, Status = Status, StatusWords = StatusWords, ActiveLabels = ActiveLabels, Rules = Rules,
     AutoJoin = function() return Settings() and Settings().acceptKnownInvites and true or false end,
     OPEN_ICON = "Interface\\RaidFrame\\ReadyCheck-Ready", BLOCKED_ICON = "Interface\\RaidFrame\\ReadyCheck-NotReady",
@@ -328,6 +451,11 @@ function ns.SocialShared.SetSwitch(sw, v)
     if p then p:Refresh() end
     for _, fn in ipairs(ns.SocialShared.listeners) do fn() end
 end
+
+-- Listing or delisting pauses the stranger-invite switch; tell the plugins that show it.
+ns:On("LFG_LIST_ACTIVE_ENTRY_UPDATE", function()
+    for _, fn in ipairs(ns.SocialShared.listeners) do fn() end
+end)
 
 -- ---------------------------------------------------------------------------
 -- The plugin
@@ -343,8 +471,9 @@ p = SimplePanel.RegisterPlugin({
     defaults = {
         declineDuels = false, declineStrangerInvites = false, acceptKnownInvites = false,
         declineGuild = false, hideStrangerWhispers = false, announce = true,
+        knownFromHistory = true, declineRatedDown = false,
     },
-    events = { "PLAYER_FLAGS_CHANGED", "CVAR_UPDATE" },
+    events = { "PLAYER_FLAGS_CHANGED", "CVAR_UPDATE", "LFG_LIST_ACTIVE_ENTRY_UPDATE" },
 
     text = function() return Status() end,
 
@@ -357,8 +486,8 @@ p = SimplePanel.RegisterPlugin({
             if sw.header then
                 tt:AddHeader(sw.header)
             elseif Available(sw) then
-                local on = sw.get()
-                tt:AddDouble(sw.text, on and "On" or "Off", T.text, on and T.green or T.muted)
+                local on, paused = sw.get(), Paused(sw)
+                tt:AddDouble(sw.text, paused and "Paused (LFG)" or (on and "On" or "Off"), T.text, paused and T.yellow or (on and T.green or T.muted))
             end
         end
         tt:AddHint("Click: switches  ·  Right-click: options")

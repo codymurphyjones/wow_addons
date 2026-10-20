@@ -36,7 +36,10 @@ local function Scan()
     return items, lowest, n > 0 and sum / n or 100
 end
 
-local function PctColor(pct) return pct <= 20 and T.red or (pct <= 50 and T.yellow or T.green) end
+local function PctColor(pct) return pct <= 20 and T.red or (pct <= 50 and T.yellow or nil) end
+
+-- Shared with the character sheet (CharacterSheet.lua).
+ns.Durability = { Scan = Scan, RepairCost = RepairCost, Color = PctColor }
 
 SimplePanel.RegisterPlugin({
     id = "Durability",
@@ -60,7 +63,7 @@ SimplePanel.RegisterPlugin({
         tt:AddDouble("Average", ("%d%%"):format(avg), nil, PctColor(avg))
         local list, cost = {}, 0
         for _, it in ipairs(items) do
-            list[#list + 1] = { it.name, it.pct, PctColor(it.pct), ("%d%%"):format(it.pct) }
+            list[#list + 1] = { it.name, it.pct, PctColor(it.pct) or T.text, ("%d%%"):format(it.pct) }
             cost = cost + RepairCost(it.slot)
         end
         if #list > 0 then
@@ -77,12 +80,19 @@ SimplePanel.RegisterPlugin({
         m:Radio({ text = "Average", value = "average", get = function() return p:Get("show") end, set = function(v) p:Set("show", v) end })
     end,
 
-    -- The character sheet opens through the game's own button: opening it from add-on code taints it.
-    secure = function() return ns.SecureClick.Click(CharacterMicroButton) end,
+    -- The game's character sheet opens through the game's own button: opening it from add-on code
+    -- taints it. With Own Panels, SimplePanel's own sheet opens instead, latched to this plugin.
+    secure = function()
+        if ns.db.options.ownPanels then return nil end
+        return ns.SecureClick.Click(CharacterMicroButton)
+    end,
     secureInCombat = true,
 
     onClick = function(p, button)
-        if button == "LeftButton" and not IsModifierKeyDown() and ToggleCharacter then
+        if button ~= "LeftButton" or IsModifierKeyDown() then return end
+        if ns.db.options.ownPanels and ns.CharacterSheet then
+            ns.CharacterSheet:Toggle(p.button)
+        elseif ToggleCharacter then
             ns.SecureClick.Open(function() ToggleCharacter("PaperDollFrame") end, "the character sheet")
         end
     end,

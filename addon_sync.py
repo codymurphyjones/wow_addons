@@ -24,7 +24,9 @@ Commands (run with -h for options):
   status                  show what sync would do (dry run)
   sync [--watch]          apply (default; yarn test); --watch re-syncs on file changes
   dev|release|auto|skip NAME ...   pin an addon to a mode (auto clears the pin)
-  publish [NAME]          upload NAME, or every addon newer than CurseForge (yarn deploy)
+  publish [NAME]          upload NAME, or every addon newer than CurseForge (yarn deploy). Addons
+                          without a project get one first: your existing project is linked, else
+                          tools/curseforge/create_projects.py creates it in a browser
   publish --queued        upload what's waiting in SourceCode/
   check [NAME ...]        every addon vs its CurseForge project: what publish would ship (yarn deploy:check)
   bump [NAME ...]         bump the patch version (TOC + Lua VERSION lines); all addons by default
@@ -34,7 +36,8 @@ Every AddOns folder sync replaces is first backed up to .addon_sync/backup (once
 so `stop` can delete what was installed and put the originals back.
 
 There is no config file. Personal settings go in .env (gitignored), CurseForge project ids live in
-each addon's TOC (## X-Curse-Project-ID), and pins are kept in .addon_sync/pins.json:
+each addon's TOC (## X-Curse-Project-ID), addons that stay local (never created on CurseForge or
+published) are listed in Local.dat, one per line, and pins are kept in .addon_sync/pins.json:
   CURSEFORGE_KEY=...            CurseForge Core API key (console.curseforge.com)
   CURSEFORGE_AUTHOR=...         your CurseForge username (publish refuses projects you don't own)
   CURSEFORGE_UPLOAD_TOKEN=...   author upload token, for publish (authors.curseforge.com)
@@ -54,6 +57,7 @@ import os
 import re
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import time
@@ -66,6 +70,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 ENV_PATH = ROOT / ".env"
+LOCAL_PATH = ROOT / "Local.dat"  # addons that stay local: never created on or published to CurseForge
+CREATE_SCRIPT = ROOT / "tools" / "curseforge" / "create_projects.py"
 DATA_DIR = ROOT / ".addon_sync"
 STATE_PATH = DATA_DIR / "state.json"
 PINS_PATH = DATA_DIR / "pins.json"
@@ -171,9 +177,23 @@ def load_config():
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))
     cfg["curseforge_author"] = os.environ.get("CURSEFORGE_AUTHOR", "").strip()
     cfg["overrides"] = load_json(PINS_PATH, {})
+    cfg["local"] = local_only()
     cfg["projects"] = {a.name: int(a.toc["x-curse-project-id"]) for a in discover(cfg)
                        if a.toc.get("x-curse-project-id", "").strip().isdigit()}
     return cfg
+
+
+def local_only():
+    """Lowercased addon names listed in Local.dat (one per line, # comments). Every other addon ships."""
+    path = next((p for p in ROOT.iterdir() if p.name.lower() == LOCAL_PATH.name.lower()), None)
+    if not path:
+        return set()
+    lines = path.read_text(encoding="utf-8-sig").splitlines()
+    return {line.split("#", 1)[0].strip().lower() for line in lines} - {""}
+
+
+def is_local(cfg, addon):
+    return addon.name.lower() in cfg["local"]
 
 
 def save_pins(cfg):
@@ -264,6 +284,12 @@ def discover(cfg):
     return addons
 
 
+def project_name(addon):
+    """The CurseForge project name: the TOC's title, with a space before each capitalized word
+    run together with the one before it ("WallyHUD" -> "Wally HUD", "MrMiyagi" -> "Mr Miyagi")."""
+    return re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", addon.title).strip()
+
+
 def resolve_names(addons, names):
     by_lower = {a.name.lower(): a for a in addons}
     picked = []
@@ -301,6 +327,17 @@ def source_hash(addon, patterns):
         h.update(f"{rel}\0{len(data)}\0".encode())
         h.update(data)
     return h.hexdigest()
+
+
+def installed_matches(addon, wow, patterns):
+    """Whether the installed copy has every workspace file, at the same size, and nothing else.
+    Catches a copy that was cut short (sync deletes the folder before copying it fresh)."""
+    target = wow / addon.name
+    if not target.exists():
+        return False
+    want = {rel: path.stat().st_size for rel, path in iter_files(addon.path, patterns)}
+    have = {rel: path.stat().st_size for rel, path in iter_files(target, [])}
+    return want == have
 
 
 def source_signature(addon, patterns):
@@ -522,6 +559,11 @@ class CurseForge:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=120) as resp, open(dest, "wb") as fh:
             shutil.copyfileobj(resp, fh)
+
+    def categories(self):
+        """WoW's addon categories (not the classes they sit under)."""
+        return self._cached("categories", lambda: [
+            c for c in self._get("/v1/categories", {"gameId": WOW_GAME_ID})["data"] if not c.get("isClass")])
 
     def search(self, text):
         return self._get("/v1/mods/search", {
@@ -750,7 +792,7 @@ def apply_plan(p, wow, state, patterns, dry_run):
 
     if p["mode"] == "dev":
         current = (st.get("installed_mode") == "dev" and st.get("last_copied_hash") == p["hash"]
-                   and (wow / addon.name).exists())
+                   and installed_matches(addon, wow, patterns))
         if current:
             return "up to date"
         if dry_run:
@@ -1002,6 +1044,21 @@ def norm(text):
     return re.sub(r"[^a-z0-9]", "", (text or "").lower())
 
 
+def owned_matches(cf, addon, author):
+    """(exact, all) CurseForge projects by author that could be this addon; exact ones match its
+    folder name, title or project name."""
+    wanted = {norm(addon.title), norm(addon.name), norm(project_name(addon))}
+    results = {}
+    for term in dict.fromkeys([addon.title, addon.name, project_name(addon)]):
+        for mod in cf.search(term):
+            results[mod["id"]] = mod
+    mods = list(results.values())
+    if author:
+        mods = [m for m in mods if any(norm(a.get("name")) == norm(author) for a in m.get("authors", []))]
+    exact = [m for m in mods if norm(m.get("name")) in wanted or norm(m.get("slug")) in wanted]
+    return exact, mods
+
+
 def cmd_link(args):
     cfg = load_config()
     addons = discover(cfg)
@@ -1015,23 +1072,15 @@ def cmd_link(args):
         return True
 
     targets = (resolve_names(addons, args.names) if args.names
-               else [a for a in addons if a.name not in cfg["projects"]])
+               else [a for a in addons if a.name not in cfg["projects"] and not is_local(cfg, a)])
     if not targets:
         print("Every addon is already linked. Pass names to re-link.")
         return True
     cf = CurseForge(api_key(cfg))
-    author = norm(cfg["curseforge_author"])
+    author = cfg["curseforge_author"]
     interactive = sys.stdin.isatty()
     for addon in targets:
-        wanted = {norm(addon.title), norm(addon.name)}
-        results = {}
-        for term in dict.fromkeys([addon.title, addon.name]):
-            for mod in cf.search(term):
-                results[mod["id"]] = mod
-        mods = list(results.values())
-        if author:
-            mods = [m for m in mods if any(norm(a.get("name")) == author for a in m.get("authors", []))]
-        exact = [m for m in mods if norm(m.get("name")) in wanted or norm(m.get("slug")) in wanted]
+        exact, mods = owned_matches(cf, addon, author)
         if len(exact) == 1:
             pick = exact[0]
         else:
@@ -1206,16 +1255,20 @@ def first_difference(local, live):
     return None
 
 
+def addon_summary(addon):
+    """(the project page's one-line summary, where it came from): description.txt, else the TOC's ## Notes."""
+    summary_file = next((p for p in sorted(addon.path.glob("*.txt")) if p.stem.lower() == "description"), None)
+    if summary_file:
+        return summary_file.read_text(encoding="utf-8-sig").strip(), summary_file.name
+    return strip_color(addon.toc.get("notes")), "the TOC's ## Notes"
+
+
 def page_drift(cf, addon, pid):
     """(project, [(field, what to paste, detail)]) where the CurseForge page differs from the workspace:
     the summary against description.txt (else the TOC's ## Notes), the description against Description.md."""
     mod = cf.mod(pid)
     drift = []
-    summary_file = next((p for p in sorted(addon.path.glob("*.txt")) if p.stem.lower() == "description"), None)
-    if summary_file:
-        summary, source = summary_file.read_text(encoding="utf-8-sig").strip(), summary_file.name
-    else:
-        summary, source = strip_color(addon.toc.get("notes")), "the TOC's ## Notes"
+    summary, source = addon_summary(addon)
     if summary and page_words(summary) != page_words(mod.get("summary") or ""):
         drift.append(("Summary", source, (summary, mod.get("summary") or "(empty)")))
     desc = find_description(addon)
@@ -1374,16 +1427,70 @@ def after_upload(cfg, addon, manual):
     return run_sync(cfg, [addon.name], refresh=True)
 
 
+def lint(addons):
+    """tools/lint.py over these addons: Lua that doesn't compile or a TOC naming a missing file
+    stops the command before anything ships."""
+    names = [a.name for a in addons]
+    if subprocess.call([sys.executable, "-I", str(ROOT / "tools" / "lint.py"), "-q", *names]) != 0:
+        raise SyncError("lint found errors (above) - fix them first, or run `yarn lint` for details.")
+
+
+def ensure_projects(cfg, cf, addons, dry_run=False):
+    """Give every addon that ships (everything not in Local.dat) a CurseForge project: link the one
+    you already own, else create it on the authors site (tools/curseforge/create_projects.py drives
+    a browser). Returns the addons, re-read when new project ids were written to their TOCs."""
+    missing = [a for a in addons if a.version and not is_local(cfg, a) and a.name not in cfg["projects"]
+               and cfg["overrides"].get(a.name) != "skip"]
+    if not missing or not cf.key:
+        return addons
+    create = []
+    for addon in missing:
+        try:
+            exact, _ = owned_matches(cf, addon, cfg["curseforge_author"])
+        except SyncError as exc:
+            print(f"{addon.name}: can't look for an existing project ({exc}) - not creating one")
+            continue
+        if len(exact) == 1:
+            pick = exact[0]
+            print(f"{addon.name}: {'would link' if dry_run else 'linked'} to your project {pick['name']} (id {pick['id']})")
+            if not dry_run:
+                set_toc_field(addon, "X-Curse-Project-ID", pick["id"])
+                cfg["projects"][addon.name] = pick["id"]
+        elif exact:
+            print(f"{addon.name}: several of your projects match - pick one with `yarn link {addon.name}`")
+        else:
+            create.append(addon)
+    if not create:
+        return addons
+    names = ", ".join(f"{a.name} as \"{project_name(a)}\"" for a in create)
+    if dry_run:
+        print(f"Would create CurseForge projects: {names}")
+        return addons
+    print(f"Not on CurseForge yet - creating {names}")
+    subprocess.call([sys.executable, "-I", str(CREATE_SCRIPT), *[a.name for a in create]])
+    fresh = discover(cfg)
+    for addon in fresh:
+        pid = addon.toc.get("x-curse-project-id", "").strip()
+        if pid.isdigit():
+            cfg["projects"][addon.name] = int(pid)
+    return fresh
+
+
 def cmd_publish(args):
     cfg = load_config()
     addons = discover(cfg)
-    cf = CurseForge(api_key(cfg), refresh=True)
     picked = resolve_names(addons, [args.name]) if args.name and not args.queued else addons
+    if args.name and not args.queued and is_local(cfg, picked[0]):
+        raise SyncError(f"{picked[0].name} is listed in {LOCAL_PATH.name} (local only) - not published. "
+                        f"Take it out of {LOCAL_PATH.name} to ship it.")
+    lint(picked)
+    cf = CurseForge(api_key(cfg), refresh=True)
     if args.queued:
         ok = publish_outbox(cfg, cf, addons, args)
     elif not args.name:
         ok = publish_all(cfg, cf, addons, args)
     else:
+        picked = ensure_projects(cfg, cf, picked, args.dry_run)
         ok = publish_addon(cfg, cf, picked[0], args)
     report_pages(cfg, cf, picked)  # after the uploads: page text is edited on the website
     return ok
@@ -1400,11 +1507,12 @@ def publish_all(cfg, cf, addons, args):
     if outbox(cfg):
         print(f"== Waiting in {release_dir(cfg).name}")
         ok = publish_outbox(cfg, cf, addons, args)
+    addons = ensure_projects(cfg, cf, addons, args.dry_run)
 
     state = load_json(STATE_PATH, {})
     candidates = []
     for addon in addons:
-        if (addon.name not in cfg["projects"] or not addon.version
+        if (addon.name not in cfg["projects"] or not addon.version or is_local(cfg, addon)
                 or cfg["overrides"].get(addon.name) == "skip"):
             continue
         try:
@@ -1503,7 +1611,7 @@ def package_all(cfg, addons, args):
     cf = CurseForge("")
     packaged = []
     for addon in addons:
-        if not addon.version or cfg["overrides"].get(addon.name) == "skip":
+        if not addon.version or is_local(cfg, addon) or cfg["overrides"].get(addon.name) == "skip":
             continue
         changed, last = deploy_status(addon, cfg, state, cf)
         if not changed:
@@ -1698,6 +1806,9 @@ def cmd_check(args):
             print(f"  Verdict     {text}{f' - {why}' if why else ''}\n")
             rows.append((addon.name, addon.version or "?", rel["version"] if rel else "-", text, why))
 
+        if is_local(cfg, addon):
+            verdict("LOCAL", f"listed in {LOCAL_PATH.name} - never published")
+            continue
         if not addon.version:
             verdict("SKIP", "no '## Version:' in the TOC")
             continue
@@ -1705,7 +1816,8 @@ def cmd_check(args):
             verdict("SKIP", "pinned: skip")
             continue
         if cf.key and not pid:
-            verdict("SKIP", f"not linked to CurseForge (`yarn link {addon.name}`)")
+            verdict("CREATE", f"not on CurseForge yet - deploy links your existing project or creates "
+                              f"\"{project_name(addon)}\" in a browser, then uploads it")
             continue
         if rel and addon.name.lower() not in {f.lower() for f in rel["folders"]}:
             verdict("BLOCKED", f"CurseForge file has no {addon.name}/ folder - wrong project id?")
@@ -1790,6 +1902,7 @@ def cmd_bump(args):
     targets = resolve_names(addons, args.names) if args.names else addons
     if args.to and len(targets) != 1:
         raise SyncError("--to needs exactly one addon name.")
+    lint(targets)
     for addon in targets:
         if not addon.version:
             print(f"{addon.name}: no '## Version:' line - skipped")

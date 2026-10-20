@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- The Wally look: flat white texture tinted by colour, 1px borders, one teal accent.
 local M = {}
@@ -7,10 +8,10 @@ ns.Media = M
 M.WHITE = "Interface\\Buttons\\WHITE8X8"
 M.BAR = "Interface\\Buttons\\WHITE8X8"
 M.FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
-M.ACCENT = { 0.33, 0.92, 0.78 }
-M.MUTED = { 0.52, 0.64, 0.70 }
-M.BG = { 0.035, 0.045, 0.060 }
-M.BORDER = { 0.16, 0.24, 0.29 }
+M.ACCENT = PAL.accent
+M.MUTED = PAL.muted
+M.BG = PAL.bg
+M.BORDER = PAL.border
 M.BAR_BG = { 0.12, 0.16, 0.19 }
 
 -- Bar textures to choose from. LibSharedMedia's statusbar textures are added when another addon
@@ -60,7 +61,9 @@ function M.SetFont(fs, size, outline)
     local o = outline
     if o == nil then o = ns.db and ns.db.general.outline or "OUTLINE" end
     if o == "NONE" then o = "" end
-    fs:SetFont(M.FONT, size or 10, o)
+    -- the suite's face (WallyHUD) in its strong weight: plates are read at a glance, over the world
+    local face = WallyHUD and WallyHUD.SuiteFace and WallyHUD.SuiteFace("semibold")
+    fs:SetFont(face or M.FONT, size or 10, o)
     fs:SetShadowOffset(1, -1)
     fs:SetShadowColor(0, 0, 0, o == "" and 1 or 0)
 end

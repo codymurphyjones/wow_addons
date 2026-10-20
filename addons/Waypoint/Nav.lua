@@ -57,6 +57,41 @@ function Nav:Project(mapID, x, y, onMap)
     if px >= 0 and px <= 1 and py >= 0 and py <= 1 then return px, py end
 end
 
+-- OpenMap's stitched map is up (its view runs past the map underneath).
+function Nav:Stitched()
+    return OpenMapAPI and OpenMapAPI.IsStitched and OpenMapAPI.WorldFromMap and OpenMapAPI.MapFromWorld
+        and OpenMapAPI.IsStitched() and true or false
+end
+
+local REACH = 2 -- on the stitched map: how far past onMap's own rectangle (in its widths) things are placed
+
+-- Where to draw a point on mapID on the world map showing onMap, as fractions of its canvas. As
+-- Project, but on OpenMap's stitched map past onMap's own 0-1 too: the stitched view shows the
+-- zones around it on the same canvas.
+function Nav:OnCanvas(mapID, x, y, onMap)
+    if self:Stitched() and mapID and onMap then
+        local u, v = OpenMapAPI.WorldFromMap(mapID, x, y)
+        local px, py
+        if u then px, py = OpenMapAPI.MapFromWorld(onMap, u, v) end
+        if px then
+            if px >= -REACH and px <= 1 + REACH and py >= -REACH and py <= 1 + REACH then return px, py end
+            return nil
+        end
+    end
+    return self:Project(mapID, x, y, onMap)
+end
+
+-- A point on the map showing onMap (its canvas fractions, past 0-1 on the stitched map) as a zone
+-- point: mapID, x, y, or nil. On the stitched map, the zone OpenMap draws there.
+function Nav:FromCanvas(onMap, x, y)
+    if not (self:Stitched() and OpenMapAPI.MapAt) then return nil end
+    local u, v = OpenMapAPI.WorldFromMap(onMap, x, y)
+    local zone = u and OpenMapAPI.MapAt(u, v)
+    local zx, zy
+    if zone then zx, zy = OpenMapAPI.MapFromWorld(zone, u, v) end
+    if zx and zx >= 0 and zx <= 1 and zy >= 0 and zy <= 1 then return zone, zx, zy end
+end
+
 function Nav:ZoneName(mapID)
     local info = mapID and C.Call(C_Map.GetMapInfo, mapID)
     return info and info.name or "?"

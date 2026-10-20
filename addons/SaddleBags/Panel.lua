@@ -100,7 +100,7 @@ function Saddle:CreatePanel()
 	overlay:SetScript("OnMouseUp", function(f, button)
 		if button == "RightButton" then saddle:ShowTabMenu(f, saddle.db.activeTab) end
 	end)
-	overlay.label = overlay:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	overlay.label = overlay:CreateFontString(nil, "OVERLAY", "SaddleBagsGameFontHighlight")
 	overlay.label:SetPoint("CENTER")
 	overlay:Hide()
 	p.editOverlay = overlay
@@ -192,8 +192,8 @@ function Saddle:CreatePanel()
 	sync:SetBackdrop(TAB_BACKDROP)
 	sync:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
 	sync:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
-	sync:SetNormalFontObject(GameFontNormalSmall)
-	sync:SetHighlightFontObject(GameFontHighlightSmall)
+	sync:SetNormalFontObject(SaddleBagsGameFontNormalSmall)
+	sync:SetHighlightFontObject(SaddleBagsGameFontHighlightSmall)
 	sync:SetText("=")
 	sync:SetScript("OnClick", function() saddle:SyncTabSizes() end)
 	sync:SetScript("OnEnter", function(f)
@@ -334,7 +334,7 @@ function Saddle:GetTabFrame(i)
 	end)
 	b:SetScript("OnDragStart", function() saddle:StartDrag() end)
 	b:SetScript("OnDragStop", function() saddle:StopDrag() end)
-	b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	b.text = b:CreateFontString(nil, "OVERLAY", "SaddleBagsGameFontNormalSmall")
 	b.text:SetPoint("CENTER")
 	b:SetScript("OnEnter", function(f)
 		GameTooltip:SetOwner(f, "ANCHOR_TOP")
@@ -510,7 +510,13 @@ function Saddle:BuildTabs()
 		if i <= count then
 			tf = self:GetTabFrame(i)
 			local b = tf.button
-			b.text:SetText(self.db.tabs[i].name)
+			local name = self.db.tabs[i].name
+			if WallyHUD and WallyHUD.FontLabel then
+				-- the suite's tab labels: capitals in its label font, measured as they'll show
+				b.text:SetFontObject(WallyHUD.FontLabel)
+				name = WallyHUD.Upper(name)
+			end
+			b.text:SetText(name)
 			b:SetWidth(math.max(40, b.text:GetStringWidth() + 16))
 			b:ClearAllPoints()
 			b:Show()
@@ -570,20 +576,37 @@ function Saddle:SelectTab(i)
 end
 
 -- Active tab is blue/gold; the tab under a window being dragged is green.
+-- With WallyHUD (the suite's shared look) the tabs are underline tabs: no fill, no border; the
+-- active one is primary text over a 2px accent line, the rest secondary text. A tab a window is
+-- being dragged onto gets the line in the success colour.
+local function SuiteTab(b, active, target)
+	if not b.wallyTab then
+		WallyHUD.UnderlineTab(b, b.text)
+		b.wallyTab = true
+	end
+	WallyHUD.SetTab(b, active or target)
+	local T = WallyHUD.Tokens
+	b.wallyUnderline:SetColorTexture(WallyHUD.RGBA(target and T.state.success or T.accent))
+end
+
 function Saddle:UpdateTabVisuals()
 	for k = 1, self.db.tabCount do
 		local b = self.tabFrames[k].button
 		local active = k == self.db.activeTab
-		b.text:SetFontObject(active and GameFontHighlightSmall or GameFontNormalSmall)
-		if k == self.dropTarget then
-			b:SetBackdropColor(0.1, 0.6, 0.2, 0.9)
-			b:SetBackdropBorderColor(0.2, 1, 0.4, 1)
-		elseif active then
-			b:SetBackdropColor(0.25, 0.45, 0.8, 0.9)
-			b:SetBackdropBorderColor(1, 0.82, 0, 1)
+		if WallyHUD and WallyHUD.UnderlineTab then
+			SuiteTab(b, active, k == self.dropTarget)
 		else
-			b:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
-			b:SetBackdropBorderColor(0.5, 0.5, 0.5, 0.8)
+			b.text:SetFontObject(active and SaddleBagsGameFontHighlightSmall or SaddleBagsGameFontNormalSmall)
+			if k == self.dropTarget then
+				b:SetBackdropColor(0.1, 0.6, 0.2, 0.9)
+				b:SetBackdropBorderColor(0.2, 1, 0.4, 1)
+			elseif active then
+				b:SetBackdropColor(0.25, 0.45, 0.8, 0.9)
+				b:SetBackdropBorderColor(1, 0.82, 0, 1)
+			else
+				b:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
+				b:SetBackdropBorderColor(0.5, 0.5, 0.5, 0.8)
+			end
 		end
 	end
 end
@@ -981,7 +1004,15 @@ function Saddle:UpdateBackdrop()
 	if not p then return end
 	local tab = self.db.tabs[self.db.activeTab]
 	local empty = not tab or #tab.frames == 0
-	if TS:IsEditing() or empty then
+	if WallyHUD and WallyHUD.Panel and not p.wallyPanel then
+		-- the suite's look: a see-through surface with a 1px hairline (only shown as below)
+		p:SetBackdrop({ bgFile = WallyHUD.WHITE, edgeFile = WallyHUD.WHITE, edgeSize = 1 })
+		p.wallyPanel = true
+	end
+	if (TS:IsEditing() or empty) and p.wallyPanel then
+		p:SetBackdropColor(WallyHUD.RGBA(WallyHUD.Tokens.surface.base))
+		p:SetBackdropBorderColor(WallyHUD.RGBA(WallyHUD.Tokens.border.hairline))
+	elseif TS:IsEditing() or empty then
 		p:SetBackdropColor(0, 0, 0, 0.5)
 		p:SetBackdropBorderColor(0.6, 0.6, 0.6, 0.9)
 	else

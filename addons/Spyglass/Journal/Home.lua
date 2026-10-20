@@ -41,8 +41,8 @@ local function TileTooltip(tile)
     if inst.comingSoon then
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Loot coming soon", 1, 0.82, 0)
-        GameTooltip:AddLine("AtlasLoot lists this place, but its loot hasn't been data-mined yet. "
-            .. "It will show here once AtlasLoot is updated.", 0.8, 0.8, 0.8, true)
+        GameTooltip:AddLine("This place is known, but its loot hasn't been data-mined yet. "
+            .. "It will show here once SpyGlass's loot data is rebuilt with it.", 0.8, 0.8, 0.8, true)
     else
         GameTooltip:AddLine(#inst.bosses .. (inst.journalOnly and " rares and named mobs, " or " bosses, ")
             .. #inst.items .. " pieces of gear", 0.8, 0.8, 0.8)
@@ -97,11 +97,11 @@ local function CreateTile(parent)
     tile.title:SetTextColor(1, 0.92, 0.75)
     if tile.title.SetMaxLines then tile.title:SetMaxLines(2) end
 
-    tile.range = tile:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    tile.range = tile:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     tile.range:SetPoint("BOTTOMLEFT", 8, 6)
-    tile.count = tile:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    tile.count = tile:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     tile.count:SetPoint("BOTTOMRIGHT", -8, 6)
-    tile.tag = tile:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    tile.tag = tile:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormalSmall")
     tile.tag:SetPoint("BOTTOM", 0, 6)
     tile.tag:SetTextColor(0.4, 0.8, 1)
     tile.tag:SetText("Forever")
@@ -120,7 +120,7 @@ local function CreateTile(parent)
     local bottom = band:CreateTexture(nil, "BORDER")
     bottom:SetPoint("BOTTOMLEFT") bottom:SetPoint("BOTTOMRIGHT") bottom:SetHeight(1)
     bottom:SetColorTexture(1, 0.78, 0.25, 0.9)
-    band.text = band:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    band.text = band:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormalSmall")
     band.text:SetPoint("CENTER", 9, 0)
     band.text:SetText("LOOT COMING SOON")
     band.text:SetTextColor(1, 0.82, 0.3)
@@ -148,7 +148,7 @@ local function CreateTile(parent)
     badge.arrow:SetSize(12, 12)
     badge.arrow:SetPoint("LEFT", 3, 0)
     badge.arrow:SetTexture(ARROW) -- a gold-rimmed green arrow, coloured already
-    badge.text = badge:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    badge.text = badge:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormalSmall")
     badge.text:SetPoint("LEFT", badge.arrow, "RIGHT", 2, 0)
     local font, size = badge.text:GetFont()
     if font then badge.text:SetFont(font, size, "OUTLINE") end
@@ -324,7 +324,7 @@ function Home:Build(parent)
     page.extend = CreateFrame("CheckButton", nil, page, "UICheckButtonTemplate")
     page.extend:SetSize(24, 24)
     page.extend:SetPoint("RIGHT", page.band, "LEFT", -150, 0)
-    local extendLabel = page.extend:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local extendLabel = page.extend:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     extendLabel:SetPoint("LEFT", page.extend, "RIGHT", 2, 1)
     extendLabel:SetText("Extend Upgrade Search")
     page.extend:SetScript("OnClick", function(self)
@@ -344,10 +344,10 @@ function Home:Build(parent)
     page.list:SetPoint("TOPLEFT", 20, -52)
     page.list:SetPoint("BOTTOMRIGHT", -28, 26)
 
-    page.status = page:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    page.status = page:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisableSmall")
     page.status:SetPoint("BOTTOMLEFT", 20, 8)
 
-    page.empty = page:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    page.empty = page:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisable")
     page.empty:SetPoint("CENTER", page.list)
     page.empty:SetWidth(500)
     return page
@@ -361,7 +361,7 @@ function Home:Refresh(toTop)
     local instances = SpyGlass:GetInstances()
     if not instances then
         J.SetList(page.list, {}, true)
-        page.empty:SetText(J.loadError or "Loading AtlasLoot...")
+        page.empty:SetText(J.loadError or "Loading loot data...")
         page.empty:Show()
         page.status:SetText("")
         return
@@ -392,7 +392,7 @@ function Home:Refresh(toTop)
     local status = total .. " " .. noun
     if soonCount > 0 then
         status = status .. "   |T" .. CLOCK .. ":14:14:0:0:64:64:5:59:5:59|t " .. soonCount
-            .. " waiting for AtlasLoot to record their loot"
+            .. " waiting for their loot to be recorded"
     end
     page.status:SetText(status)
 end

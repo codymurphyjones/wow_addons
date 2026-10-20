@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local M = ns.Media
 
 -- UI helpers in Wally's flat slate style, plus a small form builder for the settings pages.
@@ -12,7 +13,7 @@ function W.SetBackdrop(f, alpha) M.Backdrop(f, alpha) end
 local SetBackdrop = W.SetBackdrop
 
 function W.Label(parent, text, font, x, y, width)
-    local t = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
+    local t = parent:CreateFontString(nil, "OVERLAY", font or "SmartPlatesGameFontHighlight")
     t:SetPoint("TOPLEFT", x, y)
     t:SetJustifyH("LEFT")
     if width then t:SetWidth(width) end
@@ -28,11 +29,11 @@ function W.MakeButton(parent, text, width, height)
     local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
     b:SetSize(width or 110, height or 28)
     SetBackdrop(b)
-    b:SetBackdropColor(0.075, 0.105, 0.13, 1)
-    b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1)
+    b.text = b:CreateFontString(nil, "OVERLAY", "SmartPlatesGameFontHighlightSmall")
     b.text:SetPoint("CENTER"); b.text:SetText(text)
-    b:SetScript("OnEnter", function(self) self:SetBackdropColor(0.10, 0.19, 0.21, 1) end)
-    b:SetScript("OnLeave", function(self) self:SetBackdropColor(0.075, 0.105, 0.13, 1) end)
+    b:SetScript("OnEnter", function(self) self:SetBackdropColor(PAL.hover[1], PAL.hover[2], PAL.hover[3], 1) end)
+    b:SetScript("OnLeave", function(self) self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end)
     return b
 end
 local MakeButton = W.MakeButton
@@ -51,7 +52,7 @@ local Hint = W.Hint
 function W.MakeCheckbox(parent, text)
     local b = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     b:SetSize(26, 26)
-    b.label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.label = b:CreateFontString(nil, "OVERLAY", "SmartPlatesGameFontHighlightSmall")
     b.label:SetPoint("LEFT", b, "RIGHT", 3, 0); b.label:SetText(text)
     return b
 end
@@ -59,10 +60,10 @@ end
 function W.MakeEditBox(parent, width, placeholder)
     local b = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
     b:SetSize(width or 160, 26)
-    SetBackdrop(b); b:SetBackdropColor(0.02, 0.03, 0.04, 1)
-    b:SetFontObject("GameFontHighlightSmall"); b:SetJustifyH("LEFT")
+    SetBackdrop(b); b:SetBackdropColor(PAL.field[1], PAL.field[2], PAL.field[3], 1)
+    b:SetFontObject("SmartPlatesGameFontHighlightSmall"); b:SetJustifyH("LEFT")
     b:SetAutoFocus(false); b:SetTextInsets(8, 8, 2, 2)
-    b.placeholder = b:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    b.placeholder = b:CreateFontString(nil, "OVERLAY", "SmartPlatesGameFontDisableSmall")
     b.placeholder:SetPoint("LEFT", 8, 0); b.placeholder:SetText(placeholder or "")
     local function UpdatePlaceholder(self) self.placeholder:SetShown(self:GetText() == "" and not self:HasFocus()) end
     b:SetScript("OnEditFocusGained", UpdatePlaceholder)
@@ -176,10 +177,10 @@ function W.BuildForm(parent, specs)
         elseif kind == "header" then
             if y < 0 then y = y - 8 end -- breathing room above every section but the first
             local x, top = Place(26)
-            local t = Label(parent, s[2], "GameFontNormal", x, top)
+            local t = Label(parent, s[2], "SmartPlatesGameFontNormal", x, top)
             t:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
         elseif kind == "text" then
-            local t = Muted(Label(parent, s[2], "GameFontHighlightSmall", COL_X[col], y, COL_W))
+            local t = Muted(Label(parent, s[2], "SmartPlatesGameFontHighlightSmall", COL_X[col], y, COL_W))
             local h = math.max(14, t:GetStringHeight()) + 8
             Place(h)
         elseif kind == "check" then
@@ -187,14 +188,14 @@ function W.BuildForm(parent, specs)
             local x, top = Place(h)
             local b = W.MakeCheckbox(parent, s[3])
             b:SetPoint("TOPLEFT", x - 4, top)
-            if s[4] then Muted(Label(parent, s[4], "GameFontHighlightSmall", x + 27, top - 25, COL_W - 27)) end
+            if s[4] then Muted(Label(parent, s[4], "SmartPlatesGameFontHighlightSmall", x + 27, top - 25, COL_W - 27)) end
             b:SetScript("OnClick", function(self) W.Set(s[2], self:GetChecked() and true or false) end)
             b.Refresh = function() b:SetChecked(W.Get(s[2]) and true or false) end
             controls[#controls + 1] = b
         elseif kind == "slider" then
             local x, top = Place(48)
-            Label(parent, s[3], "GameFontHighlightSmall", x, top)
-            local value = Label(parent, "", "GameFontHighlightSmall", x, top, COL_W - 10)
+            Label(parent, s[3], "SmartPlatesGameFontHighlightSmall", x, top)
+            local value = Label(parent, "", "SmartPlatesGameFontHighlightSmall", x, top, COL_W - 10)
             value:SetJustifyH("RIGHT"); value:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
             local sl = W.MakeSlider(parent, COL_W - 14, s[4], s[5], s[6])
             sl:SetPoint("TOPLEFT", x + 2, top - 20)
@@ -218,7 +219,7 @@ function W.BuildForm(parent, specs)
         elseif kind == "choice" then
             local opts = s[4]
             local x, top = Place(52)
-            Label(parent, s[3], "GameFontHighlightSmall", x, top)
+            Label(parent, s[3], "SmartPlatesGameFontHighlightSmall", x, top)
             local bw = math.floor((COL_W - 10 - (#opts - 1) * 4) / #opts)
             local buttons = {}
             for i, o in ipairs(opts) do
@@ -246,7 +247,7 @@ function W.BuildForm(parent, specs)
             local x, top = Place(26)
             local sw = W.MakeSwatch(parent)
             sw:SetPoint("TOPLEFT", x, top)
-            local t = Label(parent, s[3], "GameFontHighlightSmall", x + 30, top - 3)
+            local t = Label(parent, s[3], "SmartPlatesGameFontHighlightSmall", x + 30, top - 3)
             sw:SetScript("OnClick", function()
                 W.PickColor(W.Get(s[2]), function() sw.Refresh(); ns:Changed() end)
             end)
@@ -263,12 +264,12 @@ end
 function W.MakeMultiLine(parent, width, height)
     local holder = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     holder:SetSize(width, height)
-    SetBackdrop(holder); holder:SetBackdropColor(0.02, 0.03, 0.04, 1)
+    SetBackdrop(holder); holder:SetBackdropColor(PAL.field[1], PAL.field[2], PAL.field[3], 1)
     local scroll = CreateFrame("ScrollFrame", nil, holder, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 6, -6); scroll:SetPoint("BOTTOMRIGHT", -26, 6)
     local box = CreateFrame("EditBox", nil, scroll)
     box:SetMultiLine(true); box:SetAutoFocus(false)
-    box:SetFontObject("GameFontHighlightSmall")
+    box:SetFontObject("SmartPlatesGameFontHighlightSmall")
     box:SetWidth(width - 36)
     box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     scroll:SetScrollChild(box)

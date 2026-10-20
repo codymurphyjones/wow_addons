@@ -117,23 +117,105 @@ function Nv:ToUndiscoveredFlight(owner)
     return Go("Undiscovered flight master", points, owner)
 end
 
--- The nearest vendor selling the items: one that sells all of them if any does, else those
--- selling the most of them.
-function Nv:ToItems(itemIDs, title, owner)
+-- The vendors for the items, as stops in order (an ordered request: the arrow moves on to the
+-- next as you get to each). From you, the next stop is the vendor nearest (straight) with each item
+-- still needed that it doesn't sell counting MISSING yards more (another stop), so one down the
+-- street with most of them beats one in the next town with all of them; then on from there for
+-- what's left, up to MAX_STOPS. Unless every item is bought from those vendors, the last stop is the
+-- nearest auction house (from the stop before): auction = { { id, name } } you'll buy there, and any
+-- vendor item the stops don't cover. Each stop's items are said in chat. Off your continent: the
+-- vendors selling the most of them, the nearest one, as before.
+local MISSING, MAX_STOPS = 500, 4
+local function ItemName(item)
+    return (C_Item and C_Item.GetItemInfo and C_Item.GetItemInfo(item)) or (GetItemInfo and GetItemInfo(item)) or ("item " .. item)
+end
+
+function Nv:ToItems(itemIDs, title, owner, auction)
     if not self:Available() or type(itemIDs) ~= "table" then return false end
-    local sells, score, best = ns.Places.sells, {}, 0
+    local sells = ns.Places.sells
+    local sold = {} -- vendor -> { [item] = true }
+    local left = {}
     for _, item in ipairs(itemIDs) do
-        for _, id in ipairs(sells[item] or {}) do
-            score[id] = (score[id] or 0) + 1
-            if score[id] > best then best = score[id] end
+        if sells[item] then
+            left[#left + 1] = item
+            for _, id in ipairs(sells[item]) do
+                sold[id] = sold[id] or {}
+                sold[id][item] = true
+            end
         end
     end
-    local ids = {}
-    for id, s in pairs(score) do
-        if s == best then ids[#ids + 1] = id end
+    local c, n, w = ns.Nav:Player()
+    local stops, plan = {}, {}
+    local fc, fn, fw = c, n, w
+    while c and #left > 0 and #stops < MAX_STOPS do
+        local best, bestCost, bestID
+        for id, items in pairs(sold) do
+            local covers = 0
+            for _, item in ipairs(left) do if items[item] then covers = covers + 1 end end
+            if covers > 0 then
+                for _, p in ipairs(Points({ id })) do
+                    local d = ns.Nav:To(p, fc, fn, fw)
+                    if d then
+                        local cost = d + (#left - covers) * MISSING
+                        if not bestCost or cost < bestCost then best, bestCost, bestID = p, cost, id end
+                    end
+                end
+            end
+        end
+        if not best then break end
+        local here, rest = {}, {}
+        for _, item in ipairs(left) do
+            if sold[bestID][item] then here[#here + 1] = ItemName(item) else rest[#rest + 1] = item end
+        end
+        stops[#stops + 1] = best
+        plan[#plan + 1] = ("%d. %s (%s): %s"):format(#stops, best.label, ns.Nav:Describe(best), table.concat(here, ", "))
+        left = rest
+        fc, fn, fw = ns.Nav:World(best)
     end
-    table.sort(ids)
-    return Go(title or "Vendor", Points(ids), owner)
+    -- The auction house last, for what the vendors don't sell.
+    local market = {}
+    for _, a in ipairs(type(auction) == "table" and auction or {}) do
+        market[#market + 1] = a.name or (a.id and ItemName(a.id)) or "?"
+    end
+    for _, item in ipairs(left) do market[#market + 1] = ItemName(item) end
+    local ah = #market > 0 and c and Find("Auctioneer")
+    if ah then
+        local best, bestD
+        for _, p in ipairs(Points(ah[2])) do
+            local d = fc and ns.Nav:To(p, fc, fn, fw)
+            if d and (not bestD or d < bestD) then best, bestD = p, d end
+        end
+        if best then
+            stops[#stops + 1] = best
+            plan[#plan + 1] = ("%d. %s (%s): %s"):format(#stops, best.label, ns.Nav:Describe(best), table.concat(market, ", "))
+            left = {}
+        end
+    end
+    if #stops == 0 then
+        local top, ids = 0, {}
+        for _, items in pairs(sold) do
+            local s = 0
+            for _ in pairs(items) do s = s + 1 end
+            if s > top then top = s end
+        end
+        for id, items in pairs(sold) do
+            local s = 0
+            for _ in pairs(items) do s = s + 1 end
+            if s == top then ids[#ids + 1] = id end
+        end
+        table.sort(ids)
+        return Go(title or "Vendor", Points(ids), owner)
+    end
+    if #stops > 1 then
+        ns:Print(("%d stops for what you need:"):format(#stops))
+        for _, line in ipairs(plan) do ns:Print("  " .. line) end
+    end
+    if #left > 0 then
+        local names = {}
+        for _, item in ipairs(left) do names[#names + 1] = ItemName(item) end
+        ns:Print(("Not in these stops (no vendor on your continent, or more than %d stops): %s."):format(MAX_STOPS, table.concat(names, ", ")))
+    end
+    return ns.Targets:SetRequest(owner or OWNER, { title = title or "Vendor", points = stops, ordered = #stops > 1 })
 end
 
 -- How many vendors sell an item (any faction), or 0.
@@ -156,7 +238,7 @@ StaticPopupDialogs["WAYPOINT_VENDOR"] = {
     timeout = 0, whileDead = 1, hideOnEscape = 1, preferredIndex = 3,
 }
 
-function Nv:PromptVendors(items, onAddAnyway, owner)
+function Nv:PromptVendors(items, onAddAnyway, owner, auction)
     if not self:Available() or type(items) ~= "table" or #items == 0 then return false end
     local ids, names, parts = {}, {}, {}
     for _, it in ipairs(items) do
@@ -169,7 +251,7 @@ function Nv:PromptVendors(items, onAddAnyway, owner)
     StaticPopup_Show("WAYPOINT_VENDOR",
         ("%s %s sold by vendors.\n\nNavigate to the nearest vendor selling %s?"):format(
             table.concat(parts, ", "), one and "is" or "are", one and "it" or "them"), nil, {
-            navigate = function() Nv:ToItems(ids, "Vendor: " .. table.concat(names, ", "), owner) end,
+            navigate = function() Nv:ToItems(ids, "Vendor: " .. table.concat(names, ", "), owner, auction) end,
             add = onAddAnyway and function() onAddAnyway(items) end,
         })
     return true

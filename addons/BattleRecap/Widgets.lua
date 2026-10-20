@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Shared widgets for the recap windows. Same look as Wally and Tape Measure (the basics are copied
 -- from TapeMeasure/Widgets.lua so the addons match).
@@ -6,19 +7,19 @@ local W = {}
 ns.Widgets = W
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
-local ACCENT = { 1.00, 0.42, 0.36 }
-local MUTED = { 0.52, 0.64, 0.70 }
+local ACCENT = PAL.accent
+local MUTED = PAL.muted
 W.WHITE, W.ACCENT, W.MUTED = WHITE, ACCENT, MUTED
 
 function W.SetBackdrop(f, alpha)
     f:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
-    f:SetBackdropColor(0.035, 0.045, 0.060, alpha or 1)
-    f:SetBackdropBorderColor(0.16, 0.24, 0.29, 1)
+    f:SetBackdropColor(PAL.bg[1], PAL.bg[2], PAL.bg[3], alpha or 1)
+    f:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1)
 end
 local SetBackdrop = W.SetBackdrop
 
 function W.Label(parent, text, font, x, y, width)
-    local t = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
+    local t = parent:CreateFontString(nil, "OVERLAY", font or "BattleRecapGameFontHighlight")
     t:SetPoint("TOPLEFT", x, y)
     t:SetJustifyH("LEFT")
     if width then t:SetWidth(width) end
@@ -33,11 +34,11 @@ function W.MakeButton(parent, text, width, height)
     local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
     b:SetSize(width or 110, height or 28)
     SetBackdrop(b)
-    b:SetBackdropColor(0.075, 0.105, 0.13, 1)
-    b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1)
+    b.text = b:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall")
     b.text:SetPoint("CENTER"); b.text:SetText(text)
-    b:SetScript("OnEnter", function(self) if self:IsEnabled() then self:SetBackdropColor(0.10, 0.19, 0.21, 1) end end)
-    b:SetScript("OnLeave", function(self) self:SetBackdropColor(0.075, 0.105, 0.13, 1) end)
+    b:SetScript("OnEnter", function(self) if self:IsEnabled() then self:SetBackdropColor(PAL.hover[1], PAL.hover[2], PAL.hover[3], 1) end end)
+    b:SetScript("OnLeave", function(self) self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end)
     b:SetScript("OnDisable", function(self) self.text:SetAlpha(0.35) end)
     b:SetScript("OnEnable", function(self) self.text:SetAlpha(1) end)
     return b
@@ -57,7 +58,7 @@ end
 function W.MakeCheckbox(parent, text)
     local b = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     b:SetSize(24, 24)
-    b.label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.label = b:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall")
     b.label:SetPoint("LEFT", b, "RIGHT", 2, 0); b.label:SetText(text)
     return b
 end
@@ -116,10 +117,15 @@ function W.MakeWindow(name, width, height, title, pos)
 
     local icon = f:CreateTexture(nil, "OVERLAY")
     icon:SetSize(18, 18); icon:SetPoint("TOPLEFT", 6, -5); icon:SetTexture(ns.ICON)
-    f.title = Label(f, title, "GameFontNormal", 28, -7)
-    f.subtitle = Label(f, "", "GameFontHighlightSmall", 0, -8)
+    f.title = Label(f, title, "BattleRecapGameFontNormal", 28, -7)
+    f.subtitle = Label(f, "", "BattleRecapGameFontHighlightSmall", 0, -8)
     f.subtitle:ClearAllPoints(); f.subtitle:SetPoint("LEFT", f.title, "RIGHT", 8, 0)
     W.Muted(f.subtitle)
+    if WallyHUD and WallyHUD.Tokens then
+        -- the suite's look (WallyHUD): the header in the panel colour, the title in primary text
+        band:SetColorTexture(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
+        f.title:SetTextColor(WallyHUD.RGBA(WallyHUD.Tokens.text.primary))
+    end
 
     local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
     close:SetSize(24, 24); close:SetPoint("TOPRIGHT", -1, -1)
@@ -152,7 +158,7 @@ function W.CreateTable(parent, columns, opts)
     for i, col in ipairs(columns) do
         local b = CreateFrame("Button", nil, header)
         b:SetPoint("TOPLEFT", x, 0); b:SetSize(col[2], 18)
-        b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        b.text = b:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontNormalSmall")
         b.text:SetAllPoints(); b.text:SetJustifyH(col[3] or "LEFT"); b.text:SetText(col[1])
         b:SetScript("OnClick", function() if t.onSort then t.onSort(i) end end)
         b:SetShown(not opts.noHeader)
@@ -178,7 +184,7 @@ function W.CreateTable(parent, columns, opts)
         r.barFill = r:CreateTexture(nil, "ARTWORK", nil, 1)
         r.cells = {}
         for i = 1, #columns do
-            local fs = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            local fs = r:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall")
             fs:SetWordWrap(false)
             r.cells[i] = fs
         end
@@ -219,7 +225,7 @@ function W.CreateTable(parent, columns, opts)
                 fs:SetWidth(math.max(1, width))
             end
             fs:SetJustifyH(d.section and "LEFT" or col[3] or "LEFT")
-            fs:SetFontObject((d.header or d.section) and "GameFontNormalSmall" or "GameFontHighlightSmall")
+            fs:SetFontObject((d.header or d.section) and "BattleRecapGameFontNormalSmall" or "BattleRecapGameFontHighlightSmall")
             fs:SetText(text or "")
             local c = d.colors and d.colors[i]
             if c then fs:SetTextColor(c[1], c[2], c[3])
@@ -250,7 +256,7 @@ function W.CreateTable(parent, columns, opts)
         for i = #items + 1, #self.rows do self.rows[i]:Hide(); self.rows[i].data = nil end
         content:SetHeight(math.max(1, #items * self.rowHeight))
         if not self.empty then
-            self.empty = Label(parent, "", "GameFontHighlight", 0, -60)
+            self.empty = Label(parent, "", "BattleRecapGameFontHighlight", 0, -60)
             self.empty:SetPoint("RIGHT", -26, 0); self.empty:SetJustifyH("CENTER"); W.Muted(self.empty)
         end
         self.empty:SetText(emptyText or "")

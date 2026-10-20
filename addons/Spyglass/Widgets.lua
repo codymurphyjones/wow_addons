@@ -88,13 +88,13 @@ function W.ItemTooltip(row)
     if data.instKey and not data.failed then
         local hint
         if data.inJournal then
-            hint = "Right-click: show in AtlasLoot"
+            hint = ns.Atlas:Available() and "Right-click: show in AtlasLoot" or nil
         elseif SpyGlassJournal then
             hint = "Click: show in the journal"
-        else
+        elseif ns.Atlas:Available() then
             hint = "Click: show in AtlasLoot"
         end
-        GameTooltip:AddLine(hint, 0.4, 0.73, 1)
+        if hint then GameTooltip:AddLine(hint, 0.4, 0.73, 1) end
     end
     GameTooltip:Show()
     if IsShiftKeyDown() and GameTooltip_ShowCompareItem then GameTooltip_ShowCompareItem(GameTooltip) end

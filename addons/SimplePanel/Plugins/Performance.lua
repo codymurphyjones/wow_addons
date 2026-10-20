@@ -3,8 +3,15 @@ local _, ns = ...
 -- Performance: frame rate and latency, with a live sparkline and five minutes of history.
 local T = SimplePanel.Theme
 
-local function FpsColor(v) return v >= 50 and T.green or (v >= 25 and T.yellow or T.red) end
-local function MsColor(v) return v <= 120 and T.green or (v <= 300 and T.yellow or T.red) end
+-- Only coloured when it's a problem: fine is plain text (green for "fine" is noise).
+local function FpsColor(v)
+    if v >= 30 then return nil end
+    return v >= 20 and T.yellow or T.red
+end
+local function MsColor(v)
+    if v <= 300 then return nil end
+    return v <= 600 and T.yellow or T.red
+end
 
 local function Stats(values)
     local n, sum, lo, hi = #values, 0, math.huge, 0

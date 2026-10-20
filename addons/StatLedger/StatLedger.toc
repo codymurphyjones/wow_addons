@@ -8,6 +8,7 @@
 ## Category: Equipment
 ## X-Curse-Project-ID: 1735014
 
+Fonts.lua
 Data.lua
 Core.lua
 Convert.lua

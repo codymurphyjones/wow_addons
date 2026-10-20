@@ -680,17 +680,25 @@ function E:CheckArrow()
     PointArrow(step)
 end
 
--- Waypoint's arrow carries a "Play" button while the guide is paused (Waypoint 1.x with SetButton).
+-- Waypoint's arrow carries a Play icon while the guide is paused, and a Pause icon while it runs
+-- (Waypoint 1.x with SetButton).
 local function PlayButton()
     if not (Waypoint and Waypoint.SetButton) then return false end
     if ns.char.paused then
         Waypoint:SetButton("FieldGuide", {
             text = "Play", color = ns.char.instance and "purple" or "green",
-            tooltip = "Field Guide is paused. Play: show the guide again, and point the arrow at your current step.",
+            icon = "Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up",
+            iconPushed = "Interface\\Buttons\\UI-SpellbookIcon-NextPage-Down",
+            tooltip = "Field Guide is paused. Show the guide again, and point the arrow at your current step.",
             onClick = function() E:SetPaused(false) end,
         })
     else
-        Waypoint:SetButton("FieldGuide", nil)
+        Waypoint:SetButton("FieldGuide", {
+            text = "Pause",
+            icon = "Interface\\TimeManager\\PauseButton",
+            tooltip = "Hide the guide and leave Waypoint's arrow alone. Play brings it back.",
+            onClick = function() E:SetPaused(true) end,
+        })
     end
     return true
 end
@@ -705,6 +713,7 @@ local function Own()
     else
         Waypoint:SetManager("FieldGuide", { name = "Field Guide", expected = function() return E:Plan() end,
             yield = function() return not ns.db.shown end, -- window closed: quests you tracked come first
+            pause = function() E:SetPaused(true) end, -- "Pause Field Guide" in the arrow's menu
             restore = function()
             stoppedKey = nil
             local step = E.current and E.steps[E.current]
@@ -759,7 +768,7 @@ end
 
 ns:On("PLAYER_LOGIN", function()
     if Waypoint and Waypoint.RegisterCallback then Waypoint:RegisterCallback("FieldGuide", OnWaypoint) end
-    if ns.char.paused then PlayButton() end
+    PlayButton()
     Own()
     C_Timer.NewTicker(2, function() if ns.db then E:CheckArrow() end end)
 end)

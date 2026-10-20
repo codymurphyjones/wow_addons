@@ -186,7 +186,7 @@ local function CreateRow(parent, i)
     b.icon = b:CreateTexture(nil, "ARTWORK")
     b.icon:SetSize(20, 20)
     b.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.text = b:CreateFontString(nil, "OVERLAY", "ModifiedGameFontHighlightSmall")
     b.text:SetPoint("LEFT", b.icon, "RIGHT", 6, 0)
     b.text:SetPoint("RIGHT", -2, 0)
     b.text:SetJustifyH("LEFT")
@@ -221,7 +221,7 @@ function P:Create()
     f:Hide()
     tinsert(UISpecialFrames, f:GetName())
 
-    local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local title = f:CreateFontString(nil, "OVERLAY", "ModifiedGameFontNormal")
     title:SetPoint("TOPLEFT", 12, -10)
     title:SetText("Choose a spell")
 
@@ -239,7 +239,7 @@ function P:Create()
     end)
     self.search = search
 
-    self.status = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    self.status = f:CreateFontString(nil, "OVERLAY", "ModifiedGameFontDisableSmall")
     self.status:SetPoint("TOPLEFT", 14, -56)
 
     local scroll = CreateFrame("ScrollFrame", "ModifiedSpellPickerScroll", f, "UIPanelScrollFrameTemplate")

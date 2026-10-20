@@ -49,6 +49,89 @@ function F:OnCombatEnd()
     self:ReadPending()
 end
 
+-- The meter doesn't always start a new session when combat ends: in a battleground one session can
+-- run for most of the match, so what it says after a combat is everything since the session began,
+-- not that combat. A reading is such a running total when it's from the same session as the combat
+-- before it, or (no session ids) when the meter's session is far longer than the combat was
+-- (RUNNING_SLACK). Then what the combat before it read is taken off, spell by spell, enemy by
+-- enemy, healer by healer: what's left is this combat's. One with nothing before it to take off (the
+-- first after a /reload) can't be told apart, and is left empty rather than wrong.
+local RUNNING_SLACK, RUNNING_EXTRA = 1.5, 5
+
+local function RowKey(r)
+    return (r.src or "") .. "\001" .. tostring(r.spellId or 0) .. "\001" .. (r.spell or "") .. "\001" .. (r.pet and "p" or "")
+end
+
+-- Meter rows less what an earlier reading of the same session had (rows with nothing left dropped).
+local function MinusRows(now, before)
+    if not before then return now end
+    local had = {}
+    for _, r in ipairs(before) do had[RowKey(r)] = (had[RowKey(r)] or 0) + (r.amount or 0) end
+    local out = {}
+    for _, r in ipairs(now or {}) do
+        local left = (r.amount or 0) - (had[RowKey(r)] or 0)
+        if left > 0 then
+            local c = {}
+            for k, v in pairs(r) do c[k] = v end
+            c.amount = left
+            if c.overkill and c.overkill > left then c.overkill = left end
+            out[#out + 1] = c
+        end
+    end
+    return out
+end
+
+-- Your damage per enemy (Meter.ReadTargets rows) less an earlier reading's.
+local function MinusTargets(now, before)
+    if not (now and before) then return now end
+    local had = {}
+    for _, r in ipairs(before) do had[r.name] = r end
+    local out = {}
+    for _, r in ipairs(now) do
+        local b = had[r.name]
+        local amount = (r.amount or 0) - (b and b.amount or 0)
+        if amount > 0 then
+            out[#out + 1] = { name = r.name, class = r.class, amount = amount,
+                total = r.total and math.max(0, r.total - (b and b.total or 0)) or nil }
+        end
+    end
+    return out
+end
+
+-- Who healed whom (Meter.ReadLedger) less an earlier reading's.
+local function MinusLedger(now, before)
+    if not (now and before) then return now end
+    local out = {}
+    for name, h in pairs(now) do
+        local b = before[name]
+        local total = h.total - (b and b.total or 0)
+        if total > 0 then
+            local targets = {}
+            for target, amount in pairs(h.targets or {}) do
+                local left = amount - (b and b.targets and b.targets[target] or 0)
+                if left > 0 then targets[target] = left end
+            end
+            out[name] = { total = total, class = h.class, ally = h.ally, targets = targets }
+        end
+    end
+    return out
+end
+
+-- The combat read just before seg (its raw reading is what a running total is taken off from); the
+-- last one read is kept even once it's been forgotten (a quiet spell longer than KEEP_SECONDS).
+local lastRead
+local function Before(seg)
+    for i = #segments, 1, -1 do
+        if segments[i] == seg then
+            for j = i - 1, 1, -1 do
+                if segments[j].raw then return segments[j] end
+            end
+            break
+        end
+    end
+    return lastRead ~= seg and lastRead or nil
+end
+
 -- true when read, false while the meter still hides it. Without a session id only the newest
 -- combat can be read (as the meter's current session); an older one is given up on.
 local function TryRead(seg)
@@ -60,9 +143,27 @@ local function TryRead(seg)
     local taken, r1, duration = ns.Meter.ReadSpells(takenType, seg.sessionID)
     local dealt, r2 = ns.Meter.ReadSpells(doneType, seg.sessionID)
     if r1 == "secret" or r2 == "secret" then return false end
-    seg.taken, seg.dealt, seg.duration = taken or {}, dealt or {}, duration or (seg.finish - seg.start)
-    seg.healed, seg.targets = ns.Meter.ReadHealing(seg.sessionID), ns.Meter.ReadTargets(seg.sessionID)
-    seg.ledger = ns.Meter.ReadLedger(seg.sessionID)
+    local raw = { taken = taken or {}, dealt = dealt or {}, healed = ns.Meter.ReadHealing(seg.sessionID),
+        targets = ns.Meter.ReadTargets(seg.sessionID), ledger = ns.Meter.ReadLedger(seg.sessionID) }
+    seg.raw = raw
+    local prev = Before(seg)
+    lastRead = seg
+    local measured = math.max(0.1, seg.finish - seg.start)
+    local long = (duration or 0) > measured * RUNNING_SLACK + RUNNING_EXTRA
+    local otherSession = seg.sessionID and prev and prev.sessionID and prev.sessionID ~= seg.sessionID
+    local running = (prev and seg.sessionID and prev.sessionID == seg.sessionID) or (long and not otherSession)
+    if running and prev then
+        local b = prev.raw
+        seg.taken, seg.dealt = MinusRows(raw.taken, b.taken), MinusRows(raw.dealt, b.dealt)
+        seg.healed = raw.healed and MinusRows(raw.healed, b.healed) or nil
+        seg.targets, seg.ledger = MinusTargets(raw.targets, b.targets), MinusLedger(raw.ledger, b.ledger)
+    elseif running then
+        seg.taken, seg.dealt, seg.healed, seg.targets, seg.ledger = {}, {}, nil, nil, nil -- no way to tell this combat's share
+    else
+        seg.taken, seg.dealt, seg.healed, seg.targets, seg.ledger = raw.taken, raw.dealt, raw.healed, raw.targets, raw.ledger
+    end
+    -- How long it lasted: the meter's own count, unless that's the whole running session.
+    seg.duration = (running or long or not duration) and measured or duration
     seg.attackers = {}
     for _, r in ipairs(seg.taken) do seg.attackers[r.src] = true end
     seg.read = true

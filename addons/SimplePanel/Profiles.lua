@@ -218,7 +218,8 @@ function P:Export(name)
     local data = self:Data(name)
     if not data then return "" end
     local payload = { v = 1, name = name, options = data.options, plugins = data.plugins,
-        launchers = { placement = data.launchers and data.launchers.placement, order = data.launchers and data.launchers.order } }
+        launchers = { placement = data.launchers and data.launchers.placement, order = data.launchers and data.launchers.order,
+            positions = data.launchers and data.launchers.positions } }
     local out = {}
     Encode(payload, out)
     local body = table.concat(out)
@@ -228,7 +229,7 @@ function P:Export(name)
     return table.concat(lines, "\n")
 end
 
-local PLACEMENTS = { drawer = true, bar = true, minimap = true, hidden = true }
+local PLACEMENTS = { drawer = true, bar = true, minimap = true, screen = true, hidden = true }
 
 -- Keeps only what a profile can hold, in the types SimplePanel writes.
 local function Clean(payload)
@@ -252,6 +253,13 @@ local function Clean(payload)
             end
         end
         if type(L.order) == "table" then out.launchers.order = Copy(L.order) end
+        if type(L.positions) == "table" then
+            for key, p in pairs(L.positions) do
+                if type(key) == "string" and type(p) == "table" and type(p.x) == "number" and type(p.y) == "number" then
+                    out.launchers.positions[key] = { x = p.x, y = p.y, locked = p.locked == true or nil }
+                end
+            end
+        end
     end
     return out
 end

@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local C = ns.Compat
 
 -- Questie-style world map pins for the job you took (or one you're previewing): a coloured dot for
@@ -28,7 +29,7 @@ local function OnEnter(pin)
     GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
     local data = ns.FarmData
     if pin.marker then
-        GameTooltip:AddLine(pin.job.title, 0.33, 0.92, 0.78)
+        GameTooltip:AddLine(pin.job.title, PAL.accent[1], PAL.accent[2], PAL.accent[3])
         GameTooltip:AddLine(("%s  -  %s an hour"):format(pin.job.zoneName, ns.Gold(pin.job.pay)), 1, 1, 1)
         GameTooltip:AddLine("Open this zone's map to see every spot.", 0.6, 0.6, 0.6)
     else
@@ -81,7 +82,7 @@ local function GetPin(canvas)
         pin.border:SetPoint("TOPLEFT", -1, 1); pin.border:SetPoint("BOTTOMRIGHT", 1, -1)
         pin.border:SetColorTexture(0, 0, 0, 0.9)
         pin.dot = pin:CreateTexture(nil, "ARTWORK"); pin.dot:SetAllPoints()
-        pin.label = pin:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        pin.label = pin:CreateFontString(nil, "OVERLAY", "WealthPlannerGameFontHighlightSmall")
         pin.label:SetPoint("LEFT", pin, "RIGHT", 3, 0)
         pin:SetScript("OnEnter", OnEnter)
         pin:SetScript("OnLeave", GameTooltip_Hide)

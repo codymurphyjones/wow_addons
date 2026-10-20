@@ -473,8 +473,11 @@ function PK:BuildMenu(p, m)
                 set = function(v) l.progressWidth = v; p:Refresh() end })
         end
         sub:Header("Position")
-        for _, z in ipairs({ { "left", "Left" }, { "center", "Center" }, { "right", "Right" } }) do
-            sub:Radio({ text = z[2], value = z[1], get = function() return l.zone end, set = function(v) p:SetZone(v) end })
+        for _, z in ipairs({ { "left", "Left" }, { "center", "Center" }, { "right", "Right" }, { "minimap", "On top of the minimap" } }) do
+            if z[1] ~= "minimap" or p.def.minimapZone then
+                sub:Radio({ text = z[2], value = z[1], get = function() return l.zone end, set = function(v) p:SetZone(v) end,
+                    tooltip = z[1] == "minimap" and "In a strip between the bar and the minimap, as wide as the map. Needs the Minimap plugin; without it, the right section." or nil })
+            end
         end
     end })
     m:Divider()
@@ -490,5 +493,16 @@ end
 
 -- Public API
 SimplePanel.RegisterPlugin = function(def) return PK:Register(def) end
+-- Every plugin's id.
+SimplePanel.ListPlugins = function()
+    local out = {}
+    for id in pairs(PK.plugins) do out[#out + 1] = id end
+    return out
+end
+-- Plugins to hide for now, { [id] = true } (WallyHUD's density presets); the saved layout stays.
+SimplePanel.SetDensityHidden = function(set)
+    SimplePanel.densityHidden = set
+    if ns.Bar and ns.Bar.Layout then ns.Bar:Layout() end
+end
 SimplePanel.GetPlugin = function(id) return PK:Find(id) end
 SimplePanel.UnregisterPlugin = function(id) return PK:Unregister(id) end

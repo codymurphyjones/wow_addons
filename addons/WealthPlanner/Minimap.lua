@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Draggable minimap button for the Jobs Board (copied from Wally's): left-click opens the board,
 -- right-click your wealth overview.
@@ -102,7 +103,7 @@ function MapButton:Initialize()
     b:SetScript("OnEnter", function(self)
         if self.dragging then return end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Wealth Planner: Jobs Board", 0.33, 0.92, 0.78)
+        GameTooltip:AddLine("Wealth Planner: Jobs Board", PAL.accent[1], PAL.accent[2], PAL.accent[3])
         local active, best = ns.Jobs:Active(), ns.Jobs:Board()[1]
         if active then
             GameTooltip:AddLine(("On the job: %s"):format(active.title), 0.82, 0.89, 0.93)

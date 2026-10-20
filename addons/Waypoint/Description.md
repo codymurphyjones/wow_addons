@@ -13,8 +13,15 @@ With **Questie**, the arrow points at your focused quest. If no quest is focused
 
 The arrow stays on one quest while you walk. When you track something else, change the focus or finish an objective, a chat line tells you what it points at now.
 
-### Takes the flight when it's quicker
-Waypoint times your flights and your travel speed. When running to a flight master, flying and running on beats running there, the arrow takes you to the flight master first and tells you where to fly.
+### Takes the fastest way, even across continents
+Waypoint times your flights, your rides and your travel speed, and plans the quickest trip using everything you have:
+- flight paths;
+- boats, zeppelins and skyships;
+- swimming across to an island when that beats the boat (with Aquatic Form's speed for druids);
+- your hearthstone;
+- mage teleports.
+
+The arrow leads one step at a time: "Zeppelin to Undercity", then "Fly: Undercity to Tarren Mill", then the target. A chat line gives the whole trip and how long it takes.
 
 ### Paths you draw on the map
 - **Ctrl+left-click** the world map to drop waypoints. They join into a path, and the arrow leads you through it in order.
@@ -41,6 +48,5 @@ Everyone in your group who runs Waypoint sees the same path, live.
 | `/way` | What the arrow points at |
 | `/way <x> <y> [title]` | Add a waypoint in your zone |
 | `/way clear` / `/way undo` | Clear the path / undo your last change |
-| `/way quests on\|off` | Follow Questie quests |
-| `/way share on\|off` | Share your path with your group |
+| `/way flights` | What it knows about flights, rides, your hearthstone and teleports |
 | `/way arrow` / `/way lock` | Show or hide / lock the arrow |

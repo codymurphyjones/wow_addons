@@ -10,10 +10,10 @@ UI:RegisterPage("settings", function(p)
     local o = ns.db.options
 
     local function Number(y, title, key, unit, hint, min, max)
-        Label(p, title, "GameFontHighlightSmall", 0, y, 200)
+        Label(p, title, "WealthPlannerGameFontHighlightSmall", 0, y, 200)
         local box = W.MakeNumberBox(p, 60)
         box:SetPoint("TOPLEFT", 210, y + 6)
-        Muted(Label(p, unit, "GameFontHighlightSmall", 278, y, 300))
+        Muted(Label(p, unit, "WealthPlannerGameFontHighlightSmall", 278, y, 300))
         local function Save(self)
             local v = self:GetValue()
             if v then o[key] = math.max(min, math.min(max, math.floor(v + 0.5))); ns.Jobs:Invalidate(); ns:Changed() end
@@ -57,7 +57,7 @@ UI:RegisterPage("settings", function(p)
         function() ns.Analytics:Invalidate() end)
 
     Muted(Label(p, "Your investment target, cash reserve and most per item are set on the Invest tab at the auction house.",
-        "GameFontHighlightSmall", 0, -324, 586))
+        "WealthPlannerGameFontHighlightSmall", 0, -324, 586))
 
     p.Refresh = function()
         for _, key in ipairs({ "killRate", "levelAbove", "historyDays" }) do

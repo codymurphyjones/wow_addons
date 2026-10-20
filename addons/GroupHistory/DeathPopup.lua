@@ -208,7 +208,7 @@ local function Build()
     tinsert(UISpecialFrames, "GroupHistoryDeathRecap")
     local icon = frame:CreateTexture(nil, "ARTWORK"); icon:SetSize(22, 22); icon:SetPoint("TOPLEFT", 10, -8)
     icon:SetTexture(ns.ICON)
-    frame.title = Label(frame, "Death recap", "GameFontNormal", 38, -12, 500); frame.title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    frame.title = Label(frame, "Death recap", "GroupHistoryGameFontNormal", 38, -12, 500); frame.title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     local close = MakeButton(frame, "X", 22, 20); close:SetPoint("TOPRIGHT", -8, -8)
     close:SetScript("OnClick", function() frame:Hide() end)
 
@@ -218,14 +218,14 @@ local function Build()
     scroll:SetPoint("TOPLEFT", 12, -70); scroll:SetPoint("BOTTOMRIGHT", -32, 12)
     frame.body = CreateFrame("Frame", nil, scroll); frame.body:SetSize(WIDTH - 50, 10)
     scroll:SetScrollChild(frame.body)
-    frame.text = frame.body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frame.text = frame.body:CreateFontString(nil, "OVERLAY", "GroupHistoryGameFontHighlightSmall")
     frame.text:SetPoint("TOPLEFT"); frame.text:SetWidth(WIDTH - 60); frame.text:SetJustifyH("LEFT"); frame.text:SetSpacing(3)
     frame.scroll = scroll
 
     -- A member's page: header text and their hits.
     local page = CreateFrame("Frame", nil, frame)
     page:SetPoint("TOPLEFT", 12, -70); page:SetPoint("BOTTOMRIGHT", -12, 12); page:Hide()
-    page.text = Label(page, "", "GameFontHighlightSmall", 0, 0, WIDTH - 40); page.text:SetJustifyH("LEFT"); page.text:SetSpacing(3)
+    page.text = Label(page, "", "GroupHistoryGameFontHighlightSmall", 0, 0, WIDTH - 40); page.text:SetJustifyH("LEFT"); page.text:SetSpacing(3)
     page.list = W.CreateRowList(page, -130, { rowHeight = 34 })
     frame.page = page
     frame:Hide()

@@ -410,13 +410,15 @@ function Compat.RequestRosters()
     end
 end
 
+-- Both take any spelling of the name: the server refuses your own realm written on the end.
 function Compat.Whisper(name)
+    name = Compat.PlayerName(name)
     if ChatFrame_SendTell then ChatFrame_SendTell(name) elseif ChatFrame_OpenChat then ChatFrame_OpenChat("/w " .. name .. " ") end
 end
 
 function Compat.Invite(name)
     local fn = (C_PartyInfo and C_PartyInfo.InviteUnit) or InviteUnit
-    if fn then fn(name) end
+    if fn then fn(Compat.PlayerName(name)) end
 end
 
 -- ---------------------------------------------------------------------------

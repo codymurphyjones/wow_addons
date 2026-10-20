@@ -40,6 +40,7 @@ SimplePanel.RegisterPlugin({
     category = "Information",
     icon = 134269,
     zone = "center",
+    minimapZone = true, -- can also sit on top of the minimap (the Minimap plugin's strip)
     showIcon = false,
     defaults = { coords = true, placeName = "both", precise = false },
     events = { "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "ZONE_CHANGED_NEW_AREA", "PLAYER_ENTERING_WORLD" },

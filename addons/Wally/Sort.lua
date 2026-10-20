@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local C = ns.Compat
 
 -- Wally's own bag sorter. Blizzard's sort can't be configured, so items are moved a swap at a time
@@ -471,7 +472,7 @@ local bagButton, bankButton
 
 local function OnEnter(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:AddLine(self.which == "bank" and "Sort bank" or "Sort bags", 0.33, 0.92, 0.78)
+    GameTooltip:AddLine(self.which == "bank" and "Sort bank" or "Sort bags", PAL.accent[1], PAL.accent[2], PAL.accent[3])
     GameTooltip:AddLine("Sorted by Wally, using your rules in Options > AddOns > Wally > Bag Sorting.", 0.82, 0.89, 0.93, true)
     GameTooltip:AddLine("Left-click: sort", 0.75, 0.8, 0.85)
     GameTooltip:AddLine("Right-click: sort options", 0.75, 0.8, 0.85)

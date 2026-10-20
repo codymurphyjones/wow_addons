@@ -5,11 +5,14 @@
 ## Version: 0.1.1
 ## SavedVariables: SmartPlatesDB
 ## SavedVariablesPerCharacter: SmartPlatesCharDB
+## OptionalDeps: BattleRecap
 ## IconTexture: Interface\AddOns\SmartPlates\Media\SmartPlates
 ## Category: Unit Frames
 ## AddonCompartmentFunc: SmartPlates_OnCompartmentClick
 ## X-Curse-Project-ID: 1743890
 
+Fonts.lua
+Palette.lua
 Compat.lua
 Core.lua
 Profiles.lua
@@ -33,6 +36,7 @@ Plugins\HealerTracker.lua
 Plugins\Totems.lua
 Plugins\ClassIcon.lua
 Plugins\Social.lua
+Plugins\Nemesis.lua
 Plugins\Experience.lua
 Plugins\Resource.lua
 Widgets.lua

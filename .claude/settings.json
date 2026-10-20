@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(//Z:/Games/World of Warcraft/**)",
+      "Edit(//z/Games/World of Warcraft/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -I \"$CLAUDE_PROJECT_DIR/tools/lint.py\" --hook",
+            "timeout": 30,
+            "statusMessage": "Checking Lua syntax"
+          }
+        ]
+      }
+    ]
+  }
+}

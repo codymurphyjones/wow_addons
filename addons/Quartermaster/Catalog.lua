@@ -35,6 +35,123 @@ function Catalog:AgeFor(id)
     if ok then return age end
 end
 
+-- ---------------------------------------------------------------------------
+-- Variants: copies of one item that differ in enchant, random suffix ("of the Monkey") or gems.
+-- An enchant can change what an item is worth a lot, so each variant is its own item to buy.
+-- ---------------------------------------------------------------------------
+
+-- The numbers after "item:" (id, enchant, gem1-4, suffix, uniqueID, ...); empty fields are 0.
+local function LinkFields(link)
+    local s = type(link) == "string" and link:match("item:([%-%d:]*)")
+    if not s then return nil end
+    local f = {}
+    for v in (s .. ":"):gmatch("([^:]*):") do f[#f + 1] = tonumber(v) or 0 end
+    return f
+end
+
+-- key, enchantID, suffixID for a link. key is "<itemID>" for a plain copy, otherwise
+-- "<itemID>:e<enchant>:s<suffix>:g<g1>.<g2>.<g3>.<g4>". The uniqueID and later fields differ
+-- between two identical copies, so they're left out.
+function Catalog:Variant(link)
+    local f = LinkFields(link)
+    if not f or (f[1] or 0) == 0 then return nil end
+    local id, enchant, suffix = f[1], f[2] or 0, f[7] or 0
+    local g1, g2, g3, g4 = f[3] or 0, f[4] or 0, f[5] or 0, f[6] or 0
+    if enchant == 0 and suffix == 0 and g1 == 0 and g2 == 0 and g3 == 0 and g4 == 0 then
+        return tostring(id), 0, 0
+    end
+    return ("%d:e%d:s%d:g%d.%d.%d.%d"):format(id, enchant, suffix, g1, g2, g3, g4), enchant, suffix
+end
+
+-- A variant key with no enchant, suffix or gems (nil counts as plain: entries saved before variants).
+function Catalog:IsPlain(variant)
+    return variant == nil or not variant:find(":", 1, true)
+end
+
+function Catalog:Enchanted(variant)
+    local e = variant and tonumber(variant:match(":e(%-?%d+)"))
+    return e ~= nil and e ~= 0
+end
+
+local enchantNames = {}
+local enchantTip
+
+local function TipLines(link)
+    enchantTip:SetOwner(WorldFrame, "ANCHOR_NONE")
+    enchantTip:ClearLines()
+    enchantTip:SetHyperlink(link)
+    local lines = {}
+    for i = 2, enchantTip:NumLines() do
+        local fs = _G["QuartermasterEnchantTooltipTextLeft" .. i]
+        local text = fs and fs:GetText()
+        if text and text ~= "" then
+            local r, g, b = fs:GetTextColor()
+            lines[#lines + 1] = { text = text, green = g > 0.9 and r < 0.2 and b < 0.2 }
+        end
+    end
+    return lines
+end
+
+-- "Enchanted: %s" in the client's language, as a pattern that captures the name.
+local function EnchantedPattern()
+    local fmt = ENCHANTED_TOOLTIP_LINE
+    if type(fmt) ~= "string" or not fmt:find("%s", 1, true) then return nil end
+    return "^" .. fmt:gsub("[%(%)%.%+%-%*%?%[%]%^%$]", "%%%0"):gsub("%%s", "(.+)", 1) .. "$"
+end
+
+-- The enchant's name ("Crusader"), from the link's tooltip: the enchantment line the modern
+-- tooltip data marks as such, or else the green line that the same link without its enchant lacks.
+function Catalog:EnchantText(link)
+    local _, enchant = self:Variant(link)
+    if not enchant or enchant == 0 then return nil end
+    if enchantNames[enchant] then return enchantNames[enchant] end
+    local name
+    local lineType = Enum and Enum.TooltipDataLineType and Enum.TooltipDataLineType.ItemEnchantmentPermanent
+    if lineType and C_TooltipInfo and C_TooltipInfo.GetHyperlink then
+        local ok, data = pcall(C_TooltipInfo.GetHyperlink, link)
+        for _, line in ipairs(ok and data and data.lines or {}) do
+            if line.type == lineType and line.leftText then name = line.leftText break end
+        end
+    end
+    if not name then
+        enchantTip = enchantTip or CreateFrame("GameTooltip", "QuartermasterEnchantTooltip", nil, "GameTooltipTemplate")
+        local base = {}
+        local plain = link:gsub("(item:%-?%d+):%-?%d*", "%1:0", 1)
+        for _, l in ipairs(TipLines(plain)) do base[l.text] = true end
+        for _, l in ipairs(TipLines(link)) do
+            if l.green and not base[l.text] then name = l.text break end
+        end
+    end
+    if not name then return "enchant #" .. enchant end -- item data not cached yet: try again later
+    local pattern = EnchantedPattern()
+    name = pattern and name:match(pattern) or name
+    enchantNames[enchant] = name
+    return name
+end
+
+-- What sets a variant apart, for after its name: " [Crusader]", " [socketed]", or "".
+function Catalog:VariantTag(link)
+    local variant, enchant = self:Variant(link)
+    if self:IsPlain(variant) then return "" end
+    local parts = {}
+    if enchant ~= 0 then parts[#parts + 1] = self:EnchantText(link) end
+    if variant:match(":g(.+)$") ~= "0.0.0.0" then parts[#parts + 1] = "socketed" end
+    if #parts == 0 then return "" end -- a random suffix is already in the name
+    return " |cff1eff00[" .. table.concat(parts, ", ") .. "]|r"
+end
+
+-- Auctionator's market price for a variant. Plain: by itemID. A random suffix: Auctionator's price
+-- for that suffix, if it has one. Enchanted or socketed: none, since Auctionator ignores enchants
+-- and gems and its price is for a bare copy.
+function Catalog:MarketFor(itemID, variant, link)
+    if self:IsPlain(variant) then return self:PriceFor(itemID) end
+    if variant:match(":g(.+)$") ~= "0.0.0.0" or self:Enchanted(variant) then return nil end
+    local api = API()
+    if not (api and api.GetAuctionPriceByItemLink and link) then return nil end
+    local ok, price = pcall(api.GetAuctionPriceByItemLink, ns.CALLER, link)
+    if ok and price and price > 0 then return price end
+end
+
 local function FillInfo(e)
     local name, link, quality, ilvl, reqLevel, _, _, maxStack, equipLoc, icon, _, classID, subClassID = C.GetItemInfo(e.id)
     if not name then return false end

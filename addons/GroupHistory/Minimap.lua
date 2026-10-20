@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Draggable minimap button (copied from Wally's): left-click opens Group History, right-click the party popup.
 local MapButton = {}
@@ -101,7 +102,7 @@ function MapButton:Initialize()
     b:SetScript("OnEnter", function(self)
         if self.dragging then return end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Group History", 0.33, 0.92, 0.78)
+        GameTooltip:AddLine("Group History", PAL.accent[1], PAL.accent[2], PAL.accent[3])
         local players = 0
         for _ in pairs(ns.db.players) do players = players + 1 end
         GameTooltip:AddLine(("%d players, %d runs recorded"):format(players, #ns.db.runs), 0.82, 0.89, 0.93)

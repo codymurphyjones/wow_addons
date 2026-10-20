@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Draggable minimap button (copied from Wally's): left-click opens the dojo, right-click the last lesson.
 local MapButton = {}
@@ -101,7 +102,7 @@ function MapButton:Initialize()
     b:SetScript("OnEnter", function(self)
         if self.dragging then return end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Mr. Miyagi", 0.33, 0.92, 0.78)
+        GameTooltip:AddLine("Mr. Miyagi", PAL.accent[1], PAL.accent[2], PAL.accent[3])
         GameTooltip:AddLine(("%d lessons, %d fights recorded"):format(#ns.db.deaths, #ns.db.fights), 0.82, 0.89, 0.93)
         GameTooltip:AddLine("Left-click: open the dojo", 0.75, 0.8, 0.85)
         GameTooltip:AddLine("Right-click: the last lesson", 0.75, 0.8, 0.85)

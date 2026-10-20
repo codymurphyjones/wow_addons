@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 --[[ Chart renderer (copied from SimplePanel's Chart.lua). Draws into any frame with pooled textures, lines and font strings.
 
@@ -25,7 +26,7 @@ local T = ns.Widgets.Theme
 local WHITE = T.white
 local HasLines = UIParent.CreateLine ~= nil
 local floor, max, min, abs = math.floor, math.max, math.min, math.abs
-local PLATE = { 0.035, 0.045, 0.060 } -- the window background (Widgets.SetBackdrop)
+local PLATE = PAL.bg -- the window background (Widgets.SetBackdrop)
 
 local Proto = {}
 Proto.__index = Proto
@@ -51,7 +52,7 @@ local function Acquire(self, kind)
             obj:SetColorTexture(PLATE[1], PLATE[2], PLATE[3], 0.85)
         else
             -- On the label layer, above the plot's lines (a child frame draws over its parent).
-            obj = self.labels:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            obj = self.labels:CreateFontString(nil, "OVERLAY", "WealthPlannerGameFontHighlightSmall")
             obj:SetJustifyH("LEFT")
         end
         pool[pool.used] = obj
@@ -96,7 +97,7 @@ end
 
 local function Text(self, text, font, c)
     local fs = Acquire(self, "fs")
-    fs:SetFontObject(font or "GameFontHighlightSmall")
+    fs:SetFontObject(font or "WealthPlannerGameFontHighlightSmall")
     fs:SetText(text)
     c = c or T.muted
     fs:SetTextColor(c[1], c[2], c[3], 1)
@@ -168,7 +169,7 @@ local function Frame(self, spec, axes)
     local w, h = self.frame:GetWidth(), self.frame:GetHeight()
     local top, left, bottom, right = 2, 2, 2, 2
     if spec.title then
-        local t = Text(self, spec.title, "GameFontNormal", T.accent)
+        local t = Text(self, spec.title, "WealthPlannerGameFontNormal", T.accent)
         t:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 2, -1)
         top = top + 14
     end
@@ -424,7 +425,7 @@ local function UpdateHover(self)
         self.readout = CreateFrame("Frame", nil, self.frame, "BackdropTemplate")
         ns.Widgets.SetBackdrop(self.readout, 0.95)
         self.readout:SetFrameLevel(self.frame:GetFrameLevel() + 20)
-        self.readout.text = self.readout:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        self.readout.text = self.readout:CreateFontString(nil, "OVERLAY", "WealthPlannerGameFontHighlightSmall")
         self.readout.text:SetPoint("TOPLEFT", 6, -5); self.readout.text:SetJustifyH("LEFT")
         self.dots = {}
     end

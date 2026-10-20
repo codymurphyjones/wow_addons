@@ -15,7 +15,7 @@ end
 
 UI:RegisterPage("portfolio", function(p)
     p.view = "holdings"
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, 0, 586))
+    p.summary = Muted(Label(p, "", "WealthPlannerGameFontHighlightSmall", 0, 0, 586))
     p.viewButtons = {}
     for i, v in ipairs({ { "holdings", "Holdings" }, { "ledger", "Sales" } }) do
         local b = MakeButton(p, v[2], 92, 24); b:SetPoint("TOPLEFT", (i - 1) * 96, -22)

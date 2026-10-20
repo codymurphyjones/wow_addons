@@ -2,7 +2,9 @@
 
 Dungeon and raid gear for your level and class, ranked by your spec's stat priority, on the
 Character window, plus a loot journal with every dungeon and raid, boss abilities, strategy and
-models. The loot comes from AtlasLootClassic, and the priority from StatLedger.
+models. The loot is SpyGlass's own (built from AtlasLoot Continued's tables and SpyGlass's harvest, so
+AtlasLoot doesn't have to be installed; with it, "Open in AtlasLoot" still works), and the priority
+comes from StatLedger.
 
 ## Character window tab
 

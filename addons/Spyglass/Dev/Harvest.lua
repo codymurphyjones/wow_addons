@@ -243,9 +243,29 @@ local function Tick()
     end
 end
 
+-- Loads an installed AtlasLoot's dungeon and raid module (it's load-on-demand), then calls
+-- onReady. SpyGlass itself ships its loot (Data\Loot.lua); only the harvest reads AtlasLoot, and
+-- without it the harvest goes straight on to the ID ranges.
+local function LoadAtlas(onReady)
+    if not (AtlasLoot and AtlasLoot.ItemDB) then onReady() return true end
+    local IsLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+    local Load = (C_AddOns and C_AddOns.LoadAddOn) or LoadAddOn
+    if IsLoaded(D.ATLAS_MODULE) then onReady() return true end
+    local loader = AtlasLoot.Loader
+    if loader and loader.LoadModule then
+        local result = loader:LoadModule(D.ATLAS_MODULE, onReady)
+        if IsLoaded(D.ATLAS_MODULE) or result == nil then return true end
+        if result == "InCombat" then return false, "AtlasLoot's dungeon data will load after combat." end
+    end
+    if InCombatLockdown() then return false, "AtlasLoot's dungeon data can't load in combat." end
+    Load(D.ATLAS_MODULE)
+    onReady()
+    return true
+end
+
 function H:Start()
     if ticker then ns:Print("Harvest is already running.") return end
-    local ok, reason = ns.AtlasData:Load(function()
+    local ok, reason = LoadAtlas(function()
         if ticker then return end
         if db.state.phase ~= "ranges" and db.state.phase ~= "done" then
             db.state.phase = "atlas"

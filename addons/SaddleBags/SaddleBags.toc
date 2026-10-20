@@ -9,6 +9,7 @@
 ## IconTexture: Interface\AddOns\SaddleBags\Media\Icon
 ## X-Curse-Project-ID: 1735030
 
+Fonts.lua
 Core.lua
 Panel.lua
 DamageMeter.lua

@@ -8,6 +8,7 @@
 ## IconTexture: Interface\AddOns\Bandolier\Media\Icon.tga
 ## X-Curse-Project-ID: 1729275
 
+Fonts.lua
 Core.lua
 Settings.lua
 Data.lua
@@ -15,3 +16,4 @@ Stats.lua
 Scanner.lua
 Macro.lua
 Flyout.lua
+API.lua

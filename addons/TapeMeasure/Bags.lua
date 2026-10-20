@@ -5,6 +5,11 @@ local C = ns.Compat
 -- Cosmetic only: never equips anything or touches the bag buttons' clicks.
 local Bags = { dirty = true, upgrades = {}, overlays = setmetatable({}, {__mode = "k"}) }
 ns.Bags = Bags
+-- The badge font: the suite's face (WallyHUD) in its bold weight, else the game's.
+local function BadgeFont()
+    return WallyHUD and WallyHUD.SuiteFace and WallyHUD.SuiteFace("bold") or STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
+end
+
 local function IsCombat() return InCombatLockdown and InCombatLockdown() end
 function Bags:Invalidate() self.dirty = true end
 
@@ -69,8 +74,8 @@ local function CreateOverlay(button)
     f.badge = CreateFrame("Frame", nil, f)
     f.badge:SetPoint("BOTTOMLEFT", 1, 1); f.badge:SetPoint("BOTTOMRIGHT", -1, 1); f.badge:SetHeight(13)
     local bg = f.badge:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0.02, 0.10, 0.055, 0.94)
-    f.text = f.badge:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    f.text:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 9, "OUTLINE")
+    f.text = f.badge:CreateFontString(nil, "OVERLAY", "TapeMeasureGameFontHighlightSmall")
+    f.text:SetFont(BadgeFont(), 9, "OUTLINE")
     f.text:SetPoint("CENTER"); f.text:SetTextColor(0.5, 1, 0.67)
     f:SetScript("OnShow", function(self) self:SyncPulse() end)
     f:SetScript("OnHide", function(self) self.pulse:Stop(); self.glow:SetAlpha(1) end)
@@ -107,9 +112,9 @@ function Bags:UpdateButton(button, parent, touched)
     end
     overlay.test = info.test and true or false
     overlay.text:SetText(overlay.test and "TEST" or ns.Scoring:FormatChange(info.cmp, true))
-    overlay.text:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 9, "OUTLINE")
+    overlay.text:SetFont(BadgeFont(), 9, "OUTLINE")
     if overlay.text.GetStringWidth and button.GetWidth and overlay.text:GetStringWidth() > button:GetWidth() - 3 then
-        overlay.text:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 7, "OUTLINE")
+        overlay.text:SetFont(BadgeFont(), 7, "OUTLINE")
     end
     overlay.badge:SetShown(ns.db.bagPercent or overlay.test)
     overlay:Show()

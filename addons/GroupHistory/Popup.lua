@@ -18,7 +18,7 @@ local function Window(name, w, h)
     f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
     local icon = f:CreateTexture(nil, "ARTWORK"); icon:SetSize(22, 22); icon:SetPoint("TOPLEFT", 10, -8)
     icon:SetTexture(ns.ICON)
-    f.title = Label(f, "", "GameFontNormal", 38, -12, w - 90); f.title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    f.title = Label(f, "", "GroupHistoryGameFontNormal", 38, -12, w - 90); f.title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     local close = MakeButton(f, "X", 22, 20); close:SetPoint("TOPRIGHT", -8, -8)
     close:SetScript("OnClick", function() f:Hide() end)
     f.lines = {}
@@ -39,8 +39,8 @@ local function PartyRow(i)
     if not r then
         r = CreateFrame("Button", nil, party)
         r:SetSize(500, ROW - 4)
-        r.name = Label(r, "", "GameFontHighlight", 0, 0, 220)
-        r.text = Muted(Label(r, "", "GameFontHighlightSmall", 0, -16, 500))
+        r.name = Label(r, "", "GroupHistoryGameFontHighlight", 0, 0, 220)
+        r.text = Muted(Label(r, "", "GroupHistoryGameFontHighlightSmall", 0, -16, 500))
         r.text:SetWordWrap(true); r.text:SetHeight(28)
         r:SetScript("OnClick", function(self) if self.full then ns.UI:ShowPlayer(self.full) end end)
         party.lines[i] = r
@@ -171,7 +171,7 @@ end
 function Popup:ShowReport(run)
     if not report then
         report = Window("GroupHistoryRunReport", 440, 200)
-        report.text = Label(report, "", "GameFontHighlightSmall", 12, -36, 416)
+        report.text = Label(report, "", "GroupHistoryGameFontHighlightSmall", 12, -36, 416)
         report.text:SetJustifyH("LEFT"); report.text:SetSpacing(2)
         report.open = MakeButton(report, "Details", 80, 22); report.open:SetPoint("BOTTOMRIGHT", -10, 10)
         report.open:SetScript("OnClick", function() report:Hide(); ns.UI:ShowRun(report.runID) end)

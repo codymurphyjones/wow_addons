@@ -67,7 +67,7 @@ local function GetPin(canvas)
         pin.glow = pin:CreateTexture(nil, "BACKGROUND")
         pin.glow:SetPoint("CENTER"); pin.glow:SetTexture(GLOW); pin.glow:SetBlendMode("ADD")
         pin.icon = pin:CreateTexture(nil, "ARTWORK"); pin.icon:SetAllPoints()
-        pin.num = pin:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        pin.num = pin:CreateFontString(nil, "OVERLAY", "WaypointGameFontHighlightSmall")
         pin.num:SetPoint("CENTER", 0, 0)
         pin:SetScript("OnEnter", OnPinEnter)
         pin:SetScript("OnLeave", GameTooltip_Hide)
@@ -91,7 +91,7 @@ end
 local function Place(pin, canvas, scale, w, h, px, py, size)
     pin:SetSize(size, size)
     pin:SetScale(scale)
-    pin:SetFrameLevel(canvas:GetFrameLevel() + 2100)
+    pin:SetFrameLevel(ns:MapBase(canvas) + 2100)
     pin:ClearAllPoints()
     pin:SetPoint("CENTER", canvas, "TOPLEFT", px * w / scale, -py * h / scale)
     pin:Show()
@@ -110,7 +110,7 @@ function Pins:Refresh()
         lineFrame = CreateFrame("Frame", nil, canvas)
         lineFrame:SetAllPoints(canvas)
     end
-    lineFrame:SetFrameLevel(canvas:GetFrameLevel() + 2000)
+    lineFrame:SetFrameLevel(ns:MapBase(canvas) + 2000)
     local zoom = WorldMapFrame:GetCanvasScale() or 1
     local scale = 1 / zoom
     local w, h = canvas:GetSize()
@@ -119,7 +119,7 @@ function Pins:Refresh()
     -- The path: lines first, then numbered pins on top.
     local prevX, prevY
     for i, p in ipairs(ns.Chain:Points()) do
-        local px, py = ns.Nav:Project(p.mapID, p.x, p.y, mapID)
+        local px, py = ns.Nav:OnCanvas(p.mapID, p.x, p.y, mapID)
         local col = (p.by == C.Me()) and MINE or THEIRS
         if px then
             if prevX and lineFrame.CreateLine then
@@ -144,7 +144,7 @@ function Pins:Refresh()
 
     -- Anything else the arrow points at.
     if e and e.owner ~= "path" and current then
-        local px, py = ns.Nav:Project(current.mapID, current.x, current.y, mapID)
+        local px, py = ns.Nav:OnCanvas(current.mapID, current.x, current.y, mapID)
         if px then
             local pin = GetPin(canvas)
             pin.point, pin.index, pin.isTarget = current, nil, true
@@ -158,11 +158,13 @@ function Pins:Refresh()
     end
 end
 
--- Where the cursor is on the map, as a zone point when it's over one: mapID, x, y.
+-- Where the cursor is on the map, as a zone point when it's over one: mapID, x, y. On OpenMap's
+-- stitched map, past the map underneath too: the zone OpenMap draws there.
 local function CursorPoint()
     local mapID = WorldMapFrame:GetMapID()
     local x, y = WorldMapFrame:GetNormalizedCursorPosition()
-    if not (mapID and x and y) or x < 0 or x > 1 or y < 0 or y > 1 then return nil end
+    if not (mapID and x and y) then return nil end
+    if x < 0 or x > 1 or y < 0 or y > 1 then return ns.Nav:FromCanvas(mapID, x, y) end
     local info = C.Call(C_Map.GetMapInfoAtPosition, mapID, x, y)
     if info and info.mapID and info.mapID ~= mapID and Enum and Enum.UIMapType and info.mapType == Enum.UIMapType.Zone then
         local zx, zy = ns.Nav:Project(mapID, x, y, info.mapID)

@@ -5,7 +5,7 @@
 ## Version: 0.1.4
 ## RequiredDeps: Auctionator
 ## Dependencies: Auctionator
-## OptionalDeps: Waypoint
+## OptionalDeps: Waypoint, Bandolier
 ## SavedVariables: QuartermasterDB
 ## SavedVariablesPerCharacter: QuartermasterCharDB
 ## IconTexture: Interface\AddOns\Quartermaster\Media\Icon.png
@@ -13,6 +13,8 @@
 ## AddonCompartmentFunc: Quartermaster_OnCompartmentClick
 ## X-Curse-Project-ID: 1735119
 
+Fonts.lua
+Palette.lua
 Compat.lua
 Core.lua
 Widgets.lua
@@ -31,6 +33,7 @@ UI.lua
 BrowsePage.lua
 ListsPage.lua
 PrebuiltPage.lua
+ConsumablesPage.lua
 AHTabs.lua
 AuctionSearch.lua
 CartTab.lua

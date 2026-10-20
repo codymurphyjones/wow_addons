@@ -45,8 +45,8 @@ local function Tiles(parent, titles, y)
     local tiles, w = {}, 142
     for i, title in ipairs(titles) do
         local t = UI.Panel(parent); t:SetSize(w, 56); t:SetPoint("TOPLEFT", (i - 1) * (w + 6), y)
-        Muted(Label(t, title, "GameFontHighlightSmall", 10, -8))
-        t.value = Label(t, "", "GameFontHighlightLarge", 10, -26, w - 16)
+        Muted(Label(t, title, "WealthPlannerGameFontHighlightSmall", 10, -8))
+        t.value = Label(t, "", "WealthPlannerGameFontHighlightLarge", 10, -26, w - 16)
         tiles[i] = t
     end
     return tiles
@@ -54,7 +54,7 @@ end
 
 UI:RegisterPage("insights", function(p)
     p.view = "plans"
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, 0, 586))
+    p.summary = Muted(Label(p, "", "WealthPlannerGameFontHighlightSmall", 0, 0, 586))
     p.viewButtons = {}
     for i, v in ipairs(VIEWS) do
         local b = MakeButton(p, v[2], 92, 24); b:SetPoint("TOPLEFT", (i - 1) * 95, -22)
@@ -123,7 +123,7 @@ UI:RegisterPage("insights", function(p)
     local timing = views.timing
     local salesPanel = UI.Panel(timing); salesPanel:SetPoint("TOPLEFT", 0, 0); salesPanel:SetSize(586, 78)
     timing.sales = ns.Chart:New(salesPanel, 570, 62); timing.sales:SetPoint("TOPLEFT", 8, -8)
-    timing.salesNote = Muted(Label(timing, "", "GameFontHighlightSmall", 0, -84, 586))
+    timing.salesNote = Muted(Label(timing, "", "WealthPlannerGameFontHighlightSmall", 0, -84, 586))
     timing.list = W.CreateRowList(timing, -102)
 
     local function RefreshTiming()
@@ -224,7 +224,7 @@ UI:RegisterPage("insights", function(p)
     -- -----------------------------------------------------------------------
     local deposits = views.deposits
     deposits.tiles = Tiles(deposits, { "Deposits paid", "Refunded (sold)", "Lost", "Still on the market" }, 0)
-    deposits.status = Label(deposits, "", "GameFontHighlightSmall", 0, -64, 586)
+    deposits.status = Label(deposits, "", "WealthPlannerGameFontHighlightSmall", 0, -64, 586)
     deposits.list = W.CreateRowList(deposits, -100)
 
     local function RefreshDeposits()
@@ -261,7 +261,7 @@ UI:RegisterPage("insights", function(p)
     -- -----------------------------------------------------------------------
     local wealth = views.wealth
     wealth.tiles = Tiles(wealth, { "All characters", "Cash", "Goods (bags, bank, mail)", "On the market" }, 0)
-    wealth.changes = Label(wealth, "", "GameFontHighlightSmall", 0, -64, 586)
+    wealth.changes = Label(wealth, "", "WealthPlannerGameFontHighlightSmall", 0, -64, 586)
     local chartPanel = UI.Panel(wealth); chartPanel:SetPoint("TOPLEFT", 0, -84); chartPanel:SetSize(586, 112)
     wealth.chart = ns.Chart:New(chartPanel, 570, 96); wealth.chart:SetPoint("TOPLEFT", 8, -8)
     wealth.list = W.CreateRowList(wealth, -204, { rowHeight = 30 })

@@ -1,0 +1,5 @@
+[
+  {"continent": 1, "name": "Timbermaw Hold (Felwood to the north end)", "a": [6831, -2102], "b": [7362, -2205], "yards": 801},
+  {"continent": 1, "name": "Timbermaw Hold (Felwood to the east end)", "a": [6831, -2102], "b": [6922, -2279], "yards": 461},
+  {"continent": 1, "name": "Timbermaw Hold (north end to the east end)", "a": [7362, -2205], "b": [6922, -2279], "yards": 684}
+]

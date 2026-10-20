@@ -55,7 +55,7 @@ end
 
 UI:RegisterPage("market", function(p)
     p.view, p.range = "all", 30
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, 0, 586))
+    p.summary = Muted(Label(p, "", "WealthPlannerGameFontHighlightSmall", 0, 0, 586))
 
     -- -----------------------------------------------------------------------
     -- List
@@ -89,10 +89,10 @@ UI:RegisterPage("market", function(p)
     back:SetScript("OnClick", function() p.item = nil; p.Refresh() end)
     detail.icon = detail:CreateTexture(nil, "ARTWORK"); detail.icon:SetSize(36, 36)
     detail.icon:SetPoint("TOPLEFT", 0, -54); detail.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    detail.name = Label(detail, "", "GameFontNormalLarge", 44, -54, 300)
-    detail.price = Label(detail, "", "GameFontHighlight", 44, -74, 300)
-    detail.signal = Label(detail, "", "GameFontNormalLarge", 346, -54, 240); detail.signal:SetJustifyH("RIGHT")
-    detail.reason = Muted(Label(detail, "", "GameFontHighlightSmall", 286, -74, 300)); detail.reason:SetJustifyH("RIGHT")
+    detail.name = Label(detail, "", "WealthPlannerGameFontNormalLarge", 44, -54, 300)
+    detail.price = Label(detail, "", "WealthPlannerGameFontHighlight", 44, -74, 300)
+    detail.signal = Label(detail, "", "WealthPlannerGameFontNormalLarge", 346, -54, 240); detail.signal:SetJustifyH("RIGHT")
+    detail.reason = Muted(Label(detail, "", "WealthPlannerGameFontHighlightSmall", 286, -74, 300)); detail.reason:SetJustifyH("RIGHT")
     detail.watch = MakeButton(detail, "Watch", 80, 24); detail.watch:SetPoint("LEFT", back, "RIGHT", 8, 0)
     detail.watch:SetScript("OnClick", function() ns.Prices:Watch(p.item, not ns.Prices:IsWatched(p.item)) end)
     detail.ranges = {}
@@ -108,15 +108,15 @@ UI:RegisterPage("market", function(p)
     detail.stats = {}
     for i = 1, 12 do
         local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
-        local k = Muted(Label(detail, "", "GameFontHighlightSmall", col * 200, -318 - row * 18, 95))
-        local v = Label(detail, "", "GameFontHighlightSmall", col * 200 + 95, -318 - row * 18, 100)
+        local k = Muted(Label(detail, "", "WealthPlannerGameFontHighlightSmall", col * 200, -318 - row * 18, 95))
+        local v = Label(detail, "", "WealthPlannerGameFontHighlightSmall", col * 200 + 95, -318 - row * 18, 100)
         detail.stats[i] = { k, v }
     end
 
     -- Price targets: a chat alert when a scan sees the price cross them.
-    Muted(Label(detail, "Alert me when the price is", "GameFontHighlightSmall", 410, -318, 176))
+    Muted(Label(detail, "Alert me when the price is", "WealthPlannerGameFontHighlightSmall", 410, -318, 176))
     local function TargetBox(label, which, y)
-        Label(detail, label, "GameFontHighlightSmall", 410, y, 80)
+        Label(detail, label, "WealthPlannerGameFontHighlightSmall", 410, y, 80)
         local box = W.MakeNumberBox(detail, 70, "gold")
         box:SetPoint("TOPLEFT", 500, y + 6)
         box:SetScript("OnEnterPressed", function(self)

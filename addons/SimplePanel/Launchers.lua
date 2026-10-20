@@ -18,7 +18,10 @@ local _, ns = ...
     its own tile as the owner, and forwards to plain buttons by parking them invisibly under it.
 
     The real buttons are hidden from the minimap while SimplePanel holds them and come back untouched
-    when a launcher is set to "On the minimap". Placement per launcher: drawer | bar | minimap | hidden.
+    when a launcher is set to "On the minimap". Placement per launcher: drawer | bar | minimap |
+    screen | hidden. "Anywhere on screen" gives the launcher its own spot that you drag wherever you
+    like (saved per profile). Like a drawer tile it hosts the real button, which draws its own icon
+    and handles its own clicks; a copy of the icon stands in only when there's no button to host.
 ]]
 local L = {}
 ns.Launchers = L
@@ -29,8 +32,11 @@ local entries, byKey, byButton = {}, {}, {}
 local drawer
 local showHidden = false
 
-local PLACEMENTS = { drawer = "In the drawer", bar = "Pinned to the bar", minimap = "On the minimap", hidden = "Hidden" }
+local PLACEMENTS = { drawer = "In the drawer", bar = "Pinned to the bar", minimap = "On the minimap",
+    screen = "Anywhere on screen", hidden = "Hidden" }
 L.PLACEMENTS = PLACEMENTS
+L.ORDER = { "drawer", "bar", "minimap", "screen", "hidden" }
+local UpdateFloat -- below: the icon of a launcher placed anywhere on screen
 
 -- ---------------------------------------------------------------------------
 -- What counts as a minimap button
@@ -214,6 +220,12 @@ local function Capture(e, b)
     -- An owner moving a hosted button gets it put back in its tile, as Fanny Pack does.
     hooksecurefunc(b, "SetPoint", function(self)
         if selfShow or e.parked then return end
+        if e.hosted and e.hosted.isFloat then
+            selfShow = true
+            self:ClearAllPoints(); self:SetPoint("CENTER", e.hosted, "CENTER")
+            selfShow = false
+            return
+        end
         if e.hosted then return RefreshSoon() end
         e.points = {}
         for i = 1, self:GetNumPoints() do e.points[i] = { self:GetPoint(i) } end
@@ -473,6 +485,7 @@ local function Apply(e)
         if L:Placement(e.key) == "minimap" then RestoreButton(e) else HideButton(e) end
     end
     SyncPlugin(e)
+    UpdateFloat(e)
 end
 
 function L:ApplyAll()
@@ -591,10 +604,30 @@ ns:On("ADDON_LOADED", function() if ns.db and SimplePanelFrame then ScanSoon(1) 
 -- Placement menu (tiles and pinned launchers)
 -- ---------------------------------------------------------------------------
 
+local function Positions()
+    local l = ns.db.launchers
+    l.positions = l.positions or {}
+    return l.positions
+end
+
 function L:PlacementMenu(e, m)
-    for _, k in ipairs({ "drawer", "bar", "minimap", "hidden" }) do
+    for _, k in ipairs(L.ORDER) do
         m:Radio({ text = PLACEMENTS[k], value = k, close = true, get = function() return L:Placement(e.key) end,
             set = function(v) L:SetPlacement(e.key, v) end })
+    end
+    if L:Placement(e.key) == "screen" then
+        m:Divider()
+        m:Checkbox({ text = "Lock in place", tooltip = "Dragging it no longer moves it.",
+            get = function() local p = Positions()[e.key]; return p and p.locked or false end,
+            set = function(v)
+                local p = Positions()[e.key] or {}
+                p.locked = v or nil
+                Positions()[e.key] = p
+            end })
+        m:Button({ text = "Back to the middle of the screen", fn = function()
+            Positions()[e.key] = nil
+            UpdateFloat(e)
+        end })
     end
 end
 
@@ -747,12 +780,174 @@ local function BuildDrawer()
         -- Give a click's menu a moment to open, then put every button back where it lives.
         C_Timer.After(0.1, function()
             if drawer:IsShown() then return end
-            for _, e in ipairs(entries) do Unhost(e); Unpark(e) end
+            for _, e in ipairs(entries) do
+                if not (e.hosted and e.hosted.isFloat) then Unhost(e) end
+                Unpark(e)
+            end
         end)
     end)
 end
 
+-- ---------------------------------------------------------------------------
+-- Anywhere on screen: the launcher's own icon, dragged wherever you like
+-- ---------------------------------------------------------------------------
+
+local floats = {} -- key -> icon frame
+
+-- Puts an icon at its saved spot; one never moved starts near the middle of the screen, stepped
+-- so several don't land on top of each other.
+local function PlaceFloat(f, e)
+    local pos = Positions()[e.key]
+    f:ClearAllPoints()
+    if pos and pos.x then
+        f:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+    else
+        local n = 0
+        for key, other in pairs(floats) do
+            if key ~= e.key and other:IsShown() then n = n + 1 end
+        end
+        f:SetPoint("CENTER", UIParent, "CENTER", (n % 6) * 40 - 100, 120 - math.floor(n / 6) * 40)
+    end
+end
+
+-- Shift-right-click: its placement menu. Other clicks are the launcher's own (the hosted button
+-- takes them itself; a stand-in icon passes them on).
+local function FloatOnClick(self, button)
+    local e = self.entry
+    if button == "RightButton" and IsShiftKeyDown() then
+        GameTooltip:Hide()
+        local m = ns.Menu:New(self)
+        m:Title(e.name, e.icon)
+        L:PlacementMenu(e, m)
+        m:Divider()
+        m:Header("Drag to move it")
+        return m:Show(self)
+    end
+    if e.hosted ~= self then L:Click(e, self, button) end
+end
+
+local function FloatDragStart(f)
+    local pos = Positions()[f.entry.key]
+    if pos and pos.locked then return end
+    if f.entry.hosted ~= f then L:Leave(f.entry, f) end
+    GameTooltip:Hide()
+    f:SetAlpha(0.7)
+    f:StartMoving()
+end
+
+local function FloatDragStop(f)
+    f:SetAlpha(1)
+    f:StopMovingOrSizing()
+    local x, y = f:GetCenter()
+    local s = f:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    local pos = Positions()[f.entry.key] or {}
+    pos.x, pos.y = x * s, y * s
+    Positions()[f.entry.key] = pos
+    PlaceFloat(f, f.entry)
+    -- Letting go over the hosted button would count as a click on it: not this time.
+    local b = f.entry.hosted == f and f.entry.button
+    if b then
+        b:EnableMouse(false)
+        C_Timer.After(0, function() b:EnableMouse(true) end)
+    end
+end
+
+local function MakeFloat()
+    local f = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
+    f.isFloat = true
+    W.SetBackdrop(f)
+    SetHighlight(f, false)
+    f:SetFrameStrata("MEDIUM")
+    f:SetFrameLevel(20)
+    f:SetClampedToScreen(true)
+    f:SetMovable(true)
+    f:RegisterForClicks("LeftButtonUp", "RightButtonUp", "MiddleButtonUp")
+    f:RegisterForDrag("LeftButton")
+    f.icon = f:CreateTexture(nil, "ARTWORK")
+    f.icon:SetPoint("TOPLEFT", 3, -3); f.icon:SetPoint("BOTTOMRIGHT", -3, 3)
+    f.SetHighlight = SetHighlight
+    f:SetScript("OnEnter", function(self)
+        SetHighlight(self, true)
+        if self.entry.hosted ~= self then L:Enter(self.entry, self) end
+    end)
+    f:SetScript("OnLeave", function(self)
+        SetHighlight(self, false)
+        if self.entry.hosted ~= self then L:Leave(self.entry, self) end
+    end)
+    f:SetScript("OnClick", FloatOnClick)
+    f:SetScript("OnDragStart", FloatDragStart)
+    f:SetScript("OnDragStop", FloatDragStop)
+    -- Over a hosted button, takes the mouse only while Shift is held: Shift-right-click for the menu,
+    -- Shift-drag to move it (a plain drag moves it too, through the button).
+    f.shield = CreateFrame("Button", nil, f)
+    f.shield:SetAllPoints()
+    f.shield:SetFrameLevel(f:GetFrameLevel() + 10)
+    f.shield:RegisterForClicks("RightButtonUp")
+    f.shield:RegisterForDrag("LeftButton")
+    f.shield:EnableMouse(false)
+    f.shield:SetScript("OnClick", function(_, button) FloatOnClick(f, button) end)
+    f.shield:SetScript("OnDragStart", function() FloatDragStart(f) end)
+    f.shield:SetScript("OnDragStop", function() FloatDragStop(f) end)
+    f.shield:SetScript("OnEnter", function() SetHighlight(f, true) end)
+    f.shield:SetScript("OnLeave", function() SetHighlight(f, false) end)
+    return f
+end
+
+-- Puts the real button in the on-screen spot (as a drawer tile does), dragging the spot when you
+-- drag the button; or, with no button to host, shows a copy of its icon.
+local function HostFloat(f)
+    local e = f.entry
+    if CanHost(e) and (e.hosted == f or not InCombatLockdown()) then
+        if e.hosted and e.hosted ~= f then Unhost(e) end
+        Host(e, f, f:GetWidth())
+        local b = e.button
+        b:RegisterForDrag("LeftButton")
+        b:SetScript("OnDragStart", function() FloatDragStart(f) end)
+        b:SetScript("OnDragStop", function() FloatDragStop(f) end)
+        f.icon:Hide()
+    else
+        if e.hosted == f then Unhost(e) end
+        L:ApplyIcon(f.icon, e)
+        f.icon:Show()
+    end
+    f.shield:EnableMouse(IsShiftKeyDown() and e.hosted == f)
+end
+
+ns:On("MODIFIER_STATE_CHANGED", function()
+    local shift = IsShiftKeyDown()
+    for _, f in pairs(floats) do
+        if f:IsShown() and f.entry then f.shield:EnableMouse(shift and f.entry.hosted == f) end
+    end
+end)
+
+-- Shows the launcher's spot when it's placed anywhere on screen, and hides it otherwise.
+UpdateFloat = function(e)
+    local f = floats[e.key]
+    if L:Placement(e.key) ~= "screen" then
+        if f then
+            if e.hosted == f then Unhost(e) end
+            f:Hide()
+        end
+        return
+    end
+    if not f then
+        f = MakeFloat()
+        floats[e.key] = f
+    end
+    f.entry = e
+    local size = math.floor(ns.Clamp(ns.db.options.launcherSize, 20, 48))
+    f:SetSize(size, size)
+    PlaceFloat(f, e)
+    f:Show()
+    HostFloat(f)
+end
+
 function L:Refresh()
+    -- The on-screen spots: a button its add-on moved or hid comes back (or gives way to a copy of
+    -- its icon), and copied icons follow changes (LDB updates).
+    for _, f in pairs(floats) do
+        if f:IsShown() and f.entry then HostFloat(f) end
+    end
     if not drawer or not drawer:IsShown() then
         local p = PK.plugins.Launchers
         if p then p:Refresh() end
@@ -801,12 +996,14 @@ function L:Refresh()
     local width = math.max(220, gridW + 16)
     drawer.grid:SetSize(gridW, rows * (size + gap))
     drawer.empty:SetShown(#list == 0)
-    local hidden, pinned, minimap = 0, 0, 0
+    local hidden, pinned, minimap, screen = 0, 0, 0, 0
     for _, e in ipairs(entries) do
         local pl = L:Placement(e.key)
-        if pl == "hidden" then hidden = hidden + 1 elseif pl == "bar" then pinned = pinned + 1 elseif pl == "minimap" then minimap = minimap + 1 end
+        if pl == "hidden" then hidden = hidden + 1 elseif pl == "bar" then pinned = pinned + 1
+        elseif pl == "minimap" then minimap = minimap + 1 elseif pl == "screen" then screen = screen + 1 end
     end
-    drawer.footer:SetText(("Shift-right-click a tile to move it · %d pinned · %d on minimap · %d hidden"):format(pinned, minimap, hidden))
+    drawer.footer:SetText(("Shift-right-click a tile to move it · %d pinned · %d on minimap · %d on screen · %d hidden")
+        :format(pinned, minimap, screen, hidden))
     width = math.max(width, drawer.footer:GetStringWidth() + 20)
     local height = 32 + (#list == 0 and 40 or rows * (size + gap)) + 24
     drawer:SetSize(width, height)
@@ -819,8 +1016,8 @@ function L:ToggleDrawer(owner)
     if drawer:IsShown() then return drawer:Hide() end
     ns.Menu:Close()
     drawer.owner = owner
-    drawer:ClearAllPoints()
-    ns.Tooltip.Place(drawer, owner)
+    -- Latched to the Launchers plugin like SimplePanel's other panels, and kept clear of them.
+    ns.Panels:Attach(drawer, owner)
     drawer:Show()
     self:Refresh()
 end
@@ -851,13 +1048,15 @@ PK:Register({
     onClick = function(p, button, b) L:ToggleDrawer(b) end,
     tooltip = function(p, tt)
         tt:AddDouble("In the drawer", tostring(Counts()))
-        local pinned, minimap, hidden = 0, 0, 0
+        local pinned, minimap, screen, hidden = 0, 0, 0, 0
         for _, e in ipairs(entries) do
             local pl = L:Placement(e.key)
-            if pl == "bar" then pinned = pinned + 1 elseif pl == "minimap" then minimap = minimap + 1 elseif pl == "hidden" then hidden = hidden + 1 end
+            if pl == "bar" then pinned = pinned + 1 elseif pl == "minimap" then minimap = minimap + 1
+            elseif pl == "screen" then screen = screen + 1 elseif pl == "hidden" then hidden = hidden + 1 end
         end
         tt:AddDouble("Pinned to the bar", tostring(pinned))
         tt:AddDouble("Left on the minimap", tostring(minimap))
+        tt:AddDouble("Anywhere on screen", tostring(screen))
         tt:AddDouble("Hidden", tostring(hidden))
         tt:AddDivider()
         tt:AddHint("Click: open the drawer")

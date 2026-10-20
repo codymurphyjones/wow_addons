@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- The Cart tab on the auction house (added through AHTabs.lua, next to the Buying tab). Find items
 -- swaps the list for the live search panel (AuctionSearch.lua), and search entries are edited there.
@@ -13,6 +14,20 @@ local COOL_GREEN = { 0.35, 0.95, 0.55 }
 local SEARCH_ICON = "Interface\\Icons\\INV_Misc_Spyglass_03"
 
 local panel
+
+-- What the list shows: everything still to buy, and what's done unless it was finished more than
+-- RECENT seconds ago ("recent"); only what's still to buy ("buy"); or everything ("all").
+local RECENT = 15 * 60
+local VIEWS = {
+    { "recent", "Hide old done", "Finished items stay for 15 minutes, then drop off the list." },
+    { "buy", "Still to buy", "Only what's left to buy." },
+    { "all", "Everything", "Every item on the list, finished or not." },
+}
+local function View()
+    local v = ns.char.cart.view
+    for _, o in ipairs(VIEWS) do if o[1] == v then return o end end
+    return VIEWS[1]
+end
 
 local STATUS_COLOR = {
     done = "|cff59f28c", scanning = "|cffffd24d", ["none listed"] = "|cffd9736b",
@@ -35,7 +50,7 @@ local function BuildPanel(parent)
 
     local logo = panel:CreateTexture(nil, "ARTWORK"); logo:SetSize(26, 26)
     logo:SetPoint("TOPLEFT", 10, -9); logo:SetTexture(ns.ICON)
-    Label(panel, "Cart", "GameFontNormalLarge", 42, -14):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Label(panel, "Cart", "QuartermasterGameFontNormalLarge", 42, -14):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
 
     -- What to buy: an ordinary shopping list, or prebuilt lists restocked to their targets.
     local modeList = MakeButton(panel, "Shopping list", 92, 24); modeList:SetPoint("TOPLEFT", 100, -10)
@@ -84,7 +99,7 @@ local function BuildPanel(parent)
     ticks:SetPoint("LEFT", modePre, "RIGHT", 10, 0)
     Hint(ticks, "Prebuilt lists to restock", "Tick as many as you like. Items on more than one list add their targets together.")
     panel.ticks = ticks
-    panel.summary = Muted(Label(panel, "", "GameFontHighlightSmall", 0, -16, 250))
+    panel.summary = Muted(Label(panel, "", "QuartermasterGameFontHighlightSmall", 0, -16, 250))
     panel.summary:ClearAllPoints(); panel.summary:SetPoint("LEFT", ticks, "RIGHT", 10, 0)
 
     local open = MakeButton(panel, "Edit lists", 80, 24); open:SetPoint("TOPRIGHT", -10, -10)
@@ -96,12 +111,31 @@ local function BuildPanel(parent)
     Hint(find, "Find items", "Search the live auction house without leaving the Cart: add what you find to the list you're buying (or the whole search as one entry), or buy it right away.")
     panel.find = find
 
+    -- What the list shows (VIEWS), at the right above it.
+    local view = W.MakeDropdown(panel, 170, function()
+        local opts = {}
+        for _, o in ipairs(VIEWS) do opts[#opts + 1] = { o[1], o[2] } end
+        return opts
+    end, function(value)
+        ns.char.cart.view = value
+        CartTab:Refresh()
+    end)
+    view:SetPoint("TOPRIGHT", -12, -38)
+    view:HookScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine("Show", ACCENT[1], ACCENT[2], ACCENT[3])
+        for _, o in ipairs(VIEWS) do GameTooltip:AddLine(o[2] .. ": " .. o[3], 0.8, 0.85, 0.9, true) end
+        GameTooltip:Show()
+    end)
+    view:HookScript("OnLeave", function() GameTooltip:Hide() end)
+    panel.view = view
+
     -- Expected (market price on arrival) against what the auction house asks right now.
-    panel.compare = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    panel.compare:SetPoint("TOPLEFT", 12, -44); panel.compare:SetPoint("TOPRIGHT", -12, -44)
+    panel.compare = panel:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
+    panel.compare:SetPoint("TOPLEFT", 12, -44); panel.compare:SetPoint("RIGHT", view, "LEFT", -8, 0)
     panel.compare:SetJustifyH("LEFT"); panel.compare:SetWordWrap(false)
     local holder = CreateFrame("Frame", nil, panel)
-    holder:SetPoint("TOPLEFT", 10, -62); holder:SetPoint("BOTTOMRIGHT", -6, 52)
+    holder:SetPoint("TOPLEFT", 10, -68); holder:SetPoint("BOTTOMRIGHT", -6, 52)
     panel.list = W.CreateRowList(holder, 0, { rowHeight = 34 })
     panel.list.onDrop = function() W.AddCursorItem() end
     panel.holder = holder
@@ -109,7 +143,7 @@ local function BuildPanel(parent)
     -- Footer: one big button that always says what the next click does.
     local buy = MakeButton(panel, "Start buying", 360, 34)
     buy:SetPoint("BOTTOMLEFT", 10, 10)
-    buy.text:SetFontObject("GameFontHighlight")
+    buy.text:SetFontObject("QuartermasterGameFontHighlight")
     buy.fill = buy:CreateTexture(nil, "BACKGROUND", nil, 1)
     buy.fill:SetPoint("TOPLEFT", 1, -1); buy.fill:SetPoint("BOTTOMRIGHT", -1, 1)
     buy.fill:SetColorTexture(1, 1, 1, 1); buy.fill:SetVertexColor(0, 0, 0, 0)
@@ -143,12 +177,12 @@ local function BuildPanel(parent)
     reset:HookScript("OnLeave", function() GameTooltip:Hide() end)
     panel.reset = reset
 
-    panel.money = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.money = panel:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     panel.money:SetPoint("BOTTOMRIGHT", -12, 22); panel.money:SetJustifyH("RIGHT")
-    panel.spent = Muted(panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    panel.spent = Muted(panel:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     panel.spent:SetPoint("TOPRIGHT", panel.money, "BOTTOMRIGHT", 0, -3); panel.spent:SetJustifyH("RIGHT")
     -- Background full scan (FullScan.lua): progress, paused, or up to date.
-    panel.scan = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.scan = panel:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     panel.scan:SetPoint("BOTTOMRIGHT", panel.money, "TOPRIGHT", 0, 3); panel.scan:SetJustifyH("RIGHT")
 
     -- Find items: the live search panel in place of the list. Adds go to the active list.
@@ -157,7 +191,7 @@ local function BuildPanel(parent)
     findView:Hide()
     findView.onEndEdit = function() CartTab:SetFind(false) end
     panel.findView = findView
-    panel.cartParts = { panel.compare, holder, buy, stop, reset, panel.money, panel.spent, panel.scan }
+    panel.cartParts = { panel.compare, view, holder, buy, stop, reset, panel.money, panel.spent, panel.scan }
 
     -- The button's enabled state depends on the AH throttle, which has no event; poll it lightly.
     local elapsed = 0
@@ -204,7 +238,7 @@ function CartTab:UpdateButton()
         b:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 1)
     else
         b.fill:SetVertexColor(0, 0, 0, 0)
-        b:SetBackdropBorderColor(0.16, 0.24, 0.29, 1)
+        b:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1)
     end
     panel.stop:SetEnabled(ns.Buyer:Running()); panel.stop:SetAlpha(ns.Buyer:Running() and 1 or 0.4)
 end
@@ -264,16 +298,18 @@ end
 
 local function EntryRow(entry, current, prebuilt)
     if entry.filter then return SearchRow(entry, current) end
-    local market = ns.Catalog:PriceFor(entry.itemID)
+    -- Its own variant's price: an enchanted copy Auctionator can't price shows the price it was seen at.
+    local market, seen = ns.Lists:Price(entry)
+    local label = seen and "seen at" or "market"
     local e = ns.Catalog:Get(entry.itemID)
     local remaining = ns.Lists:Remaining(entry)
     local detail
     if prebuilt then
         detail = ("have %d / target %d (%s)"):format(entry.have, entry.target, ns.Stock:Describe(entry.itemID))
         if entry.qty > 0 then detail = detail .. ("  ·  buying %d/%d"):format(entry.bought or 0, entry.qty) end
-        detail = detail .. "  ·  market " .. W.Money(market)
+        detail = detail .. "  ·  " .. label .. " " .. W.Money(market)
     else
-        detail = ("%d/%d bought  ·  market %s"):format(entry.bought or 0, entry.qty, W.Money(market))
+        detail = ("%d/%d bought  ·  %s %s"):format(entry.bought or 0, entry.qty, label, W.Money(market))
     end
     if market and remaining > 0 then
         detail = detail .. ("  ·  pays up to %s"):format(ns.Compat.Money(market * (1 + ns.Lists:Tolerance(entry) / 100)))
@@ -310,17 +346,41 @@ function CartTab:Refresh()
 
     local list = ns.Buyer:List()
     local current = ns.Buyer.entry
-    local items = {}
-    for _, entry in ipairs(list.entries) do items[#items + 1] = EntryRow(entry, current, prebuilt) end
+    -- The entries to show, by the view: what's still to buy first (in list order), then what's
+    -- done, the most recently finished first. The one being bought always shows.
+    local view, now = View()[1], time()
+    local open, done, hidden = {}, {}, 0
+    local function Take(entry, isPrebuilt)
+        -- A prebuilt item already stocked (nothing to buy) counts as done long ago: its run is
+        -- rebuilt on every recount, so a time on it wouldn't last.
+        local at = (isPrebuilt and entry.qty == 0) and 0 or ns.Lists:DoneAt(entry)
+        if not at then
+            open[#open + 1] = { entry, isPrebuilt }
+        elseif entry == current or view == "all" or (view == "recent" and now - at < RECENT) then
+            done[#done + 1] = { entry, isPrebuilt, at }
+        else
+            hidden = hidden + 1
+        end
+    end
+    for _, entry in ipairs(list.entries) do Take(entry, prebuilt) end
     if prebuilt then
-        for _, entry in ipairs(list.covered or {}) do items[#items + 1] = EntryRow(entry, current, true) end
+        for _, entry in ipairs(list.covered or {}) do Take(entry, true) end
+    end
+    table.sort(done, function(a, b) return a[3] > b[3] end)
+    local items = {}
+    for _, o in ipairs(open) do items[#items + 1] = EntryRow(o[1], current, o[2]) end
+    for _, o in ipairs(done) do items[#items + 1] = EntryRow(o[1], current, o[2]) end
+    panel.view:SetValue(view, View()[2] .. (hidden > 0 and (" |cff8fa3b3(" .. hidden .. " hidden)|r") or ""))
+    local allHidden = #items == 0 and hidden > 0
+        and ("Everything here is bought (%d finished %s hidden). Show them: Everything, above."):format(hidden, hidden == 1 and "item" or "items")
+    if prebuilt then
         panel.ticks:SetLabel(TickedNames())
-        panel.list:Set(items, #ns.Prebuilt:TickedIDs() == 0
+        panel.list:Set(items, allHidden or (#ns.Prebuilt:TickedIDs() == 0
             and "Tick one or more prebuilt lists above, like Raid Night."
-            or "Those prebuilt lists are empty. Add items in Quartermaster (/qm prebuilt).")
+            or "Those prebuilt lists are empty. Add items in Quartermaster (/qm prebuilt)."))
     else
         panel.picker:SetValue(ns.char.activeList, list.name)
-        panel.list:Set(items, "This list is empty. Open Quartermaster (/qm) to add items.")
+        panel.list:Set(items, allHidden or "This list is empty. Open Quartermaster (/qm) to add items.")
     end
 
     local total, unknown = ns.Lists:Estimate(list)

@@ -477,19 +477,19 @@ local function InitLeftRow(row, d)
         row.portrait:SetPoint("CENTER", row.ring)
         row.ringArrow = Arrow(row, 15)
         row.ringArrow:SetPoint("BOTTOMRIGHT", row.ring, "BOTTOMRIGHT", 3, -1)
-        row.title = row:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        row.title = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormalLarge")
         row.title:SetPoint("LEFT", row.ring, "RIGHT", 12, 6)
         row.title:SetPoint("RIGHT", -12, 0)
         row.title:SetJustifyH("LEFT")
-        row.sub = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.sub = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
         row.sub:SetPoint("TOPLEFT", row.title, "BOTTOMLEFT", 0, -3)
 
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(20, 20)
         row.icon:SetPoint("LEFT", 34, 0)
-        row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        row.label = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlight")
         row.label:SetPoint("LEFT", row.icon, "RIGHT", 8, 0)
-        row.count = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        row.count = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisableSmall")
         row.count:SetPoint("RIGHT", -12, 0)
         row.subArrow = Arrow(row, 12)
         row.subArrow:SetPoint("RIGHT", row.count, "LEFT", -4, 0)
@@ -556,9 +556,9 @@ local function MakeSlotButton(parent, size)
     b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
     b.arrow = Arrow(b, 14)
     b.arrow:SetPoint("BOTTOMRIGHT", 4, -4)
-    b.count = b:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    b.count = b:CreateFontString(nil, "OVERLAY", "SpyglassNumberFontNormal")
     b.count:SetPoint("TOPRIGHT", -2, -2)
-    b.label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.label = b:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
     return b
 end
@@ -609,16 +609,16 @@ local function BuildDoll(parent)
     doll.name = J.TitleText(doll, 22)
     doll.name:SetPoint("TOP", doll.crest, "BOTTOM", 0, -8)
     doll.name:SetTextColor(0.95, 0.88, 0.72)
-    doll.info = doll:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    doll.info = doll:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlight")
     doll.info:SetPoint("TOP", doll.name, "BOTTOM", 0, -6)
     doll.info:SetWidth(220)
-    doll.hint = doll:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    doll.hint = doll:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisableSmall")
     doll.hint:SetPoint("TOP", doll.info, "BOTTOM", 0, -10)
     doll.hint:SetWidth(220)
     doll.hint:SetText("Click a slot to see what you can make for it, the most useful for you first.")
 
     -- Everything else, under the slots.
-    doll.otherTitle = doll:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    doll.otherTitle = doll:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormal")
     doll.otherTitle:SetPoint("TOPLEFT", 30, -10 - 7 * STEP - 22)
     doll.otherTitle:SetText("Other")
     doll.others = {}
@@ -686,10 +686,10 @@ local function BuildTypes(parent)
     grid.name = J.TitleText(grid, 22)
     grid.name:SetPoint("TOP", grid.crest, "BOTTOM", 0, -8)
     grid.name:SetTextColor(0.95, 0.88, 0.72)
-    grid.info = grid:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    grid.info = grid:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlight")
     grid.info:SetPoint("TOP", grid.name, "BOTTOM", 0, -6)
     grid.info:SetWidth(200)
-    grid.hint = grid:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    grid.hint = grid:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisableSmall")
     grid.hint:SetPoint("TOP", grid.info, "BOTTOM", 0, -10)
     grid.hint:SetWidth(200)
     grid:Hide()
@@ -934,8 +934,17 @@ end
 -- The recipe to select once its window opens: { prof, name, spellID, time }.
 local pending
 
+-- SimplePanel's own professions window, when it holds the open profession (the game's window is
+-- kept open there, out of sight): recipes are selected there instead.
+local function SimplePanelWindow()
+    local api = SimplePanelProfessions
+    return api and api.IsCrafting and api.IsCrafting() and api or nil
+end
+
 -- The newer window's selected recipe ID (what Quartermaster reads too).
 local function SelectedRecipe()
+    local sp = SimplePanelWindow()
+    if sp then return sp.GetSelectedRecipeID() end
     local page = ProfessionsFrame and ProfessionsFrame.CraftingPage
     local form = page and page.SchematicForm
     if form and form.GetRecipeInfo then
@@ -945,6 +954,8 @@ local function SelectedRecipe()
 end
 
 local function SelectRecipe(id)
+    local sp = SimplePanelWindow()
+    if sp then return sp.SelectRecipe(id) end
     local api = C_TradeSkillUI
     local page = ProfessionsFrame and ProfessionsFrame.CraftingPage
     local list = page and page.RecipeList
@@ -1039,13 +1050,19 @@ local function Navigate()
 end
 
 -- Opening a profession window takes a secure button (it casts the profession):
--- one, laid over the row the mouse is on. Out of combat only.
+-- one, laid over the row the mouse is on. Out of combat only. It sits just
+-- above its row (the row's strata and level), so a window opened over the
+-- journal covers it too: a click there is that window's, never a cast. Combat
+-- would lock it in place, so it goes as combat starts.
 local opener
 
 local function Opener()
     if opener then return opener end
     opener = CreateFrame("Button", "SpyGlassCraftOpener", UIParent, "SecureActionButtonTemplate")
     opener:RegisterForClicks("AnyUp", "AnyDown")
+    -- PLAYER_REGEN_DISABLED comes just before the lockdown, while it can still be hidden.
+    opener:RegisterEvent("PLAYER_REGEN_DISABLED")
+    opener:SetScript("OnEvent", function(self) self:Hide() end)
     opener:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
     -- Modified clicks (links, previews) are the row's, not a cast.
     for _, mod in ipairs({ "shift-", "ctrl-", "alt-" }) do opener:SetAttribute(mod .. "type1", "none") end
@@ -1103,7 +1120,8 @@ local function Attach(row, prof, recipe, spellID)
     o:ClearAllPoints()
     o:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left * scale, bottom * scale)
     o:SetSize(width * scale, height * scale)
-    o:SetFrameStrata("FULLSCREEN_DIALOG")
+    o:SetFrameStrata(row:GetFrameStrata())
+    o:SetFrameLevel(row:GetFrameLevel() + 5)
     o:Show()
     Trace("button over " .. tostring(recipe) .. " (" .. (o:GetAttribute("type1") or "?") .. ")")
 end
@@ -1202,16 +1220,16 @@ local function InitEnchantRow(row, d)
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(36, 36)
         row.icon:SetPoint("LEFT", 4, 0)
-        row.score = row:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        row.score = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormalLarge")
         row.score:SetPoint("TOPRIGHT", -8, -5)
-        row.note = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.note = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
         row.note:SetPoint("BOTTOMRIGHT", -8, 5)
-        row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        row.name = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormal")
         row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 8, -2)
         row.name:SetPoint("RIGHT", -110, 0)
         row.name:SetJustifyH("LEFT")
         row.name:SetWordWrap(false)
-        row.detail = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.detail = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
         row.detail:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 8, 2)
         row.detail:SetPoint("RIGHT", -110, 0)
         row.detail:SetJustifyH("LEFT")
@@ -1353,12 +1371,12 @@ local function BuildSkillBanner(parent)
     b.icon = b:CreateTexture(nil, "ARTWORK")
     b.icon:SetSize(32, 32)
     b.icon:SetPoint("LEFT", 6, 0)
-    b.title = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    b.title = b:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormal")
     b.title:SetPoint("TOPLEFT", b.icon, "TOPRIGHT", 8, -1)
     b.title:SetPoint("RIGHT", -8, 0)
     b.title:SetJustifyH("LEFT")
     b.title:SetWordWrap(false)
-    b.sub = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.sub = b:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     b.sub:SetPoint("BOTTOMLEFT", b.icon, "BOTTOMRIGHT", 8, 1)
     b.sub:SetPoint("RIGHT", -8, 0)
     b.sub:SetJustifyH("LEFT")
@@ -1440,7 +1458,7 @@ local GUIDE_ROWS = 3
 local function BuildGuide(parent)
     local g = CreateFrame("Frame", nil, parent)
     g:SetSize(230, 20 + GUIDE_ROWS * 32)
-    g.title = g:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    g.title = g:CreateFontString(nil, "OVERLAY", "SpyglassGameFontNormal")
     g.title:SetPoint("TOP", 0, 0)
     g.title:SetWidth(230)
     g.rows = {}
@@ -1452,12 +1470,12 @@ local function BuildGuide(parent)
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(28, 28)
         row.icon:SetPoint("LEFT", 2, 0)
-        row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.name = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
         row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 6, -2)
         row.name:SetPoint("RIGHT", -2, 0)
         row.name:SetJustifyH("LEFT")
         row.name:SetWordWrap(false)
-        row.sub = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        row.sub = row:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisableSmall")
         row.sub:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 6, 2)
         row.sub:SetPoint("RIGHT", -2, 0)
         row.sub:SetJustifyH("LEFT")
@@ -1570,7 +1588,7 @@ function P:Build(parent)
     page.title = J.TitleText(right, 20)
     page.title:SetPoint("TOPLEFT", 6, -12)
     page.title:SetTextColor(0.95, 0.88, 0.72)
-    page.subtitle = right:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    page.subtitle = right:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     page.subtitle:SetPoint("TOPLEFT", page.title, "BOTTOMLEFT", 0, -3)
     page.subtitle:SetPoint("RIGHT", right, "RIGHT", -10, 0)
     page.subtitle:SetJustifyH("LEFT")
@@ -1581,7 +1599,7 @@ function P:Build(parent)
         local box = CreateFrame("CheckButton", nil, right, "UICheckButtonTemplate")
         box:SetSize(24, 24)
         box:SetPoint("TOPRIGHT", x, -8)
-        local text = box:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        local text = box:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
         text:SetPoint("LEFT", box, "RIGHT", 1, 1)
         text:SetText(label)
         box:SetScript("OnShow", function(self) self:SetChecked(J.db and J.db[key] or false) end)
@@ -1604,9 +1622,9 @@ function P:Build(parent)
     page.enchants = J.MakeList(right, ns.Instance.ITEM_H, InitEnchantRow)
     page.enchants:SetPoint("TOPLEFT", 0, -52)
     page.enchants:SetPoint("BOTTOMRIGHT", -20, 22)
-    page.status = right:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    page.status = right:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisableSmall")
     page.status:SetPoint("BOTTOMLEFT", 8, 4)
-    page.empty = right:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    page.empty = right:CreateFontString(nil, "OVERLAY", "SpyglassGameFontDisable")
     page.empty:SetPoint("CENTER")
     page.empty:SetWidth(360)
     return page

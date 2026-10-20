@@ -7,8 +7,8 @@ local API = {}
 SpyGlass = API
 API.API_VERSION = 1
 
--- Loads AtlasLoot's dungeon and raid data, then calls onReady. Returns
--- false and a reason when it can't.
+-- Makes sure the dungeon and raid loot is ready, then calls onReady (it's
+-- shipped with SpyGlass, so that's right away). Returns true.
 function API:Load(onReady)
     return ns.AtlasData:Load(onReady)
 end
@@ -175,6 +175,46 @@ end
 --       minLevel = 5, maxLevel = 12, bosses = { { name = "Hammerspine", items = { 763 }, rare = true } } } })
 function API:AddWorldInstances(list)
     ns.AtlasData:AddWorld(list)
+end
+
+---------------------------------------------------------------------------
+-- The gear list in another addon's window (SimplePanel's character sheet)
+---------------------------------------------------------------------------
+
+API.EMBED_API = 1
+
+-- Whether the gear list is wanted at all (Settings: the Character window tab).
+function API:IsGearListWanted()
+    return not ns.db.hideCharTab
+end
+
+-- Shows the gear list inside host, filling it. onChange() runs when the slot filter or the slot
+-- grades change: redraw your slot buttons from GearListSlotInfo. Returns true, or false and why.
+-- Opening SpyGlass's tab on the game's Character window takes the list back.
+function API:EmbedGearList(host, onChange)
+    return ns.CharPanel:Embed(host, onChange)
+end
+
+-- Hands the list back (call it when your window or its page closes).
+function API:ReleaseGearList()
+    ns.CharPanel:Release()
+end
+
+-- The frame the list is embedded in now, or nil (it went back to the Character window).
+function API:GearListHost()
+    return ns.CharPanel:Host()
+end
+
+-- For your slot button showing inventory slot slotID: { group, label, selected, grade
+-- ("green" | "yellow" | "red" | nil), text (the grade explained), color = { r, g, b } }, or nil
+-- for slots the list doesn't filter by.
+function API:GearListSlotInfo(slotID)
+    return ns.CharPanel:SlotInfo(slotID)
+end
+
+-- A click on your slot button: filter the list to that slot (again: back to all slots).
+function API:GearListClickSlot(slotID)
+    ns.CharPanel:ClickSlot(slotID)
 end
 
 -- "Contribute data" (Contribute.lua) only reports what SpyGlass doesn't know.

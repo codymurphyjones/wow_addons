@@ -8,8 +8,8 @@ local MakeEditBox, MakeNumberBox = W.MakeEditBox, W.MakeNumberBox
 local function Build(p)
     local selected
 
-    Label(p, "Lists", "GameFontNormalLarge", 0, 0)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, -24, 620))
+    Label(p, "Lists", "QuartermasterGameFontNormalLarge", 0, 0)
+    p.summary = Muted(Label(p, "", "QuartermasterGameFontHighlightSmall", 0, -24, 620))
 
     local picker = W.MakeDropdown(p, 170, function()
         local opts = {}
@@ -53,12 +53,12 @@ local function Build(p)
     -- Bottom bar: edit the selected entry; list-wide actions on the right.
     local bar = CreateFrame("Frame", nil, p)
     bar:SetPoint("BOTTOMLEFT", 0, 0); bar:SetPoint("BOTTOMRIGHT", 0, 0); bar:SetHeight(32)
-    local selText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local selText = bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     selText:SetPoint("LEFT", 0, 0); selText:SetWidth(170); selText:SetJustifyH("LEFT"); selText:SetWordWrap(false)
-    local qtyLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    local qtyLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     qtyLabel:SetPoint("LEFT", selText, "RIGHT", 6, 0); qtyLabel:SetText("Qty")
     local qty = MakeNumberBox(bar, 46); qty:SetPoint("LEFT", qtyLabel, "RIGHT", 4, 0)
-    local tolLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"))
+    local tolLabel = Muted(bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall"))
     tolLabel:SetPoint("LEFT", qty, "RIGHT", 10, 0); tolLabel:SetText("Tolerance %")
     local tol = MakeNumberBox(bar, 46); tol:SetPoint("LEFT", tolLabel, "RIGHT", 4, 0)
     Hint(tol, "Tolerance for this item", "How far over market this item may go. Leave empty to use the default from Settings.")
@@ -94,7 +94,8 @@ local function Build(p)
         for _, entry in ipairs(active.entries) do
             local f = entry.filter
             local e = not f and ns.Catalog:Get(entry.itemID)
-            local market = f and f.maxPrice or ns.Catalog:PriceFor(entry.itemID)
+            local market, seen
+            if f then market = f.maxPrice else market, seen = ns.Lists:Price(entry) end
             local tolerance = ns.Lists:Tolerance(entry)
             local remaining = ns.Lists:Remaining(entry)
             local detail
@@ -103,7 +104,7 @@ local function Build(p)
                     .. (f.maxPrice and ("max %s each"):format(ns.Compat.Money(f.maxPrice))
                         or ("max market +%d%%%s per item"):format(tolerance, entry.tolerance and ", custom" or ""))
             else
-                detail = ("%d/%d bought  ·  market %s"):format(entry.bought or 0, entry.qty, W.Money(market))
+                detail = ("%d/%d bought  ·  %s %s"):format(entry.bought or 0, entry.qty, seen and "seen at" or "market", W.Money(market))
                 if market then detail = detail .. ("  ·  max %s (+%d%%%s)"):format(ns.Compat.Money(market * (1 + tolerance / 100)),
                     tolerance, entry.tolerance and ", custom" or "") end
             end

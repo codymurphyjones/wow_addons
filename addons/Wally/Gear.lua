@@ -143,6 +143,13 @@ local function Evaluate(link)
         if better then return true, detail end
         lastDetail = detail
     end
+    -- The rules above say no. With Tape Measure installed, its verdict by your StatLedger stats gets a
+    -- say too (it can judge two pieces that both carry stats). It can only keep an item, never sell one.
+    if TapeMeasureAPI and TapeMeasureAPI.IsUpgrade then
+        local ok, better, detail = pcall(TapeMeasureAPI.IsUpgrade, link)
+        if ok and better then return true, "Tape Measure: " .. (detail or "upgrade") end
+        if ok and better == nil then return nil, "loading" end
+    end
     return false, lastDetail
 end
 
@@ -207,3 +214,7 @@ ns:On("PLAYER_EQUIPMENT_CHANGED", Invalidate)
 ns:On("SKILL_LINES_CHANGED", Invalidate)
 ns:On("PLAYER_LEVEL_UP", Invalidate)
 ns:On("SPELLS_CHANGED", Invalidate)
+-- A new stat priority changes Tape Measure's verdicts.
+ns:On("PLAYER_LOGIN", function()
+    if StatLedger and StatLedger.RegisterCallback then StatLedger:RegisterCallback("Wally", Invalidate) end
+end)

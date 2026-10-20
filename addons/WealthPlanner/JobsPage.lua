@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 local C = ns.Compat
 
 -- The Jobs Board: every way to earn gold out in the world, posted as cards. Each card shows the pay
@@ -57,26 +58,26 @@ end
 local function NewCard(parent, onOpen)
     local c = CreateFrame("Button", nil, parent, "BackdropTemplate")
     c:SetSize(CARD_W, CARD_H)
-    W.SetBackdrop(c); c:SetBackdropColor(0.055, 0.08, 0.10, 1)
+    W.SetBackdrop(c); c:SetBackdropColor(PAL.row[1], PAL.row[2], PAL.row[3], 1)
     c.icon = c:CreateTexture(nil, "ARTWORK"); c.icon:SetSize(30, 30); c.icon:SetPoint("TOPLEFT", 8, -8)
     c.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    c.title = Label(c, "", "GameFontNormal", 44, -8, 150); c.title:SetWordWrap(false); c.title:SetTextColor(1, 1, 1)
-    c.where = Muted(Label(c, "", "GameFontHighlightSmall", 44, -24, 150)); c.where:SetWordWrap(false)
-    c.pay = Label(c, "", "GameFontNormalLarge", 0, -8, 90); c.pay:ClearAllPoints(); c.pay:SetPoint("TOPRIGHT", -8, -8)
+    c.title = Label(c, "", "WealthPlannerGameFontNormal", 44, -8, 150); c.title:SetWordWrap(false); c.title:SetTextColor(1, 1, 1)
+    c.where = Muted(Label(c, "", "WealthPlannerGameFontHighlightSmall", 44, -24, 150)); c.where:SetWordWrap(false)
+    c.pay = Label(c, "", "WealthPlannerGameFontNormalLarge", 0, -8, 90); c.pay:ClearAllPoints(); c.pay:SetPoint("TOPRIGHT", -8, -8)
     c.pay:SetJustifyH("RIGHT")
-    c.payKind = Muted(Label(c, "", "GameFontHighlightSmall", 0, 0, 90)); c.payKind:ClearAllPoints()
+    c.payKind = Muted(Label(c, "", "WealthPlannerGameFontHighlightSmall", 0, 0, 90)); c.payKind:ClearAllPoints()
     c.payKind:SetPoint("TOPRIGHT", -8, -28); c.payKind:SetJustifyH("RIGHT")
     -- Difficulty: five pips.
-    Muted(Label(c, "Difficulty", "GameFontHighlightSmall", 8, -46))
+    Muted(Label(c, "Difficulty", "WealthPlannerGameFontHighlightSmall", 8, -46))
     c.pips = {}
     for i = 1, 5 do
         local pip = c:CreateTexture(nil, "ARTWORK"); pip:SetSize(9, 9); pip:SetPoint("TOPLEFT", 64 + (i - 1) * 12, -47)
         c.pips[i] = pip
     end
-    c.danger = Label(c, "", "GameFontHighlightSmall", 130, -46, 146); c.danger:SetJustifyH("RIGHT")
-    c.req = Label(c, "", "GameFontHighlightSmall", 8, -62, CARD_W - 16); c.req:SetWordWrap(false)
-    c.outlook = Label(c, "", "GameFontHighlightSmall", 8, -78, CARD_W - 16); c.outlook:SetWordWrap(false)
-    c.market = Muted(Label(c, "", "GameFontHighlightSmall", 8, -94, CARD_W - 16)); c.market:SetWordWrap(false)
+    c.danger = Label(c, "", "WealthPlannerGameFontHighlightSmall", 130, -46, 146); c.danger:SetJustifyH("RIGHT")
+    c.req = Label(c, "", "WealthPlannerGameFontHighlightSmall", 8, -62, CARD_W - 16); c.req:SetWordWrap(false)
+    c.outlook = Label(c, "", "WealthPlannerGameFontHighlightSmall", 8, -78, CARD_W - 16); c.outlook:SetWordWrap(false)
+    c.market = Muted(Label(c, "", "WealthPlannerGameFontHighlightSmall", 8, -94, CARD_W - 16)); c.market:SetWordWrap(false)
     c.badges = {}
     c.take = MakeButton(c, "Take job", 70, 20); c.take:SetPoint("BOTTOMRIGHT", -6, 6)
     c.track = MakeButton(c, "Track", 50, 20); c.track:SetPoint("RIGHT", c.take, "LEFT", -4, 0)
@@ -86,7 +87,7 @@ local function NewCard(parent, onOpen)
     end)
     W.Hint(c.track, "Track", "Points the Waypoint addon's arrow at this job's nearest spot, then on to the next.")
     c:SetScript("OnEnter", function(self) self:SetBackdropColor(0.08, 0.14, 0.16, 1) end)
-    c:SetScript("OnLeave", function(self) self:SetBackdropColor(0.055, 0.08, 0.10, 1) end)
+    c:SetScript("OnLeave", function(self) self:SetBackdropColor(PAL.row[1], PAL.row[2], PAL.row[3], 1) end)
     c:SetScript("OnClick", function(self) if self.job then onOpen(self.job.key) end end)
     c.take:SetScript("OnClick", function(self)
         local j = self:GetParent().job
@@ -102,7 +103,7 @@ local function Badge(c, i)
         b = CreateFrame("Frame", nil, c, "BackdropTemplate")
         b:SetHeight(16)
         W.SetBackdrop(b)
-        b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); b.text:SetPoint("CENTER")
+        b.text = b:CreateFontString(nil, "OVERLAY", "WealthPlannerGameFontHighlightSmall"); b.text:SetPoint("CENTER")
         c.badges[i] = b
     end
     return b
@@ -140,7 +141,7 @@ local function FillCard(c, j)
     c.take.text:SetText(mine and "Quit job" or "Take job")
     c.track.text:SetText(ns.Nav:IsTracking(j.key) and "Untrack" or "Track")
     c.track:SetShown(j.kind ~= "craft" and ns.Nav:HasArrow())
-    if mine then c:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 1) else c:SetBackdropBorderColor(0.16, 0.24, 0.29, 1) end
+    if mine then c:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 1) else c:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1) end
     c:Show()
 end
 
@@ -152,7 +153,7 @@ UI:RegisterPage("jobs", function(p)
     -- Board
     local board = CreateFrame("Frame", nil, p)
     board:SetAllPoints()
-    p.summary = Muted(Label(board, "", "GameFontHighlightSmall", 0, 0, 586))
+    p.summary = Muted(Label(board, "", "WealthPlannerGameFontHighlightSmall", 0, 0, 586))
     p.kindButtons = {}
     for i, k in ipairs(ns.Jobs.KINDS) do
         local b = MakeButton(board, "", 26, 24); b:SetPoint("TOPLEFT", (i - 1) * 29, -22)
@@ -182,7 +183,7 @@ UI:RegisterPage("jobs", function(p)
     local content = CreateFrame("Frame", nil, scroll); content:SetSize(CARD_W * 2 + GAP, 1)
     scroll:SetScrollChild(content)
     p.cards = {}
-    p.empty = Muted(Label(board, "", "GameFontHighlight", 0, -140, 560)); p.empty:SetJustifyH("CENTER")
+    p.empty = Muted(Label(board, "", "WealthPlannerGameFontHighlight", 0, -140, 560)); p.empty:SetJustifyH("CENTER")
 
     -- Job detail
     local detail = CreateFrame("Frame", nil, p)
@@ -205,7 +206,7 @@ UI:RegisterPage("jobs", function(p)
     detail.track = MakeButton(detail, "Track", 70, 24); detail.track:SetPoint("RIGHT", detail.map, "LEFT", -6, 0)
     detail.track:SetScript("OnClick", function() ns.Nav:Track(ns.Nav:IsTracking(p.job) and nil or p.job) end)
     detail.card:EnableMouse(false)
-    detail.lines = Muted(Label(detail, "", "GameFontHighlightSmall", 0, -166, 586))
+    detail.lines = Muted(Label(detail, "", "WealthPlannerGameFontHighlightSmall", 0, -166, 586))
     detail.list = W.CreateRowList(detail, -200, { rowHeight = 30 })
 
     local function RefreshDetail()

@@ -146,7 +146,7 @@ local function CreateTimeline(page)
     end)
     W.Hint(cb, "Death window only", "Only the hits from the last time you were at 90% health or more.")
     page.check = cb
-    page.note = W.Label(page, "", "GameFontHighlightSmall", 0, -4)
+    page.note = W.Label(page, "", "BattleRecapGameFontHighlightSmall", 0, -4)
     page.note:ClearAllPoints(); page.note:SetPoint("TOPRIGHT", -28, -4)
     W.Muted(page.note)
     local holder = CreateFrame("Frame", nil, page)
@@ -872,8 +872,8 @@ local function DrawPanel(page, x, top, width, title, rows, empty, note)
         f.fill = f:CreateTexture(nil, "BORDER"); f.fill:SetPoint("TOPLEFT"); f.fill:SetPoint("BOTTOMLEFT")
         f.icon = f:CreateTexture(nil, "ARTWORK"); f.icon:SetSize(ROW_H - 4, ROW_H - 4); f.icon:SetPoint("LEFT", 2, 0)
         f.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        f.left = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); f.left:SetJustifyH("LEFT"); f.left:SetWordWrap(false)
-        f.right = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); f.right:SetPoint("RIGHT", -4, 0)
+        f.left = f:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall"); f.left:SetJustifyH("LEFT"); f.left:SetWordWrap(false)
+        f.right = f:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall"); f.right:SetPoint("RIGHT", -4, 0)
         f.left:SetPoint("RIGHT", f.right, "LEFT", -4, 0)
         f.edge = f:CreateTexture(nil, "OVERLAY"); f.edge:SetPoint("TOPLEFT"); f.edge:SetPoint("BOTTOMLEFT"); f.edge:SetWidth(2)
         f:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -939,7 +939,7 @@ BuildGraph = function(page)
         nLabels = nLabels + 1
         local fs = labels[nLabels]
         if not fs then
-            fs = canvas:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            fs = canvas:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall")
             labels[nLabels] = fs
         end
         fs:ClearAllPoints(); fs:SetPoint(justify or "TOP", canvas, "TOPLEFT", x, y)
@@ -1051,7 +1051,7 @@ local function CreateGraph(page)
     page.labels = {}
     page.graphBg = page.canvas:CreateTexture(nil, "BACKGROUND")
     page.graphBg:SetColorTexture(BG[1], BG[2], BG[3], BG[4])
-    page.summary = page.canvas:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    page.summary = page.canvas:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall")
     page.summary:SetJustifyH("LEFT"); page.summary:SetSpacing(2)
     page.windowCheck = W.MakeCheckbox(page.canvas, "Death window only")
     page.windowCheck:SetScript("OnClick", function(self)
@@ -1139,8 +1139,8 @@ local function Create()
     f.killerIcon = f:CreateTexture(nil, "ARTWORK")
     f.killerIcon:SetSize(36, 36); f.killerIcon:SetPoint("TOPLEFT", 10, -36)
     f.killerIcon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    f.head = W.Label(f, "", "GameFontNormal", 54, -38, WIDTH - 70)
-    f.stats = W.Label(f, "", "GameFontHighlightSmall", 54, -58, WIDTH - 70)
+    f.head = W.Label(f, "", "BattleRecapGameFontNormal", 54, -38, WIDTH - 70)
+    f.stats = W.Label(f, "", "BattleRecapGameFontHighlightSmall", 54, -58, WIDTH - 70)
 
     local x = 10
     for _, tab in ipairs(TABS) do

@@ -19,7 +19,30 @@ ns.DEFAULTS = {
     locked = false,  -- the arrow can't be dragged
     arrowHidden = false,
     flights = true,  -- lead to a flight master when flying is quicker
+    transports = true, -- also plan with boats, zeppelins and skyships (Route.lua)
+    useHearth = true,  -- ...your hearthstone
+    useTeleports = true, -- ...mage teleports (with a rune in your bags)
+    useGrid = true,    -- follow the land and water map (Grid.lua): around lakes and cliffs; off: straight lines
+    allowSwim = true,  -- swim where that's quicker (off: only where there's no other way)
+    useAquatic = true, -- count Aquatic Form's speed when you know it
+    formTips = true,   -- say in chat when to switch to Aquatic Form
+    useSafeFall = true, -- jump down any cliff with Slow Fall or Levitate (spell and Light Feather)
+    maxFallPct = 0,    -- fall damage you'll take without one, % of your health (0: only harmless drops)
+    climb = 1,         -- each yard climbed counts as this many yards more on the flat
+    roadMode = "balanced", -- how much a walk keeps to roads (Route.lua ROAD_MODES): safe, balanced or speed
+    minGain = 45,      -- a route instead of walking must save this many seconds...
+    minShare = 15,     -- ...and this % of the trip
+    announce = true,   -- the "Fastest way: ..." chat line
+    steer = true,      -- the arrow leads around lakes and cliffs
+    showHeight = true, -- the arrow says how far above or below you the target is
+    showWay = true,    -- draw the planned trip as a dashed line on the world map (WayLine.lua)
+    showWayMinimap = true, -- ...and as a trail of dots on the minimap
+    learned = {},      -- steps you walked that the land map said you couldn't: [continent] = { [link key] = true }
+    blocked = {},      -- steps you said are blocked ("This way is blocked"): [continent] = { [link key] = true }
+    rides = {},      -- rides you've taken: [dock key] = { secs (waiting included), n, m, x, y (where it landed) }
+    teleports = {},  -- where mage teleports land: [spellID] = { m, x, y }
     towns = true,    -- town icons on the world map, with what's there (Towns.lua)
+    transportPins = true, -- zeppelin, skyship and ship docks on the world map (TransportPins.lua)
     autoFly = true,  -- a flight master with no menu: take the planned flight right away (hold Shift to choose)
     taxi = { nodes = {}, times = {} }, -- flight points' positions and timed flights, for every character
     arrow = { point = "TOP", x = 0, y = -150 },
@@ -35,6 +58,7 @@ ns.CHAR_DEFAULTS = {
     idCounter = 0,
     entries = {},     -- targets set by other addons: owner -> fields (no functions)
     taxi = { known = {} }, -- flight points you know (name -> true); mount = fastest mount speed seen
+    hearth = {},      -- where your hearthstone takes you: { bind = GetBindLocation(), m, x, y }
     -- Quest tracking history (Questie.lua): [questID] = { by = "user" or an addon's name, at = seq }.
     -- "user" only for quests you tracked yourself; anything else tracked counts as an addon's.
     tracking = {},
@@ -66,6 +90,7 @@ ns.COLORS = {
     green = { 0.56, 0.82, 0.42 },
     purple = { 0.78, 0.55, 1 },
     request = { 0.35, 0.85, 1 }, -- a request ("Navigate to"): always the next point
+    corpse = { 0.85, 0.92, 1 },   -- your body, while you're a ghost
 }
 
 function ns:ColorOf(entry)
@@ -97,7 +122,19 @@ function ns:Changed()
         if ns.Arrow then ns.Arrow:Refresh() end
         if ns.MinimapButton then ns.MinimapButton:Refresh() end
         if ns.TownPins then ns.TownPins:Refresh() end
+        if ns.TransportPins then ns.TransportPins:Refresh() end
     end)
+end
+
+-- The frame level Waypoint's world map layers count up from (+2000 the path's lines, +2050 the
+-- planned trip, town badges up to +2090, +2100 the path's pins): the canvas's, lifted over
+-- OpenMap's stitched art when it reaches them (it sits above the map's own layers, and anything
+-- under its top is hidden by it).
+function ns:MapBase(canvas)
+    local base = canvas:GetFrameLevel()
+    local top = OpenMapAPI and OpenMapAPI.ArtTopLevel and OpenMapAPI.ArtTopLevel()
+    if type(top) == "number" and top >= base + 2000 then base = top + 1 - 2000 end
+    return base
 end
 
 local frame = CreateFrame("Frame")
@@ -149,10 +186,14 @@ local function Help()
     ns:Print("/way share on | off - share your path with your group")
     ns:Print("/way confirm on | off - ask before adding a waypoint")
     ns:Print("/way flights [on | off] - lead to a flight master when flying is quicker (no option: what it knows)")
+    ns:Print("/way transports on | off - also plan with boats, zeppelins, skyships, your hearthstone and mage teleports")
+    ns:Print("/way options - all of Waypoint's settings (Options > AddOns > Waypoint)")
+    ns:Print("/way blocked - the way the arrow leads isn't there (a fence, a ledge): block it and find another; /way unblock forgets them")
     ns:Print("/way autofly on | off - at a flight master with no menu, take the planned flight right away (hold Shift to choose)")
     ns:Print("/way arrow - show or hide the arrow, /way lock - lock or unlock it")
     ns:Print("/way minimap - show or hide the minimap button")
     ns:Print("/way towns on | off - town icons on the world map (hover: what's there, click: go there)")
+    ns:Print("/way docks on | off - zeppelin, skyship and ship docks on the world map (hover: ride time, click: go there)")
     ns:Print("World map: Ctrl+left-click adds a waypoint, Ctrl+right-click removes the nearest one.")
 end
 
@@ -187,12 +228,23 @@ SlashCmdList.WAYPOINT = function(msg)
         OnOff("share", "Sharing with your group", arg)
     elseif cmd == "autofly" then
         OnOff("autoFly", "Taking the planned flight by itself", arg)
+    elseif cmd == "transports" then
+        OnOff("transports", "Boats, zeppelins, hearthstone and teleports", arg)
+        ns.db.useHearth, ns.db.useTeleports = ns.db.transports, ns.db.transports
+    elseif cmd == "blocked" or cmd == "block" then
+        ns.Route:BlockAhead()
+    elseif cmd == "unblock" then
+        ns.Route:ClearBlocks()
+    elseif cmd == "options" or cmd == "settings" or cmd == "config" then
+        if ns.Settings then ns.Settings:Open() end
     elseif cmd == "flights" then
         if arg == "on" or arg == "off" then OnOff("flights", "Flight paths", arg) else ns.Flight:Status() end
     elseif cmd == "towns" and arg == "debug" then
         ns.TownPins:Debug()
     elseif cmd == "towns" then
         OnOff("towns", "Town icons on the world map", arg)
+    elseif cmd == "docks" then
+        OnOff("transportPins", "Dock icons on the world map", arg)
     elseif cmd == "confirm" then
         OnOff("confirm", "Asking before adding a waypoint", arg)
     elseif cmd == "arrow" then

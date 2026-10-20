@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Wealth Planner lives in Wally's window: one "Wealth" tab (WallyAPI.RegisterTab) with its own
 -- row of sub-tabs. Page files register their builders with UI:RegisterPage; each page gets the
@@ -30,9 +31,9 @@ function UI:RegisterPage(name, builder) builders[name] = builder end
 
 -- A section heading with a thin rule under it.
 function UI.Section(p, text, x, y, width)
-    local fs = W.Label(p, text, "GameFontNormal", x, y)
+    local fs = W.Label(p, text, "WealthPlannerGameFontNormal", x, y)
     local rule = p:CreateTexture(nil, "ARTWORK")
-    rule:SetColorTexture(0.16, 0.24, 0.29, 1); rule:SetHeight(1)
+    rule:SetColorTexture(PAL.border[1], PAL.border[2], PAL.border[3], 1); rule:SetHeight(1)
     rule:SetPoint("TOPLEFT", x, y - 17)
     if width then rule:SetWidth(width) else rule:SetPoint("TOPRIGHT", 0, y - 17) end
     return fs
@@ -41,7 +42,7 @@ end
 -- A dark panel inside a page.
 function UI.Panel(p)
     local f = CreateFrame("Frame", nil, p, "BackdropTemplate")
-    W.SetBackdrop(f); f:SetBackdropColor(0.045, 0.065, 0.085, 1)
+    W.SetBackdrop(f); f:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
     return f
 end
 

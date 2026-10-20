@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- The Quartermaster window: Browse, Lists, Prebuilt (Settings live in Options > AddOns). Same frame, sidebar and page layout as Wally.
 local UI = {}
@@ -36,9 +37,9 @@ local settingsPanel, settingsCategory
 
 -- A section heading with a thin rule under it.
 local function Section(p, text, y)
-    Label(p, text, "GameFontNormal", 0, y)
+    Label(p, text, "QuartermasterGameFontNormal", 0, y)
     local rule = p:CreateTexture(nil, "ARTWORK")
-    rule:SetColorTexture(0.16, 0.24, 0.29, 1); rule:SetHeight(1)
+    rule:SetColorTexture(PAL.border[1], PAL.border[2], PAL.border[3], 1); rule:SetHeight(1)
     rule:SetPoint("TOPLEFT", 0, y - 17); rule:SetPoint("TOPRIGHT", 0, y - 17)
 end
 
@@ -49,19 +50,19 @@ local function BuildSettings(p)
     -- Branding: logo, name, version and what Quartermaster does.
     local logo = p:CreateTexture(nil, "ARTWORK"); logo:SetSize(40, 40)
     logo:SetPoint("TOPLEFT", 0, 0); logo:SetTexture(ns.ICON)
-    Label(p, "Quartermaster", "GameFontNormalLarge", 50, -3):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Label(p, "Quartermaster", "QuartermasterGameFontNormalLarge", 50, -3):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     Muted(Label(p, "v" .. ns.VERSION .. "  ·  Supply lists from Auctionator's prices, live auction house search, one-click buying.",
-        "GameFontHighlightSmall", 50, -24, 560))
+        "QuartermasterGameFontHighlightSmall", 50, -24, 560))
     local divider = p:CreateTexture(nil, "ARTWORK")
     divider:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 0.6); divider:SetHeight(2)
     divider:SetPoint("TOPLEFT", 0, -48); divider:SetPoint("TOPRIGHT", 0, -48)
 
     local function NumberSetting(y, title, key, suffix, hint)
-        Label(p, title, "GameFontHighlight", 0, y)
+        Label(p, title, "QuartermasterGameFontHighlight", 0, y)
         local box = MakeNumberBox(p, 60)
         box:SetPoint("TOPLEFT", 220, y + 6)
         box:SetValue(o[key])
-        local unit = Muted(Label(p, suffix, "GameFontHighlightSmall", 290, y))
+        local unit = Muted(Label(p, suffix, "QuartermasterGameFontHighlightSmall", 290, y))
         box:SetScript("OnTextChanged", function(self, user)
             local v = self:GetValue()
             if user and v and v >= 0 then o[key] = v; ns:Changed() end
@@ -75,7 +76,7 @@ local function BuildSettings(p)
         local c = MakeCheckbox(p, text)
         c:SetPoint("TOPLEFT", -4, y)
         c:SetScript("OnClick", onClick)
-        if desc then Muted(Label(p, desc, "GameFontHighlightSmall", 27, y - 24, 560)) end
+        if desc then Muted(Label(p, desc, "QuartermasterGameFontHighlightSmall", 27, y - 24, 560)) end
         return c
     end
 
@@ -110,10 +111,10 @@ local function BuildSettings(p)
     Hint(mail, "Count the mailbox", "Auctions you win arrive by mail. Quartermaster counts what it bought, plus what was in your mailbox the last time you opened it, so you don't buy the same items twice.")
 
     Section(p, "Key binding", -434)
-    Muted(Label(p, "Bind \"Buy next cart item\" under Key Bindings > AddOns > Quartermaster. Each key press buys one stack, just like clicking Buy Next.", "GameFontHighlightSmall", 0, -458, 560))
+    Muted(Label(p, "Bind \"Buy next cart item\" under Key Bindings > AddOns > Quartermaster. Each key press buys one stack, just like clicking Buy Next.", "QuartermasterGameFontHighlightSmall", 0, -458, 560))
 
     Section(p, "Where prices come from", -490)
-    p.data = Muted(Label(p, "", "GameFontHighlightSmall", 0, -514, 560))
+    p.data = Muted(Label(p, "", "QuartermasterGameFontHighlightSmall", 0, -514, 560))
 
     p.Refresh = function()
         for _, key in ipairs({ "tolerance", "overshoot", "confirmOver" }) do
@@ -167,10 +168,12 @@ end
 -- Window
 -- ---------------------------------------------------------------------------
 
+-- Optional pages (Consumables, with Bandolier) only get a tab when their file registered them.
 local TABS = {
     { "browse", "Browse", "INV_Misc_Spyglass_03" },
     { "lists", "Lists", "INV_Misc_Note_05" },
     { "prebuilt", "Prebuilt", "INV_Crate_01" },
+    { "consumables", "Consumables", "INV_Potion_54", optional = true },
     { "settings", "Settings", "INV_Misc_Gear_01" },
 }
 
@@ -202,22 +205,26 @@ local function CreateMainFrame()
 
     local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
     logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "Quartermaster", "GameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Supply lists from Auctionator's prices", "GameFontHighlightSmall", 70, -42))
+    Label(frame, "Quartermaster", "QuartermasterGameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    Muted(Label(frame, "Supply lists from Auctionator's prices", "QuartermasterGameFontHighlightSmall", 70, -42))
     local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
     close:SetScript("OnClick", function() frame:Hide() end)
 
     local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    SetBackdrop(side); side:SetBackdropColor(0.045, 0.065, 0.085, 1)
-    for i, d in ipairs(TABS) do
+    SetBackdrop(side); side:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
+    local shown = {}
+    for _, d in ipairs(TABS) do
+        if not d.optional or builders[d[1]] then shown[#shown + 1] = d end
+    end
+    for i, d in ipairs(shown) do
         local b = MakeButton(side, d[2], 147, 40); b:SetPoint("TOPLEFT", 9, -12 - (i - 1) * 46)
         b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
         local icon = b:CreateTexture(nil, "ARTWORK"); icon:SetSize(23, 23); icon:SetPoint("LEFT", 9, 0)
         icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
         b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(0.075, 0.105, 0.13, 1) end end)
+        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end end)
         if d[1] == "settings" then
             b:SetScript("OnClick", function() UI:OpenSettings() end)
             Hint(b, "Settings", "Opens Options > AddOns > Quartermaster.")
@@ -226,12 +233,12 @@ local function CreateMainFrame()
         end
         tabs[d[1]] = b
     end
-    side.summary = Muted(Label(side, "", "GameFontHighlightSmall", 12, -14 - #TABS * 46, 145))
-    Muted(Label(side, "Shift-click an item link\ninto the Name box to\nlook it up.\n\nDrop items on a list to\nadd them.\n\nAt the auction house,\nthe Cart tab buys a\nlist or restocks your\nprebuilt lists.", "GameFontHighlightSmall", 12, -100 - #TABS * 46, 145))
-    Label(side, "v" .. ns.VERSION, "GameFontHighlightSmall", 12, -470, 145):SetTextColor(0.38, 0.50, 0.57)
+    side.summary = Muted(Label(side, "", "QuartermasterGameFontHighlightSmall", 12, -14 - #shown * 46, 145))
+    Muted(Label(side, "Shift-click an item link\ninto the Name box to\nlook it up.\n\nDrop items on a list to\nadd them.\n\nAt the auction house,\nthe Cart tab buys a\nlist or restocks your\nprebuilt lists.", "QuartermasterGameFontHighlightSmall", 12, -100 - #shown * 46, 145))
+    Label(side, "v" .. ns.VERSION, "QuartermasterGameFontHighlightSmall", 12, -470, 145):SetTextColor(0.38, 0.50, 0.57)
     UI.side = side
 
-    for _, name in ipairs({ "browse", "lists", "prebuilt" }) do
+    for _, name in ipairs({ "browse", "lists", "prebuilt", "consumables" }) do
         if builders[name] then builders[name](UI:NewPage(name)) end
     end
     ShowTab(activeTab); frame:Hide()

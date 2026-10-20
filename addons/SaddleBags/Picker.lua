@@ -73,7 +73,7 @@ local function CreatePicker()
 	tint:SetAllPoints()
 	tint:SetColorTexture(0, 0, 0, 0.15)
 
-	overlay.info = overlay:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+	overlay.info = overlay:CreateFontString(nil, "OVERLAY", "SaddleBagsGameFontHighlightLarge")
 	overlay.info:SetPoint("TOP", 0, -80)
 
 	highlight = CreateFrame("Frame", "SaddleBagsPickerHighlight", UIParent, "BackdropTemplate")

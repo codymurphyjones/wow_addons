@@ -15,12 +15,12 @@ Zeppelin towers have two platforms side by side, and harbors have several ships 
 
 ### Knows which dock you're standing on
 - **Zeppelin platforms:** the sign shows within **15 yards**. The two Grom'gol zeppelin masters are only about 17 yards apart, so you always get the right platform.
-- **Ship docks:** the sign shows within **30 yards**, since piers are longer.
+- **Ship docks:** the sign shows within **60 yards**, since piers are longer.
 - If two docks are close together, the sign for the nearest one wins.
 - Distances use world coordinates, so a dock right on a zone border still works.
 
 ### Look at the master, get the sign
-Mouse over, target or soft-target a zeppelin master or dockmaster and their sign shows right away, even before you reach the platform. Frezza, Snurk Bucksquick, Zapetta, Hin Denburg, Nez'raz, Squibby Overspeck, Grimble, Grizzlowe and Raul Sweete are built in.
+Mouse over, target or soft-target a zeppelin master or dockmaster and their sign shows right away, from any distance, even before you reach the platform. Frezza, Snurk Bucksquick, Zapetta, Hin Denburg, Nez'raz, Squibby Overspeck, Grimble, Grizzlowe and Raul Sweete are built in.
 
 ### Make it yours
 - **Move a sign:** stand where you want it and type `/zep mark`. The nearest sign within 60 yards moves to your spot.
@@ -51,7 +51,8 @@ Mouse over, target or soft-target a zeppelin master or dockmaster and their sign
 | Stormwind Harbor | Ship | Auberdine |
 | Steamwheedle Port | Ship | Powderfuse Port |
 | Powderfuse Port | Ship | Gadgetzan |
-| Feralas | Ship | Feathermoon Ferry (one end only, so add the other with `/zep mark new`) |
+| Feathermoon Stronghold (Sardor Isle) | Ship | The Forgotten Coast |
+| The Forgotten Coast (Feralas) | Ship | Feathermoon Stronghold |
 
 Skyships show as **Zeppelin** signs.
 

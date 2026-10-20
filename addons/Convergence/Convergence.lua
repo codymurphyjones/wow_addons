@@ -2,7 +2,8 @@ local addonName, ns = ...
 
 -- Draws a pin for every known convergence on the world map. Pins show on the zone's own map
 -- and on any map that contains it (continent, world), so you can plan a route past them.
--- Click a pin to set a map waypoint on it.
+-- Click a pin to point the Waypoint addon's arrow at it (Shift: every spot, nearest first), or, without
+-- Waypoint, to set the game's own map waypoint on it.
 
 -- Four elements converging on a bright spark, in a teal-edged badge (Media\make_icon.py draws it).
 local ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Pin"
@@ -10,15 +11,51 @@ local SIZE = 12 -- on-screen size, kept the same at every zoom level
 
 local pins, used = {}, 0
 
+-- The Waypoint addon's arrow, when it's installed.
+local function HasArrow() return type(Waypoint) == "table" and Waypoint.Set ~= nil end
+
+local zoneNames = {}
+local function ZoneName(id)
+    if zoneNames[id] == nil then
+        local info = C_Map.GetMapInfo(id)
+        zoneNames[id] = info and info.name or ""
+    end
+    return zoneNames[id]
+end
+
 local function OnEnter(pin)
     GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
     GameTooltip:AddLine("Elemental Convergence", 0.33, 0.92, 0.78)
     GameTooltip:AddLine(string.format("%s  %.1f, %.1f", pin.zoneName or "", pin.x, pin.y), 1, 1, 1)
-    if C_Map.SetUserWaypoint then GameTooltip:AddLine("Click to set a waypoint", 0.6, 0.6, 0.6) end
+    if HasArrow() then
+        GameTooltip:AddLine("Click: point the Waypoint arrow here", 0.6, 0.6, 0.6)
+        GameTooltip:AddLine("Shift-click: lead to the nearest convergence, then the next", 0.6, 0.6, 0.6)
+    elseif C_Map.SetUserWaypoint then
+        GameTooltip:AddLine("Click to set a waypoint", 0.6, 0.6, 0.6)
+    end
     GameTooltip:Show()
 end
 
+-- Hands the spot (or, with Shift, every known spot) to Waypoint's arrow. Nearest first, then on.
+local function SetArrow(pin, all)
+    local points = {}
+    if all then
+        for zoneID, list in pairs(ns.POINTS) do
+            for _, p in ipairs(list) do points[#points + 1] = { mapID = zoneID, x = p[1] / 100, y = p[2] / 100 } end
+        end
+    else
+        points[1] = { mapID = pin.mapID, x = pin.x / 100, y = pin.y / 100 }
+    end
+    pcall(Waypoint.Set, Waypoint, "Convergence", {
+        title = "Elemental Convergence",
+        subtitle = all and ("%d known spots, nearest first"):format(#points)
+            or string.format("%s  %.1f, %.1f", pin.zoneName or "", pin.x, pin.y),
+        points = points, arrive = 20,
+    })
+end
+
 local function OnClick(pin)
+    if HasArrow() then return SetArrow(pin, IsShiftKeyDown()) end
     if not (C_Map.SetUserWaypoint and UiMapPoint) then return end
     local ok = pcall(C_Map.SetUserWaypoint, UiMapPoint.CreateFromCoordinates(pin.mapID, pin.x / 100, pin.y / 100))
     if ok and C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
@@ -57,15 +94,6 @@ local function Project(zoneID, x, y, mapID)
     if not ok2 or not pos then return end
     local px, py = pos:GetXY()
     if px >= 0 and px <= 1 and py >= 0 and py <= 1 then return px, py end
-end
-
-local zoneNames = {}
-local function ZoneName(id)
-    if zoneNames[id] == nil then
-        local info = C_Map.GetMapInfo(id)
-        zoneNames[id] = info and info.name or ""
-    end
-    return zoneNames[id]
 end
 
 local function Refresh()

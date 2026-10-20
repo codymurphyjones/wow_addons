@@ -30,6 +30,7 @@ local function PersonMenu(m, person)
             if person.zone then sub:Header(person.zone) end
             sub:Button({ text = "Whisper", fn = function() C.Whisper(person.name) end })
             sub:Button({ text = "Invite to group", fn = function() C.Invite(person.name) end })
+            ns.GroupHistory.AddMenu(sub, person.name)
         end })
 end
 
@@ -105,6 +106,11 @@ SimplePanel.RegisterPlugin({
 
     onClick = function(p, button)
         if button ~= "LeftButton" then return end
+        -- Own Panels: SimplePanel's social window, latched to this plugin (SocialWindow.lua).
+        -- Shift-click keeps the quick list.
+        if ns.db.options.ownPanels and ns.SocialWindow and not IsModifierKeyDown() then
+            return ns.SocialWindow:Toggle("friends", p.button)
+        end
         local m = ns.Menu:New(p.button)
         m:Title("Friends & Guild", p.icon)
         AddEntries(p, m)

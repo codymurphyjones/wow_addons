@@ -42,7 +42,8 @@ local function CopyEntries(entries)
     local out, searches = {}, 0
     for _, e in ipairs(entries) do
         if e.itemID then
-            out[#out + 1] = { itemID = e.itemID, name = e.name, link = e.link, qty = e.qty, tolerance = e.tolerance }
+            out[#out + 1] = { itemID = e.itemID, variant = e.variant, seenUnit = e.seenUnit, name = e.name, link = e.link,
+                qty = e.qty, tolerance = e.tolerance }
         else
             searches = searches + 1
         end
@@ -116,7 +117,7 @@ function Prebuilt:RestockCost(t)
     local total, unknown = 0, 0
     for _, e in ipairs(t.entries) do
         local need = math.max(0, e.qty - Stock:Have(e.itemID))
-        local price = ns.Catalog:PriceFor(e.itemID)
+        local price = ns.Lists:Price(e)
         if need > 0 then
             if price then total = total + price * need else unknown = unknown + 1 end
         end
@@ -125,7 +126,8 @@ function Prebuilt:RestockCost(t)
 end
 
 -- Merges the ticked lists into one throwaway shopping list for the Buyer. Targets add up when an
--- item is on more than one list; only what's still missing goes in the run.
+-- item is on more than one list; only what's still missing goes in the run. Each enchant of an item
+-- is its own entry (Lists:Key), though what you own is counted per item, whatever its enchant.
 function Prebuilt:BuildRun(ids)
     local order, byItem, names = {}, {}, {}
     for _, id in ipairs(ids) do
@@ -133,12 +135,14 @@ function Prebuilt:BuildRun(ids)
         if t then
             names[#names + 1] = t.name
             for _, e in ipairs(t.entries) do
-                local m = byItem[e.itemID]
+                local key = ns.Lists:Key(e)
+                local m = byItem[key]
                 if not m then
-                    m = { itemID = e.itemID, name = e.name, link = e.link, target = 0, from = {} }
-                    byItem[e.itemID] = m
+                    m = { itemID = e.itemID, variant = e.variant, name = e.name, link = e.link, target = 0, from = {} }
+                    byItem[key] = m
                     order[#order + 1] = m
                 end
+                if e.seenUnit then m.seenUnit = e.seenUnit end
                 m.target = m.target + e.qty
                 if e.tolerance and (not m.tolerance or e.tolerance > m.tolerance) then m.tolerance = e.tolerance end
                 m.from[#m.from + 1] = t.name
@@ -149,7 +153,7 @@ function Prebuilt:BuildRun(ids)
         entries = {}, covered = {}, isRun = true }
     for _, m in ipairs(order) do
         local have = Stock:Have(m.itemID)
-        local entry = { itemID = m.itemID, name = m.name, link = m.link, tolerance = m.tolerance,
+        local entry = { itemID = m.itemID, variant = m.variant, seenUnit = m.seenUnit, name = m.name, link = m.link, tolerance = m.tolerance,
             target = m.target, have = have, from = m.from, bought = 0, qty = m.target - have }
         if entry.qty > 0 then run.entries[#run.entries + 1] = entry
         else entry.qty = 0; run.covered[#run.covered + 1] = entry end

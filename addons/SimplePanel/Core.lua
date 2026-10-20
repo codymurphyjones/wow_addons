@@ -24,6 +24,7 @@ ns.DEFAULTS = {
         locked = false,       -- no drag-to-reorder
         divider = true,       -- thin rule between plugins
         launcherSize = 30,    -- tile size in the launcher drawer
+        ownPanels = false,    -- SimplePanel's own panels (Wally style) in place of the game's: the character sheet (Durability), professions (Professions)
         launcherColumns = 8,
         launcherSort = "name", -- "name" or "used"
         scheme = "wally",     -- Appearance: color scheme (Widgets.lua W.SCHEMES)
@@ -34,8 +35,9 @@ ns.DEFAULTS = {
     },
     -- id -> { enabled, zone, order, showIcon, showLabel, colored, spark, settings = {} }
     plugins = {},
-    -- Launcher placement: key -> "drawer" | "bar" | "minimap" | "hidden"; clicks: key -> count
-    launchers = { placement = {}, clicks = {}, order = {} },
+    -- Launcher placement: key -> "drawer" | "bar" | "minimap" | "screen" | "hidden"; clicks: key -> count;
+    -- positions: key -> { x, y, locked } for launchers placed anywhere on screen (from UIParent's bottom left)
+    launchers = { placement = {}, clicks = {}, order = {}, positions = {} },
     -- Account-wide series (Gold history across characters, etc.): plugin id -> series -> buffer
     series = {},
     -- Every character on the account (Characters.lua): "Realm - Name" -> { copper, level, xp, rested, zone, seen, ... }
@@ -54,6 +56,10 @@ ns.CHAR_DEFAULTS = {
     series = {},
     plugins = {},          -- character-scoped plugin settings
     launchers = { placement = {}, useCharacter = false },
+    -- The professions window's memory (ProfessionsPanel.lua): professionID -> { name, rank, max, at,
+    -- recipes = { [recipeID] = { n = name, i = icon, c = category, l = learned, d = difficulty, o = item made,
+    -- r = { { itemID, count } } } } }, for searching recipes with no profession open.
+    professions = {},
 }
 
 -- Saved arrays are never merged by index: that would scramble their order.
@@ -155,25 +161,28 @@ ns:On("ADDON_ACTION_BLOCKED", function(addon, func) OnBlocked("blocked", addon, 
 ns:On("ADDON_ACTION_FORBIDDEN", function(addon, func) OnBlocked("forbade", addon, func) end)
 
 ns:On("PLAYER_LOGIN", function()
-    ns:Print("v" .. ns.VERSION .. " loaded. Type |cffffffff/sb|r for settings; right-click the bar for options.")
+    ns:Print("v" .. ns.VERSION .. " loaded. Type |cffffffff/spanel|r for settings; right-click the bar for options.")
 end)
 
 local function Help()
-    ns:Print("/sb - open the settings window", true)
-    ns:Print("/sb show | hide - show or hide the bar", true)
-    ns:Print("/sb autohide - toggle auto-hide", true)
-    ns:Print("/sb edit - edit the bar: drag plugins between sections, hide them", true)
-    ns:Print("/sb lock - lock or unlock shift-dragging outside edit mode", true)
-    ns:Print("/sb plugins - list plugins and their ids", true)
-    ns:Print("/sb chart <plugin id> - open a plugin's chart window", true)
-    ns:Print("/sb scan - rescan minimap buttons for the launcher drawer", true)
-    ns:Print("/sb errors - list plugin errors", true)
-    ns:Print("/sb reset - reset the plugin layout", true)
-    ns:Print("/sb profile [name] - show the profile in use, or switch to another", true)
-    ns:Print("/sb reload - reload the UI", true)
+    ns:Print("/spanel - open the settings window", true)
+    ns:Print("/spanel show | hide - show or hide the bar", true)
+    ns:Print("/spanel autohide - toggle auto-hide", true)
+    ns:Print("/spanel edit - edit the bar: drag plugins between sections, hide them", true)
+    ns:Print("/spanel lock - lock or unlock shift-dragging outside edit mode", true)
+    ns:Print("/spanel plugins - list plugins and their ids", true)
+    ns:Print("/spanel chart <plugin id> - open a plugin's chart window", true)
+    ns:Print("/spanel scan - rescan minimap buttons for the launcher drawer", true)
+    ns:Print("/spanel character - open SimplePanel's character sheet (Own Panels)", true)
+    ns:Print("/spanel prof - open SimplePanel's professions window; /spanel prof debug - what it sees", true)
+    ns:Print("/spanel social, /spanel guild - open SimplePanel's social window on Friends or Guild (Own Panels)", true)
+    ns:Print("/spanel errors - list plugin errors", true)
+    ns:Print("/spanel reset - reset the plugin layout", true)
+    ns:Print("/spanel profile [name] - show the profile in use, or switch to another", true)
+    ns:Print("/spanel reload - reload the UI", true)
 end
 
-SLASH_SIMPLEPANEL1 = "/sb"
+SLASH_SIMPLEPANEL1 = "/spanel"
 SLASH_SIMPLEPANEL2 = "/simplepanel"
 SlashCmdList.SIMPLEPANEL = function(msg)
     msg = ns.Trim(msg)
@@ -201,7 +210,15 @@ SlashCmdList.SIMPLEPANEL = function(msg)
         end
     elseif cmd == "chart" then
         local p = ns.PluginKit:Find(rest)
-        if p then p:ShowChart() else ns:Print("No plugin with id '" .. rest .. "'. See /sb plugins.", true) end
+        if p then p:ShowChart() else ns:Print("No plugin with id '" .. rest .. "'. See /spanel plugins.", true) end
+    elseif cmd == "prof" or cmd == "professions" then
+        if rest == "" and ns.ProfessionsPanel then ns.ProfessionsPanel:Toggle() elseif ns.ProfessionsPanel then ns.ProfessionsPanel:Debug() end
+    elseif cmd == "social" or cmd == "friends" then
+        if ns.SocialWindow then ns.SocialWindow:Toggle("friends") end
+    elseif cmd == "guild" then
+        if ns.SocialWindow then ns.SocialWindow:Toggle("guild") end
+    elseif cmd == "character" or cmd == "sheet" then
+        if ns.CharacterSheet then ns.CharacterSheet:Toggle() end
     elseif cmd == "scan" then
         ns.Launchers:Scan(true)
     elseif cmd == "errors" then

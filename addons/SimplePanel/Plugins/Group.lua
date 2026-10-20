@@ -3,6 +3,7 @@ local _, ns = ...
 -- Group: party or raid size, class makeup, and who's dead, offline or out of range. The leader
 -- can start a ready check from the drop-down.
 local T = SimplePanel.Theme
+local W = ns.Widgets
 
 local function Units()
     local out = {}
@@ -51,6 +52,38 @@ local function ClassLine(classes)
     return parts
 end
 
+local function Colored(name, class)
+    local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+    if not c then return name end
+    return ("|cff%02x%02x%02x%s|r"):format(c.r * 255, c.g * 255, c.b * 255, name)
+end
+
+-- What Group History knows of each member: your +/- and note, else how often you've grouped. A
+-- raid lists only those you've rated or noted.
+local function HistoryLines(tt)
+    local GH = ns.GroupHistory
+    if not GH.Available() then return end
+    local raid = IsInRaid and IsInRaid()
+    local lines = {}
+    for _, unit in ipairs(Units()) do
+        if unit ~= "player" and UnitExists(unit) then
+            local name, realm = UnitName(unit)
+            local full = name and realm and realm ~= "" and (name .. "-" .. realm) or name
+            local info = full and GH.Get(full, UnitGUID(unit))
+            local note, rating = GH.Note(info), GH.Rating(info)
+            local right = (rating ~= "" or note) and (rating .. (note and ("  " .. W.Color(note, T.yellow)) or ""))
+                or GH.Brief(info) or W.Color("new", T.muted)
+            if name and (not raid or rating ~= "" or note) then
+                local _, class = UnitClass(unit)
+                lines[#lines + 1] = { Colored(name, class), right }
+            end
+        end
+    end
+    if #lines == 0 then return end
+    tt:AddHeader("Group History")
+    for _, l in ipairs(lines) do tt:AddDouble(l[1], l[2], T.text, T.text) end
+end
+
 local function CanLead() return UnitIsGroupLeader and (UnitIsGroupLeader("player") or (UnitIsGroupAssistant and UnitIsGroupAssistant("player"))) end
 
 SimplePanel.RegisterPlugin({
@@ -88,12 +121,24 @@ SimplePanel.RegisterPlugin({
         List("Dead", s.dead, T.red)
         List("Offline", s.offline, T.muted)
         List("Out of range", s.far, T.yellow)
+        HistoryLines(tt)
         tt:AddHint(CanLead() and "Click: ready check" or "Click: options")
     end,
 
     menu = function(_, m)
         m:Button({ text = "Ready check", disabled = function() return not CanLead() end,
             tooltip = "Leader or assistant only.", fn = function() if DoReadyCheck then DoReadyCheck() end end })
+        -- Rate or note your party in Group History (a raid is too long a list for a menu).
+        if ns.GroupHistory.Available() and not (IsInRaid and IsInRaid()) then
+            m:Header("Group History")
+            for _, unit in ipairs(Units()) do
+                local name, realm = UnitName(unit)
+                if unit ~= "player" and name then
+                    local _, class = UnitClass(unit)
+                    ns.GroupHistory.AddMenu(m, realm and realm ~= "" and (name .. "-" .. realm) or name, UnitGUID(unit), Colored(name, class))
+                end
+            end
+        end
     end,
 
     onClick = function(p, button)

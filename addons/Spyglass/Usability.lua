@@ -102,27 +102,35 @@ end
 -- Class checks
 ---------------------------------------------------------------------------
 
-local function Requirements()
-    return AtlasLoot and AtlasLoot.Data and AtlasLoot.Data.Requirements
+-- AtlasLoot's class restrictions, shipped in Data\Loot.lua (classMask: the
+-- classes that can use the item, in AtlasLoot's class bits).
+local CLASS_BITS = { WARRIOR = 1, PALADIN = 2, HUNTER = 4, ROGUE = 8, PRIEST = 16, DEATHKNIGHT = 32,
+    SHAMAN = 64, MAGE = 128, WARLOCK = 256, MONK = 512, DRUID = 1024, DEMONHUNTER = 2048 }
+
+local function ClassMask(itemID)
+    return ns.LootData and ns.LootData.classMask and ns.LootData.classMask[itemID]
 end
 
--- AtlasLoot's class data restricts the item to some classes, yours among them.
+local function ClassCanUseItem(class, itemID)
+    local mask, bit = ClassMask(itemID), CLASS_BITS[class]
+    if not (mask and bit) then return true end
+    return math.floor(mask / bit) % 2 == 1
+end
+
+-- The class data restricts the item to some classes, yours among them.
 local function RestrictedToYourClass(itemID)
-    local req = Requirements()
-    if not (req and req.HasRequirements and req.ClassCanUseItem) then return false end
-    if not req.HasRequirements(itemID) or not req.ClassCanUseItem(playerClass, itemID) then return false end
+    if not ClassMask(itemID) or not ClassCanUseItem(playerClass, itemID) then return false end
     for _, class in ipairs(CLASSES) do
-        if not req.ClassCanUseItem(class, itemID) then return true end
+        if not ClassCanUseItem(class, itemID) then return true end
     end
     return false
 end
 
--- Armor and weapon type (SpyGlass's proficiency table) and AtlasLoot's
--- class restrictions: only what the game knows without asking the server.
+-- Armor and weapon type (SpyGlass's proficiency table) and the shipped class
+-- restrictions: only what the game knows without asking the server.
 local function Proficient(itemID)
     playerClass = playerClass or select(2, UnitClass("player"))
-    local req = Requirements()
-    if req and req.ClassCanUseItem and not req.ClassCanUseItem(playerClass, itemID) then return false end
+    if not ClassCanUseItem(playerClass, itemID) then return false end
     local _, _, _, classID, subClassID = ns:Instant(itemID)
     local known = D.CLASS_PROFICIENCY[playerClass]
     if known and subClassID then

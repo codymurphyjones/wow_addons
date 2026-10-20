@@ -9,10 +9,10 @@ local Label, Muted, MakeButton = W.Label, W.Muted, W.MakeButton
 local function Minutes(secs) return ("%dh %02dm"):format(secs / 3600, secs % 3600 / 60) end
 
 UI:RegisterPage("worklog", function(p)
-    p.summary = Muted(Label(p, "", "GameFontHighlightSmall", 0, 0, 586))
+    p.summary = Muted(Label(p, "", "WealthPlannerGameFontHighlightSmall", 0, 0, 586))
     p.quit = MakeButton(p, "Quit job", 90, 24); p.quit:SetPoint("TOPRIGHT", 0, -22)
     p.quit:SetScript("OnClick", function() ns.Jobs:Take(nil) end)
-    p.now = Label(p, "", "GameFontHighlight", 0, -26, 480)
+    p.now = Label(p, "", "WealthPlannerGameFontHighlight", 0, -26, 480)
     p.list = W.CreateRowList(p, -56)
 
     p.Refresh = function()

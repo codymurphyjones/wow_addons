@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Shared widgets (copied from Wally's Widgets.lua: same flat look)
 local W = {}
@@ -6,20 +7,20 @@ ns.Widgets = W
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local ROW_H, ROW_GAP = 38, 4
-local ACCENT = { 0.33, 0.92, 0.78 }
-local MUTED = { 0.52, 0.64, 0.70 }
+local ACCENT = PAL.accent
+local MUTED = PAL.muted
 local UNKNOWN_ICON = 134400
 W.WHITE, W.ROW_H, W.ROW_GAP, W.ACCENT, W.MUTED, W.UNKNOWN_ICON = WHITE, ROW_H, ROW_GAP, ACCENT, MUTED, UNKNOWN_ICON
 
 function W.SetBackdrop(f, alpha)
     f:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
-    f:SetBackdropColor(0.035, 0.045, 0.060, alpha or 1)
-    f:SetBackdropBorderColor(0.16, 0.24, 0.29, 1)
+    f:SetBackdropColor(PAL.bg[1], PAL.bg[2], PAL.bg[3], alpha or 1)
+    f:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1)
 end
 local SetBackdrop = W.SetBackdrop
 
 function W.Label(parent, text, font, x, y, width)
-    local t = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
+    local t = parent:CreateFontString(nil, "OVERLAY", font or "GroupHistoryGameFontHighlight")
     t:SetPoint("TOPLEFT", x, y)
     t:SetJustifyH("LEFT")
     if width then t:SetWidth(width) end
@@ -35,11 +36,11 @@ function W.MakeButton(parent, text, width, height)
     local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
     b:SetSize(width or 110, height or 28)
     SetBackdrop(b)
-    b:SetBackdropColor(0.075, 0.105, 0.13, 1)
-    b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1)
+    b.text = b:CreateFontString(nil, "OVERLAY", "GroupHistoryGameFontHighlightSmall")
     b.text:SetPoint("CENTER"); b.text:SetText(text)
-    b:SetScript("OnEnter", function(self) self:SetBackdropColor(0.10, 0.19, 0.21, 1) end)
-    b:SetScript("OnLeave", function(self) self:SetBackdropColor(0.075, 0.105, 0.13, 1) end)
+    b:SetScript("OnEnter", function(self) self:SetBackdropColor(PAL.hover[1], PAL.hover[2], PAL.hover[3], 1) end)
+    b:SetScript("OnLeave", function(self) self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end)
     return b
 end
 local MakeButton = W.MakeButton
@@ -47,7 +48,7 @@ local MakeButton = W.MakeButton
 -- Marks one button of a group as the active one (accent border).
 function W.SetActive(b, active)
     if active then b:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 1)
-    else b:SetBackdropBorderColor(0.16, 0.24, 0.29, 1) end
+    else b:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1) end
 end
 
 function W.Hint(widget, title, body)
@@ -63,7 +64,7 @@ end
 function W.MakeCheckbox(parent, text)
     local b = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     b:SetSize(26, 26)
-    b.label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.label = b:CreateFontString(nil, "OVERLAY", "GroupHistoryGameFontHighlightSmall")
     b.label:SetPoint("LEFT", b, "RIGHT", 3, 0); b.label:SetText(text)
     return b
 end
@@ -71,10 +72,10 @@ end
 function W.MakeEditBox(parent, width, placeholder)
     local b = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
     b:SetSize(width or 160, 26)
-    SetBackdrop(b); b:SetBackdropColor(0.02, 0.03, 0.04, 1)
-    b:SetFontObject("GameFontHighlightSmall"); b:SetJustifyH("LEFT")
+    SetBackdrop(b); b:SetBackdropColor(PAL.field[1], PAL.field[2], PAL.field[3], 1)
+    b:SetFontObject("GroupHistoryGameFontHighlightSmall"); b:SetJustifyH("LEFT")
     b:SetAutoFocus(false); b:SetTextInsets(8, 8, 2, 2)
-    b.placeholder = b:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    b.placeholder = b:CreateFontString(nil, "OVERLAY", "GroupHistoryGameFontDisableSmall")
     b.placeholder:SetPoint("LEFT", 8, 0); b.placeholder:SetText(placeholder or "")
     local function UpdatePlaceholder(self) self.placeholder:SetShown(self:GetText() == "" and not self:HasFocus()) end
     b:SetScript("OnEditFocusGained", UpdatePlaceholder)
@@ -106,19 +107,19 @@ function W.NewRow(list)
     local height = list.rowHeight or ROW_H
     local row = CreateFrame("Button", nil, list.content, "BackdropTemplate")
     row.height = height
-    row:SetHeight(height); SetBackdrop(row); row:SetBackdropColor(0.055, 0.08, 0.10, 1)
+    row:SetHeight(height); SetBackdrop(row); row:SetBackdropColor(PAL.row[1], PAL.row[2], PAL.row[3], 1)
     row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row.icon = row:CreateTexture(nil, "ARTWORK"); row.icon:SetSize(height - 10, height - 10)
     row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.text = row:CreateFontString(nil, "OVERLAY", "GroupHistoryGameFontHighlightSmall")
     row.text:SetJustifyH("LEFT"); row.text:SetWordWrap(false)
-    row.detail = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.detail = row:CreateFontString(nil, "OVERLAY", "GroupHistoryGameFontHighlightSmall")
     row.detail:SetJustifyH("LEFT"); row.detail:SetWordWrap(false)
     row.barBg = row:CreateTexture(nil, "ARTWORK"); row.barBg:SetColorTexture(0.12, 0.16, 0.19, 1); row.barBg:SetSize(110, 6)
     row.barFill = row:CreateTexture(nil, "OVERLAY"); row.barFill:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
     row.barFill:SetPoint("LEFT", row.barBg, "LEFT"); row.barFill:SetHeight(6)
     row.marker = row:CreateTexture(nil, "OVERLAY", nil, 2); row.marker:SetColorTexture(1, 0.82, 0.3, 1); row.marker:SetSize(2, 12)
-    row.barText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); row.barText:SetJustifyH("RIGHT")
+    row.barText = row:CreateFontString(nil, "OVERLAY", "GroupHistoryGameFontHighlightSmall"); row.barText:SetJustifyH("RIGHT")
     row.barText:SetPoint("BOTTOMRIGHT", row.barBg, "TOPRIGHT", 0, 2)
     row.actions = {}
     row:SetScript("OnEnter", function(self)
@@ -130,7 +131,7 @@ function W.NewRow(list)
         if d.hint then GameTooltip:AddLine(" "); GameTooltip:AddLine(d.hint, MUTED[1], MUTED[2], MUTED[3], true) end
         GameTooltip:Show()
     end)
-    row:SetScript("OnLeave", function(self) self:SetBackdropColor(0.055, 0.08, 0.10, 1); GameTooltip:Hide() end)
+    row:SetScript("OnLeave", function(self) self:SetBackdropColor(PAL.row[1], PAL.row[2], PAL.row[3], 1); GameTooltip:Hide() end)
     row:SetScript("OnClick", function(self, button)
         local d = self.data
         if not d then return end
@@ -169,7 +170,7 @@ function W.LayoutRow(row, d, index)
     local y = -(index - 1) * (height + ROW_GAP)
     row:SetPoint("TOPLEFT", 0, y); row:SetPoint("TOPRIGHT", 0, y)
     if d.selected then row:SetBackdropBorderColor(ACCENT[1], ACCENT[2], ACCENT[3], 1)
-    else row:SetBackdropBorderColor(0.16, 0.24, 0.29, 1) end
+    else row:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1) end
 
     -- Optional status button pushes the icon and text right.
     local left = 5
@@ -251,7 +252,7 @@ function W.CreateRowList(parent, top, opts)
     scroll:SetScrollChild(content)
     scroll:SetScript("OnSizeChanged", function(_, w) content:SetWidth(w) end)
     list.scroll, list.content = scroll, content
-    list.empty = Label(parent, "", "GameFontHighlight", 0, top - 60)
+    list.empty = Label(parent, "", "GroupHistoryGameFontHighlight", 0, top - 60)
     list.empty:SetPoint("RIGHT", -26, 0); list.empty:SetJustifyH("CENTER"); Muted(list.empty)
     function list:Set(items, emptyText)
         content:SetWidth(math.max(1, scroll:GetWidth()))

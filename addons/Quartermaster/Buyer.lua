@@ -85,6 +85,15 @@ local function CurrentItem(self, entry)
     return entry.itemID
 end
 
+-- Which copies of it (Lists:Key / Catalog:Variant): an enchanted copy is a different item. A search
+-- entry on a modern group (whose variant the server doesn't say) buys plain copies only, since its
+-- price cap is the plain item's.
+local function CurrentKey(self, entry)
+    if not entry.filter then return ns.Lists:Key(entry) end
+    local g = self.group
+    return g and (g.variant or tostring(g.itemID))
+end
+
 local function ItemText(self, entry, itemID)
     if entry.filter then
         local g = self.group
@@ -94,14 +103,19 @@ local function ItemText(self, entry, itemID)
     return ns.Lists:Describe(entry)
 end
 
--- Price cap for one item: a search entry's max price, else its own cap (maxUnit), else market price plus tolerance.
-local function MaxUnit(entry, itemID)
+-- Price cap for one item: a search entry's max price, else its own cap (maxUnit), else market price
+-- plus tolerance. The market price is the variant's own (Catalog:MarketFor); an enchanted copy
+-- Auctionator can't price uses the price it was seen at when it went on the list (seen = true).
+-- g: the search entry's current group.
+local function MaxUnit(entry, itemID, g)
     if entry.filter and entry.filter.maxPrice then return entry.filter.maxPrice, nil end
-    local market = ns.Catalog:PriceFor(itemID)
+    local market, seen
+    if entry.filter then market = ns.Catalog:MarketFor(itemID, g and g.variant, g and g.link)
+    else market, seen = ns.Lists:Price(entry) end
     -- A cap set by whoever added it (Wealth Planner: the most a buy still pays at).
-    if entry.maxUnit then return entry.maxUnit, market end
+    if entry.maxUnit then return entry.maxUnit, market, seen end
     if not market then return nil, nil end
-    return market * (1 + ns.Lists:Tolerance(entry) / 100), market
+    return market * (1 + ns.Lists:Tolerance(entry) / 100), market, seen
 end
 
 -- Moves to the next unfinished entry and searches for it.
@@ -132,7 +146,7 @@ function Buyer:Search(entry)
     self.state = "scanning"
     self.status[entry] = "scanning"
     Changed()
-    local itemID = CurrentItem(self, entry)
+    local key = CurrentKey(self, entry)
     local function Done(listings)
         if self.entry ~= entry then return end
         if not listings then
@@ -141,7 +155,7 @@ function Buyer:Search(entry)
             return self:Advance()
         end
         self.listings = listings
-        ns.Compare:SetLive(itemID, listings)
+        ns.Compare:SetLive(key, listings)
         if #listings == 0 then
             if entry.filter then return self:NextGroup(entry) end
             self.status[entry] = "none listed"
@@ -157,13 +171,14 @@ function Buyer:Search(entry)
         self.status[entry] = "scanning page " .. (page + 1)
         Changed()
     end
+    -- Only copies of this variant: never an enchanted one for a plain entry, or the wrong enchant.
     if self.group then
-        ns.Scanner:Listings(self.group, Done, Progress)
+        ns.Scanner:Listings(self.group, Done, Progress, key)
     elseif ns.Scanner:Modern() then
-        ns.Scanner:SearchModern(entry.itemID, Done)
+        ns.Scanner:SearchModern(entry.itemID, Done, key)
     else
         local name = entry.name or (ns.Catalog:Get(entry.itemID) or {}).name
-        ns.Scanner:ScanAll(name, Done, Progress)
+        ns.Scanner:ScanAll(name, Done, Progress, key)
     end
 end
 
@@ -198,7 +213,7 @@ function Buyer:NextGroup(entry)
     self.group, self.listings = nil, nil
     while self.groups and #self.groups > 0 do
         local g = table.remove(self.groups, 1)
-        local cap = MaxUnit(entry, g.itemID)
+        local cap = MaxUnit(entry, g.itemID, g)
         if self.override[entry] or (cap and g.minUnit <= cap) then
             self.group = g
             self.status[entry] = ("buying %s"):format(g.link or g.name or "?")
@@ -215,7 +230,7 @@ function Buyer:NextGroup(entry)
     if over and not self.override[entry] and (entry.bought or 0) == 0 then
         self.state = "prompt"
         Changed()
-        local cap = MaxUnit(entry, over.itemID)
+        local cap = MaxUnit(entry, over.itemID, over)
         local text = ("Nothing matching %s is within your price.\n\n%sCheapest: %s at %s each"):format(
             ns.Lists:Describe(entry), cap and ("Your limit: " .. ns.Compat.Money(cap) .. " each\n") or "No max price and no market price.\n",
             over.link or over.name or "?", ns.Compat.Money(over.minUnit))
@@ -256,7 +271,7 @@ function Buyer:Choose()
     end
 
     local itemID = CurrentItem(self, entry)
-    local maxUnit, market = MaxUnit(entry, itemID)
+    local maxUnit, market, seen = MaxUnit(entry, itemID, self.group)
     local allowed = {}
     for _, l in ipairs(listings) do
         if self.override[entry] or (maxUnit and l.unit <= maxUnit) then allowed[#allowed + 1] = l end
@@ -268,7 +283,11 @@ function Buyer:Choose()
         Changed()
         local cheapest = listings[1]
         local text
-        if market then
+        if market and seen then
+            text = ("No %s within %d%% of the price it was seen at.\n\nSeen at: %s each (Auctionator has no price for this enchant)\nCheapest: %s each (%dx for %s)"):format(
+                ns.Lists:Describe(entry), ns.Lists:Tolerance(entry), ns.Compat.Money(market),
+                ns.Compat.Money(cheapest.unit), cheapest.count, ns.Compat.Money(cheapest.buyout))
+        elseif market then
             text = ("No %s within %d%% of market.\n\nMarket: %s each\nCheapest: %s each (%dx for %s)"):format(
                 ns.Lists:Describe(entry), ns.Lists:Tolerance(entry), ns.Compat.Money(market),
                 ns.Compat.Money(cheapest.unit), cheapest.count, ns.Compat.Money(cheapest.buyout))
@@ -372,7 +391,7 @@ end
 -- Reloads the candidate's page so it can be bid on, and refreshes that page's listings.
 function Buyer:Focus(listing)
     local entry = self.entry
-    local itemID = CurrentItem(self, entry)
+    local key = CurrentKey(self, entry)
     self.candidate, self.state = listing, "focusing"
     Changed()
     ns.Scanner:FocusPage(listing.name, listing.page, function(rows)
@@ -383,7 +402,7 @@ function Buyer:Focus(listing)
         for _, l in ipairs(self.listings) do if l.page ~= listing.page then fresh[#fresh + 1] = l end end
         local found
         for _, r in ipairs(rows) do
-            if r.buyout > 0 and not r.sold and r.owner ~= me then
+            if r.buyout > 0 and not r.sold and r.owner ~= me and r.variant == key then
                 r.unit = r.buyout / r.count
                 fresh[#fresh + 1] = r
                 if not found and r.link == listing.link and r.count == listing.count
@@ -397,7 +416,7 @@ function Buyer:Focus(listing)
             return a.count < b.count
         end)
         self.listings = fresh
-        ns.Compare:SetLive(itemID, fresh)
+        ns.Compare:SetLive(key, fresh)
         if not found then return self:Choose() end
         self.candidate, self.state = found, "ready"
         Changed()
@@ -413,15 +432,16 @@ end
 local function Modern(c) return c and (c.commodity or c.auctionID) end
 
 -- Bookkeeping for a purchase that went through.
-local function Bought(entry, c)
+local function Bought(entry, c, key)
     local itemID = c.itemID or entry.itemID
     entry.bought = (entry.bought or 0) + c.count
     ns.Stock:RecordPurchase(itemID, c.count)
-    ns.Compare:RecordPaid(itemID, c.count, c.buyout)
+    ns.Compare:RecordPaid(key, c.count, c.buyout)
     Buyer.spent, Buyer.bought = Buyer.spent + c.buyout, Buyer.bought + c.count
     Buyer.candidate = nil
     local remaining = ns.Lists:Remaining(entry)
     Buyer.status[entry] = remaining <= 0 and "done" or ("%d/%d bought"):format(entry.bought, entry.qty)
+    ns.Lists:Finished(entry) -- the moment it was finished (the Cart hides it after a while)
     ns:Changed()
 end
 
@@ -429,13 +449,14 @@ function Buyer:PlaceBid()
     local c = self.candidate
     if self.state ~= "ready" or not c then return end
     local entry = self.entry
+    local key = CurrentKey(self, entry)
     local function Mine() return self.entry == entry and self.state == "buying" end
     self.state = "buying"
     C_Timer.After(0, Changed) -- after the game call below
     ns.Purchase:Buy(c, {
         onBought = function()
             if not Mine() then return end
-            Bought(entry, c)
+            Bought(entry, c, key)
             if Modern(c) then
                 -- Quantities on the market changed (and a grouped row's bought auction is gone);
                 -- search again before the next purchase.

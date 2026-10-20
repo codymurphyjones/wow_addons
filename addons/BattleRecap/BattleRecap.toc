@@ -9,6 +9,8 @@
 ## AddonCompartmentFunc: BattleRecap_OnCompartmentClick
 ## X-Curse-Project-ID: 1743876
 
+Fonts.lua
+Palette.lua
 Core.lua
 Log.lua
 Meter.lua

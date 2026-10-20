@@ -206,7 +206,7 @@ local function Create()
     end)
     W.Hint(reset, "Reset stats", "Shift-click to forget every lifetime number here. Your saved recaps stay.")
     f.note = W.Label(f, "Counted from every recap saved, beyond the last 20. Test recaps aren't counted.",
-        "GameFontHighlightSmall", 12, 0)
+        "BattleRecapGameFontHighlightSmall", 12, 0)
     f.note:ClearAllPoints(); f.note:SetPoint("BOTTOMLEFT", 12, 16)
     W.Muted(f.note)
 end

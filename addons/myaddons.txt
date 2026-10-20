@@ -19,3 +19,6 @@ MrMiyagi
 Waypoint
 FieldGuide
 RoadLog
+WallyHUD
+WallyChat
+WallyTooltip

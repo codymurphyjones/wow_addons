@@ -10,6 +10,8 @@ local _, ns = ...
 --       -- one you haven't reached yet, then on to the next.
 --       arrive = 15,                                -- yards that count as "there" (default 15)
 --       next = "Pick up: The Essence of Aku'Mai",   -- optional: what comes after, for the tooltip
+--       upcoming = { mapID = 52, x = 0.6, y = 0.5 }, -- optional: where that is, so the way there is
+--                                                   -- worked out ahead and ready when you set it
 --       color = "green",                            -- "gold" (default: your own waypoints),
 --                                                   -- "green" (a leveling guide), "purple" (a dungeon)
 --       key = "quest:1234",                         -- optional: anything you want back from Get
@@ -31,7 +33,9 @@ end
 -- A request: the arrow's next point, above everything else (your path, Field Guide's dungeon and
 -- leveling steps, other addons), until you get there; then it goes back to what it followed.
 -- wp as for Set; a point may carry npc = the NPC standing there (opening its window counts as
--- arriving). With several points it leads to the nearest on your continent and holds it.
+-- arriving). With several points it leads to the nearest on your continent and holds it; with
+-- ordered = true they're stops in turn instead (getting to one moves on to the next, and it clears
+-- after the last).
 --   Waypoint:Request("MyAddon", { title = "Trade Supplies", points = { { mapID = 1433, x = 0.24, y = 0.47, npc = 777 } } })
 function API:Request(owner, wp) return ns.Targets:SetRequest(owner, wp) end
 function API:ClearRequest() ns.Targets:ClearRequest(true) end
@@ -40,19 +44,22 @@ function API:ClearRequest() ns.Targets:ClearRequest(true) end
 --   Waypoint:NavigateTo("Repair")              the nearest place of a category, by its menu name
 --       ("Class trainer", "Expert tailoring trainer", "Mailbox", "Banker", "Argent Dawn", "Trade Supplies"...)
 --   Waypoint:NavigateToUndiscoveredFlight()     the nearest flight master you haven't discovered
---   Waypoint:NavigateToItems({ 2321, 4470 }, "Vendor: Fine Thread, Simple Wood", "MyAddon")
---       the nearest vendor selling all the items (else the most of them)
+--   Waypoint:NavigateToItems({ 2321, 4470 }, "Vendor: Fine Thread, Simple Wood", "MyAddon", auction)
+--       the vendors for the items, as stops in turn (nearest first, each item they don't sell
+--       counting as another stop); auction (optional): { { id, name } } you'll buy at the auction
+--       house, so the last stop is the nearest auctioneer (also when a vendor item isn't in the stops)
 --   Waypoint:PlaceCategories()  { { name, ids, menu path, class, count = places for you } }
 --   Waypoint:SoldByVendors(itemID)  how many vendors sell it (any faction), or 0
---   Waypoint:PromptVendors({ { id = 2321, qty = 2, name = "Fine Thread" } }, onAddAnyway, "MyAddon")
---       one popup for vendor items you were about to buy elsewhere: Navigate (to the nearest vendor
---       selling them), Add anyway (calls onAddAnyway(items)), or Cancel
+--   Waypoint:PromptVendors({ { id = 2321, qty = 2, name = "Fine Thread" } }, onAddAnyway, "MyAddon", auction)
+--       one popup for vendor items you were about to buy elsewhere: Navigate (to the vendors selling
+--       them, then the auction house when auction lists anything), Add anyway (calls
+--       onAddAnyway(items)), or Cancel
 function API:NavigateTo(category, owner) return ns.Navigate:To(category, owner) end
 function API:NavigateToUndiscoveredFlight(owner) return ns.Navigate:ToUndiscoveredFlight(owner) end
-function API:NavigateToItems(itemIDs, title, owner) return ns.Navigate:ToItems(itemIDs, title, owner) end
+function API:NavigateToItems(itemIDs, title, owner, auction) return ns.Navigate:ToItems(itemIDs, title, owner, auction) end
 function API:PlaceCategories() return ns.Navigate:Categories() end
 function API:SoldByVendors(itemID) return ns.Navigate:SoldBy(itemID) end
-function API:PromptVendors(items, onAddAnyway, owner) return ns.Navigate:PromptVendors(items, onAddAnyway, owner) end
+function API:PromptVendors(items, onAddAnyway, owner, auction) return ns.Navigate:PromptVendors(items, onAddAnyway, owner, auction) end
 
 -- The arrow's frame, for an addon that docks its own window to it (Field Guide sits under it).
 function API:GetFrame()
@@ -72,6 +79,8 @@ end
 -- A button on the arrow for your addon (Field Guide's "Play" while it's paused). The arrow shows
 -- while there's a button, even with nothing to point at. One per addon; nil removes yours.
 --   Waypoint:SetButton("MyAddon", { text = "Play", color = "green", tooltip = "...", onClick = fn })
+-- Add icon = texture path (and optionally iconPushed) for a small icon instead of a text button;
+-- text then becomes the tooltip's title.
 function API:SetButton(owner, button)
     ns.Arrow:SetButton(owner, button)
 end
@@ -99,7 +108,9 @@ end
 -- expected() (optional) gives the keys of where the arrow should point now and next (up to 5);
 -- set your target with key = the first and plan = that list. The restore icon only shows when the
 -- arrow has drifted from it. yield() (optional): true when a quest the player tracked themselves
--- should win over your target (Field Guide: while its window is closed).
+-- should win over your target (Field Guide: while its window is closed). pause() (optional): adds
+-- "Pause My Addon" to the arrow's menu, for the player to take the arrow back. Restore also ends
+-- a "Navigate to" request, which would otherwise stay on top of your target.
 function API:SetManager(owner, m)
     ns.Targets:SetManager(owner, m)
 end

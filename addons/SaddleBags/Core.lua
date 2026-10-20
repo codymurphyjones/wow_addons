@@ -1,6 +1,19 @@
 local addonName, TS = ...
 _G.SaddleBags = TS
 
+-- WallyHUD (the suite's shared look) loads after us: once it's there, draw the tabs and panels
+-- again in its look.
+WallyHUD_Refresh = WallyHUD_Refresh or {}
+table.insert(WallyHUD_Refresh, function()
+	for _, saddle in pairs(TS.saddles) do
+		if saddle.panel then
+			saddle:BuildTabs()
+			saddle:UpdateTabVisuals()
+			saddle:UpdateBackdrop()
+		end
+	end
+end)
+
 TS.MAX_TABS = 10
 TS.MAX_SADDLES = 10
 TS.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon"

@@ -1,4 +1,5 @@
 local _, ns = ...
+local PAL = ns.Palette
 
 -- Draggable minimap button: left-click opens SmartPlates, right-click toggles the preview.
 local MapButton = {}
@@ -101,7 +102,7 @@ function MapButton:Initialize()
     b:SetScript("OnEnter", function(self)
         if self.dragging then return end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("SmartPlates", 0.33, 0.92, 0.78)
+        GameTooltip:AddLine("SmartPlates", PAL.accent[1], PAL.accent[2], PAL.accent[3])
         GameTooltip:AddLine("Role: " .. (ns.Role:Get() == "tank" and "Tank" or "DPS / Healer"), 0.82, 0.89, 0.93)
         GameTooltip:AddLine("Left-click: settings", 0.75, 0.8, 0.85)
         GameTooltip:AddLine("Right-click: preview plates", 0.75, 0.8, 0.85)
