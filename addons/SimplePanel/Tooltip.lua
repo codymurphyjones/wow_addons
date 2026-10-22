@@ -10,6 +10,9 @@ local _, ns = ...
     tt:Show()
 ]]
 local Tooltip = {}
+-- The shared item-tooltip scanner (shared\Tooltip.lua, loaded earlier under the same name) stays
+-- reachable as ns.Scanner: this file takes ns.Tooltip.
+ns.Scanner = ns.Scanner or (ns.Tooltip ~= Tooltip and ns.Tooltip) or nil
 ns.Tooltip = Tooltip
 SimplePanel.Tooltip = Tooltip
 

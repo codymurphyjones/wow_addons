@@ -40,6 +40,23 @@ It loads last: its TOC lists every addon of ours as an optional dependency. It r
 | Standard (default) | everything you've set up except memory | shown |
 | Expanded | everything | shown |
 
+## Vitals (Vitals.lua)
+
+Your health and your resource, drawn into the screen itself instead of a unit frame. By default WallyHUD shows the orb (below) and the line is off: turn **The line** on in the settings and the orb becomes a resource tracker.
+
+- **The tideline:** one faint line across the whole screen. Its **height** is your health. At full health it sits at the top edge, out of the way; as you're hurt it sinks down the screen, through the world you're looking at.
+- **The light:** your mana (rage, energy) lights the tideline from the left, ending in a small star. Your whole state is one point on the screen: up and right is well, sinking down and left is trouble.
+- **The film:** the space above the line (what you've lost) takes a faint cold film, capped so the world stays clear.
+- **The rim:** the screen's edges redden from your first point of damage on an exponential curve: barely there for a long while (2% at 75% health, 11% at 50%), climbing faster the lower you go, full at about 12%. Below your usual low (learned) they pulse like a heartbeat.
+- **Rhythm:** after a spell costs mana, a sweep round the star counts down the five-second rule. Energy and mana ticks ripple off the star. Combo points ride beside it.
+- **Readouts:** bring the mouse near the line and the numbers surface along it. No clicks, and the line never takes the mouse. Below 15% health the health readout shows by itself. The health readout sits at the right end of the line by default (Settings: Health numbers, left, center or right).
+- **Nothing stays:** at full health with your resource at rest, out of combat, it all fades away. Any change brings it back.
+- **It learns:** it remembers how low your health usually goes in a fight and only starts the edges' pulse below that. If you keep reaching for the numbers in fights, it starts showing them in fights on its own (and says so once). `/whud vitals` shows what it has learned; `/whud vitals forget` resets it.
+- **Your unit frame** is one choice: **the orb** (the default) or Blizzard's player frame. It switches straight away either way (after the fight, if you're in one).
+- **The orb** (Orb.lua): a Diablo-inspired glass orb in place of the player frame, where your portrait was: glowing liquid in a bronze-and-iron bezel with a crest, split by an iron bar with a gem. Health fills the top half (emerald), your resource the bottom half (in its colour), each with a bright surface line and a slow swirl in the liquid. Right-click opens your unit menu, left-click targets you, the mouse over it shows your tooltip with the numbers, shift-drag moves it (`/whud orb reset` puts it back). It keeps the same size in and out of combat, so your menu is always a right-click away. The art is drawn by `tools/WallyHUD/make_orb.py` into `Media/Orb`. Its diameter is in the settings (**Orb size**, 100 px). With **the line** on, the line shows your health, so the orb becomes a smaller **resource tracker** (80% of that size): one sphere of your resource, with the exact amount in the middle ("100", not "100 / 1000").
+
+On WoW Forever health and power can be hidden from addons in combat ("secret" values). Vitals never does arithmetic or comparisons on them: they go straight into the engine's own channels (status bar values, curve-mapped alpha, anchors to a bar's fill edge, formatted text). Learning only uses values the game lets it read.
+
 ## Objectives (Questie's tracker)
 
 Questie.lua restyles Questie's quest tracker from here, after every redraw, without changing Questie's files or settings:

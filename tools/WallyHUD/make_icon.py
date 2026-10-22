@@ -38,7 +38,7 @@ def main():
     d.rounded_rectangle([s(30), s(102), s(98), s(106)], radius=s(2), fill=DIM)
     d.rounded_rectangle([s(30), s(102), s(66), s(106)], radius=s(2), fill=ACCENT)
     d.ellipse([s(60), s(98), s(72), s(110)], fill=TEXT, outline=DARK, width=s(1))
-    ik.save(img, out, (("Icon.tga", 128),))
+    ik.save(img, out, (("Icon.tga", 128), ("Logo.png", 512)))  # Logo.png: for CurseForge
     print("icon written to", out)
 
 

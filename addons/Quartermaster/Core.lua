@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.5"
+ns.VERSION = "0.1.6"
 ns.PREFIX = "|cff55d6beQuartermaster|r"
 -- Built from the folder name so the path survives renaming the folder.
 ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon.png"

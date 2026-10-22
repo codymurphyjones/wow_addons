@@ -32,6 +32,14 @@ local RETIRED = { "pvp" }
 ns:On("PLAYER_LOGIN", function()
     for _, profile in pairs(SmartPlatesDB.profiles or {}) do
         for _, key in ipairs(RETIRED) do profile[key] = nil end
+        -- The target frame is drawn at a pixel size now, not scaled up: the old scale goes.
+        local tf = profile.targetFrame
+        if type(tf) == "table" then tf.scale, tf.sized18 = nil, nil end
+        -- Its default width went from 180 to 144 (1.2x a plate): once, move a profile still at 180.
+        if type(tf) == "table" and not tf.width144 then
+            if tf.width == 180 then tf.width = 144 end
+            tf.width144 = true
+        end
     end
 end)
 

@@ -1300,13 +1300,19 @@ def toc_dependencies(toc):
 def upload_relations(cfg, cf, toc):
     """CurseForge relations for the TOC's dependencies: through the X-Curse-Project-ID of the
     matching workspace addon, else a CurseForge project whose slug or name is exactly the folder
-    name. Returns ([{"slug", "type"}], [names that couldn't be found])."""
+    name. Returns ([{"slug", "type"}], [names that couldn't be found], [names still awaiting
+    approval]): CurseForge refuses the whole upload if a relation names a project it hasn't
+    approved yet (status 4), so those are left out."""
     projects = {name.lower(): pid for name, pid in cfg["projects"].items()}
-    relations, unlinked = [], []
+    relations, unlinked, pending = [], [], []
     for name, kind in toc_dependencies(toc):
         pid = projects.get(name.lower())
         if pid:
-            slug = cf.mod(pid)["slug"]
+            mod = cf.mod(pid)
+            if mod.get("status") != 4:
+                pending.append(name)
+                continue
+            slug = mod["slug"]
         else:
             hits = {m["slug"] for m in cf.search(name)
                     if norm(m.get("slug")) == norm(name) or norm(m.get("name")) == norm(name)}
@@ -1315,7 +1321,7 @@ def upload_relations(cfg, cf, toc):
             relations.append({"slug": slug, "type": kind})
         else:
             unlinked.append(name)
-    return relations, unlinked
+    return relations, unlinked, pending
 
 
 def find_description(addon):
@@ -1463,10 +1469,13 @@ def publish_zip(cfg, cf, addon, zpath, meta, yes=False, dry_run=False):
     if not ids:
         raise SyncError("No game versions matched - pass --game-versions, e.g. --game-versions 1.15.7")
 
-    relations, unlinked = upload_relations(cfg, cf, toc)
+    relations, unlinked, pending = upload_relations(cfg, cf, toc)
     if unlinked:
         print(f"warning: no CurseForge project found for dependency {', '.join(unlinked)} - "
               "link it, or add that relation on CurseForge by hand")
+    if pending:
+        print(f"warning: relation to {', '.join(pending)} left out - CurseForge hasn't approved "
+              "that project yet; the next release after approval links it")
 
     changelog = meta.get("changelog") or f"Version {version}"
     release_type = meta.get("releaseType") or "release"
@@ -2162,9 +2171,16 @@ def main(argv=None):
     p.set_defaults(func=cmd_init)
 
     argv = list(sys.argv[1:] if argv is None else argv)
+    # A bare "--" (yarn passes it through: `yarn deploy -- --yes`) would make argparse read every
+    # option after it as a plain value ("--yes" as the addon's name). No command here takes one.
+    argv = [a for a in argv if a != "--"]
     if not argv or (argv[0].startswith("-") and argv[0] not in ("-h", "--help")):
         argv = ["sync"] + argv
     args = parser.parse_args(argv)
+    # `npm run deploy --yes` keeps --yes for npm itself (it's an npm setting) and runs the script
+    # without it; npm leaves it in the environment as npm_config_yes, so take it from there.
+    if getattr(args, "yes", None) is False and os.environ.get("npm_config_yes", "").lower() in ("true", "1"):
+        args.yes = True
     try:
         ok = args.func(args)
     except SyncError as exc:

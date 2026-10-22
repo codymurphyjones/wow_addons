@@ -80,7 +80,7 @@ def paint(inside):
 
 img = ik.badge(paint, inner=(30, 24, 34))
 out_dir = ik.out_dir("Bandolier")
-ik.save(img, out_dir, (("Icon.tga", 128),))
+ik.save(img, out_dir, (("Icon.tga", 128), ("Logo.png", 512)))  # Logo.png: for CurseForge
 if len(sys.argv) > 2:
     img.resize((256, 256), Image.LANCZOS).save(sys.argv[2])
 print("saved", os.path.join(out_dir, "Icon.tga"), (128, 128), "RGBA")

@@ -7,7 +7,7 @@ local _, ns = ...
 -- one that covers least. When every spot would cover something vital, the tooltip goes where Edit
 -- Mode puts it (the game's own default). /wtip
 WallyTooltip = WallyTooltip or {}
-ns.VERSION = "0.1.0"
+ns.VERSION = "0.1.1"
 
 -- Events and saved variables: the shared Core.lua (addons/shared). Print stays here.
 ns.SAVED = { db = "WallyTooltipDB" }

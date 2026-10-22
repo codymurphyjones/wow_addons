@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "1.0.4"
+ns.VERSION = "1.0.5"
 -- Tape Measure's logo, shipped in the addon (Media\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\TapeMeasure\\Media\\Icon"
 

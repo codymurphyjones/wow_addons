@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.0"
+ns.VERSION = "0.1.1"
 ns.PREFIX = "|cff55d6beMr. Miyagi|r"
 ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon"
 

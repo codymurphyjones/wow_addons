@@ -10,7 +10,14 @@ local SLOTS = {
     { 17, "SECONDARYHANDSLOT", "Off Hand" }, { 18, "RANGEDSLOT", "Ranged" },
 }
 
-local function RepairCost(slot) return ns.Tooltip.RepairCost(slot) end
+-- Repair cost from the shared item scanner (ns.Scanner: SimplePanel's own tooltip has ns.Tooltip);
+-- 0 if it can't tell.
+local function RepairCost(slot)
+    local scan = ns.Scanner and ns.Scanner.RepairCost
+    if not scan then return 0 end
+    local ok, cost = pcall(scan, slot)
+    return ok and tonumber(cost) or 0
+end
 
 local function Scan()
     local items, lowest, sum, n = {}, 100, 0, 0

@@ -1,4 +1,4 @@
-# Waypoint
+# Waypoint: Geography Aware Navigation
 
 **An arrow that knows where you're going: your Questie quests, your addons' targets, and a waypoint path your whole group can draw on the map.**
 

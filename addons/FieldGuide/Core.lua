@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.0"
+ns.VERSION = "0.1.1"
 -- Field Guide's logo, shipped in the addon (Media\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\FieldGuide\\Media\\Icon"
 

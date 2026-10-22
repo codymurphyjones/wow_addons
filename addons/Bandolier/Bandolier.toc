@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Bandolier
 ## Notes: Keeps a "Bandolier" macro pointed at your best life-saving consumable. Ctrl+press it to pick any other consumable. /bandolier
-## Version: 1.0.5
+## Version: 1.0.7
 ## SavedVariables: BandolierData
 ## SavedVariablesPerCharacter: BandolierDB
 ## Dependencies: StatLedger

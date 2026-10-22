@@ -88,6 +88,7 @@ def logo():
     for x in (66, 80, 94):
         d.ellipse([s(x - 4.5), s(69.5), s(x + 4.5), s(78.5)], fill=DARK)
     save(img, "Icon.tga", 128)
+    save(img, "Logo.png", 512)  # for CurseForge
 
 
 if __name__ == "__main__":

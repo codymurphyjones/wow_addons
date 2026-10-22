@@ -2,7 +2,7 @@
 ## Title: Quartermaster
 ## Notes: Keeps your supply lists from Auctionator's prices, searches the live auction house with Auctionator-style filters, and buys one click at a time. /qm
 ## Author: Dinoblankie + Claude
-## Version: 0.1.5
+## Version: 0.1.6
 ## RequiredDeps: Auctionator
 ## Dependencies: Auctionator
 ## OptionalDeps: Waypoint, Bandolier

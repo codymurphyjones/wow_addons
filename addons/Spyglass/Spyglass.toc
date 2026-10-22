@@ -2,7 +2,7 @@
 ## Title: SpyGlass
 ## Notes: Dungeon and raid gear for your level and class, ranked by your StatLedger stat order, on the Character window, plus a loot journal with boss abilities. /sg, /sgj
 ## Author: Dinoblankie + Claude
-## Version: 1.0.8
+## Version: 1.0.9
 ## Dependencies: StatLedger
 ## OptionalDeps: Waypoint, AtlasLootClassic, AtlasLootContinued
 ## SavedVariables: SpyGlassDB, SpyGlassJournalDB, LootPriorityDB, LootPriorityJournalDB

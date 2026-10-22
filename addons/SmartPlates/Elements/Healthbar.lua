@@ -142,7 +142,8 @@ function Health:UpdateBorder(f)
     bar.targetGlow:ClearAllPoints()
     bar.targetGlow:SetPoint("TOPLEFT", f, "TOPLEFT", -out, out)
     bar.targetGlow:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", out, -out - ns.Plates:BelowBar(f))
-    local target = u.isTarget and g.targetHighlight
+    -- (SmartPlates' target frame is the target; it doesn't mark itself.)
+    local target = u.isTarget and not u.isTargetFrame and g.targetHighlight
     local style = g.targetStyle
     if target then
         bar.border:SetColor(M.ACCENT[1], M.ACCENT[2], M.ACCENT[3], 1)

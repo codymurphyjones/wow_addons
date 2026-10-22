@@ -272,7 +272,7 @@ function AC:Update(f)
                 set.cc:SetPoint("RIGHT", f.name, "LEFT", -4, 0)
             else
                 local x = (f.barH or 12) + (ns.db.castbar.height or 8) + 8
-                if u.isTarget and ns.db.general.targetStyle == "arrows" and ns.db.general.targetHighlight then
+                if u.isTarget and not u.isTargetFrame and ns.db.general.targetStyle == "arrows" and ns.db.general.targetHighlight then
                     x = x + math.max(10, (f.barH or 12) + 6) + 6
                 end
                 set.cc:SetPoint("RIGHT", f, "LEFT", -x, 0)

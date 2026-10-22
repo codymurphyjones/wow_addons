@@ -2,11 +2,12 @@
 ## Title: WallyTooltip
 ## Notes: A smart tooltip: each one goes where it's readable and blocks nothing vital (unit frames, action bars, the thing under your cursor), judged from what's on screen; Edit Mode's tooltip position only when nowhere is clear. /wtip
 ## Author: Dinoblankie + Claude
-## Version: 0.1.0
+## Version: 0.1.1
 ## OptionalDeps: WallyHUD, SimplePanel, Waypoint, Questie
 ## SavedVariables: WallyTooltipDB
 ## IconTexture: Interface\AddOns\WallyTooltip\Media\Icon
 ## Category: User Interface
+## X-Curse-Project-ID: 1759564
 
 ..\shared\Core.lua
 Core.lua

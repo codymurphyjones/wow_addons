@@ -85,8 +85,7 @@ end
 function Combo:Refresh()
     if current then current.combo:Hide(); current = nil end
     if not powerType then return end
-    local f
-    ns.Plates:Each(function(p) if p.unit.isTarget then f = p end end)
+    local f = ns.Plates:TargetPlate()
     if f and f.active then
         current = f
         Show(f)
@@ -94,7 +93,7 @@ function Combo:Refresh()
 end
 
 function Combo:Update(f)
-    if f.unit.isTarget then current = f; Show(f) else f.combo:Hide() end
+    if f.unit.isTarget and f == ns.Plates:TargetPlate() then current = f; Show(f) else f.combo:Hide() end
 end
 
 function Combo:Clear(f)

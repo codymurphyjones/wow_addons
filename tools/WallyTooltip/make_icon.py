@@ -27,7 +27,7 @@ def main():
     # the pointer, below left of it
     d.polygon([(s(24), s(62)), (s(24), s(104)), (s(34), s(94)), (s(42), s(110)), (s(49), s(106)),
                (s(41), s(91)), (s(54), s(90))], fill=TEXT, outline=DARK)
-    ik.save(img, out, (("Icon.tga", 128),))
+    ik.save(img, out, (("Icon.tga", 128), ("Logo.png", 512)))  # Logo.png: for CurseForge
     print("icon written to", out)
 
 

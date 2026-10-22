@@ -2,7 +2,7 @@
 ## Title: Mr. Miyagi
 ## Notes: A coach for deaths to mobs. Reads your actual spells, talents, items and stats, looks at how the fight went, and tells you what to do next time, with your odds now and with the advice. /miyagi
 ## Author: Dinoblankie + Claude
-## Version: 0.1.0
+## Version: 0.1.1
 ## SavedVariables: MrMiyagiDB
 ## SavedVariablesPerCharacter: MrMiyagiCharDB
 ## IconTexture: Interface\AddOns\MrMiyagi\Media\Icon

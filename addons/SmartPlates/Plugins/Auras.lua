@@ -261,7 +261,7 @@ function Auras:UpdateBigCC(f)
     else
         -- Left of the plate, beyond the cast icon (and the target arrow when it's shown).
         local x = (f.barH or 12) + (ns.db.castbar.height or 8) + 8
-        if f.unit.isTarget and ns.db.general.targetStyle == "arrows" and ns.db.general.targetHighlight then
+        if f.unit.isTarget and not f.unit.isTargetFrame and ns.db.general.targetStyle == "arrows" and ns.db.general.targetHighlight then
             x = x + math.max(10, (f.barH or 12) + 6) + 6
         end
         big:SetPoint("RIGHT", f, "LEFT", -x, 0)

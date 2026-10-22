@@ -6,7 +6,7 @@ local _, ns = ...
 -- error toasts (Reporter.lua), and the density presets (Density.lua). Settings: Options >
 -- AddOns > WallyHUD, or /whud.
 WallyHUD = WallyHUD or {}
-ns.VERSION = "0.1.0"
+ns.VERSION = "0.1.1"
 WallyHUD.VERSION = 1             -- the API's version (a number, as every suite API has)
 WallyHUD.RELEASE = ns.VERSION    -- the addon's release ("0.1.0")
 
@@ -20,10 +20,37 @@ ns.DEFAULTS = {
     hideReporter = true,   -- keep Blizzard's Issue Reporter out of the play field (keybind and toast instead)
     errorToast = true,     -- a small notice when an addon error happens, with Report and Dismiss
     questieSkin = true,    -- Questie's tracker in the suite's look (Questie.lua; a /reload to switch off)
+    vitals = false,          -- the tideline: health and power drawn into the screen (Vitals.lua); with it on, the orb tracks your resource only
+    vitalsPlayerFrame = "orb", -- your unit frame: "orb" (Orb.lua) | "blizzard" (Blizzard's player frame)
+    orbSize = 100,           -- the orb's diameter
+    vitalsHealthTextSide = "right", -- where the health readout sits on the line: "left" | "center" | "right"
+    vitalsReadouts = "learn", -- the numbers: "learn" (when you reach for them, pinned once you often do) | "approach" | "always"
+    vitalsFilm = true,       -- the cold film over the health you've lost
+    vitalsRim = true,        -- the bruised edges and the beat when you're low for you
+    vitalsRhythm = true,     -- the five-second rule sweep and the tick ripples
 }
 ns.CHAR_DEFAULTS = {}
 
-ns:OnLoad(function() WallyHUD.db = ns.db end)
+ns:OnLoad(function()
+    WallyHUD.db = ns.db
+    -- "Hide Blizzard's player frame" + "A small orb in its place" became one choice.
+    local db = ns.db
+    if db.vitalsHidePlayer ~= nil then
+        db.vitalsPlayerFrame = db.vitalsHidePlayer and "orb" or "blizzard"
+        db.vitalsHidePlayer, db.vitalsOrb = nil, nil
+    end
+    -- The orb became the default and the line a choice: once, move saved settings to that.
+    ns:Migrate("orbDefault", function(d)
+        d.vitals = false
+        d.vitalsPlayerFrame = "orb"
+    end)
+    -- The orb's default size went from 56 to 100: once, move a save still at the old default.
+    ns:Migrate("orbSize100", function(d)
+        if d.orbSize == 56 then d.orbSize = 100 end
+    end)
+    -- The in-combat size went (the orb keeps one size).
+    db.orbCombatSize = nil
+end)
 
 function ns:Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(WallyHUD.Hex(ns.T.accent) .. "WallyHUD|r: " .. tostring(msg))
@@ -73,6 +100,8 @@ local function Help()
     ns:Print("/whud report - Blizzard's Issue Reporter (also Ctrl+Shift+/)")
     ns:Print("/whud debug - what WallyHUD finds, and the frame under the mouse")
     ns:Print("/whud flags - move the battleground flag carrier frames (the right-side column); /whud flags reset")
+    ns:Print("/whud vitals - what Vitals has learned about you; /whud vitals forget")
+    ns:Print("/whud orb reset - put the orb back where your portrait was")
 end
 
 SLASH_WALLYHUD1 = "/wallyhud"
@@ -92,6 +121,14 @@ SlashCmdList.WALLYHUD = function(msg)
         ns.RightColumn:Toggle()
     elseif cmd == "flags reset" then
         ns.RightColumn:Reset()
+    elseif cmd == "vitals" then
+        ns:Print(ns.Vitals.Describe())
+    elseif cmd == "orb reset" then
+        ns.Orb:ResetPosition()
+        ns:Print("The orb is back where your portrait was.")
+    elseif cmd == "vitals forget" then
+        ns.Vitals.Forget()
+        ns:Print("Vitals forgot what it learned about you.")
     else
         ns.Settings:Open()
     end

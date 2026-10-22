@@ -1,13 +1,14 @@
 ## Interface: 16001
 ## Title: WallyHUD
-## Notes: One look for the suite: shared design tokens, a quieter HUD, density presets, and Blizzard's Issue Reporter out of the play field. /whud
+## Notes: One look for the suite, a quieter HUD, and Vitals: your health and power drawn into the screen as one line, no unit frame. Quiet minimap buttons, density presets, the Issue Reporter out of the way. /whud
 ## Author: Dinoblankie + Claude
-## Version: 0.1.0
+## Version: 0.1.1
 ## OptionalDeps: Wally, Quartermaster, WealthPlanner, TapeMeasure, Fireside, MrMiyagi, SmartPlates, BattleRecap, SimplePanel, SaddleBags, Waypoint, FieldGuide, RoadLog, Spyglass, SpyglassPluginQuests, StatLedger, Bandolier, Modified, ZeppelinSigns, Convergence, MusicLib, Questie
 ## SavedVariables: WallyHUDDB
 ## SavedVariablesPerCharacter: WallyHUDCharDB
 ## IconTexture: Interface\AddOns\WallyHUD\Media\Icon
 ## Category: User Interface
+## X-Curse-Project-ID: 1759563
 
 ..\shared\Core.lua
 ..\shared\Questie.lua
@@ -19,6 +20,8 @@ Minimap.lua
 Reporter.lua
 Density.lua
 RightColumn.lua
+Vitals.lua
+Orb.lua
 Questie.lua
 ..\shared\OptionsPage.lua
 Settings.lua

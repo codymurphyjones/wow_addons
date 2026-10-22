@@ -72,6 +72,12 @@ You can force it with `/sp role tank` or `/sp role dps`.
 - **Profiles**: named profiles shared by your characters, with export to one line of text and import.
 - Friendly units show just their name by default.
 
+## Your target frame (optional)
+
+Turn on **SmartPlates draws your target frame** (General) and your target gets a big SmartPlates plate in place of Blizzard's target frame: the same health, name, threat colour and percentage, castbar, auras and combo points as its nameplate, as a compact, crisp bar (144 x 14 px by default, 1.2 times a nameplate; set its width and height to taste). Right-click it for the target's menu; shift-drag it to move it.
+
+With **Enemy plates fly into it** (on by default), targeting an enemy sends its nameplate gliding into the target frame, growing and fading out as it slips in behind it. Switch away while it's still alive and it flies back, faster, to full opacity and its place among the plates. Friendly targets stay where they are.
+
 ---
 
 ## Commands
@@ -83,6 +89,7 @@ You can force it with `/sp role tank` or `/sp role dps`.
 | `/sp role auto\|tank\|dps` | How SmartPlates decides your role |
 | `/sp threat` | Print your threat on your target |
 | `/sp minimap` | Show or hide the minimap button |
+| `/sp target reset` | Put the target frame back where Blizzard's was |
 | `/sp reset` | Reset every setting |
 
 The window also opens from the minimap button, the addon compartment and **Options > AddOns > SmartPlates**.

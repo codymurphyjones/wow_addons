@@ -1,14 +1,15 @@
 ## Interface: 16001
-## Title: Waypoint
+## Title: Waypoint: Geography Aware Navigation
 ## Notes: A navigation arrow. Follows your Questie quests, takes targets from other addons, and lets your group build shared waypoint paths on the world map (Ctrl+click). /way
 ## Author: Dinoblankie + Claude
-## Version: 0.1.0
+## Version: 0.1.1
 ## OptionalDeps: Questie, ZeppelinSigns, RoadLog
 ## SavedVariables: WaypointDB
 ## SavedVariablesPerCharacter: WaypointCharDB
 ## IconTexture: Interface\AddOns\Waypoint\Media\Icon
 ## Category: Map & Minimap
 ## AddonCompartmentFunc: Waypoint_OnCompartmentClick
+## X-Curse-Project-ID: 1759571
 
 ..\shared\Fonts.lua
 ..\shared\Core.lua

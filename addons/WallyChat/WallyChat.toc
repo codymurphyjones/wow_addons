@@ -2,11 +2,12 @@
 ## Title: WallyChat
 ## Notes: The game's chat windows in the suite's look: hairline panels, underline tabs, Roboto Condensed, a quiet button row, clickable web links, and a full-screen view where every line can be selected and copied. /wchat
 ## Author: Dinoblankie + Claude
-## Version: 0.1.0
+## Version: 0.1.1
 ## OptionalDeps: WallyHUD, SimplePanel
 ## SavedVariables: WallyChatDB
 ## IconTexture: Interface\AddOns\WallyChat\Media\Icon
 ## Category: Chat & Communication
+## X-Curse-Project-ID: 1759561
 
 ..\shared\Core.lua
 Core.lua

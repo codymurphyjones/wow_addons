@@ -307,6 +307,11 @@ local function SetupInput(row, item, width, labelW)
 end
 
 -- Slot buttons: the item's tooltip in GameTooltip, either click runs fn(button).
+local function SlotBorder(b, hover)
+    local c = hover and T.accent or Resolve(b.slot and b.slot.border) or T.border
+    b:SetBackdropBorderColor(c[1], c[2], c[3], 1)
+end
+
 local function SlotEnter(b)
     local s = b.slot
     SlotBorder(b, true)
@@ -315,11 +320,6 @@ local function SlotEnter(b)
     GameTooltip:SetOwner(b, "ANCHOR_RIGHT")
     SafeCall(s.tooltip, GameTooltip)
     GameTooltip:Show()
-end
-
-local function SlotBorder(b, hover)
-    local c = hover and T.accent or Resolve(b.slot and b.slot.border) or T.border
-    b:SetBackdropBorderColor(c[1], c[2], c[3], 1)
 end
 
 local function SlotLeave(b)

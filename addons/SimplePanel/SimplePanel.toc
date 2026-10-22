@@ -2,7 +2,7 @@
 ## Title: SimplePanel
 ## Notes: A clean info bar across the top of your screen: gold, XP, bags, durability, quests, professions, friends and more, with rich tooltips, charts, drag-and-drop layout, color schemes, profiles and a drawer for minimap buttons.
 ## Author: Dinoblankie + Claude
-## Version: 0.1.5
+## Version: 0.1.6
 ## SavedVariables: SimplePanelDB
 ## SavedVariablesPerCharacter: SimplePanelCharDB
 ## OptionalDeps: Fireside

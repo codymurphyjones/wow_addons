@@ -1,6 +1,6 @@
 local _, ns = ...
 
-ns.VERSION = "1.1.2"
+ns.VERSION = "1.1.3"
 -- BattleRecap's logo, shipped in the addon (Media\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\BattleRecap\\Media\\Icon"
 

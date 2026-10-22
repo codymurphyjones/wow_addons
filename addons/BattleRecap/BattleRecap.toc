@@ -2,7 +2,7 @@
 ## Title: BattleRecap
 ## Notes: PvP death recaps: who killed you, with what, how fast and why, plus how to counter them. Covers battlegrounds, arenas, world PvP and duels. Hit breakdowns, graphs, nemeses, lifetime stats, match summaries and one-key revenge targeting. /brecap
 ## Author: Dinoblankie + Claude
-## Version: 1.1.2
+## Version: 1.1.3
 ## SavedVariables: BattleRecapDB
 ## IconTexture: Interface\AddOns\BattleRecap\Media\Icon
 ## Category: PvP
