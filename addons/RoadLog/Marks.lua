@@ -20,19 +20,8 @@ local RING = { 0.02, 0.06, 0.18, 0.9 }
 local ROUND = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask" -- a round mask
 local REFRESH = 1    -- seconds between redraws while you log blockers with the map open
 
-local frame
-local lines, used = {}, 0
-local pins, usedPins = {}, 0
-
-local function GetLine()
-    used = used + 1
-    local line = lines[used]
-    if not line then
-        line = frame:CreateLine(nil, "ARTWORK")
-        lines[used] = line
-    end
-    return line
-end
+local WM = ns.WorldMap
+local layer -- the shared WorldMap.lua layer (below)
 
 local function OnPinEnter(pin)
     GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
@@ -57,34 +46,27 @@ local function OnPinClick(pin, button)
     end
 end
 
-local function GetPin(canvas)
-    usedPins = usedPins + 1
-    local pin = pins[usedPins]
-    if not pin then
-        pin = CreateFrame("Button", nil, canvas)
-        pin:RegisterForClicks("RightButtonUp")
-        -- A blue spot in a dark ring: two colour fills, cut round by a mask.
-        pin.ring = pin:CreateTexture(nil, "ARTWORK", nil, 0)
-        pin.ring:SetAllPoints()
-        pin.ring:SetColorTexture(RING[1], RING[2], RING[3], RING[4])
-        pin.spot = pin:CreateTexture(nil, "ARTWORK", nil, 1)
-        pin.spot:SetPoint("TOPLEFT", 2, -2)
-        pin.spot:SetPoint("BOTTOMRIGHT", -2, 2)
-        pin.spot:SetColorTexture(SPOT[1], SPOT[2], SPOT[3], SPOT[4])
-        if pin.CreateMaskTexture then
-            for _, tex in ipairs({ pin.ring, pin.spot }) do
-                local mask = pin:CreateMaskTexture()
-                mask:SetTexture(ROUND, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-                mask:SetAllPoints(tex)
-                tex:AddMaskTexture(mask)
-            end
+local function CreatePin(pin)
+    pin:RegisterForClicks("RightButtonUp")
+    -- A blue spot in a dark ring: two colour fills, cut round by a mask.
+    pin.ring = pin:CreateTexture(nil, "ARTWORK", nil, 0)
+    pin.ring:SetAllPoints()
+    pin.ring:SetColorTexture(RING[1], RING[2], RING[3], RING[4])
+    pin.spot = pin:CreateTexture(nil, "ARTWORK", nil, 1)
+    pin.spot:SetPoint("TOPLEFT", 2, -2)
+    pin.spot:SetPoint("BOTTOMRIGHT", -2, 2)
+    pin.spot:SetColorTexture(SPOT[1], SPOT[2], SPOT[3], SPOT[4])
+    if pin.CreateMaskTexture then
+        for _, tex in ipairs({ pin.ring, pin.spot }) do
+            local mask = pin:CreateMaskTexture()
+            mask:SetTexture(ROUND, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+            mask:SetAllPoints(tex)
+            tex:AddMaskTexture(mask)
         end
-        pin:SetScript("OnEnter", OnPinEnter)
-        pin:SetScript("OnLeave", GameTooltip_Hide)
-        pin:SetScript("OnClick", OnPinClick)
-        pins[usedPins] = pin
     end
-    return pin
+    pin:SetScript("OnEnter", OnPinEnter)
+    pin:SetScript("OnLeave", GameTooltip_Hide)
+    pin:SetScript("OnClick", OnPinClick)
 end
 
 -- A blocker's points on mapID, as 0-1 fractions (false where it's off the map).
@@ -97,50 +79,25 @@ local function Projected(pts, continent, mapID)
     return out
 end
 
-local function Draw(xy, canvas, w, h, thickness, col)
-    for pass = 1, 2 do
-        local c = pass == 1 and EDGE or col
-        for i = 3, #xy - 1, 2 do
-            local x0, y0, x1, y1 = xy[i - 2], xy[i - 1], xy[i], xy[i + 1]
-            if x0 and x1 then
-                local line = GetLine()
-                line:SetDrawLayer("ARTWORK", pass == 1 and 0 or 1)
-                line:SetColorTexture(c[1], c[2], c[3], c[4])
-                line:SetThickness(pass == 1 and thickness * CASING or thickness)
-                line:SetStartPoint("TOPLEFT", canvas, x0 * w, -y0 * h)
-                line:SetEndPoint("TOPLEFT", canvas, x1 * w, -y1 * h)
-                line:Show()
-            end
-        end
-    end
+-- A blocker in its casing, thickness on screen (the layer scales it with the zoom).
+local function Draw(xy, thickness, col)
+    layer:Polyline(xy, col, thickness, EDGE, CASING)
 end
 
-function Marks:Refresh()
-    if not (ns.db and WorldMapFrame and WorldMapFrame:IsShown()) then return end
-    for i = 1, used do lines[i]:Hide() end
-    for i = 1, usedPins do pins[i]:Hide() end
-    used, usedPins = 0, 0
-    local mapID = WorldMapFrame:GetMapID()
-    local canvas = WorldMapFrame:GetCanvas()
-    if not (mapID and canvas and canvas.CreateLine) then return end
-    if not frame then
-        frame = CreateFrame("Frame", nil, canvas)
-        frame:SetAllPoints(canvas)
-    end
-    -- Just above the roads (MapLines keeps its own under Waypoint's pins, at +2100).
-    frame:SetFrameLevel(canvas:GetFrameLevel() + 2095)
+-- Lines just above the roads (MapLines keeps its own under Waypoint's pins, at +2100), the spots
+-- one level over them.
+local function Refresh(_, mapID)
+    if not (ns.db and layer:CanDrawLines()) then return end
     local continent = ns.Nav:Continent(mapID)
     if continent == nil then return end
-    local scale = 1 / (WorldMapFrame:GetCanvasScale() or 1)
-    local w, h = canvas:GetSize()
 
     if ns.db.showBlockers then
         for _, seg in ipairs(ns.db.blockers[continent] or {}) do
-            Draw(Projected(seg.pts, continent, mapID), canvas, w, h, LINE * scale, BLOCKER)
+            Draw(Projected(seg.pts, continent, mapID), LINE, BLOCKER)
         end
         local cur = ns.Recorder:Current()
         if cur and cur.kind == "blocker" and cur.continent == continent then
-            Draw(Projected(cur.pts, continent, mapID), canvas, w, h, LINE * 1.4 * scale, NOW)
+            Draw(Projected(cur.pts, continent, mapID), LINE * 1.4, NOW)
         end
     end
     for _, kind in ipairs({ "passes", "transitions" }) do
@@ -149,33 +106,28 @@ function Marks:Refresh()
         for _, mark in ipairs(show and ns.db[kind][continent] or {}) do
             local x, y = ns.Nav:Project(continent, mark.n, mark.w, mapID)
             if x then
-                local pin = GetPin(canvas)
+                local pin = layer:Pin()
                 pin.mark, pin.continent, pin.kind = mark, continent, kind
                 pin.spot:SetColorTexture(col[1], col[2], col[3], col[4])
-                pin:SetSize(PIN, PIN)
-                pin:SetScale(scale)
-                pin:SetFrameLevel(frame:GetFrameLevel() + 1)
-                pin:ClearAllPoints()
-                pin:SetPoint("CENTER", canvas, "TOPLEFT", x * w / scale, -y * h / scale)
-                pin:Show()
+                layer:Place(pin, x, y)
             end
         end
     end
 end
 
-ns:On("PLAYER_LOGIN", function()
-    if not WorldMapFrame then return end
-    local function Refresh() Marks:Refresh() end
-    hooksecurefunc(WorldMapFrame, "OnMapChanged", Refresh)
-    if WorldMapFrame.OnCanvasScaleChanged then hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", Refresh) end
-    WorldMapFrame:HookScript("OnShow", Refresh)
-    -- The blocker you're logging grows as you walk: redraw now and then while the map is open.
-    local acc = 0
-    CreateFrame("Frame"):SetScript("OnUpdate", function(_, elapsed)
-        acc = acc + elapsed
-        if acc < REFRESH then return end
-        acc = 0
+-- One layer on the world map (shared WorldMap.lua), levels from the canvas as always: redrawn
+-- when the map, its zoom or its visibility changes, and every REFRESH seconds while you log a
+-- blocker with the map open (it grows as you walk).
+layer = WM.NewLayer({
+    base = "canvas", lines = true, level = 2095, pinLevel = 2096, size = PIN, create = CreatePin, refresh = Refresh,
+    interval = REFRESH,
+    every = function(l)
         local cur = ns.Recorder:Current()
-        if WorldMapFrame:IsShown() and cur and cur.kind == "blocker" then Refresh() end
-    end)
-end)
+        if cur and cur.kind == "blocker" then l:Refresh() end
+    end,
+})
+Marks.layer = layer
+
+function Marks:Refresh()
+    if ns.db then layer:Refresh() end
+end

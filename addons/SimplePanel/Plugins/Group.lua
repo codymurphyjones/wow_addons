@@ -24,7 +24,8 @@ local function Survey()
     for _, unit in ipairs(Units()) do
         if UnitExists(unit) then
             s.total = s.total + 1
-            local name = UnitName(unit)
+            -- "Given Family": the given name alone doesn't tell two members apart.
+            local name = ns.Compat.UnitPlayer(unit)
             local _, class = UnitClass(unit)
             if class then s.classes[class] = (s.classes[class] or 0) + 1 end
             if not UnitIsConnected(unit) then s.offline[#s.offline + 1] = name
@@ -38,25 +39,22 @@ local function Survey()
     return s
 end
 
+local CLASS_FALLBACK = { 0.85, 0.9, 0.95 }
 local function ClassLine(classes)
     local parts = {}
     local order = CLASS_SORT_ORDER or { "WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE", "WARLOCK", "DRUID" }
     for _, class in ipairs(order) do
         local n = classes[class]
         if n then
-            local c = RAID_CLASS_COLORS and RAID_CLASS_COLORS[class] or { r = 0.85, g = 0.9, b = 0.95 }
+            local hex = ns.Units.ClassColor(class, CLASS_FALLBACK)
             local name = (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[class]) or class
-            parts[#parts + 1] = ("|cff%02x%02x%02x%d %s|r"):format(c.r * 255, c.g * 255, c.b * 255, n, name)
+            parts[#parts + 1] = "|c" .. hex .. n .. " " .. name .. "|r"
         end
     end
     return parts
 end
 
-local function Colored(name, class)
-    local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
-    if not c then return name end
-    return ("|cff%02x%02x%02x%s|r"):format(c.r * 255, c.g * 255, c.b * 255, name)
-end
+local function Colored(name, class) return ns.Units.Colored(name, class, { plain = true }) end
 
 -- What Group History knows of each member: your +/- and note, else how often you've grouped. A
 -- raid lists only those you've rated or noted.
@@ -67,9 +65,9 @@ local function HistoryLines(tt)
     local lines = {}
     for _, unit in ipairs(Units()) do
         if unit ~= "player" and UnitExists(unit) then
-            local name, realm = UnitName(unit)
-            local full = name and realm and realm ~= "" and (name .. "-" .. realm) or name
-            local info = full and GH.Get(full, UnitGUID(unit))
+            -- UnitName's second value is the family name: the unit's "Given Family".
+            local name = ns.Compat.UnitPlayer(unit)
+            local info = name and GH.Get(name, UnitGUID(unit))
             local note, rating = GH.Note(info), GH.Rating(info)
             local right = (rating ~= "" or note) and (rating .. (note and ("  " .. W.Color(note, T.yellow)) or ""))
                 or GH.Brief(info) or W.Color("new", T.muted)
@@ -132,10 +130,10 @@ SimplePanel.RegisterPlugin({
         if ns.GroupHistory.Available() and not (IsInRaid and IsInRaid()) then
             m:Header("Group History")
             for _, unit in ipairs(Units()) do
-                local name, realm = UnitName(unit)
+                local name = ns.Compat.UnitPlayer(unit)
                 if unit ~= "player" and name then
                     local _, class = UnitClass(unit)
-                    ns.GroupHistory.AddMenu(m, realm and realm ~= "" and (name .. "-" .. realm) or name, UnitGUID(unit), Colored(name, class))
+                    ns.GroupHistory.AddMenu(m, name, UnitGUID(unit), Colored(name, class))
                 end
             end
         end

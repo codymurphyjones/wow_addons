@@ -578,6 +578,31 @@ function L:Scan(verbose)
     self:Refresh()
 end
 
+-- An add-on hands over its own minimap button (addons/shared/MinimapButton.lua), shown or not: the
+-- drawer takes it at once, by the same key a scan would give it, instead of waiting for a scan to
+-- find it on the minimap. Returns true once it's held.
+function L:AddButton(b, name)
+    local fname = b and b.GetName and b:GetName()
+    if not fname or not ns.db then return false end
+    local key = "btn:" .. fname
+    if byKey[key] then return true end
+    if InCombatLockdown() then
+        ns:AfterCombat("launcher:" .. fname, function() L:AddButton(b, name) end)
+        return true
+    end
+    local e = { key = key, kind = "button", name = name or FriendlyName(fname), icon = ButtonIcon(b) }
+    Capture(e, b)
+    AddEntry(e)
+    self:Refresh()
+    return true
+end
+
+SimplePanel.RegisterLauncher = function(button, name)
+    local ok = L:AddButton(button, name)
+    if not ok then error("SimplePanel isn't ready for launchers yet") end
+    return ok
+end
+
 -- Rescans soon after add-ons load; many create their minimap buttons a little later.
 local scanPending
 local function ScanSoon(delay)
@@ -1073,7 +1098,8 @@ PK:Register({
             set = function(v) o.launcherColumns = v; L:Refresh() end })
         m:Checkbox({ text = "Show hidden launchers", get = function() return showHidden end, set = function(v) L:SetShowHidden(v) end })
         m:Checkbox({ text = "Placement for this character only", get = function() return ns.char.launchers.useCharacter end,
-            set = function(v) ns.char.launchers.useCharacter = v; L:ApplyAll() end,
+            -- Through ns:SetOption, so the SimplePanel window's Launchers tab shows it too.
+            set = function(v) ns:SetOption("char.launchers.useCharacter", v); L:ApplyAll() end,
             tooltip = "Use separate drawer / bar / minimap choices on this character." })
         m:Submenu({ text = "Every launcher", build = function(sub)
             local all = {}

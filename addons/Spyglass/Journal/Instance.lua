@@ -329,7 +329,7 @@ end
 local function MakeTab(frame, i, info)
     do
         -- A plain button that draws its own icon and selected glow: the
-        -- built-in checked and pushed textures can hide the icon on some clients.
+        -- built-in checked and pushed textures can hide the icon.
         local tab = CreateFrame("Button", nil, frame)
         tab:SetSize(32, 32)
         tab:SetPoint("TOPLEFT", frame, "TOPRIGHT", 0, -70 - (i - 1) * 48)

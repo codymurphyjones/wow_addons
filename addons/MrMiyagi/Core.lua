@@ -4,6 +4,9 @@ ns.VERSION = "0.1.0"
 ns.PREFIX = "|cff55d6beMr. Miyagi|r"
 ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon"
 
+-- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
+ns.SAVED = { db = "MrMiyagiDB", char = "MrMiyagiCharDB" }
+
 ns.DEFAULTS = {
     options = {
         chat = true,
@@ -21,105 +24,37 @@ ns.CHAR_DEFAULTS = {
     minimap = { angle = 115, hide = false },
 }
 
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then
-                dst[k] = {}
-                Merge(dst[k], v)
-            elseif v[1] == nil then
-                Merge(dst[k], v)
-            end
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
-    end
-    return dst
-end
-
-function ns:Print(msg, force)
-    if force or not self.db or self.db.options.chat then
-        DEFAULT_CHAT_FRAME:AddMessage(self.PREFIX .. ": " .. tostring(msg))
-    end
-end
-
-function ns:Debug(msg)
-    if self.db and self.db.options.debug then DEFAULT_CHAT_FRAME:AddMessage("|cff888888[Miyagi]|r " .. tostring(msg)) end
-end
-
-function ns.Trim(s) return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
-
-local pending
-function ns:Changed()
-    if pending then return end
-    pending = true
-    C_Timer.After(0, function()
-        pending = false
-        if ns.UI and ns.UI.Refresh then ns.UI:Refresh() end
-    end)
-end
-
-local frame = CreateFrame("Frame")
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
-    end
-    table.insert(handlers[event], fn)
-end
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do fn(...) end
-end)
-
-function ns:OnLoad(fn)
-    self.onLoad = self.onLoad or {}
-    table.insert(self.onLoad, fn)
-end
-
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    MrMiyagiDB = Merge(MrMiyagiDB or {}, ns.DEFAULTS)
-    MrMiyagiCharDB = Merge(MrMiyagiCharDB or {}, ns.CHAR_DEFAULTS)
-    ns.db, ns.char = MrMiyagiDB, MrMiyagiCharDB
-    for _, fn in ipairs(ns.onLoad or {}) do fn() end
+-- What a change refreshes (ns:Changed coalesces many edits into one refresh next frame).
+ns:OnChanged(function()
+    if ns.UI and ns.UI.Refresh then ns.UI:Refresh() end
 end)
 
 ns:On("PLAYER_LOGIN", function()
     ns:Print("v" .. ns.VERSION .. " loaded. Wax on, wax off: |cffffffff/miyagi|r opens the dojo.")
 end)
 
-local function Help()
+-- "/miyagi" alone opens the dojo; help lists that line first, then ns:Slash's own list.
+local Help
+local function FullHelp()
     ns:Print("/miyagi - open the dojo (your past lessons and patterns)", true)
-    ns:Print("/miyagi last - the last lesson again", true)
-    ns:Print("/miyagi kit - how Mr. Miyagi understands each of your spells, talents and items", true)
-    ns:Print("/miyagi debug - print the evidence behind each lesson (on/off)", true)
-    ns:Print("/miyagi minimap - show/hide the minimap button", true)
+    Help()
 end
 
-SLASH_MRMIYAGI1 = "/miyagi"
-SLASH_MRMIYAGI2 = "/mm"
-SlashCmdList.MRMIYAGI = function(msg)
-    msg = ns.Trim(msg)
-    local cmd = (msg:match("^(%S+)") or ""):lower()
-    if cmd == "" then
-        ns.UI:Toggle()
-    elseif cmd == "last" then
+Help = ns:Slash({ "/miyagi", "/mm" }, {
+    { "last", function()
         local d = ns.db.deaths[#ns.db.deaths]
         if d then ns.Coach:Show(d) else ns:Print("No lessons yet.", true) end
-    elseif cmd == "kit" then
-        ns.Kit:Print()
-    elseif cmd == "debug" then
-        ns.db.options.debug = not ns.db.options.debug
+    end, "the last lesson again" },
+    { "kit", function() ns.Kit:Print() end, "how Mr. Miyagi understands each of your spells, talents and items" },
+    { "debug", function()
+        ns:ToggleOption("db.options.debug")
         ns:Print("Debug output " .. (ns.db.options.debug and "on." or "off."), true)
-    elseif cmd == "minimap" then
-        ns.char.minimap.hide = not ns.char.minimap.hide
-        if ns.MinimapButton then ns.MinimapButton:Refresh() end
-    else
-        Help()
-    end
-end
+    end, "print the evidence behind each lesson (on/off)" },
+    { { "help", "?" }, FullHelp },
+    minimap = "char.minimap.hide",
+    default = function(msg)
+        if msg == "" then ns.UI:Toggle() else FullHelp() end
+    end,
+})
 
-function MrMiyagi_OnCompartmentClick()
-    if ns.UI then ns.UI:Toggle() end
-end
+ns:Compartment()

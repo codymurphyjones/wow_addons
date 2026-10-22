@@ -24,8 +24,10 @@ local MAX_ICON = 48  -- on-screen pixels: anything bigger on the canvas isn't an
 local PAD = 2        -- pixels around a badge that count as touching it
 local RECHECK = 0.5  -- seconds between checks while the map is open (other addons redraw their pins)
 
+local WM = ns.WorldMap
+local K = ns.QuestieKit
 local BadgeLevel -- below
-local pins, used = {}, 0
+local layer -- the shared WorldMap.lua layer the badges are on (below)
 local warned -- the badge texture didn't load (the game only finds new files after a restart)
 
 -- Sets the badge's picture, falling back to Waypoint's own icon when the file isn't loaded yet.
@@ -113,6 +115,7 @@ end
 -- Hides every other icon touching a shown badge, and gives back the ones that stopped touching.
 function Towns:Cover()
     for _, h in pairs(hidden) do h.seen = false end
+    local pins, used = layer.pins, layer.used
     if used > 0 then
         local canvas = WorldMapFrame:GetCanvas()
         local boxes = {}
@@ -188,17 +191,10 @@ end
 -- stitched map up, all of it starts above OpenMap's art (ns:MapBase): its layers are frames inside
 -- one on the canvas, so looking through the canvas doesn't see how high they go.
 local LAYER_CAP = 2090
+local function IsBadge(f) return f.wpTown end
 BadgeLevel = function(canvas)
-    local base = ns:MapBase(canvas)
-    local level = base + 1999
-    for _, f in ipairs({ canvas:GetChildren() }) do
-        if not f.wpTown and f:IsVisible() then
-            local w, h = f:GetSize()
-            local l = f:GetFrameLevel()
-            if w > MAX_ICON and h > MAX_ICON and l < base + 2100 and l >= level then level = l + 1 end
-        end
-    end
-    return math.min(level, base + LAYER_CAP)
+    local base = WM.MapBase(canvas)
+    return WM.LevelAbove(canvas, base, 1999, 2100, LAYER_CAP, MAX_ICON, IsBadge)
 end
 
 -- Tooltip colours: the town's name, section labels, kinds, names, and the hidden icons' section.
@@ -228,20 +224,14 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 -- Questie's modules through its loader, or nil (no Questie, or a version that has moved them).
+-- (The shared Questie.lua: cached, guarded imports.)
 local function QuestieModules()
-    if not (QuestieLoader and QuestieLoader.ImportModule and Questie and Questie.db and Questie.db.profile) then return nil end
-    local ok, m = pcall(function()
-        return { DB = QuestieLoader:ImportModule("QuestieDB"), Lib = QuestieLoader:ImportModule("QuestieLib"),
-                 XP = QuestieLoader:ImportModule("QuestXP"), Rep = QuestieLoader:ImportModule("QuestieReputation") }
-    end)
-    return ok and m or nil
+    if not (K.Loaded() and Questie and Questie.db and Questie.db.profile) then return nil end
+    return { DB = K.Mod("QuestieDB"), Lib = K.Mod("QuestieLib"), XP = K.Mod("QuestXP"), Rep = K.Mod("QuestieReputation") }
 end
 
-local function Try(fn, ...)
-    if type(fn) ~= "function" then return nil end
-    local ok, a = pcall(fn, ...)
-    return ok and a or nil
-end
+-- fn's first result, or nil (an error, a non-function, a false answer).
+local function Try(fn, ...) return K.Call(fn, ...) or nil end
 
 -- A Questie map icon (only with Questie loaded: another addon's pin with a similar .data is read
 -- from its tooltip instead).
@@ -506,30 +496,22 @@ local function OnClick(pin, button)
     end
 end
 
-local function GetPin(canvas)
-    used = used + 1
-    local pin = pins[used]
-    if not pin then
-        pin = CreateFrame("Button", nil, canvas)
-        pin.wpTown = true
-        pin:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-        pin.icon = pin:CreateTexture(nil, "ARTWORK"); pin.icon:SetAllPoints()
-        pin:SetScript("OnEnter", OnEnter)
-        pin:SetScript("OnLeave", OnLeave)
-        pin:SetScript("OnClick", OnClick)
-        pins[used] = pin
-    end
-    return pin
+local function CreatePin(pin)
+    pin.wpTown = true
+    pin:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    pin.icon = pin:CreateTexture(nil, "ARTWORK"); pin.icon:SetAllPoints()
+    pin:SetScript("OnEnter", OnEnter)
+    pin:SetScript("OnLeave", OnLeave)
+    pin:SetScript("OnClick", OnClick)
 end
 
-function Towns:Refresh()
-    for i = 1, used do pins[i]:Hide() end
-    used = 0
-    if not (ns.db and ns.db.towns and Available() and WorldMapFrame and WorldMapFrame:IsShown()) then
-        self:RestoreAll()
+-- Drawn on the open map (the layer below has hidden the last badges); off, or no towns to show:
+-- every covered icon gets its look back.
+local function Refresh(l, mapID)
+    if not (ns.db and ns.db.towns and Available()) then
+        Towns:RestoreAll()
         return
     end
-    local mapID = WorldMapFrame:GetMapID()
     local list = mapID and Index()[mapID]
     -- On OpenMap's stitched map a zone's neighbours show around it: their towns too (as on a zone,
     -- not on a continent or the world, where there would be hundreds). A capital listed on its zone
@@ -551,26 +533,28 @@ function Towns:Refresh()
         list = all
     end
     if list then
-        local canvas = WorldMapFrame:GetCanvas()
-        local w, h = canvas:GetSize()
-        local scale = 1 / (WorldMapFrame:GetCanvasScale() or 1) -- the same size on screen at any zoom (as MapPins)
-        local level = BadgeLevel(canvas)
         for _, t in ipairs(list) do
             local x, y = t[3], t[4]
             if t[2] ~= mapID then x, y = ns.Nav:OnCanvas(t[2], t[3], t[4], mapID) end
-            local pin = GetPin(canvas)
-            pin.town = t
-            SetBadge(pin.icon, t[5] == "AH" and ICON_NEUTRAL or ICON)
-            pin:SetSize(SIZE, SIZE)
-            pin:SetScale(scale)
-            pin:SetAlpha(1)
-            pin:SetFrameLevel(level)
-            pin:ClearAllPoints()
-            pin:SetPoint("CENTER", canvas, "TOPLEFT", x * w / scale, -y * h / scale)
-            pin:Show()
+            if x then
+                local pin = l:Pin()
+                pin.town = t
+                SetBadge(pin.icon, t[5] == "AH" and ICON_NEUTRAL or ICON)
+                pin:SetAlpha(1)
+                l:Place(pin, x, y) -- the same size on screen at any zoom (as MapPins), at BadgeLevel
+            end
         end
     end
-    self:Cover()
+    Towns:Cover()
+end
+
+function Towns:Refresh()
+    if not (ns.db and ns.db.towns and Available() and WorldMapFrame and WorldMapFrame:IsShown()) then
+        layer:Clear()
+        self:RestoreAll()
+        return
+    end
+    layer:Refresh()
 end
 
 -- /way towns debug: the badge nearest the mouse on the open map, and every frame on the map around
@@ -578,6 +562,7 @@ end
 function Towns:Debug()
     if not (WorldMapFrame and WorldMapFrame:IsShown()) then return ns:Print("Open the world map first.") end
     local mx, my = GetCursorPosition()
+    local pins, used = layer.pins, layer.used
     local best, bestD
     for i = 1, used do
         local l, r, b, t = Rect(pins[i])
@@ -627,19 +612,12 @@ function Towns:Debug()
     ns:Print(("  %d other frames around it; canvas level %d strata %s."):format(n, canvas:GetFrameLevel(), tostring(canvas:GetFrameStrata())))
 end
 
-ns:On("PLAYER_LOGIN", function()
-    if not WorldMapFrame then return end
-    local function Refresh() Towns:Refresh() end
-    hooksecurefunc(WorldMapFrame, "OnMapChanged", Refresh)
-    if WorldMapFrame.OnCanvasScaleChanged then hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", Refresh) end
-    WorldMapFrame:HookScript("OnShow", Refresh)
-    WorldMapFrame:HookScript("OnHide", function() Towns:RestoreAll() end)
-    -- Other addons redraw their pins: keep covering the ones that land on a badge.
-    local acc = 0
-    CreateFrame("Frame"):SetScript("OnUpdate", function(_, elapsed)
-        acc = acc + elapsed
-        if acc < RECHECK then return end
-        acc = 0
-        if WorldMapFrame:IsShown() and used > 0 then Towns:Cover() end
-    end)
-end)
+-- One layer on the world map (shared WorldMap.lua): redrawn when the map, its zoom or its
+-- visibility changes; closing the map gives the covered icons back, and while it's open the
+-- badges keep covering what other addons redraw onto them.
+layer = WM.NewLayer({
+    size = SIZE, pinLevel = function(canvas) return BadgeLevel(canvas) end, create = CreatePin, refresh = Refresh,
+    onHide = function() Towns:RestoreAll() end,
+    interval = RECHECK, every = function(l) if l.used > 0 then Towns:Cover() end end,
+})
+Towns.layer = layer

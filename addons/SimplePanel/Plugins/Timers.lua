@@ -7,11 +7,7 @@ local T = SimplePanel.Theme
 
 local QUICK = { 1, 5, 10, 15, 30, 60 }
 
-local function Clock(secs)
-    secs = math.max(0, math.floor(secs))
-    if secs >= 3600 then return ("%d:%02d:%02d"):format(secs / 3600, secs / 60 % 60, secs % 60) end
-    return ("%d:%02d"):format(secs / 60, secs % 60)
-end
+local function Clock(secs) return ns.Format.Clock(secs) end
 
 local function List(p)
     local list = p:Get("timers")

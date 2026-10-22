@@ -179,27 +179,17 @@ local trust = {}       -- [peer] = true, false or a pending challenge { nonce, p
 local lastRoot = {}    -- [peer] = the state it last announced
 local lastCount = {}   -- [peer] = how many facts it said it has
 local Differs          -- (below)
-local me
 
-local function Me()
-    if not me then
-        local realm = GetNormalizedRealmName and GetNormalizedRealmName()
-        me = UnitName("player") .. (realm and ("-" .. realm) or "")
-    end
-    return me
-end
+-- Who's who: the shared Units.lua (on WoW Forever a name can arrive as "Given Family",
+-- "GivenFamily" or "Given Family-Server"; all of them are you).
+local U = ns.Units
 
-local function IsMe(name)
-    return name == Me() or name == UnitName("player")
-end
+-- Only the full key counts: a lone given name could be anyone of that name.
+local IsMe, ForMe = U.IsMe, U.IsMe
 
-local function Short(name)
-    return (name or ""):match("^[^%-]+") or name
-end
-
-local function ForMe(target)
-    return target == Me() or Short(target) == UnitName("player")
-end
+-- A peer as a message names it: one word, since the fields are split on spaces ("Given Family"
+-- goes out as "GivenFamily", which IsMe matches): the shared Units.lua Wire.
+local Wire = U.Wire
 
 local function Proof(nonce, position, hash)
     return Hash(nonce .. ":" .. position .. ":" .. hash):sub(1, 8)
@@ -221,7 +211,7 @@ function S:Challenge(peer)
     end
     local nonce = string.format("%08x", math.random(0, 2147483647))
     trust[peer] = { nonce = nonce, positions = picks, at = GetTime() }
-    C.Send("CH " .. peer .. " " .. nonce .. " " .. table.concat(picks, ","))
+    C.Send("CH " .. Wire(peer) .. " " .. nonce .. " " .. table.concat(picks, ","))
 end
 
 local function Answer(peer, nonce, list)
@@ -231,7 +221,7 @@ local function Answer(peer, nonce, list)
         local h = pool[tonumber(p)]
         out[#out + 1] = h and Proof(nonce, p, h) or "-"
     end
-    C.Send("RS " .. peer .. " " .. nonce .. " " .. table.concat(out, ","))
+    C.Send("RS " .. Wire(peer) .. " " .. nonce .. " " .. table.concat(out, ","))
 end
 
 local function Check(peer, nonce, list)
@@ -251,7 +241,7 @@ local function Check(peer, nonce, list)
         if not SIMPLE_TRUST then
             local newest = 0
             for seq in pairs(DB().dev) do newest = math.max(newest, tonumber(seq)) end
-            C.Send("DQ " .. peer .. " " .. newest)
+            C.Send("DQ " .. Wire(peer) .. " " .. newest)
         end
     end
 end
@@ -280,7 +270,7 @@ end
 local function Pull(peer)
     local this = { peer = peer, at = GetTime() }
     session = this
-    C.Send("BK? " .. peer)
+    C.Send("BK? " .. Wire(peer))
     -- Out of time: let another pull start, and look again.
     C_Timer.After(SESSION, function()
         if session == this then session = nil end
@@ -323,6 +313,8 @@ local function ReplyLater()
 end
 
 local function Handle(msg, sender)
+    -- One key per peer whatever shape the game gave ("Given Family-Server" -> "Given Family").
+    sender = U.KeyOf(sender) or sender
     if not Enabled() or not sender or IsMe(sender) then return end
     local word, rest = msg:match("^(%S+)%s?(.*)$")
     if word == "ROOT" or word == "HELLO" then
@@ -345,7 +337,7 @@ local function Handle(msg, sender)
         -- Untrusted peers are only challenged (when they announce), never listened to.
         return
     elseif word == "BK?" then
-        if ForMe(rest) then C.Send("BK " .. sender .. " " .. table.concat(State().buckets)) end
+        if ForMe(rest) then C.Send("BK " .. Wire(sender) .. " " .. table.concat(State().buckets)) end
     elseif word == "BK" then
         -- Bucket hashes, ours to ask for or someone else's sync: either way,
         -- pull the buckets where this peer's state differs from ours.
@@ -360,7 +352,7 @@ local function Handle(msg, sender)
         local any = false
         for b = 1, BUCKETS do
             if hashes:sub(b * 8 - 7, b * 8) ~= mine[b] then
-                C.Send("GET " .. sender .. " " .. b)
+                C.Send("GET " .. Wire(sender) .. " " .. b)
                 any = true
             end
         end

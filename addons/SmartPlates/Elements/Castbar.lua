@@ -7,7 +7,7 @@ local Cast = { name = "Castbar" }
 
 -- ---------------------------------------------------------------------------
 -- Interrupt ready: enemy castbars turn green (teal border) while your interrupt is off cooldown.
--- Reads your own cooldowns; clients that hide them in combat (Midnight-style) just show the normal colour then.
+-- Reads your own cooldowns; while the game hides them in combat the bar just shows the normal colour.
 -- ---------------------------------------------------------------------------
 
 local Interrupt = { ready = nil } -- true ready, false on cooldown, nil no interrupt known
@@ -156,14 +156,14 @@ function Cast:Start(f)
         name, text, icon, startMS, endMS, _, notInterruptible = C.UnitChannelInfo(unit)
         channel = name ~= nil
     end
-    if not name or not C.Readable(startMS, endMS) then return bar:Hide() end
+    if not name or not C.AllReadable(startMS, endMS) then return bar:Hide() end
     bar.channel, bar.interrupted = channel, nil
-    bar.castID = C.Readable(castID) and castID or nil
+    bar.castID = C.AllReadable(castID) and castID or nil
     bar.startTime, bar.endTime = startMS / 1000, endMS / 1000
     bar:SetMinMaxValues(0, bar.endTime - bar.startTime)
-    -- Older clients return a spell/cast ID in that slot; only a real true means uninterruptible.
-    bar.locked = C.Readable(notInterruptible) and notInterruptible == true or false
-    bar.lockUnknown = not C.Readable(notInterruptible) -- hidden: we can't promise it's interruptible
+    -- Only a real true means uninterruptible.
+    bar.locked = C.AllReadable(notInterruptible) and notInterruptible == true or false
+    bar.lockUnknown = not C.AllReadable(notInterruptible) -- hidden: we can't promise it's interruptible
     self:Colorize(f)
     pcall(bar.icon.tex.SetTexture, bar.icon.tex, icon)
     pcall(bar.text.SetText, bar.text, text or name)
@@ -226,7 +226,7 @@ local function OnFailed(unit, castID)
     local f = ns.Plates:ForUnit(unit)
     if not f or not f.active then return end
     local current = f.castbar.castID
-    if current and castID and C.Readable(castID) and castID ~= current then return end
+    if current and castID and C.AllReadable(castID) and castID ~= current then return end
     Cast:Stop(f)
 end
 local function OnInterrupted(unit)

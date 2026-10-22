@@ -23,8 +23,8 @@ local function Leader() return UnitIsGroupLeader and UnitIsGroupLeader("player")
 
 local function MasterName(index)
     if index == nil then return nil end
-    if index == 0 then return UnitName("player") end
-    return UnitName("party" .. index)
+    if index == 0 then return ns.Compat.UnitPlayer("player") end
+    return ns.Compat.UnitPlayer("party" .. index)
 end
 
 local function AddEntries(p, m)
@@ -33,7 +33,7 @@ local function AddEntries(p, m)
             m:Header("Loot method")
             for _, method in ipairs(C.LOOT_METHODS) do
                 m:Radio({ text = METHOD_NAMES[method], value = method, get = function() return (C.LootMethod()) end,
-                    set = function(v) C.SetLootMethod(v, v == "master" and UnitName("player") or nil) end })
+                    set = function(v) C.SetLootMethod(v, v == "master" and C.UnitPlayer("player") or nil) end })
             end
             m:Header("Threshold")
             for _, q in ipairs(THRESHOLDS) do

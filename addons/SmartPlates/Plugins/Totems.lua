@@ -28,7 +28,7 @@ local function Build()
 end
 
 function Totems.IconFor(name)
-    if type(name) ~= "string" or not C.Readable(name) then return nil end
+    if type(name) ~= "string" or not C.AllReadable(name) then return nil end
     if not byName then Build() end
     local base = name:gsub("%s+[IVX]+$", ""):lower()
     return byName[base]

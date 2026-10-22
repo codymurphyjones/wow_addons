@@ -5,8 +5,8 @@ ns.Bars = Bars
 
 Bars.BUTTONS_PER_BAR = 12
 
--- Display order. `requires` names a global frame that only exists on clients
--- that have that bar.
+-- Display order. `requires` names the bar's global frame: the bar is offered
+-- only when that frame exists.
 Bars.ALL = {
     -- Names match the Edit Mode / Options > Action Bars numbering.
     { start = 1,   name = "Action Bar 1" },

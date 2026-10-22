@@ -109,9 +109,7 @@ local function Init()
 end
 Init() -- Blizzard_DamageMeter usually loads before us
 
-local events = CreateFrame("Frame")
-events:RegisterEvent("ADDON_LOADED")
-events:RegisterEvent("PLAYER_LOGIN")
-events:SetScript("OnEvent", function(_, event, arg1)
-	if event == "PLAYER_LOGIN" or arg1 == "Blizzard_DamageMeter" then Init() end
+TS:On("ADDON_LOADED", function(name)
+	if name == "Blizzard_DamageMeter" then Init() end
 end)
+TS:On("PLAYER_LOGIN", Init)

@@ -15,10 +15,9 @@ end
 
 local function DB() return BattleRecapDB.stats end
 
--- The key a killer is counted under: "Name-Realm" when the recap had it.
-function S.Key(k) return k and (k.fullName or k.name) end
-
-local function Short(name) return name and (name:match("^([^%-]+)") or name) end
+-- The key a killer is counted under: "Given Family" (WoW Forever) when the recap had it. Duels
+-- are kept the same way. Look players up with ns.NameKey, which also finds another shape.
+function S.Key(k) return k and (ns.Units.KeyOf(k.fullName or k.name) or k.fullName or k.name) end
 
 ---------------------------------------------------------------------------
 -- Recording
@@ -34,7 +33,7 @@ local function RecordDeath(db, recap)
     if k and k.env then
         db.env = db.env + 1
     elseif k then
-        local key = S.Key(k)
+        local key = ns.NameKey(db.killers, S.Key(k))
         local e = db.killers[key]
         if not e then
             e = { name = k.name, kills = 0, spells = {} }
@@ -71,7 +70,7 @@ end
 -- Returns the opponent's record.
 function S:Duel(name, won)
     local db = DB()
-    name = Short(name) or "?"
+    name = ns.NameKey(db.duels, name) or "?"
     local d = db.duels[name]
     if not d then
         d = { name = name, wins = 0, losses = 0, streak = 0 }
@@ -96,7 +95,7 @@ function S:Record(recap)
     local db = DB()
     if recap.kind == "duel" then
         local k = recap.killer
-        local d = k and db.duels[Short(k.name) or ""]
+        local d = k and db.duels[ns.NameKey(db.duels, k.fullName or k.name) or ""]
         if d then
             d.class = k.class or d.class
             k.record = { wins = d.wins, losses = d.losses }
@@ -113,6 +112,36 @@ function S:RecordMatch(deaths)
     db.matchDeaths = db.matchDeaths + (deaths or 0)
 end
 
+-- Two records of one killer (saved under an old and the new key shape): counts added up.
+local function MergeKiller(kept, moved)
+    if type(kept) ~= "table" or type(moved) ~= "table" then return end
+    kept.kills = (kept.kills or 0) + (moved.kills or 0)
+    kept.spells = kept.spells or {}
+    for spell, n in pairs(moved.spells or {}) do kept.spells[spell] = (kept.spells[spell] or 0) + n end
+    kept.class = kept.class or moved.class
+    if (moved.last or 0) > (kept.last or 0) then kept.last = moved.last end
+end
+
+-- Two duel records of one opponent: wins and losses added up, the streak of the newer one kept.
+local function MergeDuel(kept, moved, key)
+    if type(kept) ~= "table" or type(moved) ~= "table" then return end
+    kept.wins = (kept.wins or 0) + (moved.wins or 0)
+    kept.losses = (kept.losses or 0) + (moved.losses or 0)
+    kept.class = kept.class or moved.class
+    if (moved.last or 0) > (kept.last or 0) then kept.last, kept.streak = moved.last, moved.streak end
+    kept.name = key
+end
+
+-- WoW Forever names: killers were saved under the name the death recap gave ("Given Family-Server"
+-- too) and duels under it cut at the first hyphen; both are keyed "Given Family" now (ns.MigrateNames).
+local function MigrateNames(db)
+    ns.MigrateNames(db.killers, MergeKiller)
+    ns.MigrateNames(db.duels, MergeDuel)
+    for key, d in pairs(db.duels) do
+        if type(d) == "table" then d.name = key end
+    end
+end
+
 -- Creates the store, or rebuilds it from the saved recaps when there's none yet.
 function S:Init()
     if type(BattleRecapDB.stats) == "table" then
@@ -120,6 +149,7 @@ function S:Init()
         for key, value in pairs(defaults) do
             if BattleRecapDB.stats[key] == nil then BattleRecapDB.stats[key] = value end
         end
+        MigrateNames(BattleRecapDB.stats)
         return
     end
     BattleRecapDB.stats = Empty()
@@ -129,7 +159,7 @@ function S:Init()
         local recap = history[i]
         if not recap.test then
             if recap.kind == "duel" then
-                if recap.killer then self:Duel(recap.killer.name, recap.won) end
+                if recap.killer then self:Duel(recap.killer.fullName or recap.killer.name, recap.won) end
             else
                 RecordDeath(db, recap)
             end

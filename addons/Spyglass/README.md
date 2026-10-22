@@ -239,10 +239,11 @@ and `GetWaypoint()` returns the tracked waypoint. Without Waypoint installed tra
 
 ### The API
 
-SpyGlass sets a global `SpyGlass` table (`API_VERSION` 1). The built-in journal uses only
+SpyGlass sets a global `SpyGlass` table (`VERSION` 1; `API_VERSION`, its older name, still works; check `SpyGlass.VERSION >= 1`). The built-in journal uses only
 this API, so other addons can too; see `API.lua`. It provides:
 - instances and bosses from AtlasLoot, including loot that isn't recorded yet (`comingSoon`);
 - ranked rows for a list of items;
 - item info and usability;
 - the shared tooltip and click handlers;
-- a refresh callback.
+- a refresh callback: `SpyGlass:RegisterCallback(owner, fn)` calls `fn("REFRESH")` when the lists should be
+  redrawn (dot or colon call; one callback per owner; see `addons\shared\API.md`).

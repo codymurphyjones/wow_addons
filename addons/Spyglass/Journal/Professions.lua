@@ -19,14 +19,16 @@ local PORTRAIT = 52
 local MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 local ARROW = "Interface\\AddOns\\Spyglass\\Media\\UpArrow"
 
+-- Icons: the shared Player.lua's profession table.
+local PROF = ns.Player.PROFESSIONS
 local PROFESSIONS = {
-    { key = "Alchemy", icon = "Interface\\Icons\\Trade_Alchemy" },
-    { key = "Blacksmithing", icon = "Interface\\Icons\\Trade_BlackSmithing" },
-    { key = "Enchanting", icon = "Interface\\Icons\\Trade_Engraving" },
-    { key = "Engineering", icon = "Interface\\Icons\\Trade_Engineering" },
-    { key = "Leatherworking", icon = "Interface\\Icons\\INV_Misc_ArmorKit_17" },
-    { key = "Tailoring", icon = "Interface\\Icons\\Trade_Tailoring" },
-    { key = "Cooking", icon = "Interface\\Icons\\INV_Misc_Food_15" },
+    { key = "Alchemy", icon = PROF.Alchemy.icon },
+    { key = "Blacksmithing", icon = PROF.Blacksmithing.icon },
+    { key = "Enchanting", icon = PROF.Enchanting.icon },
+    { key = "Engineering", icon = PROF.Engineering.icon },
+    { key = "Leatherworking", icon = PROF.Leatherworking.icon },
+    { key = "Tailoring", icon = PROF.Tailoring.icon },
+    { key = "Cooking", icon = PROF.Cooking.icon },
 }
 
 -- Gear slots on the profession's home, like the Character window's paper
@@ -153,7 +155,7 @@ local page
 -- Data
 ---------------------------------------------------------------------------
 
--- A spell's name and icon, on clients with either API (some have only C_Spell).
+-- A spell's name and icon: C_Spell first, else GetSpellInfo.
 local function SpellName(id)
     local name
     if C_Spell and C_Spell.GetSpellName then name = C_Spell.GetSpellName(id) end
@@ -285,45 +287,18 @@ local function WindowRanks()
     local db = ns.db
     if not db then return {} end
     db.profRanks = type(db.profRanks) == "table" and db.profRanks or {}
-    local who = (UnitName("player") or "?") .. "-" .. (GetRealmName() or "")
+    ns.Units.MigrateKeys(db.profRanks)
+    local who = ns.Units.Me()
     db.profRanks[who] = db.profRanks[who] or {}
     return db.profRanks[who]
 end
 
 -- Your skill in each profession you have, by its name in the game.
+-- (shared Player.lua: every skill line, with collapsed headers opened to read them and closed
+-- again, plus the professions API's list)
+local SKILLS = { unfold = true }
 local function Skills()
-    local out = {}
-    if GetNumSkillLines and GetSkillLineInfo then
-        -- A collapsed header (in the Skills window) hides its skills from the
-        -- list: open them to read, then close them again as they were.
-        local closed = {}
-        if ExpandSkillHeader and CollapseSkillHeader then
-            local i = 1
-            while i <= GetNumSkillLines() do
-                local name, isHeader, isExpanded = GetSkillLineInfo(i)
-                if isHeader and not isExpanded then
-                    closed[#closed + 1] = name
-                    ExpandSkillHeader(i)
-                end
-                i = i + 1
-            end
-        end
-        for i = 1, GetNumSkillLines() do
-            local name, isHeader, _, rank = GetSkillLineInfo(i)
-            if name and not isHeader then out[name] = rank end
-        end
-        for i = GetNumSkillLines(), 1, -1 do
-            local name, isHeader = GetSkillLineInfo(i)
-            if isHeader and tContains(closed, name) then CollapseSkillHeader(i) end
-        end
-    end
-    -- Newer clients list professions on their own.
-    if GetProfessions and GetProfessionInfo then
-        for _, index in pairs({ GetProfessions() }) do
-            local name, _, rank = GetProfessionInfo(index)
-            if name and not out[name] then out[name] = rank end
-        end
-    end
+    local out = ns.Player.SkillRanks(SKILLS) or {}
     for name, rank in pairs(WindowRanks()) do
         if not out[name] then out[name] = rank end
     end
@@ -824,7 +799,8 @@ local function Known()
     if not db then return nil end
     db.known = nil -- counted recipes you hadn't learned
     db.knownRecipes = type(db.knownRecipes) == "table" and db.knownRecipes or {}
-    local who = (UnitName("player") or "?") .. "-" .. (GetRealmName() or "")
+    ns.Units.MigrateKeys(db.knownRecipes)
+    local who = ns.Units.Me()
     db.knownRecipes[who] = db.knownRecipes[who] or {}
     return db.knownRecipes[who]
 end
@@ -842,7 +818,8 @@ local WINDOWS = {
         scroll = "CraftListScrollFrame", height = "CRAFT_SKILL_HEIGHT" },
 }
 
--- Newer clients' profession window (Blizzard_Professions), driven by C_TradeSkillUI.
+-- The Professions window (Blizzard_Professions), driven by C_TradeSkillUI; WINDOWS above are the
+-- TradeSkillFrame / CraftFrame ones.
 local MODERN = { modern = true }
 
 -- The open profession window, its profession and your skill in it, or nil.
@@ -864,10 +841,10 @@ local function OpenWindow()
     end
 end
 
--- The window's recipes ({ [name] = line, or recipe ID in the newer window });
+-- The window's recipes ({ [name] = line, or recipe ID in the Professions window });
 -- adds them to what you know. A collapsed header hides its recipes in the
--- older windows, so this only ever adds.
--- Whether you've learned a recipe of the newer window: its info's flag, else
+-- TradeSkill / Craft windows, so this only ever adds.
+-- Whether you've learned a recipe of the Professions window: its info's flag, else
 -- whether you have its spell. nil when the client can't tell.
 local function Learned(id, info)
     if info.learned ~= nil then return info.learned end
@@ -876,10 +853,10 @@ local function Learned(id, info)
     return nil
 end
 
--- The window's recipes you know ({ [name] = line, or recipe ID in the newer
+-- The window's recipes you know ({ [name] = line, or recipe ID in the Professions
 -- window }) and every recipe it lists (the same, learned or not), and saves
--- what you know. The newer window lists every recipe, so its scan replaces
--- what was saved; the older ones hide recipes under collapsed headers, so
+-- what you know. The Professions window lists every recipe, so its scan replaces
+-- what was saved; the TradeSkill / Craft windows hide recipes under collapsed headers, so
 -- theirs only add.
 local function Scan(w, prof)
     local lines, all = {}, {}
@@ -941,7 +918,7 @@ local function SimplePanelWindow()
     return api and api.IsCrafting and api.IsCrafting() and api or nil
 end
 
--- The newer window's selected recipe ID (what Quartermaster reads too).
+-- The Professions window's selected recipe ID (what Quartermaster reads too).
 local function SelectedRecipe()
     local sp = SimplePanelWindow()
     if sp then return sp.GetSelectedRecipeID() end
@@ -965,7 +942,7 @@ local function SelectRecipe(id)
     if api.OpenRecipe then api.OpenRecipe(id) end
 end
 
--- The newer window loads its list after it shows, then picks its own first
+-- The Professions window loads its list after it shows, then picks its own first
 -- recipe: so wait for the list, select ours, and keep it selected until it
 -- stays (3 checks in a row), for up to 3 seconds.
 local SELECT_TRIES, SELECT_STEP, SELECT_STEADY = 30, 0.1, 3
@@ -1437,8 +1414,8 @@ local function ShowSkill(entry, rank)
 end
 
 -- Lines a row adds under the item or spell it shows (row.tipLines: { text,
--- r, g, b }). Newer clients redraw that tooltip when the item's data arrives,
--- which drops lines added once: there they're added after every draw.
+-- r, g, b }). The game redraws that tooltip when the item's data arrives,
+-- which drops lines added once: with TooltipDataProcessor they're added after every draw.
 local function AddOwnerLines(tooltip)
     if tooltip ~= GameTooltip then return end
     local owner = tooltip:GetOwner()

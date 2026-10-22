@@ -5,22 +5,9 @@ local _, ns = ...
 local T = SimplePanel.Theme
 local C = ns.Compat
 
-local function ClassColor(class)
-    if not class then return T.text end
-    if RAID_CLASS_COLORS and RAID_CLASS_COLORS[class] then local c = RAID_CLASS_COLORS[class]; return { c.r, c.g, c.b } end
-    -- Friend lists give the localized class name; find its token.
-    for token, name in pairs(LOCALIZED_CLASS_NAMES_MALE or {}) do
-        if name == class and RAID_CLASS_COLORS[token] then local c = RAID_CLASS_COLORS[token]; return { c.r, c.g, c.b } end
-    end
-    for token, name in pairs(LOCALIZED_CLASS_NAMES_FEMALE or {}) do
-        if name == class and RAID_CLASS_COLORS[token] then local c = RAID_CLASS_COLORS[token]; return { c.r, c.g, c.b } end
-    end
-    return T.text
-end
-
+-- Friend lists give the localized class name: shared Units.lua finds its token.
 local function Colored(name, class)
-    local c = ClassColor(class)
-    return ("|cff%02x%02x%02x%s|r"):format(c[1] * 255, c[2] * 255, c[3] * 255, name)
+    return ns.Units.Colored(name, class, { fallback = T.text })
 end
 
 local function PersonMenu(m, person)

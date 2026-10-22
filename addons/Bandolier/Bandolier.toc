@@ -1,16 +1,23 @@
-## Interface: 16001, 120007
+## Interface: 16001
 ## Title: Bandolier
 ## Notes: Keeps a "Bandolier" macro pointed at your best life-saving consumable. Ctrl+press it to pick any other consumable. /bandolier
-## Version: 1.0.4
+## Version: 1.0.5
 ## SavedVariables: BandolierData
 ## SavedVariablesPerCharacter: BandolierDB
 ## Dependencies: StatLedger
 ## IconTexture: Interface\AddOns\Bandolier\Media\Icon.tga
 ## X-Curse-Project-ID: 1729275
 
-Fonts.lua
+..\shared\Fonts.lua
+..\shared\Core.lua
+..\shared\API.lua
+..\shared\Items.lua
+..\shared\Tooltip.lua
+..\shared\Player.lua
 Core.lua
+..\shared\OptionsPage.lua
 Settings.lua
+..\shared\Consumables.lua
 Data.lua
 Stats.lua
 Scanner.lua

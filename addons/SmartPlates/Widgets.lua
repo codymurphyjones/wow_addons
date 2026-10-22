@@ -2,77 +2,13 @@ local _, ns = ...
 local PAL = ns.Palette
 local M = ns.Media
 
--- UI helpers in Wally's flat slate style, plus a small form builder for the settings pages.
-local W = {}
-ns.Widgets = W
+-- SmartPlates' own widgets: slider, colour swatch and picker, and a small form builder for the
+-- settings pages. The basics (buttons, labels, checkboxes, ...) are the shared kit
+-- (addons/shared/Widgets.lua, loaded first).
+local W = ns.Widgets
 
-local ACCENT, MUTED = M.ACCENT, M.MUTED
-W.ACCENT, W.MUTED = ACCENT, MUTED
-
-function W.SetBackdrop(f, alpha) M.Backdrop(f, alpha) end
-local SetBackdrop = W.SetBackdrop
-
-function W.Label(parent, text, font, x, y, width)
-    local t = parent:CreateFontString(nil, "OVERLAY", font or "SmartPlatesGameFontHighlight")
-    t:SetPoint("TOPLEFT", x, y)
-    t:SetJustifyH("LEFT")
-    if width then t:SetWidth(width) end
-    t:SetText(text)
-    return t
-end
-local Label = W.Label
-
-function W.Muted(fs) fs:SetTextColor(MUTED[1], MUTED[2], MUTED[3]); return fs end
-local Muted = W.Muted
-
-function W.MakeButton(parent, text, width, height)
-    local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
-    b:SetSize(width or 110, height or 28)
-    SetBackdrop(b)
-    b:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1)
-    b.text = b:CreateFontString(nil, "OVERLAY", "SmartPlatesGameFontHighlightSmall")
-    b.text:SetPoint("CENTER"); b.text:SetText(text)
-    b:SetScript("OnEnter", function(self) self:SetBackdropColor(PAL.hover[1], PAL.hover[2], PAL.hover[3], 1) end)
-    b:SetScript("OnLeave", function(self) self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end)
-    return b
-end
-local MakeButton = W.MakeButton
-
-function W.Hint(widget, title, body)
-    widget:HookScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine(title, ACCENT[1], ACCENT[2], ACCENT[3])
-        if body then GameTooltip:AddLine(body, 0.8, 0.85, 0.9, true) end
-        GameTooltip:Show()
-    end)
-    widget:HookScript("OnLeave", function() GameTooltip:Hide() end)
-end
-local Hint = W.Hint
-
-function W.MakeCheckbox(parent, text)
-    local b = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-    b:SetSize(26, 26)
-    b.label = b:CreateFontString(nil, "OVERLAY", "SmartPlatesGameFontHighlightSmall")
-    b.label:SetPoint("LEFT", b, "RIGHT", 3, 0); b.label:SetText(text)
-    return b
-end
-
-function W.MakeEditBox(parent, width, placeholder)
-    local b = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
-    b:SetSize(width or 160, 26)
-    SetBackdrop(b); b:SetBackdropColor(PAL.field[1], PAL.field[2], PAL.field[3], 1)
-    b:SetFontObject("SmartPlatesGameFontHighlightSmall"); b:SetJustifyH("LEFT")
-    b:SetAutoFocus(false); b:SetTextInsets(8, 8, 2, 2)
-    b.placeholder = b:CreateFontString(nil, "OVERLAY", "SmartPlatesGameFontDisableSmall")
-    b.placeholder:SetPoint("LEFT", 8, 0); b.placeholder:SetText(placeholder or "")
-    local function UpdatePlaceholder(self) self.placeholder:SetShown(self:GetText() == "" and not self:HasFocus()) end
-    b:SetScript("OnEditFocusGained", UpdatePlaceholder)
-    b:SetScript("OnEditFocusLost", UpdatePlaceholder)
-    b:HookScript("OnTextChanged", UpdatePlaceholder)
-    b:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    b:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-    return b
-end
+local ACCENT, MUTED = W.ACCENT, W.MUTED
+local SetBackdrop, Label, Muted, MakeButton, Hint = W.SetBackdrop, W.Label, W.Muted, W.MakeButton, W.Hint
 
 local sliderCount = 0
 function W.MakeSlider(parent, width, min, max, step)
@@ -93,13 +29,6 @@ function W.MakeSlider(parent, width, min, max, step)
     if text then text:SetText("") end
     return s
 end
-
-StaticPopupDialogs["SMARTPLATES_CONFIRM"] = {
-    text = "%s", button1 = YES or "Yes", button2 = NO or "No",
-    OnAccept = function(_, data) if data and data.fn then data.fn() end end,
-    timeout = 0, whileDead = 1, hideOnEscape = 1, showAlert = 1, preferredIndex = 3,
-}
-function W.Confirm(text, fn) StaticPopup_Show("SMARTPLATES_CONFIRM", text, nil, { fn = fn }) end
 
 -- Opens the colour picker for a {r, g, b} array; onChange runs after every change and on cancel.
 function W.PickColor(c, onChange)
@@ -159,8 +88,16 @@ local function Resolve(path)
     return t, keys[#keys]
 end
 
+-- A form path as an option path for ns:SetOption (addons/shared/OptionsPage.lua): "char.role" stays,
+-- "general.scale" is "db.general.scale". Writing through it keeps Options > AddOns > SmartPlates and
+-- this window showing the same value, and runs the option's apply (Role:Update...) from either UI.
+function W.OptionPath(path)
+    if path:match("^char%.") then return path end
+    return "db." .. path
+end
+
 function W.Get(path) local t, k = Resolve(path); return t[k] end
-function W.Set(path, v) local t, k = Resolve(path); t[k] = v; ns:Changed() end
+function W.Set(path, v) ns:SetOption(W.OptionPath(path), v) end
 
 local COL_W = 270
 local COL_X = { 0, 300 }

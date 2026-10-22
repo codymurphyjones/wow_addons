@@ -25,14 +25,16 @@ import subprocess
 import sys
 import time
 
-import datasets  # tools/datasets.py: the scraped data, packed when not in use
-
 TOOLS = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(TOOLS)
-ADDONS = os.path.join(REPO, "addons")
-QUESTIEDB = os.environ.get("QUESTIEDB_TOC") or \
-    r"Z:\Games\World of Warcraft\_classic_beta_\Interface\AddOns\QuestieDB\QuestieDB_Forever.toc"
-WOW_WTF = os.environ.get("WOW_WTF") or r"Z:\Games\World of Warcraft\_classic_beta_\WTF"
+sys.path.insert(0, TOOLS)  # python -I leaves the script's folder off sys.path
+sys.path.insert(0, os.path.join(TOOLS, "_shared"))
+import datasets  # noqa: E402  (tools/datasets.py: the scraped data, packed when not in use)
+import paths  # noqa: E402
+import savedvars  # noqa: E402
+
+REPO = paths.REPO
+ADDONS = paths.ADDONS
+QUESTIEDB = paths.QUESTIEDB_TOC
 
 
 def _questiedb():
@@ -51,7 +53,7 @@ def _module(name):
 
 def _saved(addon):
     def check():
-        found = glob.glob(os.path.join(WOW_WTF, "Account", "*", "SavedVariables", addon + ".lua"))
+        found = savedvars.files(addon)
         return None if found else "needs %s's saved variables (WTF/Account/*/SavedVariables/%s.lua)" % (addon, addon)
     return check
 
@@ -63,13 +65,13 @@ STEPS = [
     ("Waypoint", "build_water.py", [], "land and water map for route planning (the game's map tiles, wago.tools)", [_module("numpy")]),
     ("WealthPlanner", "build_vendor_items.py", [], "which items vendors sell", [_questiedb]),
     ("WealthPlanner", "fetch_farms.py", [], "farming drops and spawns (Wowhead)", []),
-    ("WealthPlanner", "fetch_crafts.py", [], "recipes and reagents (Wowhead)", []),
+    ("shared", "build_instances.py", [], "the dungeons and raids Field Guide, SpyGlass and Group History share (QuestieDB)", [_questiedb]),
+    ("shared", "build_recipes.py", [], "recipes for SpyGlass's journal and Wealth Planner's crafting, read once (Wowhead)", []),
     ("FieldGuide", "fetch_xp.py", [], "quest XP (QuestieDB + Wowhead cache)", [_questiedb]),
     ("FieldGuide", "build_guides.py", [], "the leveling guides", [_questiedb]),
     ("MrMiyagi", "fetch_mobs.py", [], "mob abilities (CMaNGOS, wago.tools)", []),
     ("Spyglass", "fetch_wowhead_quests.py", [], "SpyglassPluginQuests' quest database (Wowhead)", []),
     ("Spyglass", "build_loot.py", [], "dungeon and raid loot (AtlasLoot Continued + the harvest; needs the quest database)", [_module("lupa")]),
-    ("Spyglass", "fetch_wowhead_professions.py", [], "professions (Wowhead)", []),
     ("Spyglass", "fetch_wowhead.py", [], "item equip effects (Wowhead)", []),
     ("Spyglass", "fetch_pulls.py", [], "dungeon pull maps (Wowhead, wago.tools)", []),
     ("Spyglass", "fetch_zone_art.py", [], "zone pictures (Wowhead)", [_module("PIL")]),

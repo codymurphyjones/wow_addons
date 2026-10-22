@@ -233,8 +233,11 @@ end
 function F:Earlier(before, attackers)
     local chain, gaps = {}, {}
     if not before then return chain, nil end
+    -- Names from the death recap and the meter may differ in shape ("Given Family", "GivenFamily"):
+    -- compared compactly.
+    local function C(name) return ns.Units.Compact(name) or name end
     local later = {}
-    for name in pairs(attackers or {}) do later[name] = true end
+    for name in pairs(attackers or {}) do later[C(name)] = true end
     local nextStart = before
     for i = #segments, 1, -1 do
         local seg = segments[i]
@@ -242,13 +245,13 @@ function F:Earlier(before, attackers)
             local gap = math.max(0, nextStart - seg.finish)
             local same = false
             for name in pairs(seg.attackers or {}) do
-                if later[name] then same = true; break end
+                if later[C(name)] then same = true; break end
             end
             if gap > (same and SAME_ENEMY_GRACE or GRACE) then break end
             if seg.read then
                 chain[#chain + 1] = seg
                 gaps[#gaps + 1] = gap
-                for name in pairs(seg.attackers) do later[name] = true end
+                for name in pairs(seg.attackers) do later[C(name)] = true end
             end
             nextStart = seg.start
         end

@@ -1,49 +1,23 @@
 local _, ns = ...
 
--- Normalizes item APIs across clients that do or don't have C_Item (cut down from Wally's Compat.lua).
-local Compat = {}
+-- Quartermaster's game API helpers. Items come from the shared Items.lua: every ns.Items
+-- function answers as Compat.X too.
+local Compat = setmetatable({}, { __index = ns.Items })
 ns.Compat = Compat
 
-local CI = C_Item
+function Compat.Money(copper) return ns.Format.Money(copper) end
 
--- name, link, quality, ilvl, reqLevel, class, subclass, maxStack, equipLoc, texture, sellPrice, classID, subclassID
-function Compat.GetItemInfo(item)
-    if CI and CI.GetItemInfo then return CI.GetItemInfo(item) end
-    return GetItemInfo(item)
-end
-
--- itemID, type, subType, equipLoc, icon, classID, subclassID
-function Compat.GetItemInfoInstant(item)
-    if CI and CI.GetItemInfoInstant then return CI.GetItemInfoInstant(item) end
-    if GetItemInfoInstant then return GetItemInfoInstant(item) end
-end
-
-function Compat.RequestItem(id)
-    if id and CI and CI.RequestLoadItemDataByID then CI.RequestLoadItemDataByID(id) end
-end
-
-function Compat.GetClassName(classID)
-    local fn = (CI and CI.GetItemClassInfo) or GetItemClassInfo
-    return fn and fn(classID)
-end
-
-function Compat.GetSubClassName(classID, subClassID)
-    local fn = (CI and CI.GetItemSubClassInfo) or GetItemSubClassInfo
-    return fn and fn(classID, subClassID)
-end
-
-function Compat.Money(copper)
-    copper = math.floor(tonumber(copper) or 0)
-    if C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString then return C_CurrencyInfo.GetCoinTextureString(copper) end
-    if GetCoinTextureString then return GetCoinTextureString(copper) end
-    return GetMoneyString(copper)
-end
-
--- Item name from a hyperlink; available even before GetItemInfo is cached.
-function Compat.NameFromLink(link)
-    return link and link:match("|h%[(.-)%]|h")
-end
-
-function Compat.IDFromLink(link)
-    return link and tonumber(link:match("item:(%d+)"))
+-- Whether an auction owner name is you. WoW Forever names are "Given Family"; the auction house may
+-- give the owner as "Given Family", "GivenFamily", "Given Family-Server" or only the given name, so a
+-- one-word owner matches your given name (the auction house can't tell more apart then).
+local ownerCache, cacheFor = {}, nil
+function Compat.OwnerIsMe(owner)
+    if owner == nil then return false end
+    local me = ns.Units.CharKey()
+    if me ~= cacheFor then ownerCache, cacheFor = {}, me end
+    local hit = ownerCache[owner]
+    if hit ~= nil then return hit end
+    local mine = ns.Units.IsMeLoose(owner)
+    if type(owner) == "string" then ownerCache[owner] = mine end
+    return mine
 end

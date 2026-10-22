@@ -13,7 +13,8 @@ local SWAPS_PER_TICK = 4
 local MAX_MOVES = 600
 local MAX_SECONDS = 30
 local CURSOR_PATIENCE = 20 -- ticks
-local CLASS_CONTAINER, CLASS_QUIVER = 1, 11
+local CLASS = ns.Items.CLASS
+local CLASS_CONTAINER, CLASS_QUIVER = CLASS.CONTAINER, CLASS.QUIVER
 
 -- Sort rules. dir = labels for { ascending, descending }.
 Sorter.CRITERIA = {
@@ -60,17 +61,17 @@ for i, loc in ipairs({ "INVTYPE_HEAD", "INVTYPE_NECK", "INVTYPE_SHOULDER", "INVT
     EQUIP_ORDER[loc] = i
 end
 
-local HEARTHSTONE = { [6948] = true }
+local HEARTHSTONE = { [ns.Items.ITEMS.HEARTHSTONE] = true }
 
 local function CategoryOf(id, classID)
-    if HEARTHSTONE[id] or classID == 13 then return "hearth" end
-    if classID == 0 then return "consumable" end
-    if classID == 12 then return "quest" end
-    if classID == 2 or classID == 4 then return "gear" end
-    if classID == 7 or classID == 5 or classID == 3 then return "trade" end
-    if classID == 9 then return "recipe" end
+    if HEARTHSTONE[id] or classID == CLASS.KEY then return "hearth" end
+    if classID == CLASS.CONSUMABLE then return "consumable" end
+    if classID == CLASS.QUEST then return "quest" end
+    if classID == CLASS.WEAPON or classID == CLASS.ARMOR then return "gear" end
+    if classID == CLASS.TRADEGOODS or classID == CLASS.REAGENT or classID == CLASS.GEM then return "trade" end
+    if classID == CLASS.RECIPE then return "recipe" end
     if classID == CLASS_CONTAINER or classID == CLASS_QUIVER then return "container" end
-    if classID == 6 then return "ammo" end
+    if classID == CLASS.PROJECTILE then return "ammo" end
     return "misc"
 end
 
@@ -116,7 +117,14 @@ function Sorter:Validate()
     end
     opt.pinned = pins
 end
-ns:OnLoad(function() Sorter:Validate() end)
+ns:OnLoad(function()
+    Sorter:Validate()
+    -- Auto sort became on by default: once, turn it on for settings saved while it was off.
+    ns:Migrate("autoSortOn", function(db)
+        local o = db.options.sort
+        o.onMerchantClose, o.onBagsClose, o.onMailClose = true, true, true
+    end)
+end)
 
 function Sorter:CriterionInfo(key)
     for _, c in ipairs(self.CRITERIA) do if c.key == key then return c end end
@@ -238,22 +246,145 @@ local function Fits(d, family)
 end
 
 -- ---------------------------------------------------------------------------
+-- Anchored items: ctrl-right-click an item in your bags and sorting leaves it in its slot.
+-- ns.char.sortAnchors["bag:slot"] = itemID; an anchor whose item has left its slot is dropped.
+-- ---------------------------------------------------------------------------
+
+local function AnchorKey(bag, slot) return bag .. ":" .. slot end
+
+function Sorter:IsAnchored(bag, slot)
+    local id = ns.char.sortAnchors[AnchorKey(bag, slot)]
+    if not id then return false end
+    local info = C.GetSlotInfo(bag, slot)
+    return info ~= nil and info.id == id
+end
+
+-- on: anchor the item now in that slot. Returns whether the slot is anchored afterwards.
+function Sorter:SetAnchor(bag, slot, on)
+    local info = C.GetSlotInfo(bag, slot)
+    if on and not (info and info.id) then return false end
+    ns.char.sortAnchors[AnchorKey(bag, slot)] = on and info.id or nil
+    self:RefreshAnchors()
+    ns:Changed()
+    return on and true or false
+end
+
+function Sorter:ToggleAnchor(bag, slot)
+    local info = C.GetSlotInfo(bag, slot)
+    if not info then return end
+    local name = info.link or "That item"
+    if self:SetAnchor(bag, slot, not self:IsAnchored(bag, slot)) then
+        ns:Print(name .. " is anchored: sorting won't move it. Ctrl-right-click it again to release it.", true)
+    else
+        ns:Print(name .. " is no longer anchored.", true)
+    end
+end
+
+-- { { bag, slot, id } } for every anchored item still in its slot.
+function Sorter:Anchors()
+    local out = {}
+    for key, id in pairs(ns.char.sortAnchors) do
+        local bag, slot = key:match("^(%-?%d+):(%d+)$")
+        bag, slot = tonumber(bag), tonumber(slot)
+        if bag and self:IsAnchored(bag, slot) then out[#out + 1] = { bag = bag, slot = slot, id = id } end
+    end
+    table.sort(out, function(a, b) if a.bag ~= b.bag then return a.bag < b.bag end return a.slot < b.slot end)
+    return out
+end
+
+-- Drops anchors whose item has gone (moved by hand, sold, or its bag removed). A slot that's
+-- locked is mid-move, so it's left for the next check.
+local function PruneAnchors()
+    local anchors = ns.char and ns.char.sortAnchors
+    if not anchors then return end
+    for key, id in pairs(anchors) do
+        local bag, slot = key:match("^(%-?%d+):(%d+)$")
+        bag, slot = tonumber(bag), tonumber(slot)
+        local info = bag and C.GetSlotInfo(bag, slot)
+        if not bag or not (info and (info.locked or info.id == id)) then anchors[key] = nil end
+    end
+end
+
+-- The game's bag item buttons: ctrl-right-click anchors, and anchored ones wear a lock.
+local hookedButtons = {}
+
+local function ButtonSlot(b)
+    local bag = b.GetBagID and b:GetBagID()
+    if bag == nil then bag = b:GetParent() and b:GetParent():GetID() end
+    return bag, b:GetID()
+end
+
+local function OnItemClick(b, mouseButton)
+    if mouseButton ~= "RightButton" or not IsControlKeyDown() or IsShiftKeyDown() or IsAltKeyDown() then return end
+    local bag, slot = ButtonSlot(b)
+    if bag and slot and bag >= 0 and bag <= C.NUM_BAGS + C.NUM_REAGENT_BAGS then Sorter:ToggleAnchor(bag, slot) end
+end
+
+local function ForEachItemButton(fn)
+    local frames = { _G.ContainerFrameCombinedBags }
+    for i = 1, NUM_CONTAINER_FRAMES or 13 do frames[#frames + 1] = _G["ContainerFrame" .. i] end
+    -- Wally's own bag window (Bags.lua): its slots are the game's item buttons too.
+    if ns.BagWindow and ns.BagWindow:IsShown() then
+        for _, b in ipairs(ns.BagWindow:Buttons()) do fn(b) end
+    end
+    for _, f in pairs(frames) do
+        if f and f:IsShown() then
+            if f.EnumerateValidItems then
+                for _, b in f:EnumerateValidItems() do fn(b) end
+            elseif f.GetName and f:GetName() then
+                for i = 1, 40 do
+                    local b = _G[f:GetName() .. "Item" .. i]
+                    if b and b:IsShown() then fn(b) end
+                end
+            end
+        end
+    end
+end
+
+function Sorter:RefreshAnchors()
+    if not ns.char then return end
+    ForEachItemButton(function(b)
+        if not hookedButtons[b] then
+            hookedButtons[b] = true
+            b:HookScript("OnClick", OnItemClick)
+        end
+        local bag, slot = ButtonSlot(b)
+        local on = bag ~= nil and slot ~= nil and Sorter:IsAnchored(bag, slot)
+        if on and not b.wallyAnchor then
+            local t = b:CreateTexture(nil, "OVERLAY", nil, 7)
+            t:SetSize(14, 14); t:SetPoint("TOPLEFT", 1, -1)
+            t:SetTexture("Interface\\PetBattles\\PetBattle-LockIcon")
+            b.wallyAnchor = t
+        end
+        if b.wallyAnchor then b.wallyAnchor:SetShown(on) end
+    end)
+end
+
+-- Other addons can hold sorting off while they move items (SimplePanel emptying a bag).
+local holds = {}
+function Sorter:Hold(owner, on) holds[owner] = on and true or nil end
+local function Held() return next(holds) ~= nil end
+
+-- ---------------------------------------------------------------------------
 -- Sorting
 -- ---------------------------------------------------------------------------
 
+-- Anchored slots aren't part of the sort: what's in them stays, and nothing moves into them.
 local function Scan(which)
     local slots = {}
     for _, bag in ipairs(C.BagList(which)) do
         if not Sorter:IsIgnored(bag) then
             local family = C.GetBagFamily(bag)
             for slot = 1, C.GetNumSlots(bag) do
-                local info = C.GetSlotInfo(bag, slot)
-                local s = { bag = bag, slot = slot, family = family }
-                if info and info.link then
-                    s.info, s.d = info, Data(info)
-                    s.key = info.link .. "#" .. (info.count or 1)
+                if not Sorter:IsAnchored(bag, slot) then
+                    local info = C.GetSlotInfo(bag, slot)
+                    local s = { bag = bag, slot = slot, family = family }
+                    if info and info.link then
+                        s.info, s.d = info, Data(info)
+                        s.key = info.link .. "#" .. (info.count or 1)
+                    end
+                    slots[#slots + 1] = s
                 end
-                slots[#slots + 1] = s
             end
         end
     end
@@ -420,6 +551,7 @@ function Sorter:Start(which, auto)
     if InCombatLockdown() then return Fail("Can't sort bags in combat.") end
     if CursorHasItem() then return Fail("Put down the item on your cursor first.") end
     if ns.Seller:IsBusy() then return Fail("Wait until Wally has finished selling.") end
+    if Held() then return Fail("Wait until your items have finished moving.") end
     if which == "bank" and not self.bankOpen then return Fail("Open your bank first.") end
     cache = {}
     self.which, self.moves, self.started, self.cursorWait, self.mergeTries = which, 0, GetTime(), 0, {}
@@ -476,6 +608,7 @@ local function OnEnter(self)
     GameTooltip:AddLine("Sorted by Wally, using your rules in Options > AddOns > Wally > Bag Sorting.", 0.82, 0.89, 0.93, true)
     GameTooltip:AddLine("Left-click: sort", 0.75, 0.8, 0.85)
     GameTooltip:AddLine("Right-click: sort options", 0.75, 0.8, 0.85)
+    GameTooltip:AddLine("Ctrl-right-click an item in your bags to anchor it: sorting won't move it.", 0.75, 0.8, 0.85, true)
     GameTooltip:Show()
 end
 
@@ -622,7 +755,8 @@ function Sorter:RefreshButtons()
 end
 
 function Sorter:PlaceButtons()
-    local show = ns.db.options.sort.bagButton
+    -- (Wally's own bag window has its Sort button; this one is for the game's bag windows)
+    local show = ns.db.options.sort.bagButton and not (ns.BagWindow and ns.BagWindow:Enabled())
     local busy = self:IsBusy()
     local parent = show and BackpackFrame()
     if parent then
@@ -671,20 +805,47 @@ function Sorter:PlaceButtons()
     if bankButton then bankButton:SetAlpha(busy and 0.5 or 1) end
 end
 
--- Classic hands out ContainerFrameN to whichever bag opens first, so check after every open or close.
+-- The game hands out ContainerFrameN to whichever bag opens first, so check after every open or close.
 -- Checked again a moment later, once Blizzard has finished laying out the window and its search box.
 local function QueueRefresh()
-    C_Timer.After(0, function() Sorter:RefreshButtons() end)
-    C_Timer.After(0.2, function() Sorter:RefreshButtons() end)
+    C_Timer.After(0, function() Sorter:RefreshButtons(); Sorter:RefreshAnchors() end)
+    C_Timer.After(0.2, function() Sorter:RefreshButtons(); Sorter:RefreshAnchors() end)
+end
+
+-- Auto sort (Bag Sorting options): after the bags close, a merchant or a mailbox. Several bag
+-- windows close at once, so it waits a moment and sorts once.
+local autoPending
+local function AutoSort(option, delay)
+    if not ns.db.options.sort[option] or autoPending then return end
+    autoPending = true
+    C_Timer.After(delay, function()
+        autoPending = nil
+        Sorter:Start("bags", true)
+    end)
+end
+
+local function AnyBagShown()
+    local combined = _G.ContainerFrameCombinedBags
+    if combined and combined:IsShown() then return true end
+    for i = 1, NUM_CONTAINER_FRAMES or 13 do
+        local f = _G["ContainerFrame" .. i]
+        if f and f:IsShown() then return true end
+    end
+    return false
+end
+
+local function OnBagHidden()
+    QueueRefresh()
+    C_Timer.After(0, function() if not AnyBagShown() then AutoSort("onBagsClose", 0.2) end end)
 end
 
 ns:On("PLAYER_LOGIN", function()
     for i = 1, NUM_CONTAINER_FRAMES or 13 do
         local f = _G["ContainerFrame" .. i]
-        if f then f:HookScript("OnShow", QueueRefresh); f:HookScript("OnHide", QueueRefresh) end
+        if f then f:HookScript("OnShow", QueueRefresh); f:HookScript("OnHide", OnBagHidden) end
     end
     local combined = _G.ContainerFrameCombinedBags
-    if combined then combined:HookScript("OnShow", QueueRefresh); combined:HookScript("OnHide", QueueRefresh) end
+    if combined then combined:HookScript("OnShow", QueueRefresh); combined:HookScript("OnHide", OnBagHidden) end
     local search = _G.BagItemSearchBox
     if search then search:HookScript("OnShow", QueueRefresh) end
     QueueRefresh()
@@ -699,6 +860,9 @@ end)
 ns:On("PLAYER_REGEN_DISABLED", function()
     if Sorter:IsBusy() then Sorter:Stop("Sorting stopped: you entered combat.", true) end
 end)
-ns:On("MERCHANT_CLOSED", function()
-    if ns.db.options.sort.onMerchantClose then C_Timer.After(0.3, function() Sorter:Start("bags", true) end) end
+ns:On("MERCHANT_CLOSED", function() AutoSort("onMerchantClose", 0.3) end)
+ns:On("MAIL_CLOSED", function() AutoSort("onMailClose", 0.3) end)
+ns:On("BAG_UPDATE_DELAYED", function()
+    if not Sorter:IsBusy() then PruneAnchors() end
+    Sorter:RefreshAnchors()
 end)

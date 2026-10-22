@@ -36,7 +36,7 @@ function Resource:UpdateValue(f)
     pcall(bar.SetMinMaxValues, bar, 0, UnitPowerMax(unit))
     pcall(bar.SetValue, bar, UnitPower(unit))
     local ok, _, token = pcall(UnitPowerType, unit)
-    if not ok or not C.Readable(token) then token = nil end
+    if not ok or not C.AllReadable(token) then token = nil end
     local c = token and PowerBarColor and PowerBarColor[token] or MANA
     bar:SetStatusBarColor(c.r, c.g, c.b, 1)
 end

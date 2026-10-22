@@ -4,7 +4,7 @@ local _, ns = ...
 -- out each time a recap is shown (never saved), so older recaps get the current rules too.
 local MAX_NOTES = 3
 
-local function Pct(n) return ("%d%%"):format(math.floor(n * 100 + 0.5)) end
+local function Pct(n) return ns.Format.Pct(n) end
 
 local function DuelNotes(recap, Add)
     local T, k, dealt = recap.totals or {}, recap.killer, recap.dealt
@@ -117,7 +117,7 @@ function ns.Hints(recap)
     if L and L.allyTotal > 0 and damage > 0 then
         local best
         for _, h in ipairs(L.healers) do
-            if h.ally and h.name ~= UnitName("player") and (not best or h.total > best.total) then best = h end
+            if h.ally and not ns.IsMe(h.name) and (not best or h.total > best.total) then best = h end
         end
         if best and best.onMe < damage * 0.1 and best.onMe < best.total * 0.2 then
             Add(("%s healed %s, but only %s of it on you: fight where your healer can see and reach you.")

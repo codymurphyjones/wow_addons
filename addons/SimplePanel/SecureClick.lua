@@ -31,7 +31,7 @@ end
 local function Make(p)
     local o = CreateFrame("Button", "SimplePanelSecure" .. p.id:gsub("[^%w]", ""), UIParent, "SecureActionButtonTemplate")
     o:SetFrameStrata("HIGH")
-    -- Newer clients run secure clicks on the mouse *down* when "cast on key down" is on (the
+    -- The game runs secure clicks on the mouse *down* when "cast on key down" is on (the
     -- default), and a button that only hears the up-click then does nothing. Hear both, and ask for
     -- the action on the up-click like a normal button.
     o:RegisterForClicks("AnyUp", "AnyDown")

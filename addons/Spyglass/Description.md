@@ -116,14 +116,14 @@ With your level as L:
 
 ## For addon authors
 
-SpyGlass sets a global `SpyGlass` table (`API_VERSION` 1). The built-in journal uses nothing but this API, so your addon can use it too:
+SpyGlass sets a global `SpyGlass` table (`VERSION` 1; `API_VERSION`, its older name, still works; check `SpyGlass.VERSION >= 1`). The built-in journal uses nothing but this API, so your addon can use it too:
 
 - instances and bosses from AtlasLoot;
 - ranked rows for any list of items;
 - item info and usability checks;
 - the shared tooltip and click handlers;
 - waypoints, through the Waypoint addon's arrow;
-- a refresh callback.
+- a refresh callback: `SpyGlass:RegisterCallback(owner, fn)` calls `fn("REFRESH")` when the lists should be redrawn.
 
 **Plugins** add their own items to the list, each with where it comes from:
 

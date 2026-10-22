@@ -9,25 +9,23 @@ seed hashes are kept), so every new client ships knowing them.
     python tools/Spyglass/export_anchors.py                    # finds WTF/Account/*/SavedVariables/Spyglass.lua
     python tools/Spyglass/export_anchors.py path/to/Spyglass.lua
 """
-import glob
 import os
 import re
 import sys
 
 from lupa import lua51
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_shared"))
+import savedvars  # noqa: E402
+
 ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "Spyglass")  # tools/Spyglass/ builds addons/Spyglass/
-WTF = os.environ.get("WOW_WTF") or r"Z:\Games\World of Warcraft\_classic_beta_\WTF"  # the game's saved variables (read only)
 OUT = os.path.join(ADDON, "Data", "Anchors.lua")
 KEEP = 400  # the newest this many commits
 
 
 def history(path):
     """{ seq: hash } of the developer's commits in one saved-variables file."""
-    lua = lua51.LuaRuntime()
-    with open(path, encoding="utf-8", errors="replace") as f:
-        lua.execute(f.read())
-    db = lua.globals().SpyGlassDB
+    db = savedvars.load(path, "SpyGlassDB", lua=lua51.LuaRuntime(), errors="replace")
     out = {}
     sync = db and db.sync
     if not sync:
@@ -42,7 +40,7 @@ def history(path):
 
 
 def main(argv):
-    paths = argv or glob.glob(os.path.join(WTF, "Account", "*", "SavedVariables", "Spyglass.lua"))
+    paths = argv or savedvars.files("Spyglass")
     merged = {}
     for path in paths:
         merged.update(history(path))

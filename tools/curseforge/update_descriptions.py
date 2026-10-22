@@ -63,10 +63,17 @@ def update(page, pid, markdown_text):
     how = cfsite.set_editor(page, markdown_text)
     if not how:
         return False, "found the page but couldn't fill its editor (run with --inspect)"
-    page.wait_for_timeout(800)
-    label = cfsite.click_button(page, ["Save Changes", "Save", "Update"])
+    labels = ["Save Changes", "Save", "Update"]
+    label = cfsite.click_button(page, labels, wait=5)
+    if not label and cfsite.nudge_editor(page):
+        # The site may only turn Save on after a real keystroke in the editor.
+        label = cfsite.click_button(page, labels, wait=5)
     if not label:
-        return False, f"filled the {how} but found no enabled Save button - nothing saved"
+        found = cfsite.find_buttons(page, labels)
+        if found:
+            return False, f"filled the {how}, but the \"{found[0][0]}\" button stays disabled - nothing saved"
+        names = ", ".join(f'"{n}"' for n in cfsite.button_names(page)) or "none"
+        return False, f"filled the {how}, but no Save button matched (buttons on the page: {names}) - nothing saved"
     try:
         page.wait_for_load_state("networkidle", timeout=15000)
     except Exception:

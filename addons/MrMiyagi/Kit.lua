@@ -167,10 +167,8 @@ local function Talents(spells)
     local list, tabs = {}, {}
     if not (GetNumTalentTabs and GetTalentInfo) then return list, tabs end
     for tab = 1, GetNumTalentTabs() or 0 do
-        local r = { C.Call(GetTalentTabInfo, tab) }
-        local tabName, points
-        if type(r[1]) == "number" then tabName, points = r[2], r[5] else tabName, points = r[1], r[3] end
-        tabs[#tabs + 1] = { C.Str(tabName) or ("Tree " .. tab), C.Num(points) or 0 }
+        local tabName, points = ns.Player.TalentTab(tab)
+        tabs[#tabs + 1] = { C.Str(tabName) or ("Tree " .. tab), points }
         for i = 1, (GetNumTalents and GetNumTalents(tab)) or 0 do
             local name, _, _, _, rank, maxRank = C.Call(GetTalentInfo, tab, i)
             name, rank = C.Str(name), C.Num(rank)
@@ -200,34 +198,19 @@ end
 
 local function Items()
     local out = {}
-    local CC = C_Container
-    for bag = 0, NUM_BAG_SLOTS or 4 do
-        local slots = (CC and CC.GetContainerNumSlots and CC.GetContainerNumSlots(bag)) or (GetContainerNumSlots and GetContainerNumSlots(bag)) or 0
-        for slot = 1, slots do
-            local id, count, link
-            if CC and CC.GetContainerItemInfo then
-                local i = CC.GetContainerItemInfo(bag, slot)
-                if i then id, count, link = i.itemID, i.stackCount, i.hyperlink end
-            elseif GetContainerItemInfo then
-                local _, c, _, _, _, _, l, _, _, i = GetContainerItemInfo(bag, slot)
-                id, count, link = i, c, l
-            end
-            if id then
-                local e = out[id]
-                if e then
-                    e.count = e.count + (count or 1)
-                else
-                    local lines = C.BagItemLines(bag, slot)
-                    local use
-                    for _, line in ipairs(lines) do
-                        if line:find("^Use:") then use = line break end
-                    end
-                    if use then
-                        local u = Kit.Understand(use)
-                        out[id] = { id = id, name = C.Str(link and link:match("%[(.-)%]")) or ("item " .. id), link = link,
-                            count = count or 1, text = use, tags = u.tags, amounts = u.amounts, cleanse = u.cleanse,
-                            bag = bag, slot = slot }
-                    end
+    for bag, slot, info in ns.Items.IterateBags() do
+        local id, count, link = info.id, info.count, info.link
+        if id then
+            local e = out[id]
+            if e then
+                e.count = e.count + (count or 1)
+            else
+                local use = ns.Tooltip.UseText(ns.Tooltip.Lines("bag", bag, slot), true)
+                if use then
+                    local u = Kit.Understand(use)
+                    out[id] = { id = id, name = C.Str(link and link:match("%[(.-)%]")) or ("item " .. id), link = link,
+                        count = count or 1, text = use, tags = u.tags, amounts = u.amounts, cleanse = u.cleanse,
+                        bag = bag, slot = slot }
                 end
             end
         end

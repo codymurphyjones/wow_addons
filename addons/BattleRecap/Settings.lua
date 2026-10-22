@@ -1,129 +1,55 @@
 local _, ns = ...
 
--- Options > AddOns > BattleRecap, built with Blizzard's Settings API (same pattern as Spyglass and
--- Modified). Every option also has a slash command, which writes the same BattleRecapDB keys.
+-- Options > AddOns > BattleRecap, built with the shared OptionsPage.lua (addons/shared). Every
+-- option also has a slash command; those change the same options (ns:SetOption on "db.<key>",
+-- ns.db being BattleRecapDB), so the page always shows the current value.
 local O = {}
 ns.Options = O
 
-local entries = {} -- settings to refresh when a slash command changes them
+local function ApplyLook() if ns.Popup then ns.Popup:ApplyLook() end end
 
-local function DB() return BattleRecapDB end
+O.page = ns.NewOptionsPage({ name = "BattleRecap", icon = true, build = function(p)
+    p:Header("What to record")
+    p:Check({ id = "WorldPvP", path = "db.worldPvP", label = "PvP deaths outside battlegrounds",
+        tooltip = "Deaths in arenas and the open world where an enemy player, or their pet or totem, hit you. "
+            .. "Battleground deaths are always recorded." })
+    p:Check({ id = "Duels", path = "db.duels", label = "Duels you lose", tooltip = "A recap of the damage you took, from Blizzard's damage meter." })
+    p:Check({ id = "DuelWins", path = "db.duelWins", label = "Duels you win",
+        tooltip = "A recap of the damage you did and took. Your duel record per opponent is kept either way." })
 
-local function Checkbox(category, key, name, get, set, tooltip)
-    local CreateCheckbox = Settings.CreateCheckbox or Settings.CreateCheckBox
-    local setting = Settings.RegisterProxySetting(category, "BattleRecap_" .. key, Settings.VarType.Boolean,
-        name, get(), get, function(value)
-            if O.refreshing then return end
-            set(value and true or false)
-        end)
-    CreateCheckbox(category, setting, tooltip)
-    entries[#entries + 1] = { setting = setting, get = get }
-end
-
--- A percentage slider over a 0..1 (or more) value.
-local function Slider(category, key, name, min, max, get, set, tooltip)
-    if not (Settings.CreateSlider and Settings.CreateSliderOptions and Settings.VarType.Number) then return end
-    local setting = Settings.RegisterProxySetting(category, "BattleRecap_" .. key, Settings.VarType.Number,
-        name, math.floor(get() * 100 + 0.5), function() return math.floor(get() * 100 + 0.5) end, function(value)
-            if O.refreshing then return end
-            set(value / 100)
-        end)
-    local options = Settings.CreateSliderOptions(min, max, 5)
-    if MinimalSliderWithSteppersMixin then
-        options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, function(v) return ("%d%%"):format(v) end)
-    end
-    Settings.CreateSlider(category, setting, options, tooltip)
-    entries[#entries + 1] = { setting = setting, get = function() return math.floor(get() * 100 + 0.5) end }
-end
-
-local function Flag(key)
-    return function() return DB()[key] and true or false end, function(v) DB()[key] = v end
-end
-
--- Called at login, once saved variables are loaded.
-function O:Register()
-    if self.category or not (Settings and Settings.RegisterVerticalLayoutCategory) then return end
-    if not ((Settings.CreateCheckbox or Settings.CreateCheckBox) and Settings.RegisterProxySetting
-        and Settings.VarType and Settings.VarType.Boolean) then
-        return -- this client's Settings API can't build the page; slash commands still work
-    end
-    local category, layout = Settings.RegisterVerticalLayoutCategory("BattleRecap " .. ns.IconMarkup(16))
-    local function Header(text)
-        if layout and layout.AddInitializer and CreateSettingsListSectionHeaderInitializer then
-            layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(text))
-        end
-    end
-
-    Header("What to record")
-    local get, set = Flag("worldPvP")
-    Checkbox(category, "WorldPvP", "PvP deaths outside battlegrounds", get, set,
-        "Deaths in arenas and the open world where an enemy player, or their pet or totem, hit you. "
-            .. "Battleground deaths are always recorded.")
-    get, set = Flag("duels")
-    Checkbox(category, "Duels", "Duels you lose", get, set, "A recap of the damage you took, from Blizzard's damage meter.")
-    get, set = Flag("duelWins")
-    Checkbox(category, "DuelWins", "Duels you win", get, set,
-        "A recap of the damage you did and took. Your duel record per opponent is kept either way.")
-
-    Header("The popup")
+    p:Header("The popup")
     local kinds = { { "bg", "Battleground deaths" }, { "arena", "Arena deaths" }, { "pvp", "World PvP deaths" }, { "duel", "Duels" } }
     for _, kind in ipairs(kinds) do
-        get, set = Flag(ns.POPUP_KEYS[kind[1]])
-        Checkbox(category, "Popup_" .. kind[1], "Pop up after: " .. kind[2], get, set,
-            "Show the recap as soon as it's ready. Off: it's still saved, for the minimap button and /brecap.")
+        p:Check({ id = "Popup_" .. kind[1], path = "db." .. ns.POPUP_KEYS[kind[1]], label = "Pop up after: " .. kind[2],
+            tooltip = "Show the recap as soon as it's ready. Off: it's still saved, for the minimap button and /brecap." })
     end
-    get, set = Flag("autoHide")
-    Checkbox(category, "AutoHide", "Hide it when you're resurrected", get, set)
-    get, set = Flag("hints")
-    Checkbox(category, "Hints", "Show notes on why you died", get, set,
-        "Short notes under the recap: burst, focused by several enemies, damage over time, magic, overkill.")
-    get, set = Flag("counters")
-    Checkbox(category, "Counters", "Show how to beat the class that killed you", get, set,
-        "Under the recap: the pattern its damage shows and how your class beats it. The Details Counter tab "
-            .. "lists every enemy class in the fight.")
-    get, set = Flag("sound")
-    Checkbox(category, "Sound", "Play a sound when a recap pops up", get, set)
-    Slider(category, "Scale", "Popup size", 60, 150,
-        function() return DB().popupScale or 1 end,
-        function(v) DB().popupScale = v; ns.Popup:ApplyLook() end)
-    Slider(category, "Alpha", "Popup opacity", 30, 100,
-        function() return DB().popupAlpha or 1 end,
-        function(v) DB().popupAlpha = v; ns.Popup:ApplyLook() end)
+    p:Check({ id = "AutoHide", path = "db.autoHide", label = "Hide it when you're resurrected" })
+    p:Check({ id = "Hints", path = "db.hints", label = "Show notes on why you died",
+        tooltip = "Short notes under the recap: burst, focused by several enemies, damage over time, magic, overkill." })
+    p:Check({ id = "Counters", path = "db.counters", label = "Show how to beat the class that killed you",
+        tooltip = "Under the recap: the pattern its damage shows and how your class beats it. The Details Counter tab "
+            .. "lists every enemy class in the fight." })
+    p:Check({ id = "Sound", path = "db.sound", label = "Play a sound when a recap pops up" })
+    p:Slider({ id = "Scale", path = "db.popupScale", label = "Popup size", min = 0.6, max = 1.5, step = 0.05, scale = 100,
+        percent = true, apply = ApplyLook })
+    p:Slider({ id = "Alpha", path = "db.popupAlpha", label = "Popup opacity", min = 0.3, max = 1, step = 0.05, scale = 100,
+        percent = true, apply = ApplyLook })
 
-    Header("Matches")
-    get, set = Flag("matchCard")
-    Checkbox(category, "MatchCard", "Show a summary when a battleground or arena ends", get, set,
-        "Win or loss, your scoreboard line, your deaths and who got you most. /brecap match reopens the last one.")
+    p:Header("Matches")
+    p:Check({ id = "MatchCard", path = "db.matchCard", label = "Show a summary when a battleground or arena ends",
+        tooltip = "Win or loss, your scoreboard line, your deaths and who got you most. /brecap match reopens the last one." })
 
-    Header("Minimap")
-    Checkbox(category, "Minimap", "Show the minimap button",
-        function() return not DB().minimap.hide end,
-        function(v) DB().minimap.hide = not v; ns.MinimapButton:Initialize() end)
+    p:Header("Minimap")
+    p:Check({ id = "Minimap", path = "db.minimap.hide", invert = true, label = "Show the minimap button",
+        apply = function() if ns.MinimapButton then ns.MinimapButton:Initialize() end end })
 
-    if layout and layout.AddInitializer and CreateSettingsButtonInitializer then
-        Header("Revenge")
-        layout:AddInitializer(CreateSettingsButtonInitializer("Target your last killer", "Make macro", function()
-            ns.Revenge:MakeMacro()
-        end, "Makes a character macro that targets whoever killed you last, to put on a bar. "
-            .. "Or bind a key: Key Bindings > BattleRecap.", true))
-    end
+    p:Header("Revenge")
+    p:Button({ label = "Target your last killer", text = "Make macro", fn = function() ns.Revenge:MakeMacro() end,
+        tooltip = "Makes a character macro that targets whoever killed you last, to put on a bar. "
+            .. "Or bind a key: Key Bindings > BattleRecap." })
+end })
 
-    Settings.RegisterAddOnCategory(category)
-    self.category = category
-end
+-- Shows current values (the page also refreshes itself after every ns:SetOption).
+function O:Refresh() self.page:Refresh() end
 
--- Shows current values (after a slash command changed them).
-function O:Refresh()
-    self.refreshing = true
-    for _, e in ipairs(entries) do pcall(e.setting.SetValue, e.setting, e.get()) end
-    self.refreshing = false
-end
-
-function O:Open()
-    if self.category and Settings.OpenToCategory then
-        self:Refresh()
-        local ok = pcall(Settings.OpenToCategory, self.category:GetID())
-        if ok then return end
-    end
-    ns:Print("Open the game menu > Options > AddOns > BattleRecap.")
-end
+function O:Open() return self.page:Open() end

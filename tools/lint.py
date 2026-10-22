@@ -7,9 +7,10 @@ every TOC lists files that exist.
     (yarn lint ... does the same)
 
 Errors (exit 1): a .lua file that doesn't compile, a TOC line naming a file that isn't there
-(spelled case for case, as the game reads it on other systems).
-Warnings: a .lua/.xml file no TOC or XML loads, a TOC without Version/Category/IconTexture, a
-Retail interface number unlike the other addons'.
+(spelled case for case, as the game reads it on other systems), including ..\shared\ lines naming
+a file addons/shared doesn't have.
+Also an error: a TOC whose ## Interface isn't exactly 16001 (the addons support only WoW Forever).
+Warnings: a .lua/.xml file no TOC or XML loads, a TOC without Version/Category/IconTexture.
 
 Lua is compiled with lupa (Lua 5.5), not WoW's Lua 5.1, so the two 5.5-only complaints about
 assigning to loop variables are ignored.
@@ -24,6 +25,10 @@ import sys
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(TOOLS)
 ADDONS = os.path.join(REPO, "addons")
+# Shared code (addons/shared): TOCs load it as ..\shared\<file>; builds copy it in (addon_sync.py).
+SHARED = os.path.join(ADDONS, "shared")
+FOREVER_INTERFACE = "16001"  # WoW Forever, the only client the addons support
+SHARED_LINE = re.compile(r"^\.\.[\\/]+shared[\\/]+(.+)$", re.I)
 
 # Valid in Lua 5.1: Lua 5.5 makes for-loop variables read-only.
 LUA55_ONLY = re.compile(r"attempt to assign to const variable")
@@ -118,6 +123,13 @@ def check_addon(name, report):
         for rel in toc_files(lines):
             if "[" in rel:
                 continue  # [Family]/[Game] tokens: the client fills these in
+            shared = SHARED_LINE.match(rel)
+            if shared:
+                if not exists_exact(SHARED, shared.group(1)):
+                    report.error(name, "%s lists %s, which isn't in addons/shared (check the spelling and case)" % (toc, rel))
+                else:
+                    report.shared.add(os.path.normcase(os.path.join(SHARED, *re.split(r"[\\/]+", shared.group(1)))))
+                continue
             if not exists_exact(folder, rel):
                 report.error(name, "%s lists %s, which isn't there (check the spelling and case)" % (toc, rel))
             else:
@@ -146,11 +158,29 @@ def check_addon(name, report):
                 report.warn(name, "%s isn't loaded by any TOC or XML" % os.path.relpath(path, folder))
 
 
+def check_shared(report, all_addons):
+    """Every shared .lua file compiles; with every addon checked, warn about ones no TOC loads."""
+    if not os.path.isdir(SHARED):
+        return
+    for dirpath, dirnames, filenames in os.walk(SHARED):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        for fname in filenames:
+            path = os.path.join(dirpath, fname)
+            low = fname.lower()
+            if low.endswith(".lua"):
+                err = compile_error(path)
+                if err:
+                    report.error("shared", err)
+            if all_addons and low.endswith((".lua", ".xml")) and os.path.normcase(path) not in report.shared:
+                report.warn("shared", "%s isn't loaded by any addon's TOC" % os.path.relpath(path, SHARED))
+
+
 class Report:
     def __init__(self):
         self.errors = []
         self.warnings = []
         self.interfaces = {}
+        self.shared = set()  # shared files some TOC loads
 
     def error(self, addon, text):
         self.errors.append((addon, text))
@@ -158,19 +188,13 @@ class Report:
     def warn(self, addon, text):
         self.warnings.append((addon, text))
 
-    def retail_mismatch(self):
-        """Warn about Retail (12xxxx) interface numbers unlike most addons'."""
-        retail = {}
-        for addon, value in self.interfaces.items():
-            for v in re.findall(r"\d+", value):
-                if v.startswith("12") and len(v) == 6:
-                    retail[addon] = v
-        if not retail:
-            return
-        common = collections.Counter(retail.values()).most_common(1)[0][0]
-        for addon, v in sorted(retail.items()):
-            if v != common:
-                self.warn(addon, "Retail interface %s; most addons use %s" % (v, common))
+    def forever_only(self):
+        """The addons support only WoW Forever: every TOC's ## Interface must be exactly 16001."""
+        for addon, value in sorted(self.interfaces.items()):
+            numbers = re.findall(r"\d+", value)
+            if numbers != [FOREVER_INTERFACE]:
+                self.error(addon, "## Interface: %s - the addons support only WoW Forever (%s)"
+                           % (value or "missing", FOREVER_INTERFACE))
 
 
 def run_hook():
@@ -217,8 +241,9 @@ def main(argv=None):
     names = addon_folders(args.names)
     for name in names:
         check_addon(name, report)
+    check_shared(report, not args.names)
     if not args.names:
-        report.retail_mismatch()
+        report.forever_only()
 
     if not args.quiet:
         for addon, text in report.warnings:

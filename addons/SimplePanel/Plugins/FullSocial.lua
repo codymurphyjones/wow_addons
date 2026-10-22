@@ -16,22 +16,9 @@ local SWITCHES, Available, AddSwitches = S.SWITCHES, S.Available, S.AddSwitches
 -- People online
 -- ---------------------------------------------------------------------------
 
-local function ClassColor(class)
-    if not class then return T.text end
-    local colors = RAID_CLASS_COLORS or {}
-    if colors[class] then local c = colors[class]; return { c.r, c.g, c.b } end
-    -- Friend lists give the localized class name; find its token.
-    for _, names in ipairs({ LOCALIZED_CLASS_NAMES_MALE or {}, LOCALIZED_CLASS_NAMES_FEMALE or {} }) do
-        for token, name in pairs(names) do
-            if name == class and colors[token] then local c = colors[token]; return { c.r, c.g, c.b } end
-        end
-    end
-    return T.text
-end
-
+-- Friend lists give the localized class name: shared Units.lua finds its token.
 local function Colored(name, class)
-    local c = ClassColor(class)
-    return ("|cff%02x%02x%02x%s|r"):format(c[1] * 255, c[2] * 255, c[3] * 255, name)
+    return ns.Units.Colored(name, class, { fallback = T.text })
 end
 
 local function PersonMenu(m, person)

@@ -210,7 +210,7 @@ ns:On("UNIT_FLAGS", function(unit)
     if not f or not f.active then return end
     if UnitIsTapDenied then
         local ok, tapped = pcall(UnitIsTapDenied, unit)
-        if ok and C.Readable(tapped) then f.unit.tapped = tapped end
+        if ok and C.AllReadable(tapped) then f.unit.tapped = tapped end
     end
     Health:UpdateColor(f)
     Health:UpdateRing(f)

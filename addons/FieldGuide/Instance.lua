@@ -5,7 +5,8 @@ local _, ns = ...
 -- quests, a popup says it's time and where to pick them up; "Guide me" switches the guide to a
 -- route that collects them, has you run the dungeon, and turns them in. The minimap button's
 -- tooltip lists every dungeon in your range with quests left, for as long as that's true.
--- Dungeons and their quests: Guides\Instances.lua (generated).
+-- The dungeons (name, levels, entrance, map, final bosses, wings): the suite's shared\Instances.lua;
+-- their quests: Guides\Instances.lua (generated). I.list joins the two, by area ID.
 --
 -- Wings: Scarlet Monastery, Dire Maul, Blackrock Spire and Stratholme are entered wing by wing,
 -- and each wing is its own run. The route runs only the wings your quests need, in order, with
@@ -16,7 +17,20 @@ local _, ns = ...
 local I = {}
 ns.Instance = I
 
-ns.Instances = ns.Instances or {}
+-- Each dungeon with quests: its quests (ns.DungeonQuests) with what the dungeon is (ns.Instances), as
+-- { id = area ID, name, from, to, entrance, map = instance map ID, bosses, wings, Alliance, Horde,
+-- wingOf, before, follow, inside }, by level.
+I.list = {}
+for _, quests in ipairs(ns.DungeonQuests or {}) do
+    local d = ns.Instances:ByArea(quests.id)
+    if d then
+        local inst = {}
+        for k, v in pairs(quests) do inst[k] = v end
+        inst.name, inst.from, inst.to, inst.entrance = d.name, d.from, d.to, d.entrance
+        inst.map, inst.bosses, inst.wings = d.instanceID, d.bosses, d.wings
+        I.list[#I.list + 1] = inst
+    end
+end
 
 local function Faction() return UnitFactionGroup("player") or "" end
 
@@ -52,7 +66,7 @@ function I:InsideText(id)
 end
 
 function I:Get(id)
-    for _, inst in ipairs(ns.Instances) do
+    for _, inst in ipairs(self.list) do
         if inst.id == id then return inst end
     end
 end
@@ -132,7 +146,7 @@ function I:Current()
     local now = GetTime()
     if current and currentAt == now then return current end
     local level, out = ns.Progress:Level(), {}
-    for _, inst in ipairs(ns.Instances) do
+    for _, inst in ipairs(self.list) do
         if level >= inst.from and level <= inst.to then
             local open = self:Open(inst)
             if #open > 0 then out[#out + 1] = { inst = inst, open = open } end
@@ -453,11 +467,12 @@ local function Remember()
     if x and y and (x > 0 or y > 0) then lastOutside = { map, x * 100, y * 100 } end
 end
 
--- Seeds for the dungeon maps of each wing, from QuestieDB's wing areas (Dire Maul's floors and
--- Upper Blackrock Spire). Others are learned (ns.db.wingMaps).
-local SEED_MAPS = {
-    [235] = "north", [236] = "west", [237] = "west", [238] = "west", [239] = "east", [240] = "east", [255] = "upper",
-}
+-- Seeds for the dungeon maps of each wing: the floors only one wing has (ns.Instances: Dire Maul's
+-- floors and Upper Blackrock Spire, from QuestieDB's wing areas). Others are learned (ns.db.wingMaps).
+local function SeedWing(inst, map)
+    local d, wing = ns.Instances:ByMap(map)
+    return d and wing and d.area == inst.id and wing.key or nil
+end
 
 local function InsideMap() return C_Map.GetBestMapForUnit("player") end
 
@@ -474,7 +489,7 @@ local function WingFromMap(inst)
         local id, key = learned:match("^(%d+):(.+)$")
         if tonumber(id) == inst.id then return key end
     end
-    local seed = SEED_MAPS[map]
+    local seed = SeedWing(inst, map)
     return seed and I:Wing(inst, seed) and seed or nil
 end
 

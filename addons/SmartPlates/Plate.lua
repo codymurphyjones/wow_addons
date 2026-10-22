@@ -60,7 +60,7 @@ local function Reaction(unit)
         return "HOSTILE"
     end
     local okF, friend = pcall(UnitIsFriend, "player", unit)
-    if okF and C.Readable(friend) and friend then return "FRIENDLY" end
+    if okF and C.AllReadable(friend) and friend then return "FRIENDLY" end
     return "HOSTILE"
 end
 
@@ -97,7 +97,7 @@ end
 
 local function Safe(fn, ...)
     local ok, a, b = pcall(fn, ...)
-    if not ok or not C.Readable(a) then return nil end
+    if not ok or not C.AllReadable(a) then return nil end
     return a, b
 end
 
@@ -108,13 +108,10 @@ local function GroupClass(unit, name)
     if not IsInGroup() then return nil end
     for _, gu in ipairs(C.GroupUnits(groupUnits)) do
         local match = C.UnitIsUnit(unit, gu)
-        if not match and name then
-            local ok, gName = pcall(UnitName, gu)
-            match = ok and C.Readable(gName) and gName == name
-        end
+        if not match and name then match = C.SameName(ns.Units.UnitFull(gu), name) end
         if match then
             local ok, _, token = pcall(UnitClass, gu)
-            if ok and C.Readable(token) then return token end
+            if ok and C.AllReadable(token) then return token end
             return nil
         end
     end
@@ -125,6 +122,9 @@ function Plates:UpdateUnit(f)
     local isPlayer, class, race, guid = C.Identity(unit) -- each read may be secret on Forever/Midnight
     u.guid = guid
     u.name = Safe(UnitName, unit)
+    -- A player's full "Given Family" (WoW Forever) when the client tells it: the family name is
+    -- what tells two players apart. The given name alone otherwise.
+    if isPlayer and u.name then u.name = ns.Units.UnitFull(unit) or u.name end
     if isPlayer and not class then class = GroupClass(unit, u.name) end
     u.isPlayer = isPlayer or false
     u.class = isPlayer and class or nil

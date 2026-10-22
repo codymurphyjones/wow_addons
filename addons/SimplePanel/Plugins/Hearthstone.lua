@@ -5,7 +5,7 @@ local _, ns = ...
 local T = SimplePanel.Theme
 local C = ns.Compat
 
-local HEARTHSTONE = 6948
+local HEARTHSTONE = ns.Items.ITEMS.HEARTHSTONE
 local GCD = 2 -- a cooldown this short is the global cooldown, not the hearthstone's
 
 local function Remaining()
@@ -14,11 +14,8 @@ local function Remaining()
     return math.max(0, start + duration - GetTime())
 end
 
-local function Clock(secs)
-    secs = math.ceil(secs)
-    if secs >= 3600 then return ("%d:%02d:%02d"):format(secs / 3600, secs / 60 % 60, secs % 60) end
-    return ("%d:%02d"):format(secs / 60, secs % 60)
-end
+local CLOCK = { round = "ceil" }
+local function Clock(secs) return ns.Format.Clock(secs, CLOCK) end
 
 SimplePanel.RegisterPlugin({
     id = "Hearthstone",

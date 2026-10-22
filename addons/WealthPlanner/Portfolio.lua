@@ -133,7 +133,8 @@ function P:RecordWorth()
     local mail = MailGoods()
     local total = cash + goods + auctions + mail
     t[ns.Today()] = total
-    ns.db.wealth[key] = { t = time(), cash = cash, goods = goods, auctions = auctions, mail = mail, total = total }
+    ns.db.wealth[key] = { t = time(), cash = cash, goods = goods, auctions = auctions, mail = mail, total = total,
+        realm = ns.Units.RealmLabel(), name = ns.CharName() }
     local log = ns.db.worthLog[key]
     if not log then log = {}; ns.db.worthLog[key] = log end
     local last = log[#log]
@@ -145,13 +146,24 @@ function P:RecordWorth()
     end
 end
 
+-- Whether a saved character is on this realm, and its name. Entries say so themselves; older ones
+-- (characters not logged in since) only have it in their "Name-Realm" key.
+local function OnRealm(key)
+    local w = ns.db.wealth[key]
+    local label = ns.Units.RealmLabel()
+    if w and w.realm then return w.realm == label, w.name or ns.Units.Short(key) end
+    local realm = "-" .. label
+    if key:sub(-#realm) == realm then return true, key:sub(1, -#realm - 1) end
+    return false
+end
+
 -- Your characters on this realm: { { key, name, cash, goods, auctions, mail, total, t } }, richest first.
 function P:Characters()
-    local realm = "-" .. (GetRealmName() or "?")
     local out = {}
     for key, w in pairs(ns.db.wealth) do
-        if key:sub(-#realm) == realm then
-            out[#out + 1] = { key = key, name = key:sub(1, -#realm - 1), cash = w.cash or 0, goods = w.goods or 0,
+        local here, name = OnRealm(key)
+        if here then
+            out[#out + 1] = { key = key, name = name, cash = w.cash or 0, goods = w.goods or 0,
                 auctions = w.auctions or 0, mail = w.mail or 0, total = w.total or 0, t = w.t }
         end
     end
@@ -172,13 +184,12 @@ end
 -- The account's net worth by day (each character's last known figure carried forward), oldest
 -- first: values, days.
 function P:AccountHistory(days)
-    local realm = "-" .. (GetRealmName() or "?")
     local today = ns.Today()
     local values, labels, carry = {}, {}, {}
     for day = today - (days or 30) + 1, today do
         local sum, any = 0, false
         for key, t in pairs(ns.db.worth) do
-            if key:sub(-#realm) == realm then
+            if OnRealm(key) then
                 if t[day] then carry[key] = t[day] end
                 if carry[key] then sum, any = sum + carry[key], true end
             end
@@ -478,7 +489,7 @@ ns:OnLoad(function()
     end)
     ns:On("BANKFRAME_OPENED", BankOpened)
     ns:On("BANKFRAME_CLOSED", BankClosed)
-    -- Newer clients open the bank through the interaction manager (the banker's type).
+    -- The game also opens the bank through the interaction manager (the banker's type).
     local banker = Enum and Enum.PlayerInteractionType and Enum.PlayerInteractionType.Banker
     if banker then
         ns:On("PLAYER_INTERACTION_MANAGER_FRAME_SHOW", function(kind) if kind == banker then BankOpened() end end)

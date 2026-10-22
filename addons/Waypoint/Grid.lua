@@ -57,11 +57,9 @@ for k, s in ipairs(STEPS) do DIRECTION[s[1] * 3 + s[2]] = k - 1 end
 local W = ns.Water
 local maps = {} -- continent -> { r0, c0, nr, nc, rows = { "llww..." } }
 
--- The map tiles are Forever's (classic) continents; later expansions reshaped them.
+-- The map tiles are WoW Forever's continents.
 local function Usable()
-    if not W then return false end
-    local _, _, _, interface = GetBuildInfo()
-    return (tonumber(interface) or 0) < 40000
+    return W ~= nil
 end
 
 local function Map(continent)

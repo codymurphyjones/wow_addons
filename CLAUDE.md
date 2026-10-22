@@ -40,3 +40,7 @@ Don't copy files into the game yourself. When a change needs testing in game, te
 ## The addons
 
 `addons\myaddons.txt` lists the user's own addons; everything else in the game folder is third party.
+
+The addons support only WoW Forever (`## Interface: 16001`, the 12.x engine; `yarn lint` errors on any other interface number). Don't add Classic Era, Retail or other-client branches. Names on Forever are realmless "Given Family": compare and key players with `addons\shared\Units.lua`, never by `UnitName("player")` or `GetRealmName()`.
+
+`addons\shared\` is code and data several addons share, not an addon (see its README.md); scripts that generate its data live in `tools\shared\`. A TOC loads a shared file as `..\shared\<File>.lua`; the builds copy it into that addon's `Shared\` folder and rewrite the line. Don't fork shared code into an addon: change it in `addons\shared\`. An addon can't have a `Shared\` folder of its own.

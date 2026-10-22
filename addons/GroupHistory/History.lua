@@ -21,22 +21,102 @@ local function Tag(reason)
     return "other"
 end
 
+-- Players by compact name ("aranaliacaelmyr"), so every shape of a name finds its record.
+local byCompact, indexed
+
+local function Index()
+    local players = ns.db.players
+    if indexed ~= players then
+        indexed, byCompact = players, {}
+        for key in pairs(players) do
+            local c = type(key) == "string" and ns.Units.Compact(key)
+            if c and (not byCompact[c] or key:find(" ", 1, true)) then byCompact[c] = key end
+        end
+    end
+    return byCompact
+end
+
+-- The key a player is saved under, whatever shape the name came in ("Given Family",
+-- "GivenFamily", "Given Family-Server", "Given-Family"), or the key a new record gets.
+function H:Key(name)
+    local key = ns.Units.KeyOf(name)
+    if not key or ns.db.players[key] then return key end
+    local c = ns.Units.Compact(key)
+    local found = c and Index()[c]
+    if found and ns.db.players[found] then return found end
+    return key
+end
+
 function H:Get(full, create)
+    full = full and self:Key(full)
     local p = full and ns.db.players[full]
     if not p and create and full then
         p = { first = time(), runs = {}, t = { runs = 0, finished = 0, wipes = 0, deaths = 0, fault = 0, faultDeaths = 0, bosses = 0 },
             reasons = {} }
         ns.db.players[full] = p
+        local c = ns.Units.Compact(full)
+        if c and indexed == ns.db.players then byCompact[c] = full end
     end
     return p
 end
 
--- A player by name ("Bob" or "Bob-Realm"), or nil.
+-- Two records of one player (saved under an old and the new key): counts added up, the rest kept
+-- from whichever has it.
+local function MergePlayer(kept, moved)
+    if type(kept) ~= "table" or type(moved) ~= "table" then return end
+    kept.t, moved.t = kept.t or {}, moved.t or {}
+    for k, v in pairs(moved.t) do
+        if type(v) == "number" then kept.t[k] = (kept.t[k] or 0) + v end
+    end
+    kept.reasons = kept.reasons or {}
+    for tag, n in pairs(moved.reasons or {}) do kept.reasons[tag] = (kept.reasons[tag] or 0) + n end
+    kept.runs = kept.runs or {}
+    for _, id in ipairs(moved.runs or {}) do table.insert(kept.runs, id) end
+    table.sort(kept.runs)
+    if moved.first and (not kept.first or moved.first < kept.first) then kept.first = moved.first end
+    if moved.last and (not kept.last or moved.last > kept.last) then
+        kept.last, kept.lastRole = moved.last, moved.lastRole or kept.lastRole
+    end
+    for _, k in ipairs({ "class", "race", "level", "guild", "note", "rating" }) do
+        if kept[k] == nil then kept[k] = moved[k] end
+    end
+end
+
+-- WoW Forever names: earlier versions saved other players as "Given-Family" (UnitName's two values
+-- joined), with the server ("Given Family-ClassicBetaPvP") or compact ("GivenFamily"); the key is
+-- "Given Family" now. ns.Units.MigrateNames also merges keys that are one player in two shapes
+-- ("GivenFamily" next to "Given Family") into the spaced one; MergePlayer adds the other record in
+-- (without a merge it's dropped). Runs once per load; nothing moves once everything has.
+ns:OnLoad(function()
+    local U = ns.Units
+    U.MigrateNames(ns.db.players, MergePlayer)
+    for _, run in ipairs(ns.db.runs or {}) do
+        if type(run) == "table" then
+            U.MigrateNames(run.members)
+            if type(run.me) == "string" then run.me = U.KeyOf(run.me) or run.me end
+        end
+    end
+    indexed = nil
+end)
+
+-- A player by name ("Given Family" in any shape, or the given name alone), or nil.
 function H:Find(text)
-    text = ns.Trim(text):lower()
+    text = ns.Trim(text)
     if text == "" then return nil end
+    local key = self:Key(text)
+    if key and ns.db.players[key] then return key end
+    text = text:lower()
     for full in pairs(ns.db.players) do
-        if full:lower() == text or C.Short(full):lower() == text then return full end
+        if full:lower() == text or (full:match("^(%S+) ") or ""):lower() == text then return full end
+    end
+end
+
+-- A value in a table keyed by players' names (a death's blame or reasons), found by any shape.
+function H.ByName(tbl, name)
+    if type(tbl) ~= "table" or name == nil then return nil end
+    if tbl[name] ~= nil then return tbl[name] end
+    for k, v in pairs(tbl) do
+        if C.SameName(k, name) then return v end
     end
 end
 
@@ -160,7 +240,9 @@ function H:DeathsOf(full)
     for _, r in ipairs(self:RunsWith(full)) do
         for i = #r.deaths, 1, -1 do
             local d = r.deaths[i]
-            if d.victim == short or (d.blame and d.blame[short]) then out[#out + 1] = { run = r, death = d } end
+            if d.victim == short or C.SameName(d.victim, short) or H.ByName(d.blame, short) then
+                out[#out + 1] = { run = r, death = d }
+            end
         end
     end
     return out
@@ -179,20 +261,23 @@ function H:SetRating(full, rating)
     ns:Changed()
 end
 
--- For other addons (SimplePanel's Social switches, tooltips and person menus). name is "Bob" (your
--- realm) or "Bob-Realm"; guid, when given, supplies the realm.
-GroupHistoryAPI = GroupHistoryAPI or {}
+-- For other addons (SimplePanel's Social switches, tooltips and person menus). name is the player's
+-- name in any shape ("Given Family", "GivenFamily", "Given Family-Server"); guid, when given,
+-- supplies the name when there's none or only the given name. Event "CHANGED" (no arguments) after
+-- what Group History knows changes (a run, a rating, a note), at most once a frame.
+local _, FireAPI = ns.NewAPI("GroupHistoryAPI", 1)
+ns:OnChanged(function() FireAPI("CHANGED") end)
 
 local function Resolve(name, guid)
     name = C.Str(name)
-    local full = name and name:find("-", 1, true) and name
-    if not full and guid then
-        local _, _, _, _, _, n, realm = C.Call(GetPlayerInfoByGUID, guid)
-        n, realm = C.Str(n), C.Str(realm)
-        if n and realm then full = n .. "-" .. realm:gsub("%s", "") end
-        name = name or n
+    if guid and not (name and ns.Trim(ns.Units.Short(name) or ""):find(" ", 1, true)) then
+        -- ns.Units.Call: C.Call passes on only five results, and the name is the sixth.
+        local _, _, _, _, _, n = ns.Units.Call(GetPlayerInfoByGUID, guid)
+        n = C.Str(n)
+        if n and (not name or ns.Trim(ns.Units.Short(n) or ""):find(" ", 1, true)) then name = n end
     end
-    return full or C.Full(name)
+    -- The key the player is saved under, found by any shape of the name.
+    return name and H:Key(name)
 end
 
 -- What you know of a player, or nil if you've never grouped with them (nor rated or noted them).

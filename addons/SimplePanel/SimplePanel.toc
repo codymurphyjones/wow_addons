@@ -1,8 +1,8 @@
-## Interface: 16001, 11509, 20506, 50504, 120100
+## Interface: 16001
 ## Title: SimplePanel
 ## Notes: A clean info bar across the top of your screen: gold, XP, bags, durability, quests, professions, friends and more, with rich tooltips, charts, drag-and-drop layout, color schemes, profiles and a drawer for minimap buttons.
 ## Author: Dinoblankie + Claude
-## Version: 0.1.4
+## Version: 0.1.5
 ## SavedVariables: SimplePanelDB
 ## SavedVariablesPerCharacter: SimplePanelCharDB
 ## OptionalDeps: GroupHistory
@@ -11,15 +11,26 @@
 ## AddonCompartmentFunc: SimplePanel_OnCompartmentClick
 ## X-Curse-Project-ID: 1740497
 
+..\shared\Core.lua
+..\shared\API.lua
+..\shared\Units.lua
+..\shared\Format.lua
+..\shared\Items.lua
+..\shared\Tooltip.lua
+..\shared\WorldMap.lua
+..\shared\Player.lua
 Compat.lua
 Core.lua
 Defaults.lua
 Profiles.lua
 Characters.lua
 Widgets.lua
+..\shared\Window.lua
+..\shared\Bar.lua
 Tooltip.lua
 Menu.lua
 GroupHistory.lua
+..\shared\Chart.lua
 Chart.lua
 ChartWindow.lua
 PluginKit.lua
@@ -32,6 +43,7 @@ CharacterSheet.lua
 ProfessionsPanel.lua
 SocialWindow.lua
 SocialGuild.lua
+..\shared\OptionsPage.lua
 Options.lua
 Config.lua
 ReputationWatch.lua

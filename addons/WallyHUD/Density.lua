@@ -38,10 +38,11 @@ function D:Apply()
     MinimapButtons(density ~= "minimal")
 end
 
+-- /whud minimal | standard | expanded and Options > AddOns > WallyHUD: the same option, so the
+-- page shows it; its apply (D:Apply) lays the HUD out.
 function D:Set(density)
     if not D.NAMES[density] then return end
-    ns.db.density = density
-    self:Apply()
+    ns:SetOption("db.density", density)
     ns:Print(("Density: %s."):format(D.NAMES[density]))
 end
 

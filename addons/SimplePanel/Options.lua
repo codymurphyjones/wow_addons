@@ -11,7 +11,10 @@ local _, ns = ...
 --   { type = "note", text = "..." }
 --   { type = "custom", height = 40, build = function(row, width) end, refresh = function(row) end }
 --
--- Any row may use get/set instead of key, and `apply` runs after a change. A row with
+-- A key row saves through ns:SetOption("db.options.<key>") (addons/shared/OptionsPage.lua), so
+-- Options > AddOns > SimplePanel shows the change and runs that option's apply there; give such a
+-- row no apply of its own for the same side effect. Any row may use get/set instead of key, and
+-- `apply` runs after a change. A row with
 -- `disabled = function() return true end` fades and says why (`why`); hovering it lights up the
 -- rows named in `causes` (by id or key), which are what turn it back on.
 local Options = {}
@@ -28,7 +31,7 @@ local function Get(def)
 end
 
 local function Set(def, value)
-    if def.set then def.set(value) else ns.db.options[def.key] = value end
+    if def.set then def.set(value) else ns:SetOption("db.options." .. def.key, value) end
     if def.apply then def.apply(value) end
 end
 
@@ -96,7 +99,7 @@ BUILD.check = function(r, view)
         view:Refresh()
     end)
     if def.desc then r.desc = Muted(Label(r, def.desc, "SimplePanelFontSmall", 27, -25, 480)) end
-    r.height = def.desc and 44 or 28
+    r.height, r.descTop = 28, 25
     r.Refresh = function()
         r.box:SetChecked(Get(def) and true or false)
         if r.desc then
@@ -119,7 +122,7 @@ BUILD.slider = function(r, view)
     end)
     r.slider:SetPoint("TOPLEFT", 0, -18)
     if def.desc then r.desc = Muted(Label(r, def.desc, "SimplePanelFontSmall", 0, -36, 480)) end
-    r.height = def.desc and 58 or 44
+    r.height, r.descTop = 44, 36
     r.Refresh = function()
         local v = Get(def) or def.min
         r.slider:SetSilently(v)
@@ -146,7 +149,7 @@ BUILD.choice = function(r, view)
         x = x + (v[3] or 80) + 6
     end
     if def.desc then r.desc = Muted(Label(r, def.desc, "SimplePanelFontSmall", 0, -30, 480)) end
-    r.height = def.desc and 50 or 32
+    r.height, r.descTop = 32, 30
     r.Refresh = function()
         local cur = Get(def)
         for _, e in ipairs(r.buttons) do W.SetActive(e.b, e.value == cur) end
@@ -278,10 +281,13 @@ function View:Layout()
         if show and def.hidden and Resolve(def.hidden) then show = false end
         r:SetShown(show)
         if show then
+            if r.desc then -- as tall as its text, which can wrap to several lines or change (why)
+                r:SetHeight(math.max(r.height, r.descTop + math.ceil(r.desc:GetStringHeight()) + 6))
+            end
             if def.type == "group" and y < 0 then y = y - 6 end
             r:ClearAllPoints()
             r:SetPoint("TOPLEFT", 4, y); r:SetPoint("RIGHT", self.child, "RIGHT", -4, 0)
-            y = y - r.height
+            y = y - r:GetHeight()
         end
     end
     self.child:SetHeight(-y + 10)

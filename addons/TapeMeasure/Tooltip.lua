@@ -103,14 +103,11 @@ local function AddComparison(tooltip, cmp)
     if summary then tooltip:AddLine(summary, 0.85, 0.9, 0.95, true) end
 end
 
-local function AddLines(tooltip, data)
-    if tooltip.tapeMeasureDone or not ns.db or not ns.db.enabled or not ns.db.tooltip then return end
-    local _, link = tooltip:GetItem()
-    link = link or (data and data.hyperlink)
-    if not link then return end
+-- Returns false (try again on the next update) while it's off or the item can't be compared yet.
+local function AddLines(tooltip, link)
+    if not ns.db or not ns.db.enabled or not ns.db.tooltip then return false end
     local cmp = ns.Scoring:Compare(link)
-    if not cmp then return end
-    tooltip.tapeMeasureDone = true
+    if not cmp then return false end
 
     tooltip:AddLine(" ")
     tooltip:AddDoubleLine(ns.IconMarkup(16) .. " Tape Measure", ns:ColoredSpecText(), ACCENT[1], ACCENT[2], ACCENT[3])
@@ -134,29 +131,10 @@ local function AddLines(tooltip, data)
     tooltip:Show()
 end
 
-local function Clear(tooltip) tooltip.tapeMeasureDone = nil end
-
-if TooltipDataProcessor and Enum and Enum.TooltipDataType then
-    TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
-        if tooltip == GameTooltip or tooltip == ItemRefTooltip then AddLines(tooltip, data) end
-    end)
-else
-    for _, tt in ipairs({ GameTooltip, ItemRefTooltip }) do
-        tt:HookScript("OnTooltipSetItem", AddLines)
-    end
-end
-for _, tt in ipairs({ GameTooltip, ItemRefTooltip }) do
-    tt:HookScript("OnHide", Clear)
-    if tt:HasScript("OnTooltipCleared") then tt:HookScript("OnTooltipCleared", Clear) end
-end
+local hook = ns.Tooltip.HookItem(AddLines)
 
 -- Pressing or releasing Shift redraws the tooltip with all lines, or the short version.
 ns:On("MODIFIER_STATE_CHANGED", function(key)
     if key ~= "LSHIFT" and key ~= "RSHIFT" then return end
-    for _, tt in ipairs({ GameTooltip, ItemRefTooltip }) do
-        if tt:IsShown() and tt.tapeMeasureDone and tt.RefreshData then
-            tt.tapeMeasureDone = nil
-            pcall(tt.RefreshData, tt)
-        end
-    end
+    hook.Refresh()
 end)

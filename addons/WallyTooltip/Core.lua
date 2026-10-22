@@ -1,4 +1,4 @@
-local addonName, ns = ...
+local _, ns = ...
 
 -- WallyTooltip: tooltips that place themselves. Every tooltip the game puts in its default spot
 -- (units in the world, and anything else that asks for the default anchor) goes where it can be
@@ -9,6 +9,9 @@ local addonName, ns = ...
 WallyTooltip = WallyTooltip or {}
 ns.VERSION = "0.1.0"
 
+-- Events and saved variables: the shared Core.lua (addons/shared). Print stays here.
+ns.SAVED = { db = "WallyTooltipDB" }
+
 ns.DEFAULTS = {
     enabled = true,      -- place tooltips smartly (off: the game's default spot, as always)
     glide = true,        -- a tooltip that's showing glides to a new spot (off: it jumps)
@@ -16,52 +19,25 @@ ns.DEFAULTS = {
     debug = false,       -- say in chat where each tooltip went, and why
 }
 
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then dst[k] = {} end
-            Merge(dst[k], v)
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
-    end
-    return dst
-end
-
 local ACCENT = "|cff40c4cd"
 function ns:Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(ACCENT .. "WallyTooltip|r: " .. tostring(msg))
 end
 
-local frame = CreateFrame("Frame")
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
-    end
-    table.insert(handlers[event], fn)
-end
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do
-        local ok, err = pcall(fn, ...)
-        if not ok then geterrorhandler()(err) end
-    end
-end)
-
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    WallyTooltipDB = Merge(type(WallyTooltipDB) == "table" and WallyTooltipDB or {}, ns.DEFAULTS)
-    ns.db = WallyTooltipDB
-    -- (once: debug messages back off after the first, chattier version)
-    if not ns.db.quietDebug then ns.db.debug, ns.db.quietDebug = false, true end
+ns:OnLoad(function()
+    -- Once: debug messages back off after the first, chattier version. Saves from before
+    -- ns:Migrate have quietDebug set: then it's already done.
+    ns:Migrate("quietDebug", function(db)
+        if not db.quietDebug then db.debug, db.quietDebug = false, true end
+    end)
 end)
 
 SLASH_WALLYTOOLTIP1 = "/wtip"
 SlashCmdList.WALLYTOOLTIP = function(msg)
     local cmd = strtrim(msg or ""):lower()
+    -- The same options as Options > AddOns > WallyTooltip (ns:SetOption), so the page shows them.
     if cmd == "on" or cmd == "off" then
-        ns.db.enabled = cmd == "on"
+        ns:SetOption("db.enabled", cmd == "on")
         ns:Print(ns.db.enabled and "Placing tooltips where they're readable and block nothing vital."
             or "Off: tooltips go where Edit Mode puts them.")
     elseif cmd == "options" or cmd == "config" then
@@ -75,8 +51,7 @@ SlashCmdList.WALLYTOOLTIP = function(msg)
             ns:Print("No tooltip has asked for the default spot yet: hover a player or a creature in the world.")
         end
     elseif cmd == "debug" then
-        ns.db.debug = not ns.db.debug
-        ns:Print(ns.db.debug and "Saying where each tooltip goes, and why." or "Quiet again.")
+        ns:Print(ns:ToggleOption("db.debug") and "Saying where each tooltip goes, and why." or "Quiet again.")
     else
         ns:Print(("Smart placement is %s. /wtip on | off, /wtip options, /wtip status (what it's done), /wtip debug (where each tooltip goes, and why)."):format(
             ns.db.enabled and "on" or "off"))

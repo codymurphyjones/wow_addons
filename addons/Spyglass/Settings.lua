@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Options > AddOns > SpyGlass, built with Blizzard's Settings API.
+-- Options > AddOns > SpyGlass, built with the shared OptionsPage.lua (addons/shared).
 local S = {}
 ns.Settings = S
 
@@ -69,102 +69,83 @@ end
 -- The page
 ---------------------------------------------------------------------------
 
-local checkboxes = {} -- settings to refresh when changed elsewhere
-
-local function Checkbox(category, key, name, get, set, tooltip)
-    local CreateCheckbox = Settings.CreateCheckbox or Settings.CreateCheckBox
-    local setting = Settings.RegisterProxySetting(category, "SpyGlass_" .. key, Settings.VarType.Boolean,
-        name, get(), get,
-        function(value)
-            if S.refreshing then return end
-            set(value)
-        end)
-    CreateCheckbox(category, setting, tooltip)
-    checkboxes[#checkboxes + 1] = { setting = setting, get = get }
-end
-
--- Called at login, once AtlasLoot's settings are loaded.
-function S:Register()
-    if self.category or not (Settings and Settings.RegisterVerticalLayoutCategory) then return end
-    if not ((Settings.CreateCheckbox or Settings.CreateCheckBox) and Settings.RegisterProxySetting
-        and Settings.VarType and Settings.VarType.Boolean) then
-        return -- this client's Settings API can't build the page; slash commands still work
+-- Built with the shared OptionsPage.lua (addons/shared). Options are paths into SpyGlassDB
+-- ("db.") and the journal's SpyGlassJournalDB ("jdb.", ns.jdb = ns.J.db); /sg tab, /sgj map,
+-- /sgj minimap and the journal's own checkboxes change them through ns:SetOption, so every UI
+-- shows the same value. The journal's saved table has no defaults table, so each control here
+-- names its default.
+local function Build(p)
+    p:Header("Minimap buttons")
+    -- Only with AtlasLoot loaded: without it there's no setting of its to change.
+    if AtlasMinimap() then
+        p:Check({ id = "HideAtlasLoot", label = "Hide AtlasLoot minimap button", default = false,
+            get = function() return S:AtlasButtonHidden() end,
+            set = function(value) S:SetAtlasButtonHidden(value) end,
+            tooltip = "Hides AtlasLoot's book on the minimap, so it doesn't sit next to SpyGlass's. "
+                .. "AtlasLoot still opens with /al, and from SpyGlass. This changes AtlasLoot's own "
+                .. "minimap setting, so its options agree." })
     end
+    p:Check({ path = "jdb.minimap.hide", invert = true, default = true, label = "Show SpyGlass minimap button",
+        tooltip = "The SpyGlass button that opens the journal (right-click: your gear list). /sgj minimap",
+        apply = function() ns.Minimap:Update() end })
 
-    -- The logo after the name, so the AddOns list still sorts by "SpyGlass".
-    local category, layout = Settings.RegisterVerticalLayoutCategory("SpyGlass " .. ns.IconMarkup(16))
-    local function Header(text)
-        if layout and layout.AddInitializer and CreateSettingsListSectionHeaderInitializer then
-            layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(text))
-        end
-    end
+    p:Header("Character window")
+    p:Check({ path = "db.hideCharTab", invert = true, default = true, label = "Show the SpyGlass tab",
+        tooltip = "The book tab on the Character window that shows your ranked gear list. /sg tab",
+        apply = function() ns.CharPanel:ApplyTabSetting() end })
 
-    Header("Minimap buttons")
-    Checkbox(category, "HideAtlasLoot", "Hide AtlasLoot minimap button",
-        function() return S:AtlasButtonHidden() end,
-        function(value) S:SetAtlasButtonHidden(value) end,
-        "Hides AtlasLoot's book on the minimap, so it doesn't sit next to SpyGlass's. "
-            .. "AtlasLoot still opens with /al, and from SpyGlass. This changes AtlasLoot's own "
-            .. "minimap setting, so its options agree.")
-    if SpyGlassJournal and SpyGlassJournal.IsMinimapShown then
-        Checkbox(category, "JournalMinimap", "Show SpyGlass minimap button",
-            function() return SpyGlassJournal:IsMinimapShown() end,
-            function(value) SpyGlassJournal:SetMinimapShown(value) end,
-            "The SpyGlass button that opens the journal (right-click: your gear list).")
-    end
+    p:Header("Journal")
+    p:Check({ path = "jdb.dungeonMap", default = true, label = "Dungeon map on the map key",
+        tooltip = "Inside a dungeon SpyGlass has a map for, the map key opens SpyGlass's dungeon map instead of "
+            .. "the world map (press it again to close it). Off: the world map everywhere. /sgj map" })
+    p:Check({ path = "jdb.extendUpgrades", default = false, label = "Extend upgrade search",
+        tooltip = "Count upgrades up to 3 levels above yours: places and gear you'll reach soon, not only what "
+            .. "you can run and wear now (also on the journal's home page).",
+        apply = function() if ns.J and ns.J.Refresh then ns.J:Refresh() end end })
+    p:Check({ path = "jdb.scrapShots", default = true, label = "Scrapbook: take screenshots",
+        tooltip = "The Scrapbook takes a screenshot of each big moment (level-ups, first boss kills, epic loot...), "
+            .. "saved in the game's Screenshots folder; the entry names the file (also on the Scrapbook tab).",
+        apply = function() if ns.Scrapbook then ns.Scrapbook:Refresh() end end })
 
-    Header("Character window")
-    Checkbox(category, "CharTab", "Show the SpyGlass tab",
-        function() return not ns.db.hideCharTab end,
-        function(value)
-            ns.db.hideCharTab = not value
-            ns.CharPanel:ApplyTabSetting()
-        end,
-        "The book tab on the Character window that shows your ranked gear list.")
-
-    Header("Help improve SpyGlass")
-    Checkbox(category, "Contribute", "Share discoveries",
-        function() return ns.db.contribute and true or false end,
-        function(value) ns.Contribute:SetEnabled(value) end,
-        "Trades what players find that SpyGlass's data doesn't have yet (loot and the creature that dropped it, "
+    p:Header("Help improve SpyGlass")
+    p:Check({ path = "db.contribute", default = false, label = "Share discoveries",
+        tooltip = "Trades what players find that SpyGlass's data doesn't have yet (loot and the creature that dropped it, "
             .. "what vendors sell and for what, who gives quests and their reward choices, rares and bosses) with "
             .. "other SpyGlass players, as hidden addon messages (never chat), so everyone stays up to date between "
             .. "updates, and passes it on to the developer. Off: nothing is sent and nothing is received. "
-            .. "No names, guilds or chat are ever shared.")
+            .. "No names, guilds or chat are ever shared.",
+        apply = function()
+            ns.Contribute:Apply()
+            if ns.Sync then ns.Sync:Apply() end
+        end })
 
     -- Plugins found at login, with a button that lists them in chat.
-    Header("Plugins")
+    p:Header("Plugins")
     local found, loaded = ns.Plugins:Found(), 0
     for _, entry in ipairs(found) do
         if entry.status == "loaded" and not entry.reason then loaded = loaded + 1 end
     end
-    if layout and layout.AddInitializer and CreateSettingsButtonInitializer then
-        local summary = #found == 0 and "No plugins installed"
-            or (loaded .. " of " .. #found .. " plugin" .. (#found == 1 and "" or "s") .. " loaded")
-        layout:AddInitializer(CreateSettingsButtonInitializer(summary, "List in chat", function()
-            SlashCmdList.SPYGLASS("plugins")
-        end, "Plugins are addons with \"plugin\" in their name that add items to SpyGlass's list. "
-            .. "This lists each one found, and why any of them didn't load.", true))
-    end
-
-    Settings.RegisterAddOnCategory(category)
-    self.category = category
+    local summary = #found == 0 and "No plugins installed"
+        or (loaded .. " of " .. #found .. " plugin" .. (#found == 1 and "" or "s") .. " loaded")
+    p:Button({ label = summary, text = "List in chat", fn = function() SlashCmdList.SPYGLASS("plugins") end,
+        tooltip = "Plugins are addons with \"plugin\" in their name that add items to SpyGlass's list. "
+            .. "This lists each one found, and why any of them didn't load." })
 end
 
--- Shows current values (after a slash command or AtlasLoot changed them).
+-- Called at login (Core.lua), after the plugin scan and once AtlasLoot's settings are loaded.
+function S:Register()
+    if self.page then return end
+    self.page = ns.NewOptionsPage({ name = "SpyGlass", icon = true, build = Build })
+    -- Already inside PLAYER_LOGIN: build it now rather than wait for the next one.
+    self.page:Register()
+end
+
+-- Shows current values (after a slash command or AtlasLoot changed them). API:RefreshSettings.
 function S:Refresh()
-    self.refreshing = true
-    for _, box in ipairs(checkboxes) do
-        pcall(box.setting.SetValue, box.setting, box.get())
-    end
-    self.refreshing = false
+    if self.page then self.page:Refresh() end
 end
 
 function S:Open()
-    if self.category and Settings.OpenToCategory then
-        self:Refresh()
-        local ok = pcall(Settings.OpenToCategory, self.category:GetID())
-        if ok then return end
-    end
+    if self.page then return self.page:Open() end
     ns:Print("Open the game menu > Options > AddOns > SpyGlass.")
 end

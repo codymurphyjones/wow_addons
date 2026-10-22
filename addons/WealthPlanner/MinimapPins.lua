@@ -9,10 +9,9 @@ local SIZE = 8
 local MAX_PINS = 60
 local UPDATE = 0.1
 local T = ns.Widgets.Theme
-
--- Minimap diameter in yards at each zoom level (HereBeDragons' table).
-local OUTDOOR = { [0] = 466 + 2 / 3, 400, 333 + 1 / 3, 266 + 2 / 3, 200, 133 + 1 / 3 }
-local INDOOR = { [0] = 300, 240, 180, 120, 80, 50 }
+local WM = ns.WorldMap
+-- Round, as the minimap was always taken to be; Nav:Around has your position already.
+local VIEW = { square = false, player = false }
 
 local pool = {}
 
@@ -33,30 +32,20 @@ local function HideFrom(i)
     for k = i, #pool do pool[k]:Hide() end
 end
 
-local function Radius()
-    local zoom = Minimap:GetZoom() or 0
-    local t = (IsIndoors and IsIndoors()) and INDOOR or OUTDOOR
-    return (t[zoom] or t[0]) / 2
-end
-
 local function Update()
     if not (ns.db and ns.db.options.minimapPins and ns.Nav:Job()) then return HideFrom(1) end
-    local radius = Radius()
-    local half = Minimap:GetWidth() / 2
-    local rotate = GetCVar and GetCVar("rotateMinimap") == "1"
-    local facing = rotate and GetPlayerFacing and GetPlayerFacing() or 0
-    local sin, cos = math.sin(facing), math.cos(facing)
+    local v = WM.MinimapView(VIEW)
     local n = 0
-    for _, a in ipairs(ns.Nav:Around(radius * 1.05)) do
+    for _, a in ipairs(ns.Nav:Around(v.radius * 1.05)) do
         if n >= MAX_PINS then break end
-        local s, x, y = a[1], a[2], a[3]
-        if rotate then x, y = x * cos - y * sin, x * sin + y * cos end
+        local s = a[1]
+        local px, py = v:Place(a[2], a[3])
         n = n + 1
         local p = Pin(n)
         local col = T.series[((s.index or 1) - 1) % #T.series + 1]
         p.dot:SetColorTexture(col[1], col[2], col[3], 1)
         p:SetAlpha(1)
-        p:ClearAllPoints(); p:SetPoint("CENTER", Minimap, "CENTER", x / radius * half, -y / radius * half)
+        p:ClearAllPoints(); p:SetPoint("CENTER", Minimap, "CENTER", px, py)
         p:Show()
     end
     HideFrom(n + 1)

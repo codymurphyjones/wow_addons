@@ -18,10 +18,10 @@ local function Set(name, value)
     end)
 end
 
--- The furthest the game allows: 60 yards on Retail, 41 on the Classic clients. If the game keeps a
--- lower value after we set this, that lower value is what Status reports.
+-- The furthest the game allows: 41 yards. If the game keeps a lower value after we set this, that
+-- lower value is what Status reports.
 function CV:Max()
-    return ns.Compat.IS_MAINLINE and 60 or 41
+    return 41
 end
 
 function CV:Distance()

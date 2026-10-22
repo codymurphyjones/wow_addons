@@ -6,6 +6,11 @@ local _, ns = ...
 local Q = {}
 ns.Quests = Q
 
+-- Events and saved variables: the shared Core.lua (addons/shared). SpyGlassPluginQuestsDB, saved
+-- per character, is ns.char.
+ns.SAVED = { char = "SpyGlassPluginQuestsDB" }
+ns.PREFIX = "|TInterface\\AddOns\\Spyglass\\Media\\Icon:14:14|t |cff66bbffSpyGlassPluginQuests|r"
+
 local DB = ns.QuestDB
 local MAX_CHAIN = 25
 
@@ -47,10 +52,9 @@ end
 -- Completion and eligibility
 ---------------------------------------------------------------------------
 
-local IsDone = (C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted) or IsQuestFlaggedCompleted
-
+-- The game's own record only (shared Questie.lua; gameOnly: Questie's isn't counted).
 function Q:Done(id)
-    return IsDone and IsDone(id) and true or false
+    return ns.QuestieKit.IsDone(id, true)
 end
 
 -- The NPC (or object) in a giver / ender pair { "npc" or "object", id }:
@@ -96,15 +100,20 @@ end
 
 -- Saved per character: steps we went to whose giver didn't offer them
 -- (already done before the game kept track, or not for this character).
-local function Skips()
-    -- Saved under the old name (LootPriorityPlugin): carry it over.
-    if type(SpyGlassPluginQuestsDB) ~= "table" and type(LootPriorityPluginDB) == "table" then
+ns:OnLoad(function()
+    -- Saved under the old name (LootPriorityPlugin): carry it over. (Without a saved
+    -- SpyGlassPluginQuestsDB the shared Core.lua has just made an empty one.)
+    if next(SpyGlassPluginQuestsDB) == nil and type(LootPriorityPluginDB) == "table" then
         SpyGlassPluginQuestsDB = LootPriorityPluginDB
+        ns.char = SpyGlassPluginQuestsDB
     end
     LootPriorityPluginDB = nil
-    SpyGlassPluginQuestsDB = type(SpyGlassPluginQuestsDB) == "table" and SpyGlassPluginQuestsDB or {}
-    SpyGlassPluginQuestsDB.skipped = SpyGlassPluginQuestsDB.skipped or {}
-    return SpyGlassPluginQuestsDB.skipped
+    ns.char.skipped = ns.char.skipped or {}
+end)
+
+-- (Before the saved variables are loaded: a throwaway list.)
+local function Skips()
+    return ns.char and ns.char.skipped or {}
 end
 
 function Q:Skipped(id)

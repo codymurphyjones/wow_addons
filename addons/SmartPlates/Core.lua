@@ -1,6 +1,6 @@
-local addonName, ns = ...
+local _, ns = ...
 
-ns.VERSION = "0.1.1"
+ns.VERSION = "0.1.2"
 ns.PREFIX = "|cff55d6beSmartPlates|r"
 ns.ICON = "Interface/AddOns/SmartPlates/Media/SmartPlates"
 
@@ -56,7 +56,7 @@ ns.DEFAULTS = {
     -- Game nameplate settings SmartPlates manages (restored when turned off).
     cvars = {
         manage = true,
-        distance = 0,       -- yards; 0 = the game's maximum (60 on Retail, 41 on Classic clients)
+        distance = 0,       -- yards; 0 = the game's maximum (41)
         stacking = true,    -- plates stack instead of overlapping
         alwaysShow = true,  -- show plates for units out of combat too
         enemies = true,     -- enemy plates on
@@ -151,46 +151,36 @@ ns.CHAR_DEFAULTS = {
     profile = "Default",
 }
 
--- Saved arrays (colours, custom plate lists) are never merged by index.
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then
-                dst[k] = {}
-                Merge(dst[k], v)
-            elseif v[1] == nil then
-                Merge(dst[k], v)
-            end
-        elseif dst[k] == nil then
-            dst[k] = v
+-- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
+-- SmartPlatesDB holds named profiles (Profiles.lua), so only the character table is set up there;
+-- ns.db is the active profile, set by Profiles:Load below.
+ns.SAVED = { char = "SmartPlatesCharDB" }
+
+ns:OnLoad(function()
+    -- Settings live in named profiles; versions before profiles kept them at the top level.
+    SmartPlatesDB = SmartPlatesDB or {}
+    if not SmartPlatesDB.profiles then
+        local old = SmartPlatesDB
+        SmartPlatesDB = { profiles = { Default = old } }
+    end
+    -- The one-time fixes below keep their own flags in SmartPlatesDB (they cover every profile;
+    -- ns:Migrate would keep its flag in the active profile).
+    -- 0.1: health text defaulted to percent; it now defaults to the value. Once, for every profile.
+    if not SmartPlatesDB.healthValueDefault then
+        for _, p in pairs(SmartPlatesDB.profiles) do
+            if type(p.general) == "table" and p.general.healthText == "percent" then p.general.healthText = "value" end
         end
+        SmartPlatesDB.healthValueDefault = true
     end
-    return dst
-end
-ns.Merge = Merge
-
-function ns:Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage(self.PREFIX .. ": " .. tostring(msg))
-end
-
-function ns.Trim(s) return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
-
--- ---------------------------------------------------------------------------
--- Game events
--- ---------------------------------------------------------------------------
-
-local frame = CreateFrame("Frame")
-ns.EventFrame = frame
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
+    -- 0.1.1: the threat percentage was 10 pt, hard to read; it's 14 now. Once, for profiles left at 10.
+    if not SmartPlatesDB.biggerThreatText then
+        for _, p in pairs(SmartPlatesDB.profiles) do
+            local pct = type(p.threat) == "table" and p.threat.percent
+            if type(pct) == "table" and pct.size == 10 then pct.size = 14 end
+        end
+        SmartPlatesDB.biggerThreatText = true
     end
-    table.insert(handlers[event], fn)
-end
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do fn(...) end
+    ns.Profiles:Load(ns.char.profile)
 end)
 
 -- ---------------------------------------------------------------------------
@@ -207,57 +197,17 @@ function ns:Fire(msg, ...)
     for _, fn in ipairs(listeners[msg] or {}) do fn(...) end
 end
 
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    -- Settings live in named profiles; versions before profiles kept them at the top level.
-    SmartPlatesDB = SmartPlatesDB or {}
-    if not SmartPlatesDB.profiles then
-        local old = SmartPlatesDB
-        SmartPlatesDB = { profiles = { Default = old } }
-    end
-    -- 0.1: health text defaulted to percent; it now defaults to the value. Once, for every profile.
-    if not SmartPlatesDB.healthValueDefault then
-        for _, p in pairs(SmartPlatesDB.profiles) do
-            if type(p.general) == "table" and p.general.healthText == "percent" then p.general.healthText = "value" end
-        end
-        SmartPlatesDB.healthValueDefault = true
-    end
-    -- 0.1.1: the threat percentage was 10 pt, hard to read; it's 14 now. Once, for profiles left at 10.
-    if not SmartPlatesDB.biggerThreatText then
-        for _, p in pairs(SmartPlatesDB.profiles) do
-            local pct = type(p.threat) == "table" and p.threat.percent
-            if type(pct) == "table" and pct.size == 10 then pct.size = 14 end
-        end
-        SmartPlatesDB.biggerThreatText = true
-    end
-    SmartPlatesCharDB = Merge(SmartPlatesCharDB or {}, ns.CHAR_DEFAULTS)
-    ns.char = SmartPlatesCharDB
-    ns.Profiles:Load(ns.char.profile)
-    for _, fn in ipairs(ns.onLoad or {}) do fn() end
+-- Settings changed (ns:Changed): re-apply them to every plate once, on the next frame.
+ns:OnChanged(function()
+    ns:Fire("SettingsChanged")
+    if ns.Plates then ns.Plates:UpdateAll() end
+    if ns.UI and ns.UI.Refresh then ns.UI:Refresh() end
 end)
-
-function ns:OnLoad(fn)
-    self.onLoad = self.onLoad or {}
-    table.insert(self.onLoad, fn)
-end
-
--- Settings changed: re-apply them to every plate once, on the next frame.
-local pending
-function ns:Changed()
-    if pending then return end
-    pending = true
-    C_Timer.After(0, function()
-        pending = false
-        ns:Fire("SettingsChanged")
-        if ns.Plates then ns.Plates:UpdateAll() end
-        if ns.UI and ns.UI.Refresh then ns.UI:Refresh() end
-    end)
-end
 
 -- Resets the active profile.
 function ns:ResetSettings()
     wipe(ns.db)
-    Merge(ns.db, ns.DEFAULTS)
+    ns.Merge(ns.db, ns.DEFAULTS)
     ns:Changed()
 end
 
@@ -291,8 +241,8 @@ SlashCmdList.SMARTPLATES = function(msg)
     elseif cmd == "test" then
         ns.TestMode:Toggle()
     elseif cmd == "role" and (rest == "auto" or rest == "tank" or rest == "dps") then
-        ns.char.role = rest
-        ns.Role:Update()
+        -- Through ns:SetOption: its apply runs Role:Update, and the window and Options page show it.
+        ns:SetOption("char.role", rest)
         ns:Print("Role: " .. rest .. " (now " .. ns.Role:Get() .. ").")
     elseif cmd == "role" then
         ns:Print("Role setting: " .. ns.char.role .. ", detected: " .. ns.Role:Get() .. ".")
@@ -303,9 +253,7 @@ SlashCmdList.SMARTPLATES = function(msg)
     elseif cmd == "cvars" then
         ns.CVars:PrintColorSettings()
     elseif cmd == "minimap" then
-        ns.char.minimap.hide = not ns.char.minimap.hide
-        if ns.MinimapButton then ns.MinimapButton:Refresh() end
-        ns:Changed()
+        ns:ToggleOption("char.minimap.hide")
     elseif cmd == "reset" then
         ns:ResetSettings()
         ns:Print("Settings reset to defaults.")
@@ -314,6 +262,4 @@ SlashCmdList.SMARTPLATES = function(msg)
     end
 end
 
-function SmartPlates_OnCompartmentClick()
-    if ns.UI then ns.UI:Toggle() end
-end
+ns:Compartment()

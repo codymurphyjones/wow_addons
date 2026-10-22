@@ -9,44 +9,14 @@ Usage: python make_icon.py <output dir>
 Writes <name>.tga (128x128, 32-bit, used in game) for each icon, and Logo.png
 (512x512, the addon icon, for CurseForge and other listings)."""
 import os, sys
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
-S = 1024                      # supersampled canvas, downscaled at the end
-C = S / 2
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_shared"))
+import iconkit as ik
+from iconkit import C, S, circle
+
 GREEN, GREEN_DARK = (70, 210, 100), (20, 70, 30)
 GOLD, GOLD_EDGE, GOLD_LIGHT = (232, 184, 70), (126, 84, 22), (255, 226, 140)
-
-
-def circle(d, r, fill=None, outline=None, width=0, cx=C, cy=C):
-    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill, outline=outline, width=width)
-
-
-def badge(paint, inner=(24, 28, 44), glow_color=(230, 180, 60, 60)):
-    """A gold-rimmed badge; paint(draw, layer) draws the content, clipped to the badge."""
-    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    shadow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).ellipse([C - 470, C - 455, C + 470, C + 485], fill=(0, 0, 0, 170))
-    img = Image.alpha_composite(img, shadow.filter(ImageFilter.GaussianBlur(18)))
-    d = ImageDraw.Draw(img)
-    circle(d, 480, fill=(120, 82, 24))
-    circle(d, 462, fill=(214, 166, 64))
-    circle(d, 446, fill=(92, 60, 18))
-    circle(d, 432, fill=inner)
-
-    inside = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    glow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ImageDraw.Draw(glow).ellipse([C - 330, C - 260, C + 330, C + 340], fill=glow_color)
-    inside = Image.alpha_composite(inside, glow.filter(ImageFilter.GaussianBlur(60)))
-    inside = paint(inside)
-
-    mask = Image.new("L", (S, S), 0)
-    ImageDraw.Draw(mask).ellipse([C - 432, C - 432, C + 432, C + 432], fill=255)
-    clipped = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    clipped.paste(inside, (0, 0), Image.composite(inside.split()[3], Image.new("L", (S, S), 0), mask))
-    img = Image.alpha_composite(img, clipped)
-    ring = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ImageDraw.Draw(ring).ellipse([C - 440, C - 440, C + 440, C + 440], outline=(0, 0, 0, 140), width=22)
-    return Image.alpha_composite(img, ring.filter(ImageFilter.GaussianBlur(8)))
 
 
 def coin(d, cx, y, w=150, h=54):
@@ -70,7 +40,7 @@ def paint_addon(layer):
     head = [(hx + 40, hy - 40), (hx - 70, hy - 20), (hx + 20, hy + 70)]
     d.polygon([(x + 8, y + 12) for x, y in head], fill=(0, 0, 0, 140))
     d.polygon(head, fill=GREEN, outline=GREEN_DARK, width=8)
-    shine = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    shine = ik.layer()
     ImageDraw.Draw(shine).line([(x, y - 10) for x, y in pts[:-1]], fill=(190, 255, 200, 120), width=10, joint="curve")
     return Image.alpha_composite(layer, shine)
 
@@ -87,7 +57,7 @@ def paint_jobs(layer):
     notes = [((256, 300, 486, 500), -4, (232, 64, 64)), ((520, 290, 770, 470), 3, (64, 140, 232)),
              ((300, 530, 530, 720), 2, (70, 190, 90))]
     for (x0, y0, x1, y1), tilt, pin in notes:
-        note = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        note = ik.layer()
         dn = ImageDraw.Draw(note)
         dn.rectangle([x0 + 8, y0 + 10, x1 + 8, y1 + 10], fill=(0, 0, 0, 90))
         dn.rectangle([x0, y0, x1, y1], fill=(246, 240, 222))
@@ -118,7 +88,7 @@ def paint_invest(layer):
     d.pieslice([cx - r, cy - r, cx + r, cy + r], 170, 250, fill=GREEN, outline=GREEN_DARK, width=8)
     ox, oy = 40, -50
     d.pieslice([cx - r + ox, cy - r + oy, cx + r + ox, cy + r + oy], 250, 320, fill=GOLD, outline=GOLD_EDGE, width=8)
-    shine = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    shine = ik.layer()
     ImageDraw.Draw(shine).arc([cx - r + 40, cy - r + 40, cx + r - 40, cy + r - 40], 190, 240, fill=(190, 255, 200, 130), width=14)
     layer = Image.alpha_composite(layer, shine)
     d = ImageDraw.Draw(layer)
@@ -133,14 +103,13 @@ def paint_invest(layer):
     return layer
 
 
-out_dir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "WealthPlanner", "Media")
-os.makedirs(out_dir, exist_ok=True)
+GLOW = [C - 330, C - 260, C + 330, C + 340]
+out_dir = ik.out_dir("WealthPlanner")
 for name, paint, inner, glow in (
     ("Icon", paint_addon, (24, 28, 44), (230, 180, 60, 60)),
     ("JobsIcon", paint_jobs, (34, 30, 28), (230, 160, 80, 50)),
     ("InvestIcon", paint_invest, (20, 32, 40), (80, 200, 140, 60)),
 ):
-    img = badge(paint, inner, glow)
-    img.resize((128, 128), Image.LANCZOS).save(os.path.join(out_dir, name + ".tga"))
-    img.resize((512, 512), Image.LANCZOS).save(os.path.join(out_dir, name + ".png" if name != "Icon" else "Logo.png"))
+    img = ik.badge(paint, inner, (GLOW, glow, 60))
+    ik.save(img, out_dir, ((name + ".tga", 128), (name + ".png" if name != "Icon" else "Logo.png", 512)))
     print("saved", name)

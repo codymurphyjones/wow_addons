@@ -129,7 +129,7 @@ end)
 local function GUIDFor(isGUID, unit)
     if isGUID then return unit end
     local ok, guid = pcall(UnitGUID, unit)
-    if ok and C.Readable(guid) then return guid end
+    if ok and C.AllReadable(guid) then return guid end
 end
 
 local function RegisterDBM()

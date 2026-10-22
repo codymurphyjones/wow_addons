@@ -41,7 +41,7 @@ local ARRIVE = 150            -- yards from where a ride lands that count as arr
 local ARRIVE_TOWN = 600       -- the same, when only its town is known
 local function MinGain() return ns.db.minGain or 45 end
 local function MinShare() return (ns.db.minShare or 15) / 100 end
-local HEARTHSTONE = 6948      -- the item
+local HEARTHSTONE = ns.Items.ITEMS.HEARTHSTONE -- the item (6948)
 local HEARTH_SPELL = 8690     -- the spell it casts
 local RUNE = 17031            -- Rune of Teleportation: what a mage teleport uses up (classic)
 local FEATHER = 17056         -- Light Feather: what Slow Fall and Levitate use up
@@ -196,19 +196,14 @@ local function Held(key, read)
 end
 
 local function ItemCount(id)
-    return Held("count:" .. id, function()
-        local fn = (C_Item and C_Item.GetItemCount) or GetItemCount
-        return C.Num(C.Call(fn, id)) or 0
-    end)
+    return Held("count:" .. id, function() return ns.Items.ItemCount(id) end)
 end
 
 local function ItemCooldown(id)
     -- held as the time it's ready, so the wait still counts down in combat
     local ready = Held("ready:" .. id, function()
-        local fn = (C_Container and C_Container.GetItemCooldown) or GetItemCooldown
-        local start, duration = C.Call(fn, id)
-        start, duration = C.Num(start), C.Num(duration)
-        if not (start and duration) or start == 0 then return 0 end
+        local start, duration = ns.Items.ItemCooldown(id) -- 0, 0 when ready or unreadable
+        if start == 0 then return 0 end
         return start + duration
     end)
     return math.max(0, ready - GetTime())
@@ -258,10 +253,9 @@ local function InAquatic()
     return GetShapeshiftFormID and C.Num(C.Call(GetShapeshiftFormID)) == AQUATIC_FORM or false
 end
 
--- Mage teleports use a Rune of Teleportation on classic clients: one has to be in your bags.
+-- Mage teleports use a Rune of Teleportation: one has to be in your bags.
 HasRune = function()
-    local _, _, _, interface = GetBuildInfo()
-    return (tonumber(interface) or 0) >= 40000 or ItemCount(RUNE) > 0
+    return ItemCount(RUNE) > 0
 end
 
 -- Whether a spell is off its cooldown (the global cooldown doesn't count).
@@ -325,8 +319,7 @@ end
 function R:FallText(yards)
     local share = G and G.FallDamage(yards) or 0
     local hp = MaxHealth()
-    local amount = hp and (" (%s HP)"):format(BreakUpLargeNumbers and BreakUpLargeNumbers(math.floor(share * hp + 0.5))
-        or tostring(math.floor(share * hp + 0.5))) or ""
+    local amount = hp and (" (%s HP)"):format(ns.Format.Thousands(share * hp)) or ""
     return ("about %d%% of your health%s"):format(math.floor(share * 100 + 0.5), amount)
 end
 
@@ -1602,10 +1595,9 @@ function R:RoadMode()
 end
 function R:Offroad() return self:RoadMode().offroad end
 
+-- Through ns:SetOption, so Options > AddOns > Waypoint shows it; the option drops the planned flight.
 function R:SetRoadMode(id)
-    ns.db.roadMode = id
-    if ns.Flight then ns.Flight.route = nil end
-    ns:Changed()
+    ns:SetOption("db.roadMode", id)
 end
 
 -- The roads Waypoint knows (Data\Roads.lua, from RoadLog, for everyone) and the ones RoadLog has

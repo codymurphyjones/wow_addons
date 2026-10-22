@@ -1,5 +1,5 @@
 local _, ns = ...
-local C = ns.Compat
+local WM = ns.WorldMap
 
 -- The planned trip (Route.lua's R:Lines) drawn as a dashed line: on the world map the whole way,
 -- on the minimap the part around you as a trail of dots. Each kind of travel has a colour family
@@ -68,88 +68,28 @@ end
 -- World map
 -- ---------------------------------------------------------------------------------------------
 
-local lines, used = {}, 0
-local frame
+local layer -- the shared WorldMap.lua layer (below)
 
-local function GetLine()
-    used = used + 1
-    local line = lines[used]
-    if not line then
-        line = frame:CreateLine(nil, "ARTWORK")
-        lines[used] = line
-    end
-    return line
-end
+-- A world point on mapID, as 0-1 fractions (nil off it, with a little slack). On OpenMap's
+-- stitched map the view runs past mapID's own rectangle: there OpenMap says where the point is on
+-- the canvas, past 0-1 too.
+local function Project(continent, n, w, mapID) return WM.WorldOnCanvas(continent, n, w, mapID, 0.05) end
 
--- A world point on mapID, as 0-1 fractions (nil off it). On OpenMap's stitched map the view runs
--- past mapID's own rectangle: there OpenMap says where the point is on the canvas, past 0-1 too.
-local function Project(continent, n, w, mapID)
-    if OpenMapAPI and OpenMapAPI.IsStitched and OpenMapAPI.CanvasFromWorldPos and OpenMapAPI.IsStitched() then
-        local x, y = OpenMapAPI.CanvasFromWorldPos(continent, n, w)
-        if x then return x, y end
-    end
-    if not (CreateVector2D and C_Map.GetMapPosFromWorldPos) then return nil end
-    local _, pos = C.Call(C_Map.GetMapPosFromWorldPos, continent, CreateVector2D(n, w), mapID)
-    if not pos then return nil end
-    local x, y = pos:GetXY()
-    if x and x >= -0.05 and x <= 1.05 and y >= -0.05 and y <= 1.05 then return x, y end
-end
-
--- A polyline in canvas units (x, y down) as dashes, carrying the dash pattern across its corners.
-local function Dashed(xy, canvas, thickness, col, scale)
-    local dash, gap = DASH * scale, GAP * scale
-    local on, left = true, dash
-    for i = 3, #xy - 1, 2 do
-        local x0, y0, x1, y1 = xy[i - 2], xy[i - 1], xy[i], xy[i + 1]
-        local len = math.sqrt((x1 - x0) ^ 2 + (y1 - y0) ^ 2)
-        local at = 0
-        while at < len do
-            local step = math.min(left, len - at)
-            if on then
-                local a, b = at / len, (at + step) / len
-                local line = GetLine()
-                line:SetColorTexture(col[1], col[2], col[3], 0.9)
-                line:SetThickness(thickness)
-                line:SetStartPoint("TOPLEFT", canvas, x0 + (x1 - x0) * a, -(y0 + (y1 - y0) * a))
-                line:SetEndPoint("TOPLEFT", canvas, x0 + (x1 - x0) * b, -(y0 + (y1 - y0) * b))
-                line:Show()
-            end
-            at = at + step
-            left = left - step
-            if left <= 0 then
-                on = not on
-                left = on and dash or gap
-            end
-        end
-    end
-end
-
-function Way:Refresh()
-    if not (ns.db and WorldMapFrame and WorldMapFrame:IsShown()) then return end
-    for i = 1, used do lines[i]:Hide() end
-    used = 0
-    local trip = ns.db.showWay and Lines()
-    local mapID = WorldMapFrame:GetMapID()
-    local canvas = WorldMapFrame:GetCanvas()
-    if not (trip and mapID and canvas and canvas.CreateLine) then return end
-    if not frame then
-        frame = CreateFrame("Frame", nil, canvas)
-        frame:SetAllPoints(canvas)
-    end
-    frame:SetFrameLevel(ns:MapBase(canvas) + 2050)
-    local scale = 1 / (WorldMapFrame:GetCanvasScale() or 1)
-    local w, h = canvas:GetSize()
+-- The trip as dashes (fine, so the route's bends show), on the layer's line frame at +2050.
+local function Refresh(l, mapID)
+    local trip = ns.db and ns.db.showWay and Lines()
+    if not (trip and l:CanDrawLines()) then return end
     for _, seg in ipairs(trip) do
-        local xy, run = {}, nil
+        local run
         local function Flush()
-            if run and #run >= 4 then Dashed(run, canvas, LINE * scale, Color(seg), scale) end
+            if run and #run >= 4 then l:Dashed(run, Color(seg), LINE, DASH, GAP, 0.9) end
             run = nil
         end
         for i = 1, #seg.pts - 1, 2 do
             local x, y = Project(seg.continent, seg.pts[i], seg.pts[i + 1], mapID)
             if x then
                 run = run or {}
-                run[#run + 1], run[#run + 2] = x * w, y * h
+                run[#run + 1], run[#run + 2] = x, y
             else
                 Flush() -- off this map: the line breaks there
             end
@@ -158,13 +98,22 @@ function Way:Refresh()
     end
 end
 
+-- Redrawn when the map, its zoom or its visibility changes, every REFRESH seconds while it's open,
+-- and when OpenMap switches between its stitched map and Blizzard's (the line, the pins and the
+-- town badges go somewhere else, at other levels).
+layer = WM.NewLayer({
+    lines = true, level = 2050, refresh = Refresh, interval = REFRESH,
+    onStitched = function(l) l:Refresh(); ns:Changed() end,
+})
+Way.layer = layer
+
+function Way:Refresh()
+    if ns.db then layer:Refresh() end
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Minimap: the part of the trip around you, as dots
 -- ---------------------------------------------------------------------------------------------
-
--- Minimap diameter in yards at each zoom level (as MinimapPin.lua).
-local OUTDOOR = { [0] = 466 + 2 / 3, 400, 333 + 1 / 3, 266 + 2 / 3, 200, 133 + 1 / 3 }
-local INDOOR = { [0] = 300, 240, 180, 120, 80, 50 }
 
 local dots, shownDots = {}, 0
 
@@ -183,30 +132,21 @@ local function UpdateMinimap()
     if not Minimap then return end
     local count = 0
     local trip = ns.db and ns.db.showWayMinimap and not ns:InBattleground() and Lines()
-    local c, n, w = ns.Nav:Player()
+    -- What the minimap shows (shared WorldMap.lua): its zoom, indoors or out, turning with you or
+    -- not, round or square, and where you are.
+    local v = trip and WM.MinimapView()
+    local c = v and v.continent
     if trip and c then
-        local zoom = Minimap:GetZoom() or 0
-        local t = (IsIndoors and IsIndoors()) and INDOOR or OUTDOOR
-        local radius, half = (t[zoom] or t[0]) / 2, Minimap:GetWidth() / 2
-        local spacing = radius / 10
-        local rotate = GetCVar and GetCVar("rotateMinimap") == "1"
-        local sin, cos = 0, 1
-        if rotate then
-            local facing = GetPlayerFacing and C.Num(GetPlayerFacing())
-            if facing then sin, cos = math.sin(facing), math.cos(facing) end
-        end
-        local square = GetMinimapShape and GetMinimapShape() == "SQUARE"
-        local edge = radius * 0.95
+        local spacing = v.radius / 10
+        local edge = v.radius * 0.95
         local function Place(pn, pw, col)
-            local x, y = w - pw, n - pn -- yards east, yards south
-            if rotate then x, y = x * cos - y * sin, x * sin + y * cos end
-            local inside = square and (math.abs(x) <= edge and math.abs(y) <= edge) or (x * x + y * y <= edge * edge)
+            local px, py, inside = v:PlaceWorld(c, pn, pw, nil, edge)
             if not inside or count >= DOTS then return end
             count = count + 1
             local dot = GetDot(count)
             dot:SetVertexColor(col[1], col[2], col[3], 0.95)
             dot:ClearAllPoints()
-            dot:SetPoint("CENTER", Minimap, "CENTER", x / radius * half, -y / radius * half)
+            dot:SetPoint("CENTER", Minimap, "CENTER", px, py)
             dot:Show()
         end
         for _, seg in ipairs(trip) do
@@ -231,28 +171,11 @@ local function UpdateMinimap()
     shownDots = count
 end
 
+-- The minimap's dots follow you; the world map's line has its own layer (above).
 ns:On("PLAYER_LOGIN", function()
-    if WorldMapFrame then
-        local function Refresh() Way:Refresh() end
-        hooksecurefunc(WorldMapFrame, "OnMapChanged", Refresh)
-        if WorldMapFrame.OnCanvasScaleChanged then hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", Refresh) end
-        WorldMapFrame:HookScript("OnShow", Refresh)
-        -- OpenMap switching between its stitched map and Blizzard's: the line, the pins and the
-        -- town badges go somewhere else, at other levels.
-        if OpenMapAPI and OpenMapAPI.RegisterCallback then
-            pcall(OpenMapAPI.RegisterCallback, Way, "OpenMap_StitchedChanged", function()
-                Refresh()
-                ns:Changed()
-            end)
-        end
-    end
-    local mapAcc, miniAcc = 0, 0
+    local miniAcc = 0
     CreateFrame("Frame"):SetScript("OnUpdate", function(_, elapsed)
-        mapAcc, miniAcc = mapAcc + elapsed, miniAcc + elapsed
-        if mapAcc >= REFRESH then
-            mapAcc = 0
-            if WorldMapFrame and WorldMapFrame:IsShown() then Way:Refresh() end
-        end
+        miniAcc = miniAcc + elapsed
         if miniAcc >= MINI_UPDATE then
             miniAcc = 0
             UpdateMinimap()

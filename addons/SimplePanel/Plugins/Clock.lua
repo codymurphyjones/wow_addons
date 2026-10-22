@@ -25,11 +25,8 @@ local function Server(p)
     return Format(h, m, nil, p)
 end
 
-local function Duration(secs)
-    local h, m = math.floor(secs / 3600), math.floor(secs / 60) % 60
-    if h > 0 then return ("%dh %02dm"):format(h, m) end
-    return ("%dm"):format(m)
-end
+local DURATION = { days = false }
+local function Duration(secs) return ns.Format.Duration(secs, DURATION) end
 
 SimplePanel.RegisterPlugin({
     id = "Clock",

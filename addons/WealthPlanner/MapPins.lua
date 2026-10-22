@@ -13,7 +13,7 @@ local DOT = 9      -- on-screen size of a spawn dot
 local MARKER = 18  -- on-screen size of a zone marker
 local T = ns.Widgets.Theme
 
-local pins, used = {}, 0
+local WM = ns.WorldMap
 local preview -- job key shown without taking it (Jobs Board "Show on map")
 
 function Pins:Preview(key) preview = key; self:Refresh() end
@@ -73,88 +73,50 @@ local function OnClick(pin)
     })
 end
 
-local function GetPin(canvas)
-    used = used + 1
-    local pin = pins[used]
-    if not pin then
-        pin = CreateFrame("Button", nil, canvas)
-        pin.border = pin:CreateTexture(nil, "BACKGROUND")
-        pin.border:SetPoint("TOPLEFT", -1, 1); pin.border:SetPoint("BOTTOMRIGHT", 1, -1)
-        pin.border:SetColorTexture(0, 0, 0, 0.9)
-        pin.dot = pin:CreateTexture(nil, "ARTWORK"); pin.dot:SetAllPoints()
-        pin.label = pin:CreateFontString(nil, "OVERLAY", "WealthPlannerGameFontHighlightSmall")
-        pin.label:SetPoint("LEFT", pin, "RIGHT", 3, 0)
-        pin:SetScript("OnEnter", OnEnter)
-        pin:SetScript("OnLeave", GameTooltip_Hide)
-        pin:SetScript("OnClick", OnClick)
-        pins[used] = pin
-    end
-    return pin
+local function CreatePin(pin)
+    pin.border = pin:CreateTexture(nil, "BACKGROUND")
+    pin.border:SetPoint("TOPLEFT", -1, 1); pin.border:SetPoint("BOTTOMRIGHT", 1, -1)
+    pin.border:SetColorTexture(0, 0, 0, 0.9)
+    pin.dot = pin:CreateTexture(nil, "ARTWORK"); pin.dot:SetAllPoints()
+    pin.label = pin:CreateFontString(nil, "OVERLAY", "WealthPlannerGameFontHighlightSmall")
+    pin.label:SetPoint("LEFT", pin, "RIGHT", 3, 0)
+    pin:SetScript("OnEnter", OnEnter)
+    pin:SetScript("OnLeave", GameTooltip_Hide)
+    pin:SetScript("OnClick", OnClick)
 end
 
--- Where a point on zoneID lands on mapID, as 0..1 fractions, or nil if it's off that map.
-local function Project(zoneID, x, y, mapID)
-    if zoneID == mapID then return x, y end
-    local ok, continent, world = pcall(C_Map.GetWorldPosFromMapPos, zoneID, CreateVector2D(x, y))
-    if not ok or not world then return end
-    local ok2, _, pos = pcall(C_Map.GetMapPosFromWorldPos, continent, world, mapID)
-    if not ok2 or not pos then return end
-    local px, py = pos:GetXY()
-    if px >= 0 and px <= 1 and py >= 0 and py <= 1 then return px, py end
-end
-
-local function Place(pin, canvas, scale, w, h, px, py, size)
-    pin:SetSize(size, size)
-    pin:SetScale(scale)
-    pin:SetFrameLevel(canvas:GetFrameLevel() + 2000)
-    pin:ClearAllPoints()
-    pin:SetPoint("CENTER", canvas, "TOPLEFT", px * w / scale, -py * h / scale)
-    pin:Show()
-end
-
-function Pins:Refresh()
-    if not (WorldMapFrame and WorldMapFrame:IsShown()) then return end
-    local map = WorldMapFrame
-    local mapID = map:GetMapID()
-    local canvas = map:GetCanvas()
-    for i = 1, used do pins[i]:Hide() end
-    used = 0
+local function Draw(layer, mapID)
     local job = ns.db and ns.db.options.mapPins and JobShown()
-    if not (mapID and job) then return end
-
-    local scale = 1 / (map:GetCanvasScale() or 1)
-    local w, h = canvas:GetSize()
+    if not job then return end
     if mapID == job.zone then
         for _, pt in ipairs(ns.Jobs:Pins(job, job.zone)) do
-            local pin = GetPin(canvas)
+            local pin = layer:Pin()
             pin.marker, pin.job = nil, job
             pin.kind, pin.id, pin.index, pin.mapID, pin.x, pin.y = pt.kind, pt.id, pt.index, job.zone, pt[1], pt[2]
             local col = Color(pt.index)
             pin.dot:SetTexture(nil); pin.dot:SetColorTexture(col[1], col[2], col[3], 1)
             pin.label:SetText("")
-            Place(pin, canvas, scale, w, h, pt[1] / 100, pt[2] / 100, DOT)
+            layer:Place(pin, pt[1] / 100, pt[2] / 100, DOT)
         end
     else
         -- A bigger map: one marker in the middle of the job's spots.
         local sx, sy, n = 0, 0, 0
         for _, pt in ipairs(ns.Jobs:Pins(job, job.zone)) do sx, sy, n = sx + pt[1], sy + pt[2], n + 1 end
         if n == 0 then return end
-        local px, py = Project(job.zone, sx / n / 100, sy / n / 100, mapID)
+        local px, py = WM.Project(job.zone, sx / n / 100, sy / n / 100, mapID)
         if not px then return end
-        local pin = GetPin(canvas)
+        local pin = layer:Pin()
         pin.marker, pin.job = true, job
         pin.dot:SetTexture(ns.Jobs.KIND_ICON[job.kind]); pin.dot:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         pin.label:SetText(job.title)
-        Place(pin, canvas, scale, w, h, px, py, MARKER)
+        layer:Place(pin, px, py, MARKER)
     end
 end
 
-ns:On("PLAYER_LOGIN", function()
-    if not WorldMapFrame then return end
-    local function Refresh() Pins:Refresh() end
-    hooksecurefunc(WorldMapFrame, "OnMapChanged", Refresh)
-    hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", Refresh)
-    WorldMapFrame:HookScript("OnShow", Refresh)
-    -- A preview lasts until the map closes.
-    WorldMapFrame:HookScript("OnHide", function() preview = nil end)
-end)
+-- Pins on the map canvas, 2000 levels over it; redrawn when the map changes, zooms or opens.
+-- A preview lasts until the map closes.
+local layer = WM.NewLayer({ base = "canvas", level = 2000, create = CreatePin, refresh = Draw,
+    onHide = function() preview = nil end })
+Pins.layer = layer
+
+function Pins:Refresh() layer:Refresh() end

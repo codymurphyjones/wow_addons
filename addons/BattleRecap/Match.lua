@@ -11,10 +11,8 @@ local MAX_MATCHES = 5
 local STALE = 3 * 3600 -- a match "in progress" older than this is from another session
 local WIDTH, HEIGHT = 380, 380
 
-local Readable, SafeCall = ns.Log.Readable, ns.Log.SafeCall
-local function Num(v) v = Readable(v); return type(v) == "number" and v or nil end
-local function Str(v) v = Readable(v); return (type(v) == "string" and v ~= "") and v or nil end
-local function Short(name) return name and (name:match("^([^%-]+)") or name) end
+local S = ns.Secrets
+local Readable, SafeCall, Num, Str = S.Readable, S.Call, S.Num, S.Str
 
 local function Current() return BattleRecapDB.currentMatch end
 
@@ -52,7 +50,7 @@ function M:KillsBy(key)
     if not cur or cur.done or not key then return nil end
     local n = 0
     for _, d in ipairs(cur.deaths) do
-        if d.key == key then n = n + 1 end
+        if d.key == key or ns.Units.Same(d.key, key) then n = n + 1 end
     end
     return n
 end
@@ -63,14 +61,14 @@ end
 
 -- Your line on the scoreboard: { killingBlows, honorableKills, deaths, honor, damage, healing }.
 local function ReadScore()
-    local guid, me = UnitGUID("player"), UnitName("player")
+    local guid = UnitGUID("player")
     local info
     if C_PvP and C_PvP.GetScoreInfoByPlayerGuid then info = SafeCall(C_PvP.GetScoreInfoByPlayerGuid, guid) end
     local n = GetNumBattlefieldScores and Num(SafeCall(GetNumBattlefieldScores)) or 0
     if type(info) ~= "table" and C_PvP and C_PvP.GetScoreInfo then
         for i = 1, n do
             local s = SafeCall(C_PvP.GetScoreInfo, i)
-            if type(s) == "table" and (Str(s.guid) == guid or Short(Str(s.name)) == me) then info = s; break end
+            if type(s) == "table" and (Str(s.guid) == guid or ns.IsMe(Str(s.name))) then info = s; break end
         end
     end
     if type(info) == "table" then
@@ -79,11 +77,11 @@ local function ReadScore()
             honor = Num(info.honorGained), damage = Num(info.damageDone), healing = Num(info.healingDone),
         }
     end
-    -- Older clients: GetBattlefieldScore(i) -> name, killingBlows, honorableKills, deaths, honorGained, ...
+    -- Else GetBattlefieldScore(i) -> name, killingBlows, honorableKills, deaths, honorGained, ...
     if GetBattlefieldScore then
         for i = 1, n do
             local ok, name, kb, hk, deaths, honor = pcall(GetBattlefieldScore, i)
-            if ok and Short(Str(name)) == me then
+            if ok and ns.IsMe(Str(name)) then
                 return { killingBlows = Num(kb), honorableKills = Num(hk), deaths = Num(deaths), honor = Num(honor) }
             end
         end
@@ -144,10 +142,8 @@ local function Create()
     f.table = W.CreateTable(holder, COLS, { noHeader = true })
 end
 
-local function Duration(s)
-    s = math.max(0, s or 0)
-    return ("%d:%02d"):format(math.floor(s / 60), s % 60)
-end
+local CLOCK = { hours = false, missing = "0:00" }
+local function Duration(s) return ns.Format.Clock(s, CLOCK) end
 
 function M:Render(m)
     local result = m.result == "win" and "|cff55ff55Victory|r" or m.result == "loss" and "|cffff5555Defeat|r" or "Match over"
@@ -203,7 +199,7 @@ function M:Render(m)
     local killers, list = {}, {}
     for _, d in ipairs(deaths) do
         if not d.env and d.name then
-            local key = d.key or d.name
+            local key = ns.NameKey(killers, d.key or d.name) or d.name
             if not killers[key] then
                 killers[key] = { name = d.name, class = d.class, n = 0 }
                 list[#list + 1] = killers[key]

@@ -10,10 +10,10 @@ local WHISPER_EVERY = 30 * 60 -- seconds between history lines for the same pers
 -- Tooltips
 -- ---------------------------------------------------------------------------
 
-local function OnUnitTooltip(tooltip)
-    if not (ns.db and ns.db.options.tooltip) or tooltip ~= GameTooltip then return end
-    local ok, _, unit = pcall(tooltip.GetUnit, tooltip)
-    if not ok or not unit or C.Readable(unit) == nil then return end
+-- Runs once per showing of GameTooltip's unit (the shared Tooltip.lua hook); returning false
+-- leaves it to run again, as when the saved data isn't loaded yet.
+local function OnUnitTooltip(tooltip, unit)
+    if not (ns.db and ns.db.options.tooltip) then return false end
     if not C.Bool(C.Call(UnitIsPlayer, unit)) then return end
     local full = C.UnitFull(unit)
     local text = full and ns.History:Summary(full, true)
@@ -23,13 +23,7 @@ local function OnUnitTooltip(tooltip)
     tooltip:Show()
 end
 
-ns:On("PLAYER_LOGIN", function()
-    if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum.TooltipDataType then
-        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, OnUnitTooltip)
-    elseif GameTooltip:HasScript("OnTooltipSetUnit") then
-        GameTooltip:HookScript("OnTooltipSetUnit", OnUnitTooltip)
-    end
-end)
+ns:On("PLAYER_LOGIN", function() ns.Tooltip.HookUnit(OnUnitTooltip) end)
 
 -- ---------------------------------------------------------------------------
 -- Whispers
@@ -39,8 +33,9 @@ local shown = {} -- full name -> time() a line was last shown
 
 local function OnWhisper(_, who)
     if not (ns.db and ns.db.options.whisper) then return end
+    -- The author as chat gives it ("Given Family", maybe with the server): the saved player's key.
     who = C.Str(who)
-    local full = who and C.Full(who)
+    local full = who and ns.History:Key(who)
     local text = full and ns.History:Summary(full)
     if not text then return end
     if shown[full] and time() - shown[full] < WHISPER_EVERY then return end

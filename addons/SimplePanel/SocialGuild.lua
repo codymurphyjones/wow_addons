@@ -55,7 +55,7 @@ local function Roster()
 end
 
 local function MemberMenu(page, mem)
-    local me = mem.short == UnitName("player")
+    local me = ns.Compat.IsMe(mem.name)
     SW.PersonMenu(Anchor(page), { name = mem.name, title = mem.short, sub = mem.rank, invite = mem.online and not me }, function(m)
         if Can(CanEditPublicNote) then
             m:Button({ text = "Set public note", fn = function()
@@ -194,7 +194,7 @@ local MAX_LINES = 300
 local logs = { GUILD = {}, OFFICER = {} }
 local function Log(kind, msg, sender, guid)
     local l = logs[kind]
-    l[#l + 1] = { at = time(), who = Str(sender) and Short(sender) or "?", text = Str(msg) or "(hidden)", guid = guid }
+    l[#l + 1] = { at = time(), who = Str(sender) and ns.Compat.FullName(sender, guid) or "?", text = Str(msg) or "(hidden)", guid = guid }
     if #l > MAX_LINES then table.remove(l, 1) end
 end
 ns:On("CHAT_MSG_GUILD", function(msg, sender, _, _, _, _, _, _, _, _, _, guid) Log("GUILD", msg, sender, guid); SW:Dirty() end)
@@ -456,14 +456,14 @@ local LOG_TEXT = {
 -- Members' class files by short name (for colouring names in the news and the log).
 local function ClassesByName()
     local out = {}
-    for _, mem in ipairs(Roster()) do out[mem.short] = mem.file end
+    for _, mem in ipairs(Roster()) do out[ns.Units.Compact(mem.name) or mem.short] = mem.file end
     return out
 end
 
 -- A name in its class colour (members), or plain (no longer in the guild).
 local function Named(name, classes)
     local short = Short(name)
-    local file = classes[short]
+    local file = classes[ns.Units.Compact(name) or short]
     return W.Color(short, file and ClassColor(file) or T.text)
 end
 

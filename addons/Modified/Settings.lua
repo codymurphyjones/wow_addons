@@ -1,47 +1,41 @@
 local ADDON, ns = ...
 
--- Options > AddOns > Modified, built with Blizzard's Settings API.
+-- Options > AddOns > Modified, built with the shared OptionsPage.lua (addons/shared). The /mod
+-- window's "Show empty bars" and "Show all spell ranks" change the same options (ns:SetOption),
+-- so both show the same value.
 local S = {}
 ns.Settings = S
 
--- Called from Core once SavedVariables are loaded.
-function S:Register()
-    if self.category or not (Settings and Settings.RegisterVerticalLayoutCategory) then return end
-
-    local category = Settings.RegisterVerticalLayoutCategory("Modified")
+S.page = ns.NewOptionsPage({ name = "Modified", build = function(p)
     local _, max = ns.Manager:CharacterMacroUsage()
+    p:Slider({ id = "MacroLimit", label = "Character macro limit", min = 1, max = max, step = 1,
+        default = math.min(ns.Manager.DEFAULT_LIMIT, max),
+        get = function() return (ns.Manager:GetLimit()) end,
+        set = function(value) ns.Manager:SetLimit(value) end,
+        format = function(v) return ("%d"):format(v) end,
+        tooltip = ("How many of your %d character macros Modified may use, so the rest stay free for your own macros. "
+            .. "Buttons that are already managed keep working if you lower this; new ones can't be added "
+            .. "until Modified is back under the limit."):format(max) })
+    p:Check({ id = "AutoReload", path = "db.autoReload", label = "Reload UI after Apply/Revert",
+        tooltip = "Changing macros and action buttons from an addon makes Blizzard's action bars throw cooldown errors "
+            .. "until the UI is reloaded. With this on, Modified reloads right after you apply or revert a button. "
+            .. "With it off, click Reload UI in /mod (or type /reload) before your next fight." })
 
-    local limit = Settings.RegisterProxySetting(category, "Modified_MacroLimit", Settings.VarType.Number,
-        "Character macro limit", math.min(ns.Manager.DEFAULT_LIMIT, max),
-        function() return (ns.Manager:GetLimit()) end,
-        function(value) ns.Manager:SetLimit(value) end)
-    local options = Settings.CreateSliderOptions(1, max, 1)
-    if MinimalSliderWithSteppersMixin then
-        options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-    end
-    Settings.CreateSlider(category, limit, options,
-        ("How many of your %d character macros Modified may use, so the rest stay free for your own macros. "
-        .. "Buttons that are already managed keep working if you lower this; new ones can't be added "
-        .. "until Modified is back under the limit."):format(max))
+    p:Header("The /mod window")
+    p:Check({ path = "db.showEmpty", label = "Show empty bars",
+        tooltip = "The bar list shows action bars that have nothing on them too.",
+        apply = function() if ns.UI then ns.UI:Refresh() end end })
+    p:Check({ path = "db.showAllRanks", label = "Show all spell ranks",
+        tooltip = "Lists every rank you know in the spell picker, so a row can cast a specific rank, e.g. Rejuvenation(Rank 3). "
+            .. "Dragging a spell from the spellbook also keeps its rank while this is on. "
+            .. "Rows without a fixed rank always cast your highest rank.",
+        apply = function(checked)
+            if ns.SpellPicker then
+                ns.SpellPicker:Hide()
+                if checked then ns.SpellPicker:PrepareRanks() end
+            end
+            ns:RequestRefresh() -- the editor's checkbox
+        end })
+end })
 
-    local reload = Settings.RegisterProxySetting(category, "Modified_AutoReload", Settings.VarType.Boolean,
-        "Reload UI after Apply/Revert", true,
-        function() return ns.db.autoReload end,
-        function(value) ns.db.autoReload = value end)
-    local CreateCheckbox = Settings.CreateCheckbox or Settings.CreateCheckBox
-    CreateCheckbox(category, reload,
-        "Changing macros and action buttons from an addon makes Blizzard's action bars throw cooldown errors "
-        .. "until the UI is reloaded. With this on, Modified reloads right after you apply or revert a button. "
-        .. "With it off, click Reload UI in /mod (or type /reload) before your next fight.")
-
-    Settings.RegisterAddOnCategory(category)
-    self.category = category
-end
-
-function S:Open()
-    if self.category and Settings.OpenToCategory then
-        local ok = pcall(Settings.OpenToCategory, self.category:GetID())
-        if ok then return end
-    end
-    ns:Print("Open the game menu > Options > AddOns > Modified.")
-end
+function S:Open() return self.page:Open() end

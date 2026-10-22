@@ -8,7 +8,6 @@ ns.Catalog = Catalog
 
 local LOAD_PER_TICK = 150
 
-local function API() return Auctionator and Auctionator.API and Auctionator.API.v1 end
 
 function Catalog:HasData()
     return Auctionator and Auctionator.Database and Auctionator.Database.db ~= nil
@@ -21,19 +20,10 @@ local function IDFromKey(key)
     return tonumber(key) or tonumber(key:match("^g:(%d+)"))
 end
 
-function Catalog:PriceFor(id)
-    local api = API()
-    if not api or not id then return nil end
-    local ok, price = pcall(api.GetAuctionPriceByItemID, ns.CALLER, id)
-    if ok and price and price > 0 then return price end
-end
+-- Auctionator's price and age, through the shared AuctionPrice.lua (addons/shared).
+function Catalog:PriceFor(id) return id and ns.AuctionPrice.Market(id) or nil end
 
-function Catalog:AgeFor(id)
-    local api = API()
-    if not api or not api.GetAuctionAgeByItemID or not id then return nil end
-    local ok, age = pcall(api.GetAuctionAgeByItemID, ns.CALLER, id)
-    if ok then return age end
-end
+function Catalog:AgeFor(id) return id and ns.AuctionPrice.Age(id) or nil end
 
 -- ---------------------------------------------------------------------------
 -- Variants: copies of one item that differ in enchant, random suffix ("of the Monkey") or gems.
@@ -74,19 +64,14 @@ function Catalog:Enchanted(variant)
 end
 
 local enchantNames = {}
-local enchantTip
+local SCAN_ONLY = { info = false }
 
+-- The link's lines from the scan tooltip (after the name), and whether each is green.
 local function TipLines(link)
-    enchantTip:SetOwner(WorldFrame, "ANCHOR_NONE")
-    enchantTip:ClearLines()
-    enchantTip:SetHyperlink(link)
     local lines = {}
-    for i = 2, enchantTip:NumLines() do
-        local fs = _G["QuartermasterEnchantTooltipTextLeft" .. i]
-        local text = fs and fs:GetText()
-        if text and text ~= "" then
-            local r, g, b = fs:GetTextColor()
-            lines[#lines + 1] = { text = text, green = g > 0.9 and r < 0.2 and b < 0.2 }
+    for i, l in ipairs((ns.Tooltip.Scan(SCAN_ONLY, "hyperlink", link)) or {}) do
+        if i >= 2 and l[1] ~= "" then
+            lines[#lines + 1] = { text = l[1], green = l[4] > 0.9 and l[3] < 0.2 and l[5] < 0.2 }
         end
     end
     return lines
@@ -108,13 +93,11 @@ function Catalog:EnchantText(link)
     local name
     local lineType = Enum and Enum.TooltipDataLineType and Enum.TooltipDataLineType.ItemEnchantmentPermanent
     if lineType and C_TooltipInfo and C_TooltipInfo.GetHyperlink then
-        local ok, data = pcall(C_TooltipInfo.GetHyperlink, link)
-        for _, line in ipairs(ok and data and data.lines or {}) do
-            if line.type == lineType and line.leftText then name = line.leftText break end
+        for _, l in ipairs(ns.Tooltip.Lines("hyperlink", link) or {}) do
+            if l.type == lineType and l[1] ~= "" then name = l[1] break end
         end
     end
     if not name then
-        enchantTip = enchantTip or CreateFrame("GameTooltip", "QuartermasterEnchantTooltip", nil, "GameTooltipTemplate")
         local base = {}
         local plain = link:gsub("(item:%-?%d+):%-?%d*", "%1:0", 1)
         for _, l in ipairs(TipLines(plain)) do base[l.text] = true end
@@ -146,10 +129,7 @@ end
 function Catalog:MarketFor(itemID, variant, link)
     if self:IsPlain(variant) then return self:PriceFor(itemID) end
     if variant:match(":g(.+)$") ~= "0.0.0.0" or self:Enchanted(variant) then return nil end
-    local api = API()
-    if not (api and api.GetAuctionPriceByItemLink and link) then return nil end
-    local ok, price = pcall(api.GetAuctionPriceByItemLink, ns.CALLER, link)
-    if ok and price and price > 0 then return price end
+    return link and ns.AuctionPrice.Market(link) or nil
 end
 
 local function FillInfo(e)
@@ -235,7 +215,7 @@ function Catalog:StartLoading()
             local e = table.remove(q)
             if not e then break end
             if FillInfo(e) then Notify()
-            else Catalog.waiting[e.id] = e; C.RequestItem(e.id) end
+            else Catalog.waiting[e.id] = e; C.RequestItem(e.id, true) end
         end
         if #q == 0 then ticker:Cancel(); ticker = nil end
     end)

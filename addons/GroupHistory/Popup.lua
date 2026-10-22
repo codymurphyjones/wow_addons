@@ -39,7 +39,9 @@ local function PartyRow(i)
     if not r then
         r = CreateFrame("Button", nil, party)
         r:SetSize(500, ROW - 4)
-        r.name = Label(r, "", "GroupHistoryGameFontHighlight", 0, 0, 220)
+        -- One line across the row: a long "Given Family  level 60, Healer" is cut short instead of
+        -- wrapping down into the summary under it.
+        r.name = Label(r, "", "GroupHistoryGameFontHighlight", 0, 0, 500); r.name:SetWordWrap(false)
         r.text = Muted(Label(r, "", "GroupHistoryGameFontHighlightSmall", 0, -16, 500))
         r.text:SetWordWrap(true); r.text:SetHeight(28)
         r:SetScript("OnClick", function(self) if self.full then ns.UI:ShowPlayer(self.full) end end)
@@ -117,10 +119,8 @@ end)
 
 local report
 
-local function Duration(run)
-    local secs = (run.stop or time()) - run.start
-    return ("%dh %02dm"):format(secs / 3600, secs % 3600 / 60)
-end
+local DURATION = { days = false, alwaysHours = true }
+local function Duration(run) return ns.Format.Duration((run.stop or time()) - run.start, DURATION) end
 
 -- Lines describing a run: bosses, wipes, deaths by person, who caused the most.
 function Popup.RunLines(run)

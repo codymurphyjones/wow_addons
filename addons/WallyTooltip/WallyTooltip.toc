@@ -1,4 +1,4 @@
-## Interface: 16001, 11509, 20506, 50504, 120100
+## Interface: 16001
 ## Title: WallyTooltip
 ## Notes: A smart tooltip: each one goes where it's readable and blocks nothing vital (unit frames, action bars, the thing under your cursor), judged from what's on screen; Edit Mode's tooltip position only when nowhere is clear. /wtip
 ## Author: Dinoblankie + Claude
@@ -8,7 +8,9 @@
 ## IconTexture: Interface\AddOns\WallyTooltip\Media\Icon
 ## Category: User Interface
 
+..\shared\Core.lua
 Core.lua
 Screen.lua
 Place.lua
+..\shared\OptionsPage.lua
 Settings.lua

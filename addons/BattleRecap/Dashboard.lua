@@ -12,8 +12,9 @@ local f, tabs, pages = nil, {}, {}
 local current = "overview"
 
 local WHITE = { 1, 1, 1 }
-local function Pct(n) return ("%d%%"):format(math.floor((n or 0) + 0.5)) end
-local function When(t) return t and date("%m/%d %H:%M", t) or "" end
+local PCT = { isPercent = true, missing = 0 }
+local function Pct(n) return ns.Format.Pct(n, PCT) end
+local When = ns.Format.When
 
 ---------------------------------------------------------------------------
 -- Pages

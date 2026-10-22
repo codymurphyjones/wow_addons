@@ -218,7 +218,8 @@ local function Sparkline(recap)
     return true
 end
 
-local function Pct(n) return ("%d%%"):format(math.floor((n or 0) + 0.5)) end
+local PCT = { isPercent = true, missing = 0 }
+local function Pct(n) return ns.Format.Pct(n, PCT) end
 
 local function KillerText(k)
     if not k then return "Unknown", "No damage was recorded before you died." end

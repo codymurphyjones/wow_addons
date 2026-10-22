@@ -54,13 +54,11 @@ Square (row, col) covers north = MAX - (row + 0.5) * CELL, west = MAX - (col + 0
 same world yards C_Map.GetWorldPosFromMapPos returns.
 """
 import collections
-import csv
 import json
 import math
 import os
 import struct
 import sys
-import urllib.request
 
 import numpy as np
 
@@ -72,6 +70,7 @@ CACHE = os.path.join(HERE, ".cache")
 PASSAGES = os.path.join(HERE, "passages.json")  # [ { continent, name, a: [n, w], b: [n, w], yards } ]
 sys.path.insert(0, os.path.join(TOOLS, "_shared"))
 from casc import Casc  # noqa: E402
+import fetcher as fetching  # noqa: E402
 
 TILE = 1600 / 3          # yards per map tile
 CHUNK = TILE / 16        # per map chunk
@@ -104,16 +103,10 @@ HAZARD_WORDS = ("magma", "lava", "slime", "fel - generic")
 
 
 def wago_table(name, build):
-    os.makedirs(CACHE, exist_ok=True)
-    path = os.path.join(CACHE, "%s-%s.csv" % (name, build))
-    if not os.path.exists(path):
-        url = "https://wago.tools/db2/%s/csv?build=%s" % (name, build)
-        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "wow-addons build"})) as r:
-            data = r.read()
-        with open(path, "wb") as f:
-            f.write(data)
-    with open(path, encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    """A game table for this build from wago.tools, cached in tools/Waypoint/.cache."""
+    web = fetching.Fetcher(CACHE, pace=0, attempts=1, ok_only=True, give_up_after=1,
+                           give_up="wago.tools download failed: {url}")
+    return fetching.wago_table(web, name, build, file="%s-%s.csv" % (name, build))
 
 
 def chunks(b, start=0, end=None):

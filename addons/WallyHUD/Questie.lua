@@ -26,17 +26,11 @@ local function Strip(text)
     return (tostring(text or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
 end
 
-local function Module(name)
-    return QuestieLoader and QuestieLoader.ImportModule and QuestieLoader:ImportModule(name)
-end
-
--- The quest Questie's tracker is focused on, if any.
-local function FocusedQuest()
-    local db = Questie and Questie.db and Questie.db.char
-    local focus = db and db.TrackerFocus
-    if type(focus) == "number" then return focus end
-    if type(focus) == "string" then return tonumber(focus:match("^(%d+)")) end
-end
+-- Questie from the outside (shared Questie.lua): its modules (cached, guarded) and the quest its
+-- tracker is focused on, if any.
+local K = ns.QuestieKit
+local Module = K.Mod
+local FocusedQuest = K.FocusedQuest
 
 -- Our extras on a line, made once and reused (lines are reused for other kinds each update).
 local function Extras(line)
@@ -213,13 +207,13 @@ end
 local hooked = false
 local function Hook()
     if hooked or not (ns.db and ns.db.questieSkin) then return hooked end
-    local QT, THF, Pool = Module("QuestieTracker"), Module("TrackerHeaderFrame"), Module("TrackerLinePool")
+    local QT = Module("QuestieTracker")
     if not (QT and type(QT.UpdateFormatting) == "function") then return false end
     local function Apply() pcall(Q.Apply, Q) end
-    hooksecurefunc(QT, "UpdateFormatting", Apply)
-    if type(QT.Update) == "function" then hooksecurefunc(QT, "Update", Apply) end
-    if THF and type(THF.Update) == "function" then hooksecurefunc(THF, "Update", function() pcall(StyleHeader) end) end
-    if Pool and type(Pool.UpdateQuestLines) == "function" then hooksecurefunc(Pool, "UpdateQuestLines", Apply) end
+    K.Hook("QuestieTracker", "UpdateFormatting", Apply)
+    K.Hook("QuestieTracker", "Update", Apply)
+    K.Hook("TrackerHeaderFrame", "Update", function() pcall(StyleHeader) end)
+    K.Hook("TrackerLinePool", "UpdateQuestLines", Apply)
     hooked = true
     Apply()
     return true

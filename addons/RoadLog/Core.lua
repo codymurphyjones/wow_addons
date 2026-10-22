@@ -4,14 +4,12 @@ ns.VERSION = "0.1.0"
 -- RoadLog's logo, shipped in the addon (tools\RoadLog\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\RoadLog\\Media\\Icon"
 
--- The logo as inline text markup, size x size pixels.
-function ns.IconMarkup(size)
-    return ("|T%s:%d:%d|t"):format(ns.ICON, size, size)
-end
-
 ns.PREFIX = ns.IconMarkup(14) .. " |cffd9b77aRoadLog|r"
 
--- Account-wide: roads are the same for every character.
+-- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
+-- Account-wide only: roads are the same for every character.
+ns.SAVED = { db = "RoadLogDB" }
+
 ns.DEFAULTS = {
     enabled = false, -- the toggle: while on, every step you walk counts as road
     showMap = false, -- draw recorded roads on the world map (Settings: Show roads, /roadlog map)
@@ -36,64 +34,22 @@ ns.DEFAULTS = {
     transitions = {},
 }
 
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then dst[k] = {} end
-            Merge(dst[k], v)
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
-    end
-    return dst
-end
-
-function ns:Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage(self.PREFIX .. ": " .. tostring(msg))
-end
-
--- Something changed: redraw the button and the map once, next frame.
-local pending
-function ns:Changed()
-    if pending then return end
-    pending = true
-    C_Timer.After(0, function()
-        pending = false
-        if ns.MinimapButton then ns.MinimapButton:Refresh() end
-        if ns.MapLines then ns.MapLines:Refresh() end
-        if ns.Marks then ns.Marks:Refresh() end
-    end)
-end
-
-local frame = CreateFrame("Frame")
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
-    end
-    table.insert(handlers[event], fn)
-end
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do fn(...) end
+-- Something changed: redraw the button and the map (once, next frame: ns:Changed).
+ns:OnChanged(function()
+    if ns.MinimapButton then ns.MinimapButton:Refresh() end
+    if ns.MapLines then ns.MapLines:Refresh() end
+    if ns.Marks then ns.Marks:Refresh() end
 end)
 
-function ns:OnLoad(fn)
-    self.onLoad = self.onLoad or {}
-    table.insert(self.onLoad, fn)
-end
-
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    RoadLogDB = Merge(type(RoadLogDB) == "table" and RoadLogDB or {}, ns.DEFAULTS)
-    ns.db = RoadLogDB
+ns:OnLoad(function()
     -- Roads used to be drawn by default, and that default was saved like a choice. Switch them off
-    -- once; after that Show roads is only ever changed by you.
-    if not ns.db.roadsOffByDefault then
-        ns.db.showMap = false
-        ns.db.roadsOffByDefault = true
-    end
-    for _, fn in ipairs(ns.onLoad or {}) do fn() end
+    -- once; after that Show roads is only ever changed by you. (roadsOffByDefault: the flag
+    -- this used before ns:Migrate, so it never runs twice.)
+    ns:Migrate("roadsOffByDefault", function(db)
+        if db.roadsOffByDefault then return end
+        db.showMap = false
+        db.roadsOffByDefault = true
+    end)
 end)
 
 ns:On("PLAYER_LOGIN", function()
@@ -116,14 +72,15 @@ function ns:SetEnabled(on)
         or self.db.mode == "blocker" and "Logging |cffff6050blockers|r: walk along the wall, fence or cliff edge."
         or self.db.mode == "cave" and "Logging a |cff40c4cdcave|r: walk its passages; heights are worked out by the next build."
         or "Recording |cff7fdf7fon|r: walk down the middle of the road.")
-    self:Changed()
+    -- Every caller (/roadlog, the minimap button, the page): Options > AddOns > RoadLog shows it.
+    self:OptionChanged("db.enabled")
 end
 
 function ns:SetShowMap(on)
     if on == nil then on = not self.db.showMap end
     self.db.showMap = on and true or false
     self:Print(self.db.showMap and "Roads shown on the world map." or "Roads hidden on the world map.")
-    self:Changed()
+    self:OptionChanged("db.showMap")
 end
 
 local function Stats()
@@ -175,9 +132,8 @@ SlashCmdList.ROADLOG = function(msg)
     elseif cmd == "map" then
         ns:SetShowMap()
     elseif cmd == "smooth" then
-        ns.db.smooth = not ns.db.smooth
-        ns:Print(ns.db.smooth and "Roads drawn with the weaving taken out." or "Roads drawn exactly as recorded.")
-        ns:Changed()
+        -- The same option as Options > AddOns > RoadLog (ns:SetOption), so the page shows it.
+        ns:Print(ns:ToggleOption("db.smooth") and "Roads drawn with the weaving taken out." or "Roads drawn exactly as recorded.")
     elseif cmd == "road" or cmd == "blocker" or cmd == "cave" then
         ns.Recorder:SetMode(cmd)
         ns:Print(cmd == "blocker" and "Logging blockers: walk along walls, fences and cliff edges you can't cross."
@@ -196,14 +152,11 @@ SlashCmdList.ROADLOG = function(msg)
     elseif cmd == "stats" then
         Stats()
     elseif cmd == "minimap" then
-        ns.db.minimap.hide = not ns.db.minimap.hide
-        ns.MinimapButton:Refresh()
-        ns:Print(ns.db.minimap.hide and "Minimap button hidden. /roadlog minimap shows it again." or "Minimap button shown.")
+        -- The option's apply refreshes the button.
+        ns:Print(ns:ToggleOption("db.minimap.hide") and "Minimap button hidden. /roadlog minimap shows it again." or "Minimap button shown.")
     else
         Help()
     end
 end
 
-function RoadLog_OnCompartmentClick()
-    if ns.db then ns:SetEnabled() end
-end
+ns:Compartment(function() ns:SetEnabled() end)

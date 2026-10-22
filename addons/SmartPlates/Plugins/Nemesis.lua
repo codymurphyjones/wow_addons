@@ -6,36 +6,25 @@ local C, M = ns.Compat, ns.Media
 -- Revenge key targets. Read again each time BattleRecap saves a recap.
 local Nemesis = { name = "Nemesis" }
 local TOP, MIN_KILLS = 5, 2
-local kills = {} -- "Name" and "Name-Realm" -> times they've killed you, for the top nemeses
-local revenge    -- the last killer's name, realm stripped
-
-local function Short(name) return name and name:match("^([^%-]+)") or name end
+local kills = C.NameSet()   -- the top nemeses (any shape of their name) -> times they've killed you
+local revenge = C.NameSet() -- the last killer
 
 local function Rebuild()
-    wipe(kills)
-    revenge = nil
+    C.NameSetWipe(kills)
+    C.NameSetWipe(revenge)
     local api = BattleRecapAPI
     if not api then return end
     if api.Nemeses then
         local ok, list = pcall(api.Nemeses)
         for i, e in ipairs(ok and list or {}) do
             if i > TOP or e.kills < MIN_KILLS then break end
-            kills[e.key] = e.kills
-            local short = Short(e.key)
-            kills[short] = math.max(kills[short] or 0, e.kills)
+            C.NameSetAdd(kills, e.key, e.kills)
         end
     end
     if api.RevengeTarget then
         local ok, name = pcall(api.RevengeTarget)
-        if ok and name then revenge = Short(name) end
+        if ok and name then C.NameSetAdd(revenge, name) end
     end
-end
-
--- The plate's name, and "Name-Realm" for someone from another realm; nil when the client hides it.
-local function PlateName(f)
-    local ok, name, realm = pcall(UnitName, f.unit.unitid)
-    if not ok or not C.Readable(name, realm) or not name then return nil end
-    return name, (realm and realm ~= "") and (name .. "-" .. realm) or name
 end
 
 function Nemesis:Create(f)
@@ -56,10 +45,8 @@ local function Hide(f) f.nemesis.icon:Hide(); f.nemesis.count:Hide() end
 function Nemesis:Update(f)
     local u, w, m = f.unit, ns.db.widgets, f.nemesis
     if not (w.nemesis or w.revenge) or not u.isPlayer or u.reaction == "FRIENDLY" then return Hide(f) end
-    local name, full = PlateName(f)
-    if not name then return Hide(f) end
-    local n = w.nemesis and (kills[full] or kills[name])
-    local last = w.revenge and revenge == name
+    local n = w.nemesis and C.NameSetFind(kills, u.unitid)
+    local last = w.revenge and C.NameSetFind(revenge, u.unitid) ~= nil
     if not (n or last) then return Hide(f) end
     if last then
         m.icon:SetVertexColor(1, 0.25, 0.2, 1)

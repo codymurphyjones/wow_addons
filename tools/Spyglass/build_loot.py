@@ -26,10 +26,14 @@ import json
 import os
 import re
 import sys
-import urllib.request
 import zipfile
 
 import lupa
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_shared"))
+import fetcher as fetching  # noqa: E402  (downloads through webfetch.py)
+from luawrite import lua_ids  # noqa: E402
+import luawrite  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -64,14 +68,15 @@ def fetch(offline):
         if not have:
             raise SystemExit("No AtlasLoot in %s and --offline: run once online, or pass --atlasloot." % CACHE)
         return os.path.dirname(have[-1])
-    with urllib.request.urlopen(urllib.request.Request(RELEASES, headers={"User-Agent": "wow-addons-tools"}), timeout=60) as r:
-        release = json.load(r)[0]
+    # Nothing cached: the release list is read fresh each time, the release only when it's new.
+    web = fetching.Fetcher(None, pace=0, timeout=60, attempts=1, ok_only=True, give_up_after=1,
+                           give_up="Couldn't download {url}")
+    release = json.loads(web.get(RELEASES))[0]
     asset = next(a for a in release["assets"] if a["name"].endswith("-classic.zip"))
     folder = os.path.join(CACHE, os.path.splitext(asset["name"])[0])
     if not os.path.isdir(os.path.join(folder, "AtlasLootContinued_DungeonsAndRaids")):
         print("downloading", asset["name"])
-        with urllib.request.urlopen(asset["browser_download_url"], timeout=300) as r:
-            unpack(io.BytesIO(r.read()), folder)
+        unpack(io.BytesIO(web.get(asset["browser_download_url"], binary=True, timeout=300)), folder)
     return folder
 
 
@@ -412,11 +417,7 @@ def merge_boss(name, alliance, horde, a):
 # ---------------------------------------------------------------------------------------------
 
 def lua_str(s):
-    return '"' + str(s).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
-
-
-def lua_ids(ids):
-    return "{ " + ", ".join(str(i) for i in ids) + " }"
+    return luawrite.lua_str(s, lf="escape", cr="keep")
 
 
 def write(instances, masks, source, path):

@@ -17,15 +17,14 @@ Data/Items.lua (the harvest's own answers always win).
 """
 import argparse
 import datetime
-import hashlib
 import html
 import json
 import os
 import re
 import sys
-import time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_shared"))
-import webfetch  # noqa: E402  (pages from a real browser: Wowhead refuses curl)
+import fetcher as fetching  # noqa: E402  (paced, cached; pages from a real browser: Wowhead refuses curl)
+from wowhead import balanced, js_literal  # noqa: E402
 
 ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "Spyglass")  # tools/Spyglass/ builds addons/Spyglass/
 OUT = os.path.join(ADDON, "Data", "wowhead.json")
@@ -33,7 +32,6 @@ HARVEST = os.path.join(ADDON, "Data", "harvest.json")
 DATA_LUA = os.path.join(ADDON, "Data.lua")
 CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".wowhead_cache")
 BASE = "https://www.wowhead.com/forever/"
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SpyGlass addon data tool"
 PACE = 1.5          # seconds between requests
 MAX_LEVEL = 60
 SPLIT_AT = 950      # a page this full may be cut short: split it by subclass
@@ -89,116 +87,8 @@ EFFECT_PREFIXES = ("Equip:", "Use:", "Chance on hit:")
 
 
 # ---------------------------------------------------------------------------
-# Fetching: paced, cached, retried
+# Reading Wowhead's pages (fetcher.py fetches, wowhead.py reads the JS literals)
 # ---------------------------------------------------------------------------
-
-class Fetcher:
-    def __init__(self, refresh=False):
-        self.refresh = refresh
-        self.last = 0.0
-        self.requests = 0
-        self.failures = 0
-        os.makedirs(CACHE, exist_ok=True)
-
-    def path(self, url):
-        return os.path.join(CACHE, hashlib.sha1(url.encode("utf-8")).hexdigest() + ".html")
-
-    def get(self, url):
-        path = self.path(url)
-        if not self.refresh and os.path.exists(path):
-            with open(path, encoding="utf-8") as f:
-                return f.read()
-        delay = PACE
-        for attempt in range(6):
-            wait = self.last + delay - time.time()
-            if wait > 0:
-                time.sleep(wait)
-            self.last = time.time()
-            self.requests += 1
-            try:
-                text = download(url)
-            except RetryLater as e:
-                print("  %s (%s); waiting %.0fs" % (url, e, delay * 4))
-                delay *= 4
-                continue
-            self.failures = 0
-            with open(path, "w", encoding="utf-8", newline="\n") as f:
-                f.write(text)
-            return text
-        self.failures += 1
-        if self.failures >= 5:
-            raise SystemExit("Wowhead keeps refusing; stopped. Rerun later: the cache keeps what's done.")
-        return None
-
-
-class RetryLater(Exception):
-    pass
-
-
-def download(url):
-    # A real browser session (tools/_shared/webfetch.py): Wowhead refuses curl and urllib.
-    code, body = webfetch.fetch(url, timeout=40)
-    if code in (403, 429) or code >= 500 or code == 0:
-        raise RetryLater("HTTP %d" % code)
-    if code == 202 or not body.strip():
-        # A bot challenge (or nothing): never cached.
-        raise RetryLater("HTTP %d, empty page" % code)
-    return body
-
-
-# ---------------------------------------------------------------------------
-# Reading Wowhead's pages
-# ---------------------------------------------------------------------------
-
-KEY = re.compile(r"([A-Za-z_]\w*)(\s*:)")
-
-
-def js_literal(text):
-    """Wowhead's JS object literals as Python values (bare keys quoted)."""
-    out, i, n, last = [], 0, len(text), ""
-    while i < n:
-        c = text[i]
-        if c == '"':
-            j = i + 1
-            while text[j] != '"':
-                j += 2 if text[j] == "\\" else 1
-            out.append(text[i:j + 1])
-            last, i = '"', j + 1
-            continue
-        if last in ("{", ","):
-            m = KEY.match(text, i)
-            if m:
-                out.append('"%s"%s' % (m.group(1), m.group(2)))
-                last, i = ":", m.end()
-                continue
-        out.append(c)
-        if not c.isspace():
-            last = c
-        i += 1
-    return json.loads("".join(out))
-
-
-def balanced(s, i):
-    """The [...] or {...} starting at s[i]."""
-    depth, j, in_str = 0, i, False
-    while j < len(s):
-        c = s[j]
-        if in_str:
-            if c == "\\":
-                j += 1
-            elif c == '"':
-                in_str = False
-        elif c == '"':
-            in_str = True
-        elif c in "[{":
-            depth += 1
-        elif c in "]}":
-            depth -= 1
-            if depth == 0:
-                return s[i:j + 1]
-        j += 1
-    raise ValueError("unbalanced literal")
-
 
 def list_page(text):
     """(listview rows by id, gatherer entries by id) from an items list page."""
@@ -400,7 +290,7 @@ def main(argv):
     args = ap.parse_args(argv)
 
     patterns, schools = equip_patterns()
-    fetcher = Fetcher(refresh=args.refresh)
+    fetcher = fetching.Fetcher(CACHE, refresh=args.refresh, pace=PACE)
     try:
         with open(HARVEST, encoding="utf-8") as f:
             harvested = json.load(f).get("items", {})

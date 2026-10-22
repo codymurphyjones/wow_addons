@@ -517,6 +517,14 @@ local function MarketOf(x, itemID)
     return ns.Catalog:MarketFor(itemID or x.itemID, x.variant, x.link)
 end
 
+-- "  (30-day normal 1g 5s)", from Wealth Planner's price history, when it keeps one.
+local function NormalHint(itemID, market)
+    local normal = ns.AuctionPrice.Normal(itemID)
+    if not normal then return "" end
+    local spike = market and market > normal * 1.15
+    return ("  (30-day normal %s%s)"):format(Money(normal), spike and ": spiked, buys stop at normal" or "")
+end
+
 -- "1g 20s  |cff..(-12%)|r" against the market price.
 local function PriceText(unit, market)
     if not market then return Money(unit) end
@@ -548,7 +556,7 @@ local function GroupRow(self, g, target)
         text = (g.name or e.name) and (W.QualityName(g.name or e.name, g.quality or e.quality) .. tag) or ("|cff8fa3b3item " .. g.itemID .. "|r"),
         detail = table.concat(detail, "  ·  "),
         right = PriceText(g.minUnit, market),
-        hint = (market and ("Market: " .. Money(market) .. "\n")
+        hint = (market and ("Market: " .. Money(market) .. NormalHint(g.itemID, market) .. "\n")
             or (not plain and "No market price for this enchant: Auctionator prices the plain item only.\n" or ""))
             .. "Click to see its listings and buy. Right-click or + adds it to your list. Shift-click to link.",
         onClick = function() self:Open(g) end,
@@ -695,7 +703,7 @@ function M:ShowListings()
                 icon = W.IconFor(e.icon and e or { itemID = g.itemID }), link = link or e.link,
                 text = ("%dx %s%s"):format(l.available or l.count, link or e.name or "?", ltag),
                 detail = ("%s each  ·  %s for all%s"):format(PriceText(l.unit, MarketOf(l.link and l or g, g.itemID)),
-                    Money(l.unit * (l.available or l.count)), l.owner and ("  ·  " .. l.owner) or ""),
+                    Money(l.unit * (l.available or l.count)), l.owner and ("  ·  " .. tostring(ns.Units.Display(l.owner))) or ""),
                 right = Money(l.unit * (l.available or l.count)),
                 selected = self.selected == l,
             }
@@ -725,9 +733,8 @@ function M:Select(l)
         ns.Scanner:FocusPage(l.name, l.page, function(rows)
             if self.token ~= token or self.selected ~= l then return end
             self.state = "idle"
-            local me = UnitName("player")
             for _, r in ipairs(rows) do
-                if r.buyout > 0 and not r.sold and r.owner ~= me and r.link == l.link and r.count == l.count
+                if r.buyout > 0 and not r.sold and not r.mine and r.link == l.link and r.count == l.count
                     and r.buyout == l.buyout and r.bidAmount ~= r.buyout then
                     r.unit = r.buyout / r.count
                     self.candidate = r

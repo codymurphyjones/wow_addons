@@ -32,6 +32,13 @@ Commands (run with -h for options):
   bump [NAME ...]         bump the patch version (TOC + Lua VERSION lines); all addons by default
   stop                    restore the AddOns folders sync replaced since the session began (yarn stop)
 
+Shared code: addons/shared holds Lua several addons load. It is never an addon of its own, so it
+is never installed or published. An addon loads a shared file by listing its real path in its TOC,
+`..\shared\DeathRecap.lua`; every build (the dev copy sync installs, and release zips) copies each
+listed file into the addon's own Shared\ folder and rewrites that TOC line to
+`Shared\DeathRecap.lua`. Files an XML file there loads come along too. Editing a shared file counts
+as a change to every addon that loads it (--watch re-syncs them all).
+
 Every AddOns folder sync replaces is first backed up to .addon_sync/backup (once per test session),
 so `stop` can delete what was installed and put the originals back.
 
@@ -54,6 +61,7 @@ import hashlib
 import html
 import json
 import os
+import posixpath
 import re
 import shutil
 import stat
@@ -61,6 +69,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import types
 import uuid
 import urllib.error
 import urllib.parse
@@ -97,6 +106,8 @@ DEFAULT_CONFIG = {
     "exclude": ["__pycache__", "*.py", "*.pyc", "Tools", "Dev", ".git*", "*.md", "*.txt"],
 }
 MODES = ("dev", "release", "skip")
+SHARED_DIR = "shared"     # <source_dir>/shared: code several addons load; never an addon itself
+SHARED_FOLDER = "Shared"  # where each addon's build carries its copies of it
 
 
 class SyncError(Exception):
@@ -277,6 +288,8 @@ def discover(cfg):
         raise SyncError(f"source_dir does not exist: {src}")
     addons = []
     for folder in sorted(p for p in src.iterdir() if p.is_dir()):
+        if folder.name.lower() == SHARED_DIR:
+            continue  # shared code, copied into the addons that load it (build_files)
         toc = find_toc(folder, folder.name)
         if toc:
             text = toc.read_bytes().decode("utf-8-sig", errors="replace")
@@ -320,9 +333,83 @@ def iter_files(root, patterns):
     return sorted(out)
 
 
+# A TOC line loading a shared file: ..\shared\<path>
+SHARED_LINE = re.compile(rb"^([ \t]*)\.\.[\\/]+" + SHARED_DIR.encode() + rb"[\\/]+([^\r\n]*?)[ \t]*(\r?\n)?$", re.I)
+XML_INCLUDE = re.compile(r"<(?:Script|Include)\b[^>]*\bfile\s*=\s*\"([^\"]+)\"", re.I)
+
+
+class Generated:
+    """A build file made in memory (a TOC with its shared lines rewritten), in place of its Path."""
+
+    def __init__(self, data, source):
+        self.data, self.source = data, source
+
+    def read_bytes(self):
+        return self.data
+
+    def stat(self):
+        return types.SimpleNamespace(st_size=len(self.data), st_mtime_ns=self.source.stat().st_mtime_ns)
+
+
+def rewrite_toc(data):
+    """(TOC bytes with each ..\shared\<path> line pointing into Shared\ instead, [<path>, ...])."""
+    out, refs = [], []
+    for line in data.splitlines(keepends=True):
+        m = SHARED_LINE.match(line)
+        if m and m.group(2):
+            rel = m.group(2).decode("utf-8").replace("\\", "/").strip("/")
+            refs.append(rel)
+            line = m.group(1) + (SHARED_FOLDER + "/" + rel).replace("/", "\\").encode("utf-8") + (m.group(3) or b"")
+        out.append(line)
+    return b"".join(out), refs
+
+
+def shared_root(addon):
+    return addon.path.parent / SHARED_DIR
+
+
+def build_files(addon, patterns):
+    """The files an addon's build is made of, listed as iter_files() lists them: the workspace copy,
+    its TOCs with shared lines rewritten (as Generated), and the shared files they load, under Shared/."""
+    files, wanted = [], []
+    for rel, path in iter_files(addon.path, patterns):
+        if rel.split("/")[0].lower() == SHARED_FOLDER.lower():
+            raise SyncError(f"{addon.name} has a {SHARED_FOLDER}/ folder of its own, which builds fill with "
+                            f"its copies of {SHARED_DIR}/ - rename it")
+        if "/" not in rel and rel.lower().endswith(".toc"):
+            data, refs = rewrite_toc(path.read_bytes())
+            if refs:
+                path = Generated(data, path)
+                wanted += refs
+        files.append((rel, path))
+    root, seen = shared_root(addon), set()
+    while wanted:
+        rel = posixpath.normpath(wanted.pop(0))
+        if rel.lower() in seen:
+            continue
+        seen.add(rel.lower())
+        src = root / rel
+        if rel.startswith("..") or not src.is_file():
+            raise SyncError(f"{addon.name}'s TOC loads ..\\{SHARED_DIR}\\{rel.replace('/', chr(92))}, "
+                            f"which isn't in {root}")
+        files.append((f"{SHARED_FOLDER}/{rel}", src))
+        if rel.lower().endswith(".xml"):
+            text = re.sub(r"<!--.*?-->", "", src.read_text(encoding="utf-8", errors="replace"), flags=re.S)
+            wanted += [posixpath.join(posixpath.dirname(rel), inc.replace("\\", "/"))
+                       for inc in XML_INCLUDE.findall(text)]
+    return sorted(files, key=lambda f: f[0])
+
+
+def copy_build_file(src, dest):
+    if isinstance(src, Generated):
+        dest.write_bytes(src.data)
+    else:
+        shutil.copy2(src, dest)
+
+
 def source_hash(addon, patterns):
     h = hashlib.sha256()
-    for rel, path in iter_files(addon.path, patterns):
+    for rel, path in build_files(addon, patterns):
         data = path.read_bytes()
         h.update(f"{rel}\0{len(data)}\0".encode())
         h.update(data)
@@ -335,7 +422,7 @@ def installed_matches(addon, wow, patterns):
     target = wow / addon.name
     if not target.exists():
         return False
-    want = {rel: path.stat().st_size for rel, path in iter_files(addon.path, patterns)}
+    want = {rel: path.stat().st_size for rel, path in build_files(addon, patterns)}
     have = {rel: path.stat().st_size for rel, path in iter_files(target, [])}
     return want == have
 
@@ -343,7 +430,7 @@ def installed_matches(addon, wow, patterns):
 def source_signature(addon, patterns):
     """Cheap change detector for --watch (paths, sizes, mtimes)."""
     h = hashlib.sha256()
-    for rel, path in iter_files(addon.path, patterns):
+    for rel, path in build_files(addon, patterns):
         st = path.stat()
         h.update(f"{rel}\0{st.st_size}\0{st.st_mtime_ns}\0".encode())
     return h.hexdigest()
@@ -378,7 +465,7 @@ def _hash_entries(entries):
 
 def content_hash(addon, patterns):
     """Hash of the workspace copy, ignoring version lines."""
-    return _hash_entries((rel, path.read_bytes()) for rel, path in iter_files(addon.path, patterns))
+    return _hash_entries((rel, path.read_bytes()) for rel, path in build_files(addon, patterns))
 
 
 def zip_entries(zpath, addon_name, patterns):
@@ -647,10 +734,10 @@ def protect(wow, folders):
 def install_dev(addon, wow, patterns):
     target = safe_target(wow, addon.name)
     remove_dir(target)
-    for rel, src in iter_files(addon.path, patterns):
+    for rel, src in build_files(addon, patterns):
         dest = target / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
+        copy_build_file(src, dest)
 
 
 def install_release(zpath, folders, wow):
@@ -838,7 +925,12 @@ def run_sync(cfg, only=None, dry_run=False, refresh=False):
     cf = CurseForge(api_key(cfg), refresh=refresh)
     rows, warnings, removed, built, failed = [], [], [], [], False
     for addon in addons:
-        p = plan_addon(addon, cfg, state, cf)
+        try:
+            p = plan_addon(addon, cfg, state, cf)
+        except SyncError as exc:  # a TOC loading a shared file that isn't there
+            rows.append((addon.name, addon.version or "?", "-", "-", f"FAILED: {exc}", ""))
+            failed = True
+            continue
         removed += clean_outbox(cfg, cf, addon, dry_run)
         if p.get("publishable"):
             try:
@@ -1165,10 +1257,13 @@ def build_release_zip(addon, cfg, folder):
     dest = folder / upload_zip_name(addon)
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(".part")
-    files = iter_files(addon.path, cfg["exclude"])
+    files = build_files(addon, cfg["exclude"])
     with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
         for rel, path in files:
-            zf.write(path, f"{addon.name}/{rel}")
+            if isinstance(path, Generated):
+                zf.writestr(f"{addon.name}/{rel}", path.data)
+            else:
+                zf.write(path, f"{addon.name}/{rel}")
     os.replace(tmp, dest)
     return dest, len(files)
 
@@ -1685,7 +1780,7 @@ def publish_outbox(cfg, cf, addons, args):
 def diff_release(addon, patterns, zpath):
     """(added, removed, changed) paths between the workspace and <addon>/ in a release zip.
     Version lines are ignored, like content_hash()."""
-    local = dict(iter_files(addon.path, patterns))
+    local = dict(build_files(addon, patterns))
     released = dict(zip_entries(zpath, addon.name, patterns))
     changed = [rel for rel in sorted(set(local) & set(released))
                if normalize_content(rel, local[rel].read_bytes()) != normalize_content(rel, released[rel])]
@@ -1844,7 +1939,7 @@ def cmd_check(args):
         if last and compare_versions(version, last) <= 0:
             version = next_version(last)
             print(f"  Version     {addon.version} is not past {last} - deploy bumps it to {version} first")
-        files = iter_files(addon.path, patterns)
+        files = build_files(addon, patterns)
         size = sum(path.stat().st_size for _, path in files)
         name = f"{addon.name}_v{version.replace('.', '_')}.zip"
         print(f"  Zip         {name}: {len(files)} files, {size / 1024:.0f} KB, all under {addon.name}/")
@@ -2074,6 +2169,9 @@ def main(argv=None):
         ok = args.func(args)
     except SyncError as exc:
         print(f"error: {exc}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        print("Cancelled.", file=sys.stderr)
         return 1
     return 0 if ok else 1
 

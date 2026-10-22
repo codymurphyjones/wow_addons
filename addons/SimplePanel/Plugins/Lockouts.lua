@@ -7,13 +7,7 @@ local Chars = ns.Characters
 
 local function Left(l) return (l.resetAt or 0) - time() end
 
-local function Clock(secs)
-    secs = math.max(0, math.floor(secs))
-    local d, h, m = math.floor(secs / 86400), math.floor(secs / 3600) % 24, math.floor(secs / 60) % 60
-    if d > 0 then return ("%dd %dh"):format(d, h) end
-    if h > 0 then return ("%dh %02dm"):format(h, m) end
-    return ("%dm"):format(m)
-end
+local function Clock(secs) return ns.Format.Duration(secs) end
 
 -- Lockouts that haven't reset yet.
 local function Current(info)

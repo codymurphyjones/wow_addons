@@ -42,9 +42,27 @@ end
 
 local BASIC = Enum and Enum.CraftingReagentType and Enum.CraftingReagentType.Basic
 
-local function ItemCount(id)
-    local fn = (C_Item and C_Item.GetItemCount) or GetItemCount
-    return fn and fn(id) or 0
+local ItemCount = ns.Items.ItemCount
+
+-- A recipe's basic reagents from C_TradeSkillUI (the Professions window and SimplePanel's).
+local function ReadRecipe(recipeID)
+    local api = C_TradeSkillUI
+    if not (recipeID and api and api.GetRecipeSchematic) then return {} end
+    local schematic = api.GetRecipeSchematic(recipeID, false)
+    local out = {}
+    for _, slot in ipairs(schematic and schematic.reagentSlotSchematics or {}) do
+        local first = slot.reagents and slot.reagents[1]
+        local basic = slot.required or not BASIC or slot.reagentType == BASIC
+        if basic and first and first.itemID then
+            local id = first.itemID
+            local name, link, _, _, _, _, _, _, _, icon = C.GetItemInfo(id)
+            if not name then C.RequestItem(id) end
+            out[#out + 1] = { itemID = id, name = name, link = link,
+                texture = icon or select(5, C.GetItemInfoInstant(id)),
+                need = slot.quantityRequired or 0, have = ItemCount(id) }
+        end
+    end
+    return out
 end
 
 -- SimplePanel's own professions window (Own Panels), when it holds the profession: the game's
@@ -62,26 +80,7 @@ local PROFESSIONS = {
         return page and page:IsVisible() and not SimplePanelCrafting()
     end,
     Key = SelectedRecipeID,
-    Read = function()
-        local recipeID = SelectedRecipeID()
-        local api = C_TradeSkillUI
-        if not (recipeID and api and api.GetRecipeSchematic) then return {} end
-        local schematic = api.GetRecipeSchematic(recipeID, false)
-        local out = {}
-        for _, slot in ipairs(schematic and schematic.reagentSlotSchematics or {}) do
-            local first = slot.reagents and slot.reagents[1]
-            local basic = slot.required or not BASIC or slot.reagentType == BASIC
-            if basic and first and first.itemID then
-                local id = first.itemID
-                local name, link, _, _, _, _, _, _, _, icon = C.GetItemInfo(id)
-                if not name then C.RequestItem(id) end
-                out[#out + 1] = { itemID = id, name = name, link = link,
-                    texture = icon or select(5, C.GetItemInfoInstant(id)),
-                    need = slot.quantityRequired or 0, have = ItemCount(id) }
-            end
-        end
-        return out
-    end,
+    Read = function() return ReadRecipe(SelectedRecipeID()) end,
     Hook = function(kind)
         local form = SchematicForm()
         if not form or kind.hooked then return end
@@ -134,27 +133,6 @@ local function Legacy(frameName, prefix, hooks)
             end
         end,
     }
-end
-
--- The recipe's basic reagents, as the game's window kind reads them.
-local function ReadRecipe(recipeID)
-    local api = C_TradeSkillUI
-    if not (recipeID and api and api.GetRecipeSchematic) then return {} end
-    local schematic = api.GetRecipeSchematic(recipeID, false)
-    local out = {}
-    for _, slot in ipairs(schematic and schematic.reagentSlotSchematics or {}) do
-        local first = slot.reagents and slot.reagents[1]
-        local basic = slot.required or not BASIC or slot.reagentType == BASIC
-        if basic and first and first.itemID then
-            local id = first.itemID
-            local name, link, _, _, _, _, _, _, _, icon = C.GetItemInfo(id)
-            if not name then C.RequestItem(id) end
-            out[#out + 1] = { itemID = id, name = name, link = link,
-                texture = icon or select(5, C.GetItemInfoInstant(id)),
-                need = slot.quantityRequired or 0, have = ItemCount(id) }
-        end
-    end
-    return out
 end
 
 local SIMPLEPANEL = {

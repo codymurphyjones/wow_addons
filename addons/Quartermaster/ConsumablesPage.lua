@@ -234,7 +234,7 @@ if Consumables:Available() then
 end
 
 -- For other addons (Bandolier's /bandolier stock): opens this page.
-QuartermasterAPI = QuartermasterAPI or {}
+ns.NewAPI("QuartermasterAPI", 1)
 function QuartermasterAPI.ShowConsumables()
     if not Consumables:Available() then return false end
     ns.UI:Show("consumables")

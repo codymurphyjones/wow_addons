@@ -29,30 +29,30 @@ local lib, panel
 local function Money(c) return C.Money(c or 0) end
 
 -- Always exactly two coins, zeros included: gold and silver from 1g up, silver and copper below.
-local COIN = "%s|TInterface\\MoneyFrame\\UI-%sIcon:0:0:2:0|t"
-local function Money2(c)
-    c = math.max(0, math.floor(tonumber(c) or 0))
-    local g, s, cp = math.floor(c / 10000), math.floor(c / 100) % 100, c % 100
-    if g > 0 then
-        local gold = BreakUpLargeNumbers and BreakUpLargeNumbers(g) or tostring(g)
-        return COIN:format(gold, "Gold") .. " " .. COIN:format(s, "Silver")
+local function Money2(c) return ns.Format.Money(c, ns.Format.MONEY_TWO) end
+
+-- Against Wealth Planner's 30-day normal (when it keeps one): a crash is shown in red.
+local function NormalText(d)
+    if not (d and d.normal) then return "" end
+    if d.crashed then
+        return ("  -  " .. RED .. "%d%% under its 30-day normal (%s): selling now gives it away|r"):format(
+            (1 - d.market / d.normal) * 100 + 0.5, Money(d.normal))
     end
-    return COIN:format(s, "Silver") .. " " .. COIN:format(cp, "Copper")
+    return "  -  30-day normal " .. Money(d.normal)
 end
 
+local AGE = { days = true, unit = "d" }
 local function AgeText(d)
-    if not d or d.age == nil then return "not seen recently" end
-    local text = ("seen %dd ago"):format(d.age)
-    if d.stale then return YELLOW .. text .. "|r" end
-    return text
+    if not d or d.age == nil then return "not seen recently" .. NormalText(d) end
+    local text = "seen " .. ns.Format.Ago(d.age, AGE)
+    if d.stale then return YELLOW .. text .. "|r" .. NormalText(d) end
+    return text .. NormalText(d)
 end
 
+local TIME_LEFT = { days = false, pad = false, minOne = true }
 local function TimeLeftText(a)
     local s = a.timeLeftSeconds
-    if s then
-        if s >= 3600 then return ("%dh %dm"):format(s / 3600, s % 3600 / 60) end
-        return ("%dm"):format(math.max(1, s / 60))
-    end
+    if s then return ns.Format.Duration(s, TIME_LEFT) end
     return TIME_BAND[a.timeLeft] or ""
 end
 
@@ -180,7 +180,7 @@ local function QueueItem(row, isNext)
         d.dim = 0.5
     elseif row.state == "pending" then
         d.status = { texture = NOT_READY, onClick = function() A:SetApproved(key, true) end, hint = "Not approved. Click to approve." }
-        d.detail = "Not approved  -  " .. price
+        d.detail = "Not approved  -  " .. price .. NormalText(row.details)
         d.dim = 0.3
     else
         d.status = { texture = READY, onClick = function() A:SetApproved(key, false) end, hint = "Will post. Click to unapprove it." }
@@ -324,8 +324,8 @@ end
 -- ---------------------------------------------------------------------------
 
 local HIDDEN_LIB_TABS = { "AuctionatorTabs_Cancelling", "AuctionatorTabs_Auctionator" }
--- LibAHTab's spacing between tabs (LibAHTab.lua).
-local TAB_OFFSET_X = (WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_CAMELOT) and -14 or 3
+-- LibAHTab's spacing between tabs on WoW Forever (LibAHTab.lua's OFFSET_X).
+local TAB_OFFSET_X = 3
 
 local savedPoints = {} -- tab -> { point, relativeTo, relativePoint, x, y } as first found
 local hookedTabs = {}  -- tab -> true: OnShow hook installed
@@ -581,9 +581,7 @@ local function Build()
     panel.mode = mode
     local duration = MakeButton(right, "", 86, 24); duration:SetPoint("BOTTOMLEFT", 174, 3)
     duration:SetScript("OnClick", function()
-        local o = ns.db.options.auction
-        o.duration = (o.duration or 2) % 3 + 1
-        ns:Changed()
+        ns:SetOption("db.options.auction.duration", (ns.db.options.auction.duration or 2) % 3 + 1)
     end)
     Hint(duration, "Default duration", "Used for items you haven't posted by hand yet. Once you post an item yourself, Wally uses the duration you chose.")
     panel.duration = duration

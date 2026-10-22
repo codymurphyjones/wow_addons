@@ -1,5 +1,4 @@
 local _, ns = ...
-local PAL = ns.Palette
 local C = ns.Compat
 
 -- The Group History window: Players (everyone you've run with, and each one's page), Runs (each
@@ -9,29 +8,19 @@ local UI = {}
 ns.UI = UI
 
 local W = ns.Widgets
-local ACCENT = W.ACCENT
-local SetBackdrop, Label, Muted, MakeButton, Hint = W.SetBackdrop, W.Label, W.Muted, W.MakeButton, W.Hint
+local Label, Muted, MakeButton, Hint = W.Label, W.Muted, W.MakeButton, W.Hint
 
-local frame
-local pages, tabs = {}, {}
-local activeTab = "players"
+local win -- the window (shared\Window.lua), made under "Window" below
 local TABS = {
     { "players", "Players", "INV_Misc_GroupNeedMore" },
     { "runs", "Runs", "INV_Misc_Map_01" },
     { "settings", "Settings", "INV_Misc_Gear_01" },
 }
 
-local function NewPage(name)
-    local p = CreateFrame("Frame", nil, frame)
-    p:SetPoint("TOPLEFT", 196, -76); p:SetPoint("BOTTOMRIGHT", -18, 18)
-    p:Hide(); pages[name] = p
-    return p
-end
+local function NewPage(name) return win:NewPage(name) end
 
-local function Duration(run)
-    local secs = (run.stop or time()) - run.start
-    return ("%dh %02dm"):format(secs / 3600, secs % 3600 / 60)
-end
+local DURATION = { days = false, alwaysHours = true }
+local function Duration(run) return ns.Format.Duration((run.stop or time()) - run.start, DURATION) end
 
 local function RunLine(run)
     return ("%s  -  %s, %s%s, %d wipe%s, %d death%s"):format(date("%m/%d/%y %H:%M", run.start), Duration(run),
@@ -96,6 +85,15 @@ local function CreatePlayersPage()
     d.list = W.CreateRowList(d, -118, { rowHeight = 34 })
     p.detail = d
 
+    -- The note box and the list sit under the totals (at -84 and -118, or lower when the totals and
+    -- a long note wrap onto more lines).
+    local function PlaceBelowTotals()
+        local noteTop = math.min(-84, -50 - math.ceil(d.totals:GetStringHeight() or 0) - 8)
+        d.note:SetPoint("TOPLEFT", 0, noteTop)
+        d.list.scroll:SetPoint("TOPLEFT", 0, noteTop - 34)
+        d.list.empty:SetPoint("TOPLEFT", 0, noteTop - 94)
+    end
+
     local function RefreshPlayer()
         local full = p.full
         local rec = ns.History:Get(full)
@@ -105,6 +103,7 @@ local function CreatePlayersPage()
             rec.race and (rec.race .. " ") or "", rec.class and rec.class:lower():gsub("^%l", string.upper) or "",
             date("%m/%d/%y", rec.first), rec.last and date("%m/%d/%y", rec.last) or "-") .. (rec.guild and ("  <" .. rec.guild .. ">") or ""))
         d.totals:SetText(ns.History:Summary(full, true) or "")
+        PlaceBelowTotals()
         if not d.note:HasFocus() then d.note:SetText(rec.note or "") end
         W.SetBackdrop(d.up); W.SetBackdrop(d.down)
         if rec.rating == 1 then d.up:SetBackdropBorderColor(0.35, 0.95, 0.55, 1) end
@@ -119,10 +118,11 @@ local function CreatePlayersPage()
         local short = C.Short(full)
         for _, e in ipairs(ns.History:DeathsOf(full)) do
             local death = e.death
-            local share = death.blame and death.blame[short]
-            local text = death.victim == short and ("|cffd9736bDied|r: " .. DeathLine(death))
+            local share = ns.History.ByName(death.blame, short)
+            local text = (death.victim == short or C.SameName(death.victim, short)) and ("|cffd9736bDied|r: " .. DeathLine(death))
                 or ("|cffffd24d%d%% of the blame|r for %s"):format((share or 0) * 100, DeathLine(death))
-            local why = death.reasons and death.reasons[short] and death.reasons[short][1]
+            local reasons = ns.History.ByName(death.reasons, short)
+            local why = reasons and reasons[1]
             items[#items + 1] = {
                 noIcon = true, text = text,
                 detail = ("%s, %s  -  %s"):format(e.run.instance, date("%m/%d", death.t or e.run.start),
@@ -186,6 +186,14 @@ local function CreateRunsPage()
     d.list = W.CreateRowList(d, -200, { rowHeight = 40 })
     p.detail = d
 
+    -- The list starts under the text (at -200, or lower): a run with many bosses, or a death blamed
+    -- on several players (full "Given Family" names), runs past 12 lines.
+    local function PlaceList()
+        local top = math.min(-200, -32 - math.ceil(d.text:GetStringHeight() or 0) - 12)
+        d.list.scroll:SetPoint("TOPLEFT", 0, top)
+        d.list.empty:SetPoint("TOPLEFT", 0, top - 60)
+    end
+
     local function RefreshDeath(run, death)
         d.title:SetText(DeathLine(death))
         local lines = { ("%s, %s%s. %s's role: %s."):format(run.instance, date("%m/%d %H:%M:%S", death.t or run.start),
@@ -200,6 +208,7 @@ local function CreateRunsPage()
         end
         if death.synced then lines[#lines + 1] = "|cffaaaaaaHits sent by their own Group History.|r" end
         d.text:SetText(table.concat(lines, "\n"))
+        PlaceList()
         local items = {}
         for i = #(death.hits or {}), 1, -1 do
             local h = death.hits[i]
@@ -218,6 +227,7 @@ local function CreateRunsPage()
         local lines = ns.Popup.RunLines(run)
         table.insert(lines, 2, "With " .. Members(run))
         d.text:SetText(table.concat(lines, "\n"))
+        PlaceList()
         local items = {}
         for _, death in ipairs(run.deaths) do
             items[#items + 1] = {
@@ -255,6 +265,7 @@ end
 -- Settings
 -- ---------------------------------------------------------------------------
 
+-- Through ns:SetOption, so Options > AddOns > Group History (Settings.lua) shows the same values.
 local function CreateSettingsPage()
     local p = NewPage("settings")
     local o = ns.db.options
@@ -269,7 +280,7 @@ local function CreateSettingsPage()
     p.boxes = {}
     for i, c in ipairs(checks) do
         local b = W.MakeCheckbox(p, c[2]); b:SetPoint("TOPLEFT", -4, -30 - (i - 1) * 26)
-        b:SetScript("OnClick", function(self) o[c[1]] = self:GetChecked() and true or false end)
+        b:SetScript("OnClick", function(self) ns:SetOption("db.options." .. c[1], self:GetChecked() and true or false) end)
         if c[3] then Hint(b, c[2], c[3]) end
         p.boxes[c[1]] = b
     end
@@ -280,7 +291,7 @@ local function CreateSettingsPage()
         Muted(Label(p, unit, "GroupHistoryGameFontHighlightSmall", 290, y, 260))
         box:SetScript("OnEnterPressed", function(self)
             local v = tonumber(self:GetText())
-            if v then o[key] = math.max(0, math.floor(v)) end
+            if v then ns:SetOption("db.options." .. key, math.max(0, math.floor(v))) end
             self:SetText(tostring(o[key])); self:ClearFocus()
         end)
         Hint(box, title, hint)
@@ -300,94 +311,49 @@ end
 -- Window
 -- ---------------------------------------------------------------------------
 
-local function ShowTab(name)
-    activeTab = name
-    for key, pg in pairs(pages) do pg:SetShown(key == name) end
-    for key, b in pairs(tabs) do
-        b.selected:SetShown(key == name)
-        b:SetBackdropColor(key == name and 0.09 or 0.075, key == name and 0.15 or 0.105, key == name and 0.17 or 0.13, 1)
-    end
-end
-
-local function CreateMainFrame()
-    if frame then return end
-    frame = CreateFrame("Frame", "GroupHistoryWindow", UIParent, "BackdropTemplate")
-    frame:SetSize(800, 560); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true)
-    frame:SetClampedToScreen(true); frame:SetMovable(true); frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton"); SetBackdrop(frame, 0.985)
-    local w = ns.char.window
-    frame:SetPoint(w.point or "CENTER", UIParent, w.point or "CENTER", w.x or 0, w.y or 0)
-    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local point, _, _, x, y = self:GetPoint()
-        ns.char.window = { point = point, x = x, y = y }
-    end)
-    frame:SetScript("OnShow", function() UI:Refresh() end)
-    tinsert(UISpecialFrames, "GroupHistoryWindow")
-
-    local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
-    logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "Group History", "GroupHistoryGameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Everyone you've run dungeons with, and how it went", "GroupHistoryGameFontHighlightSmall", 70, -42))
-    local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
-    close:SetScript("OnClick", function() frame:Hide() end)
-
-    local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-    side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    SetBackdrop(side); side:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
-    for i, d in ipairs(TABS) do
-        local b = MakeButton(side, d[2], 147, 40); b:SetPoint("TOPLEFT", 9, -12 - (i - 1) * 46)
-        b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
-        local icon = b:CreateTexture(nil, "ARTWORK"); icon:SetSize(23, 23); icon:SetPoint("LEFT", 9, 0)
-        icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
-        b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end end)
-        b:SetScript("OnClick", function() ShowTab(d[1]); UI:Refresh() end)
-        tabs[d[1]] = b
-    end
-    side.current = Muted(Label(side, "", "GroupHistoryGameFontHighlightSmall", 12, -20 - #TABS * 46, 145))
-    Label(side, "v" .. ns.VERSION, "GroupHistoryGameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
-    UI.side = side
-
-    CreatePlayersPage(); CreateRunsPage(); CreateSettingsPage()
-    ShowTab(activeTab); frame:Hide()
-end
+win = ns.NewWindow({
+    name = "GroupHistoryWindow", title = "Group History", subtitle = "Everyone you've run dungeons with, and how it went",
+    tabs = TABS, active = "players",
+    refresh = function() UI:Refresh() end,
+    decorate = function(_, side, count)
+        side.current = Muted(Label(side, "", "GroupHistoryGameFontHighlightSmall", 12, -20 - count * 46, 145))
+        UI.side = side
+    end,
+    build = function() CreatePlayersPage(); CreateRunsPage(); CreateSettingsPage() end,
+})
+UI.window = win
 
 function UI:Refresh()
-    if not (ns.db and frame and frame:IsShown()) then return end
+    if not (ns.db and win:IsShown()) then return end
     local run = ns.Run.current
     UI.side.current:SetText(run and ("In a run:\n|cffffffff%s|r\n%d fights, %d deaths"):format(run.instance, #run.fights, #run.deaths) or "")
-    local p = pages[activeTab]
-    if p and p.Refresh then p.Refresh() end
+    win:Refresh()
 end
 
 function UI:Toggle()
     if not ns.db then return end
-    CreateMainFrame()
-    frame:SetShown(not frame:IsShown())
+    win:Toggle()
 end
 
 function UI:ShowPlayer(full)
     if not ns.db then return end
-    CreateMainFrame()
+    win:Build()
     if full and not ns.History:Get(full) then full = nil end
-    pages.players.full = full
-    ShowTab("players"); frame:Show(); self:Refresh()
+    win.pages.players.full = full
+    win:Show("players")
     if not full then ns:Print("No history with that player.", true) end
 end
 
 function UI:ShowRun(id)
     if not ns.db then return end
-    CreateMainFrame()
-    pages.runs.runID, pages.runs.death = id, nil
-    ShowTab("runs"); frame:Show(); self:Refresh()
+    win:Build()
+    win.pages.runs.runID, win.pages.runs.death = id, nil
+    win:Show("runs")
 end
 
 function UI:ShowDeath(runID, death)
     if not ns.db then return end
-    CreateMainFrame()
-    pages.runs.runID, pages.runs.death = runID, death
-    ShowTab("runs"); frame:Show(); self:Refresh()
+    win:Build()
+    win.pages.runs.runID, win.pages.runs.death = runID, death
+    win:Show("runs")
 end

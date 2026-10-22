@@ -72,7 +72,7 @@ local function BuildClassic(def)
 end
 
 -- ---------------------------------------------------------------------------
--- Modern AuctionHouseFrame (other clients)
+-- Modern AuctionHouseFrame (the one WoW Forever shows)
 -- ---------------------------------------------------------------------------
 
 local function BuildModern(def)
@@ -106,8 +106,8 @@ function AHTabs:Panel(id) return self.byID[id] and self.byID[id].panel end
 -- Tab order and hiding (modern AuctionHouseFrame)
 -- ---------------------------------------------------------------------------
 
--- LibAHTab's spacing between tabs (LibAHTab.lua), as Wally uses it.
-local TAB_OFFSET_X = (WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE and WOW_PROJECT_ID ~= WOW_PROJECT_CAMELOT) and -14 or 3
+-- LibAHTab's spacing between tabs on WoW Forever (LibAHTab.lua's OFFSET_X), as Wally uses it.
+local TAB_OFFSET_X = 3
 local SHOPPING = "AuctionatorTabs_Shopping"
 local WALLY = "Wally" -- Wally's LibAHTab tab (Wally/AuctionTab.lua)
 

@@ -4,11 +4,13 @@ with a tooltip hanging from the coin, holding a small chart. Wally's palette.
 Drawn at 1024 px and scaled down. Run: python make_icon.py <folder>  (writes Icon.tga, Icon.png and Logo.png)
 """
 import os
-import math
 import sys
 from PIL import Image, ImageDraw
 
-S = 1024
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_shared"))
+import iconkit as ik
+from iconkit import S
+
 BASE = (9, 11, 15, 255)
 SIDE = (16, 22, 29, 255)
 WELL = (24, 33, 42, 255)
@@ -21,12 +23,7 @@ MUT = (133, 163, 179, 255)
 GREEN = (89, 242, 140, 255)
 
 
-def layer():
-    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    return img, ImageDraw.Draw(img)
-
-
-img, d = layer()
+img, d = ik.canvas(S, 1)
 # Frame, like the sibling add-ons' icons.
 d.rounded_rectangle([40, 40, S - 40, S - 40], radius=150, fill=BASE, outline=BORDER, width=24)
 
@@ -73,7 +70,7 @@ x0, x1 = TIP[0] + 60, TIP[2] - 60
 base = TIP[3] - 60
 ys = [0.25, 0.45, 0.35, 0.7, 0.55, 0.9]
 pts = [(x0 + (x1 - x0) * i / (len(ys) - 1), base - 190 * v) for i, v in enumerate(ys)]
-over, od = layer()
+over, od = ik.canvas(S, 1)
 od.polygon(pts + [(x1, base), (x0, base)], fill=ACC_DIM)
 img = Image.alpha_composite(img, over)
 d = ImageDraw.Draw(img)
@@ -81,7 +78,4 @@ d.line(pts, fill=ACC, width=30, joint="curve")
 for p in pts:
     d.ellipse([p[0] - 22, p[1] - 22, p[0] + 22, p[1] + 22], fill=ACC)
 
-out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "SimplePanel", "Media")
-img.resize((128, 128), Image.LANCZOS).save(out + "/Icon.tga")
-img.resize((128, 128), Image.LANCZOS).save(out + "/Icon.png")
-img.resize((512, 512), Image.LANCZOS).save(out + "/Logo.png")
+ik.save(img, ik.out_dir("SimplePanel"), (("Icon.tga", 128), ("Icon.png", 128), ("Logo.png", 512)))

@@ -3,7 +3,7 @@ local _, ns = ...
 -- "What you could have done": damage in a recap that YOUR class (or race) has an answer to. A
 -- Serpent Sting doing real damage to a Druid means Cure Poison; a Fireball that went through a
 -- Shaman means Earth Shock; a Fear before the kill on a Forsaken means Will of the Forsaken.
--- WoW Forever / Classic Era abilities, with the level each is learned at (an answer you don't have
+-- WoW Forever abilities, with the level each is learned at (an answer you don't have
 -- yet says so). Only damage is in a recap, so a Fear shows as a pause in the damage.
 local R = {}
 ns.Remedies = R

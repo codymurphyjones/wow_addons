@@ -466,9 +466,13 @@ function Arrow:Undock(frame)
     docked[frame] = nil
 end
 
+-- Through ns:SetOption, so Options > AddOns > Waypoint shows it too; the option re-places them.
 function Arrow:SetDockAlign(align)
     if not ALIGN[align] then return end
-    ns.db.dockAlign = align
+    ns:SetOption("db.dockAlign", align)
+end
+
+function Arrow:PlaceDocked()
     for frame in pairs(docked) do Place(frame) end
 end
 
@@ -478,7 +482,7 @@ end
 
 function Arrow:ShowMenu()
     if not (MenuUtil and MenuUtil.CreateContextMenu) then
-        ns.Targets:Skip(false) -- an older client: what right-click used to do
+        ns.Targets:Skip(false) -- without MenuUtil: what right-click used to do
         return
     end
     MenuUtil.CreateContextMenu(f, function(_, root)
@@ -511,8 +515,7 @@ function Arrow:ShowMenu()
         -- The last few waypoints: hover for the list, click one to clear it.
         local history = ns.Targets:History(5)
         root:CreateCheckbox("Show towns on the map", function() return ns.db.towns end, function()
-            ns.db.towns = not ns.db.towns
-            ns:Changed()
+            ns:ToggleOption("db.towns")
         end)
         local clear = root:CreateButton("Clear waypoint")
         if #history == 0 then
@@ -531,8 +534,8 @@ function Arrow:ShowMenu()
     end)
 end
 
--- The road preference box's menu: Safe, Balanced, Speed (each with what it does). An older client
--- without menus: each click moves on to the next.
+-- The road preference box's menu: Safe, Balanced, Speed (each with what it does). Without
+-- MenuUtil: each click moves on to the next.
 function Arrow:ShowModeMenu(owner)
     local modes = ns.Route.ROAD_MODES
     local function Pick(id)

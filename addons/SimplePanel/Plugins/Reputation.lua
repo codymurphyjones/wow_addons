@@ -25,11 +25,8 @@ local function PerHour(name, id)
     return s.gained / hours
 end
 
-local function Short(n)
-    n = math.floor(n + 0.5)
-    if n >= 10000 then return ("%.1fk"):format(n / 1000) end
-    return tostring(n)
-end
+local SHORT = { tiers = ns.Format.TIERS_K, round = true, abs = false }
+local function Short(n) return ns.Format.Short(n, SHORT) end
 
 SimplePanel.RegisterPlugin({
     id = "Reputation",

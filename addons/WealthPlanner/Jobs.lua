@@ -86,16 +86,8 @@ end
 -- ---------------------------------------------------------------------------
 
 -- Gathering skills by English name -> rank (Classic skill lines).
-function Jobs:Skills()
-    local out = {}
-    if GetNumSkillLines and GetSkillLineInfo then
-        for i = 1, GetNumSkillLines() do
-            local name, isHeader, _, rank = GetSkillLineInfo(i)
-            if name and not isHeader then out[name:lower()] = rank end
-        end
-    end
-    return out
-end
+local SKILL_RANKS = { lower = true }
+function Jobs:Skills() return ns.Player.SkillRanks(SKILL_RANKS) end
 
 local SKILL_NAME = { skin = "skinning", herb = "herbalism", mine = "mining", fish = "fishing" }
 
@@ -106,32 +98,16 @@ local function SkinSkill(level)
     return level * 5
 end
 
-local zoneNames = {}
-function Jobs.ZoneName(mapID)
-    if zoneNames[mapID] == nil then
-        local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
-        zoneNames[mapID] = info and info.name or ("Zone " .. mapID)
-    end
-    return zoneNames[mapID]
-end
+local WM = ns.WorldMap
+function Jobs.ZoneName(mapID) return WM.ZoneName(mapID, "Zone %s") end
 
--- World position (continent, x, y in yards) of a point on a zone map.
-local function World(mapID, x, y)
-    if not (C_Map and C_Map.GetWorldPosFromMapPos and CreateVector2D) then return nil end
-    local ok, continent, pos = pcall(C_Map.GetWorldPosFromMapPos, mapID, CreateVector2D(x / 100, y / 100))
-    if ok and continent and pos then return continent, pos:GetXY() end
-end
+-- World position (continent, x, y in yards) of a point on a zone map (x, y 0-100).
+local function World(mapID, x, y) return WM.World(mapID, x / 100, y / 100) end
 Jobs.World = World
 
 function Jobs:PlayerWorld()
-    if not (C_Map and C_Map.GetBestMapForUnit) then return nil end
-    local map = C_Map.GetBestMapForUnit("player")
-    if not map then return nil end
-    local ok, pos = pcall(C_Map.GetPlayerMapPosition, map, "player")
-    if not (ok and pos) then return nil end
-    local x, y = pos:GetXY()
-    if not x or (x == 0 and y == 0) then return nil end
-    return World(map, x * 100, y * 100)
+    local c, n, w = WM.Player()
+    return c, n, w
 end
 
 -- ---------------------------------------------------------------------------

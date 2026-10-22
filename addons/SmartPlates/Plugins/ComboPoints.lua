@@ -28,8 +28,8 @@ local powerType = POWER_BY_CLASS[CLASS]
 local current -- plate showing the pips
 
 local function Points()
-    -- Classic keeps combo points on the target; Retail keeps them on the player.
-    if powerType == (PT.ComboPoints or 4) and GetComboPoints and not C.IS_MAINLINE then
+    -- Combo points are kept on the target.
+    if powerType == (PT.ComboPoints or 4) and GetComboPoints then
         local max = C.Num(UnitPowerMax("player", powerType)) or 0
         return GetComboPoints("player", "target") or 0, max > 0 and max or 5
     end

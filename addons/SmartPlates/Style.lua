@@ -16,8 +16,12 @@ end
 ns:OnLoad(RebuildCustom)
 ns:Listen("SettingsChanged", RebuildCustom)
 
+-- By name; a player's plate (named "Given Family" on WoW Forever) also by the given name alone, as
+-- custom plates added before the plates showed family names were.
 function Style:Custom(u)
-    return u.name and C.Readable(u.name) and customByName[u.name:lower()] or nil
+    if not (u.name and C.AllReadable(u.name)) then return nil end
+    local name = u.name:lower()
+    return customByName[name] or (u.isPlayer and customByName[name:match("^(%S+)") or name]) or nil
 end
 
 function Style:Decide(u)

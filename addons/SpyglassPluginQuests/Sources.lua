@@ -63,7 +63,7 @@ end
 ---------------------------------------------------------------------------
 
 local STANDINGS = { Hated = 1, Hostile = 2, Unfriendly = 3, Neutral = 4, Friendly = 5, Honored = 6, Revered = 7, Exalted = 8 }
-local standings, skills
+local standings
 
 -- Your standing with a faction by name (1-8), or nil when you haven't met it.
 local function Standing(name)
@@ -79,69 +79,45 @@ local function Standing(name)
     return standings[name]
 end
 
--- Your skill in a profession by name, or nil when you don't have it.
-local function Skill(name)
-    if not skills then
-        skills = {}
-        if GetNumSkillLines and GetSkillLineInfo then
-            for i = 1, GetNumSkillLines() do
-                local sname, isHeader, _, rank = GetSkillLineInfo(i)
-                if sname and not isHeader then skills[sname] = rank end
-            end
-        end
-    end
-    return skills[name]
-end
+-- Your skill in a profession by name, or nil when you don't have it (shared Player.lua: every
+-- skill line by name, cached until the skills change).
+local Skill = ns.Player.Skill
 
-local watcher = CreateFrame("Frame")
-pcall(watcher.RegisterEvent, watcher, "UPDATE_FACTION")
-pcall(watcher.RegisterEvent, watcher, "SKILL_LINES_CHANGED")
-watcher:SetScript("OnEvent", function(_, event)
-    if event == "UPDATE_FACTION" then standings = nil else skills = nil end
-end)
+ns:On("UPDATE_FACTION", function() standings = nil end)
 
 ---------------------------------------------------------------------------
 -- Map spots
 ---------------------------------------------------------------------------
 
-local function MapName(mapID)
-    local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
-    return info and info.name or ("map " .. mapID)
-end
+local WM = ns.WorldMap
+
+local function MapName(mapID) return WM.ZoneName(mapID, "map %s") end
 
 -- The nearest spot your faction can use: one on the map you're on, else the
 -- closest on your continent, else the first. Also how many there are.
-local scratch
 local function NearestSpot(f)
     local faction = UnitFactionGroup("player")
     local usable, best, bestD = 0, nil, math.huge
     local here = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
-    local hereCont, hereWorld
+    local hc, hn, hw
     for _, s in ipairs(Unpack(f).spots) do
         if not s.fac or s.fac == faction then
             usable = usable + 1
             if s.map == here then
                 if bestD > -1 then best, bestD = s, -1 end
             elseif bestD > -1 then
-                if hereWorld == nil then
+                if hc == nil then
                     -- Your own position, once, and only when it's needed.
-                    hereWorld = false
-                    local pos = here and C_Map.GetPlayerMapPosition and C_Map.GetPlayerMapPosition(here, "player")
-                    if pos and C_Map.GetWorldPosFromMapPos then
-                        local ok, cont, world = pcall(C_Map.GetWorldPosFromMapPos, here, pos)
-                        if ok and world then hereCont, hereWorld = cont, world end
-                    end
+                    hc = false
+                    local c, n, w = WM.Player()
+                    if c then hc, hn, hw = c, n, w end
                 end
-                local d = 1e300 -- distance unknown: still better than no spot
-                if hereWorld and CreateVector2D then
-                    scratch = scratch or CreateVector2D(0, 0)
-                    scratch:SetXY(s.x / 100, s.y / 100)
-                    local ok, cont, world = pcall(C_Map.GetWorldPosFromMapPos, s.map, scratch)
-                    if ok and cont == hereCont and world then
-                        local dx, dy = world.x - hereWorld.x, world.y - hereWorld.y
-                        d = math.sqrt(dx * dx + dy * dy)
-                    end
+                local d -- distance unknown: still better than no spot
+                if hc then
+                    local c, n, w = WM.World(s.map, s.x / 100, s.y / 100)
+                    d = WM.Distance(hc, hn, hw, c, n, w)
                 end
+                d = d or 1e300
                 if d < bestD then best, bestD = s, d end
             end
         end

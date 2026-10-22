@@ -106,6 +106,8 @@ end
 -- Price cap for one item: a search entry's max price, else its own cap (maxUnit), else market price
 -- plus tolerance. The market price is the variant's own (Catalog:MarketFor); an enchanted copy
 -- Auctionator can't price uses the price it was seen at when it went on the list (seen = true).
+-- With Wealth Planner's price history the market counts for no more than the item's 30-day normal,
+-- so a spiked market doesn't raise the cap (the fourth value is that normal, when it's lower).
 -- g: the search entry's current group.
 local function MaxUnit(entry, itemID, g)
     if entry.filter and entry.filter.maxPrice then return entry.filter.maxPrice, nil end
@@ -115,7 +117,9 @@ local function MaxUnit(entry, itemID, g)
     -- A cap set by whoever added it (Wealth Planner: the most a buy still pays at).
     if entry.maxUnit then return entry.maxUnit, market, seen end
     if not market then return nil, nil end
-    return market * (1 + ns.Lists:Tolerance(entry) / 100), market, seen
+    local ref, normal = market, nil
+    if not seen and itemID then ref, normal = ns.AuctionPrice.BuyReference(market, itemID) end
+    return ref * (1 + ns.Lists:Tolerance(entry) / 100), ref, seen, (normal and normal < market) and normal or nil
 end
 
 -- Moves to the next unfinished entry and searches for it.
@@ -271,7 +275,7 @@ function Buyer:Choose()
     end
 
     local itemID = CurrentItem(self, entry)
-    local maxUnit, market, seen = MaxUnit(entry, itemID, self.group)
+    local maxUnit, market, seen, spiked = MaxUnit(entry, itemID, self.group)
     local allowed = {}
     for _, l in ipairs(listings) do
         if self.override[entry] or (maxUnit and l.unit <= maxUnit) then allowed[#allowed + 1] = l end
@@ -285,6 +289,10 @@ function Buyer:Choose()
         local text
         if market and seen then
             text = ("No %s within %d%% of the price it was seen at.\n\nSeen at: %s each (Auctionator has no price for this enchant)\nCheapest: %s each (%dx for %s)"):format(
+                ns.Lists:Describe(entry), ns.Lists:Tolerance(entry), ns.Compat.Money(market),
+                ns.Compat.Money(cheapest.unit), cheapest.count, ns.Compat.Money(cheapest.buyout))
+        elseif spiked then
+            text = ("No %s within %d%% of its 30-day normal (the market has spiked above it).\n\nNormal: %s each\nCheapest: %s each (%dx for %s)"):format(
                 ns.Lists:Describe(entry), ns.Lists:Tolerance(entry), ns.Compat.Money(market),
                 ns.Compat.Money(cheapest.unit), cheapest.count, ns.Compat.Money(cheapest.buyout))
         elseif market then
@@ -396,13 +404,12 @@ function Buyer:Focus(listing)
     Changed()
     ns.Scanner:FocusPage(listing.name, listing.page, function(rows)
         if self.entry ~= entry or self.candidate ~= listing then return end
-        local me = UnitName("player")
         -- Replace this page's listings with what's there now.
         local fresh = {}
         for _, l in ipairs(self.listings) do if l.page ~= listing.page then fresh[#fresh + 1] = l end end
         local found
         for _, r in ipairs(rows) do
-            if r.buyout > 0 and not r.sold and r.owner ~= me and r.variant == key then
+            if r.buyout > 0 and not r.sold and not r.mine and r.variant == key then
                 r.unit = r.buyout / r.count
                 fresh[#fresh + 1] = r
                 if not found and r.link == listing.link and r.count == listing.count

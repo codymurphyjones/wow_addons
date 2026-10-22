@@ -29,11 +29,8 @@ end
 
 local function Icon(id) return id and select(5, C.GetItemInfoInstant(id)) or W.UNKNOWN_ICON end
 
-local function Duration(secs)
-    if not secs then return nil end
-    if secs < 3600 then return ("%d min"):format(secs / 60) end
-    return ("%.0fh"):format(secs / 3600)
-end
+local DURATION = { style = "coarse", missing = false }
+local function Duration(secs) return ns.Format.Duration(secs, DURATION) end
 
 local function Signed(copper)
     if not copper then return "|cff8fa3b3-|r" end
@@ -304,7 +301,7 @@ UI:RegisterPage("insights", function(p)
         local items = {}
         for _, c in ipairs(ns.Portfolio:Characters()) do
             items[#items + 1] = {
-                noIcon = true, text = c.name .. (c.key == ns.CharKey() and "  |cff8fa3b3(you)|r" or ""),
+                noIcon = true, text = c.name .. (ns.Units.Same(c.key, ns.CharKey()) and "  |cff8fa3b3(you)|r" or ""),
                 detail = ("Cash %s   Goods %s   Auctions %s%s   |cff8fa3b3updated %s|r"):format(ns.Gold(c.cash), ns.Gold(c.goods),
                     ns.Gold(c.auctions), c.mail > 0 and ("   Mail " .. ns.Gold(c.mail)) or "", c.t and date("%m/%d %H:%M", c.t) or "?"),
                 right = "|cffffffff" .. ns.Gold(c.total) .. "|r",
@@ -312,7 +309,7 @@ UI:RegisterPage("insights", function(p)
         end
         wealth.list:Set(items, "Log in on each character once to add it here.")
         return ("%d character%s on %s. Goods are valued at market (never above what a vendor charges); unrealized is what selling the goods you bought would make, after the cut. Free goods (farmed): %s."):format(
-            a.chars, a.chars == 1 and "" or "s", GetRealmName() or "?", ns.Gold(free))
+            a.chars, a.chars == 1 and "" or "s", ns.Units.RealmLabel(), ns.Gold(free))
     end
 
     local REFRESH = { plans = RefreshPlans, timing = RefreshTiming, convert = RefreshConvert, deposits = RefreshDeposits, wealth = RefreshWealth }

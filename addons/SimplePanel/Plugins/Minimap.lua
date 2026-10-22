@@ -37,7 +37,7 @@ local function SetPoints(f, pts)
     for _, pt in ipairs(pts) do f:SetPoint(unpack(pt)) end
 end
 
-local function Pct(v) return ("%d%%"):format(v * 100 + 0.5) end
+local function Pct(v) return ns.Format.Pct(v) end
 
 local function IsAncestor(f, child)
     local cur = child:GetParent()
@@ -63,8 +63,6 @@ local function ByMinimap(f)
     end
 end
 
-local IS_CLASSIC = WOW_PROJECT_ID ~= nil and WOW_PROJECT_MAINLINE ~= nil and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE
-
 -- ---------------------------------------------------------------------------
 -- Corner frames: the game's own buttons moved into a corner, some redrawn
 -- ---------------------------------------------------------------------------
@@ -86,10 +84,9 @@ local CORNERS = {
             return (taken.battlefield or (bf and OnMinimap(bf))) and "BOTTOMRIGHT" or "BOTTOMLEFT"
         end,
         find = function()
-            -- Classic clients with the newer queue eye keep it by the map; on retail it's by the
-            -- micro menu and stays there.
+            -- The newer queue eye is kept by the map.
             local q = QueueStatusButton
-            if q and (ByMinimap(q) or IS_CLASSIC) then return q end
+            if q then return q end
             for _, name in ipairs({ "QueueStatusMinimapButton", "MiniMapLFGFrame", "LFGMinimapFrame" }) do
                 local f = _G[name]
                 if f and ByMinimap(f) then return f end
@@ -308,10 +305,10 @@ local MAP_PARTS = {
 
 -- Hidden by parenting them to a hidden frame, so the game showing them again changes nothing.
 -- Unnamed things on the map itself are left alone (they're add-ons' pins); the named parts above
--- go wherever the client put them (some clients hang the day/night button on the map).
+-- go wherever the game put them (it may hang the day/night button on the map).
 local faded = {}  -- [frame] = its alpha, for protected parts we can't reparent
 local function Hide(f, named)
-    -- A protected part (newer clients protect some of the map's buttons) can't be moved out of
+    -- A protected part (the game protects some of the map's buttons) can't be moved out of
     -- the way; it's made invisible instead, and stops taking the mouse while out of combat.
     if named and f and f ~= Minimap and not faded[f] and f.IsProtected and f:IsProtected() and f.SetAlpha then
         faded[f] = f:GetAlpha()
@@ -337,7 +334,7 @@ local function HideAll()
         -- Corner frames were moved to the square first, so they aren't the cluster's any more.
         for _, f in ipairs({ c:GetChildren() }) do Hide(f) end
         for _, r in ipairs({ c:GetRegions() }) do Hide(r) end
-        -- Newer clients hold the map in c.MinimapContainer, beside the player coordinates
+        -- The game holds the map in c.MinimapContainer, beside the player coordinates
         -- (PlayerCoords) and the day/night moon (c.DielFrame, unnamed): everything there but the map.
         local holder = c.MinimapContainer
         if holder then
@@ -778,7 +775,7 @@ local function Activate(p)
         box:SetFrameStrata("BACKGROUND")
         box:SetBackdrop({ bgFile = T.white, edgeFile = T.white, edgeSize = 1 })
         box:EnableMouse(false)
-        -- The game's minimap buttons on newer clients ask their parent to re-lay itself out; the
+        -- The game's minimap buttons ask their parent to re-lay itself out; the
         -- square places its corners itself, so there's nothing to do.
         box.Layout = function() end
         MakeCalendar()

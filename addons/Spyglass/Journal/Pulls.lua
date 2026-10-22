@@ -32,7 +32,7 @@ end
 function P:PlanFor(key)
     local db = ns.J.db
     if db.followHost ~= false and self.shared[key] and not G:IsHost() then
-        return self.shared[key], (self.sharedFrom and Ambiguate(self.sharedFrom, "short") .. "'s") or "the host's"
+        return self.shared[key], (self.sharedFrom and ns.Units.Display(self.sharedFrom) .. "'s") or "the host's"
     end
     return self:MyPlan(key), nil
 end
@@ -98,7 +98,7 @@ local function ShareCurrent()
 end
 
 G:On("PLAN", function(payload, sender)
-    if sender ~= G.host then return end -- only the host's plan is shared
+    if not ns.Units.Same(sender, G.host) then return end -- only the host's plan is shared
     local key, plan = P:Decode(payload)
     if not key then return end
     P.shared[key], P.sharedFrom = plan, sender
@@ -207,6 +207,7 @@ function P:Build(parent)
     side:SetPoint("TOPLEFT", holder, "TOPRIGHT", 8, 0); side:SetPoint("BOTTOMRIGHT")
     page.group = side:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     page.group:SetPoint("TOPLEFT", 0, 0); page.group:SetWidth(274); page.group:SetJustifyH("LEFT")
+    page.group:SetMaxLines(2) -- the checkbox sits two lines below
     page.follow = CreateFrame("CheckButton", nil, side, "UICheckButtonTemplate")
     page.follow:SetSize(24, 24); page.follow:SetPoint("TOPLEFT", -4, -30)
     page.follow.text = page.follow.text or page.follow.Text
@@ -320,7 +321,7 @@ function P:Refresh()
     if G:InGroup() then
         local n = 0
         for _ in pairs(G.peers) do n = n + 1 end
-        local host = G.host and (G:IsHost() and "you" or Ambiguate(G.host, "short")) or "nobody yet"
+        local host = G.host and (G:IsHost() and "you" or ns.Units.Display(G.host)) or "nobody yet"
         page.group:SetText(("Group: %d with SpyGlass. Host: |cffffffff%s|r.%s"):format(n, host,
             G:IsHost() and " Your plan is shared with the group." or (from and (" Showing " .. from .. " plan.") or "")))
     else

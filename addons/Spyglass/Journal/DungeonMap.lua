@@ -43,6 +43,28 @@ end
 function M:Current()
     if not IsInInstance() then return nil end
     local name, _, _, _, _, _, _, instanceID = GetInstanceInfo()
+    local pulls = ns.PullData and ns.PullData.instances or {}
+    -- The suite's instance list (shared\Instances.lua) knows the place by its map ID or any name.
+    -- Its maps are under its own key, or one per wing: the wing its name says, else the wing
+    -- whose floors you're on, else the first.
+    local inst, wing = ns.Instances:Find(name, instanceID)
+    if inst then
+        if wing and wing.loot and pulls[wing.loot] then return wing.loot end
+        if pulls[inst.key] then return inst.key end
+        local map = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+        local first
+        for _, w in ipairs(inst.wings or {}) do
+            local d = w.loot and pulls[w.loot]
+            if d then
+                first = first or w.loot
+                for _, floor in ipairs(d.uiMap or {}) do
+                    if map and floor == map then return w.loot end
+                end
+            end
+        end
+        if first then return first end
+    end
+    -- Places the list doesn't have: by the map data's own IDs and names.
     local lname = name and name:lower()
     for key, d in pairs(ns.PullData and ns.PullData.instances or {}) do
         if (instanceID and d.instanceID == instanceID) or (lname and d.name and d.name:lower() == lname) then return key end

@@ -6,6 +6,9 @@
 ## Category: Map
 ## OptionalDeps: Waypoint
 ## IconTexture: Interface\AddOns\Convergence\Media\Icon
+## X-Curse-Project-ID: 1759230
 
+..\shared\Core.lua
+..\shared\WorldMap.lua
 Data.lua
 Convergence.lua

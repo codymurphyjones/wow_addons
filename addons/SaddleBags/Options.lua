@@ -35,6 +35,10 @@ local function GetRow(n)
 	r:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -(n - 1) * ROW_H)
 	r:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -(n - 1) * ROW_H)
 	r:Show()
+	-- One line that ends before the row's buttons (SetButton moves its right edge left of each
+	-- one): a long window name is cut short instead of running under them.
+	r.label:SetPoint("RIGHT", r, "RIGHT", 0, 0)
+	r.label:SetWordWrap(false)
 	for _, b in ipairs(r.buttons) do
 		b:Hide()
 		b:Enable()
@@ -50,6 +54,7 @@ local function SetButton(r, k, text, onClick, width)
 	b:SetText(text)
 	b:SetScript("OnClick", onClick)
 	b:Show()
+	r.label:SetPoint("RIGHT", b, "LEFT", -6, 0)
 end
 
 local function AddCheck(anchor, text, onClick)
@@ -294,6 +299,7 @@ function TS:RefreshOptions()
 	r.label:SetFontObject(SaddleBagsGameFontHighlightSmall)
 	r.label:SetText("Pick a Saddle and tab to lock a window into it; it re-attaches every login. "
 		.. "|cffff8040Protected|r windows freeze their Saddle during combat.")
+	r.label:SetWordWrap(true) -- two small lines fit the row; one would run past the page's edge
 
 	-- Damage meter windows 2+ come and go, so they're listed right after the
 	-- main damage meter entry each time the page refreshes.

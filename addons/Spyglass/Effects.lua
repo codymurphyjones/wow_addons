@@ -42,8 +42,7 @@ local function Spells()
 end
 
 -- The talents you have points in, with their tooltip text (read once per
--- talent change from a hidden tooltip).
-local scanTip
+-- talent change from a hidden tooltip: shared Tooltip.lua).
 local function Talents()
     if talents then return talents end
     talents = {}
@@ -52,19 +51,8 @@ local function Talents()
         for i = 1, (GetNumTalents and GetNumTalents(tab) or 0) do
             local name, _, _, _, rank = GetTalentInfo(tab, i)
             if name and rank and rank > 0 then
-                local text = name
-                if not scanTip then
-                    scanTip = CreateFrame("GameTooltip", "SpyGlassTalentScanTip", nil, "GameTooltipTemplate")
-                end
-                scanTip:SetOwner(WorldFrame, "ANCHOR_NONE")
-                scanTip:ClearLines()
-                if pcall(scanTip.SetTalent, scanTip, tab, i) then
-                    for line = 2, scanTip:NumLines() do
-                        local left = _G["SpyGlassTalentScanTipTextLeft" .. line]
-                        text = text .. " " .. (left and left:GetText() or "")
-                    end
-                end
-                scanTip:Hide()
+                local more = ns.Tooltip.Text(ns.Tooltip.Lines("talent", tab, i) or {}, 2)
+                local text = more ~= "" and (name .. " " .. more) or name
                 talents[#talents + 1] = { name = name, text = text:lower(), points = rank }
             end
         end

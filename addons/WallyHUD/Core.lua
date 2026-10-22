@@ -1,4 +1,4 @@
-local addonName, ns = ...
+local _, ns = ...
 
 -- WallyHUD: the suite's design system and HUD. It loads last (its TOC lists every addon of ours
 -- as an optional dependency), repaints their palettes to one look (Palettes.lua), and owns the
@@ -7,7 +7,11 @@ local addonName, ns = ...
 -- AddOns > WallyHUD, or /whud.
 WallyHUD = WallyHUD or {}
 ns.VERSION = "0.1.0"
-WallyHUD.VERSION = ns.VERSION
+WallyHUD.VERSION = 1             -- the API's version (a number, as every suite API has)
+WallyHUD.RELEASE = ns.VERSION    -- the addon's release ("0.1.0")
+
+-- Events and saved variables: the shared Core.lua (addons/shared). Print and Debug stay here.
+ns.SAVED = { db = "WallyHUDDB", char = "WallyHUDCharDB" }
 
 ns.DEFAULTS = {
     suiteLook = true,      -- repaint our addons to the shared look (a /reload to change)
@@ -19,43 +23,10 @@ ns.DEFAULTS = {
 }
 ns.CHAR_DEFAULTS = {}
 
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then dst[k] = {} end
-            Merge(dst[k], v)
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
-    end
-    return dst
-end
+ns:OnLoad(function() WallyHUD.db = ns.db end)
 
 function ns:Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(WallyHUD.Hex(ns.T.accent) .. "WallyHUD|r: " .. tostring(msg))
-end
-
-local frame = CreateFrame("Frame")
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
-    end
-    table.insert(handlers[event], fn)
-end
--- Each handler on its own: one that fails is reported (the game's error frame, BugSack...) and
--- the others still run.
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do
-        local ok, err = pcall(fn, ...)
-        if not ok then geterrorhandler()(err) end
-    end
-end)
-
-function ns:OnLoad(fn)
-    self.onLoad = self.onLoad or {}
-    table.insert(self.onLoad, fn)
 end
 
 -- Our addons that drew something before WallyHUD loaded (it loads last) put a function in
@@ -69,15 +40,6 @@ ns:On("PLAYER_LOGIN", function()
             if not ok then geterrorhandler()(err) end
         end
     end)
-end)
-
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    WallyHUDDB = Merge(type(WallyHUDDB) == "table" and WallyHUDDB or {}, ns.DEFAULTS)
-    WallyHUDCharDB = Merge(type(WallyHUDCharDB) == "table" and WallyHUDCharDB or {}, ns.CHAR_DEFAULTS)
-    ns.db, ns.char = WallyHUDDB, WallyHUDCharDB
-    WallyHUD.db = ns.db
-    for _, fn in ipairs(ns.onLoad or {}) do fn() end
 end)
 
 -- /whud debug: what WallyHUD sees, and what's under the mouse (point at something, type it).

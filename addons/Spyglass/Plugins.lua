@@ -103,7 +103,7 @@ function P:Scan(quiet)
             end
         end
     end
-    -- Some clients turn LoadAddOn down during login; try once more shortly.
+    -- LoadAddOn can be turned down during login; try once more shortly.
     if retry and not self.retried then
         self.retried = true
         C_Timer.After(2, function()

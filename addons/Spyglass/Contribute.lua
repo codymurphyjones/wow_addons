@@ -64,9 +64,7 @@ local function Place()
     return map and ("m" .. map) or nil
 end
 
-local function ItemID(link)
-    return link and tonumber(link:match("item:(%d+)"))
-end
+local function ItemID(link) return ns.Items.IDFromLink(link) end
 
 local function Wanted(itemID)
     local _, _, _, classID = ns:Instant(itemID)
@@ -272,11 +270,10 @@ end
 local trainer, lastItem, lastQuest
 
 local function OnRecipeItemUsed(bag, slot)
-    local link = C_Container and C_Container.GetContainerItemLink and C_Container.GetContainerItemLink(bag, slot)
-        or (GetContainerItemLink and GetContainerItemLink(bag, slot))
-    local itemID = ItemID(link)
+    local ok, link = pcall(ns.Items.GetSlotLink, bag, slot)
+    local itemID = ok and ItemID(link) or nil
     local _, _, _, classID = ns:Instant(itemID or 0)
-    if itemID and classID == 9 then lastItem = { id = itemID, t = GetTime() } end
+    if itemID and classID == ns.Items.CLASS.RECIPE then lastItem = { id = itemID, t = GetTime() } end
 end
 
 local function OnLearned(spell)
@@ -295,7 +292,7 @@ local function OnLearned(spell)
     if not C.KnownFact(fact) then Note(fact) end
 end
 
--- "You have learned how to create a new item: X" (clients without NEW_RECIPE_LEARNED).
+-- "You have learned how to create a new item: X" (when NEW_RECIPE_LEARNED doesn't fire).
 local function OnSystemMessage(text)
     local pattern = ERR_LEARN_RECIPE_S and ERR_LEARN_RECIPE_S:gsub("%%s", "(.+)")
     local name = pattern and text and text:match("^" .. pattern .. "$")
@@ -498,8 +495,9 @@ local function Store(fact, sender)
         entry = { n = 0, s = {}, t = time() }
         ns.db.collected[fact] = entry
     end
-    -- Senders are only counted (a salted hash), never kept by name.
-    local who = Hash(salt .. (sender or "?"))
+    -- Senders are only counted (a salted hash of the compact name, so every shape of one name
+    -- counts once), never kept by name.
+    local who = Hash(salt .. (ns.Units.Compact(sender) or "?"))
     if not entry.s[who] then
         entry.s[who] = true
         entry.n = entry.n + 1
@@ -644,10 +642,10 @@ function C:Apply()
     end
 end
 
+-- Through ns:SetOption, so Options > AddOns > SpyGlass shows it; the option's apply (Settings.lua)
+-- starts or stops sharing (C:Apply, Sync:Apply).
 function C:SetEnabled(on)
-    ns.db.contribute = on and true or nil
-    self:Apply()
-    if ns.Sync then ns.Sync:Apply() end
+    ns:SetOption("db.contribute", on and true or false)
 end
 
 -- /sg collect [on|off|status]

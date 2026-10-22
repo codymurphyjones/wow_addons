@@ -27,24 +27,23 @@ retried with backoff; stops after 5 straight failures), so reruns cost nothing.
 
     python tools/Spyglass/fetch_pulls.py
 """
-import csv
-import gzip
-import hashlib
 import io
-import json
 import os
-import random
 import re
 import site
 import struct
 import sys
-import time
 
 sys.path.append(site.getusersitepackages())  # Pillow / numpy from a --user install
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_shared"))
-import webfetch  # noqa: E402  (pages from a real browser: Wowhead refuses curl)
+import fetcher as fetching  # noqa: E402  (paced, cached; pages from a real browser: Wowhead refuses curl)
+import luawrite  # noqa: E402
+import paths  # noqa: E402
+import sqldump  # noqa: E402
+from sqldump import columns, sql_rows  # noqa: E402
+from wowhead import balanced, js_literal  # noqa: E402
 
 ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "Spyglass")  # tools/Spyglass/ builds addons/Spyglass/
 OUT = os.path.join(ADDON, "Journal", "PullData.lua")
@@ -52,24 +51,14 @@ MEDIA = os.path.join(ADDON, "Media", "Pulls")
 ZONE_ART = os.path.join(ADDON, "Journal", "ZoneArt.lua")
 CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".wowhead_cache")
 WOWHEAD = "https://www.wowhead.com/forever/"
-WAGO = "https://wago.tools/db2/%s/csv"
 CLASSIC_BUILD = "1.15.9.70003"  # classic era: only its Map table is complete on wago
 CASC = "https://wago.tools/api/casc/%d"
-CMANGOS = "https://raw.githubusercontent.com/cmangos/classic-db/master/Full_DB/ClassicDB_1_12_1_z2815.sql.gz"
-# A plain UA: Wowhead answers longer custom ones with an empty HTTP 202 bot
-# challenge, and full browser strings with 403.
-UA = "Mozilla/5.0"
 PACE = (1.5, 3.0)   # seconds between Wowhead requests
 FILE_PACE = 0.4     # between wago / GitHub downloads
 LINK = 3.0          # pack clustering distance, map units (0-100)
 TEX_W, TEX_H = 1024, 512
 USED_W, USED_H = 768, 512   # the 1002x668 art keeps its 3:2 shape
 ART_W, ART_H = 1002, 668
-
-ATLAS_PATHS = [
-    os.path.join(ADDON, "..", "AtlasLootClassic_DungeonsAndRaids", "data.lua"),
-    r"Z:\Games\World of Warcraft\_classic_beta_\Interface\AddOns\AtlasLootClassic_DungeonsAndRaids\data.lua",
-]
 
 # Zone (area) ID -> instance map ID (Map.db; GetInstanceInfo()'s 8th value).
 INSTANCE_MAP = {
@@ -88,123 +77,17 @@ WING_FLOORS = {
 
 
 # ---------------------------------------------------------------------------
-# Fetching: paced, cached, retried (pattern from fetch_wowhead_quests.py)
+# Fetching: paced, cached, retried (tools/_shared/fetcher.py)
 # ---------------------------------------------------------------------------
 
-class RetryLater(Exception):
-    pass
+def Fetcher():
+    return fetching.Fetcher(CACHE, pace=PACE, file_pace=FILE_PACE, timeout=120, min_backoff=2, skip_empty=True,
+                            none_on_404=True, flush=True,
+                            give_up="Downloads keep failing; stopped. Rerun later: the cache keeps what's done.")
 
 
-def download(url, binary=False):
-    # A real browser session (tools/_shared/webfetch.py): Wowhead refuses curl and urllib.
-    code, body = webfetch.fetch(url, binary=binary, timeout=120)
-    if code in (403, 429) or code >= 500 or code == 0:
-        raise RetryLater("HTTP %d" % code)
-    if code == 404:
-        return None
-    if code == 202 or not body.strip():
-        raise RetryLater("HTTP %d, empty answer" % code)  # a bot challenge: never cached
-    return body
-
-
-class Fetcher:
-    def __init__(self):
-        self.last, self.requests, self.failures = 0.0, 0, 0
-        os.makedirs(CACHE, exist_ok=True)
-
-    def get(self, url, binary=False, name=None):
-        path = os.path.join(CACHE, name or hashlib.sha1(url.encode("utf-8")).hexdigest() + ".html")
-        if os.path.exists(path) and os.path.getsize(path) > 0:  # empty: a refused answer
-            if binary:
-                with open(path, "rb") as f:
-                    return f.read()
-            with open(path, encoding="utf-8") as f:
-                return f.read()
-        wowhead = "wowhead.com" in url
-        delay = random.uniform(*PACE) if wowhead else FILE_PACE
-        for _ in range(6):
-            wait = self.last + delay - time.time()
-            if wait > 0:
-                time.sleep(wait)
-            self.last = time.time()
-            self.requests += 1
-            try:
-                data = download(url, binary)
-            except RetryLater as e:
-                print("  %s (%s); waiting %.0fs" % (url, e, max(delay, 2) * 4), flush=True)
-                delay = max(delay, 2) * 4
-                continue
-            self.failures = 0
-            if data is None:
-                return None
-            if binary:
-                with open(path, "wb") as f:
-                    f.write(data)
-            else:
-                with open(path, "w", encoding="utf-8", newline="\n") as f:
-                    f.write(data)
-            return data
-        self.failures += 1
-        if self.failures >= 5:
-            raise SystemExit("Downloads keep failing; stopped. Rerun later: the cache keeps what's done.")
-        return None
-
-    def table(self, name, build=None):
-        url = WAGO % name + ("?build=" + build if build else "")
-        text = self.get(url) or ""
-        return list(csv.DictReader(io.StringIO(text)))
-
-
-# ---------------------------------------------------------------------------
-# Wowhead's JS literals (from fetch_wowhead_quests.py)
-# ---------------------------------------------------------------------------
-
-KEY = re.compile(r"([A-Za-z_]\w*)(\s*:)")
-
-
-def js_literal(text):
-    out, i, n, last = [], 0, len(text), ""
-    while i < n:
-        c = text[i]
-        if c == '"':
-            j = i + 1
-            while text[j] != '"':
-                j += 2 if text[j] == "\\" else 1
-            out.append(text[i:j + 1])
-            last, i = '"', j + 1
-            continue
-        if last in ("{", ","):
-            m = KEY.match(text, i)
-            if m:
-                out.append('"%s"%s' % (m.group(1), m.group(2)))
-                last, i = ":", m.end()
-                continue
-        out.append(c)
-        if not c.isspace():
-            last = c
-        i += 1
-    return json.loads("".join(out))
-
-
-def balanced(s, i):
-    depth, j, in_str = 0, i, False
-    while j < len(s):
-        c = s[j]
-        if in_str:
-            if c == "\\":
-                j += 1
-            elif c == '"':
-                in_str = False
-        elif c == '"':
-            in_str = True
-        elif c in "[{":
-            depth += 1
-        elif c in "]}":
-            depth -= 1
-            if depth == 0:
-                return s[i:j + 1]
-        j += 1
-    raise ValueError("unbalanced literal")
+def table(fetcher, name, build=None):
+    return fetching.wago_table(fetcher, name, build)
 
 
 def zone_npcs(fetcher, area):
@@ -233,12 +116,10 @@ def instance_keys():
 
 def atlas_instances():
     """{ key: (area, [boss npcIDs]) } from AtlasLootClassic."""
-    for path in ATLAS_PATHS:
-        if os.path.exists(path):
-            text = open(path, encoding="utf-8").read()
-            break
-    else:
+    path = paths.atlasloot_data()
+    if not path:
         raise SystemExit("AtlasLootClassic_DungeonsAndRaids/data.lua not found")
+    text = open(path, encoding="utf-8").read()
     heads = list(re.finditer(r'^data\["([^"]+)"\]\s*=\s*\{', text, re.M))
     out = {}
     for n, m in enumerate(heads):
@@ -252,66 +133,8 @@ def atlas_instances():
     return out
 
 
-def sql_rows(text, table):
-    """Value tuples of every INSERT INTO `table`."""
-    rows = []
-    for m in re.finditer(r"INSERT INTO `%s` VALUES " % table, text):
-        i, n = m.end(), len(text)
-        while i < n and text[i] == "(":
-            row, i = parse_tuple(text, i + 1)
-            rows.append(row)
-            if text[i] == ",":
-                i += 1
-            while text[i] in "\r\n ":
-                i += 1
-            if text[i] == ";":
-                break
-    return rows
-
-
-def parse_tuple(s, i):
-    vals, cur = [], []
-    while True:
-        c = s[i]
-        if c == "'":
-            j, buf = i + 1, []
-            while True:
-                if s[j] == "\\":
-                    buf.append(s[j + 1])
-                    j += 2
-                elif s[j] == "'" and s[j + 1] == "'":
-                    buf.append("'")
-                    j += 2
-                elif s[j] == "'":
-                    break
-                else:
-                    buf.append(s[j])
-                    j += 1
-            vals.append("".join(buf))
-            i = j + 1
-            cur = None
-        elif c in ",)":
-            if cur is not None:
-                tok = "".join(cur).strip()
-                vals.append(None if tok == "NULL" else (float(tok) if "." in tok or "e" in tok.lower() else int(tok)))
-            cur = []
-            i += 1
-            if c == ")":
-                return vals, i
-        else:
-            if cur is not None:
-                cur.append(c)
-            i += 1
-
-
-def columns(text, table):
-    m = re.search(r"CREATE TABLE `%s` \((.*?)\n\) ENGINE" % table, text, re.S)
-    return [ln.strip().split()[0].strip("`") for ln in m.group(1).split("\n") if ln.strip().startswith("`")]
-
-
 def world_db(fetcher, maps):
-    data = fetcher.get(CMANGOS, binary=True, name="cmangos-classic-db.sql.gz")
-    text = gzip.decompress(data).decode("utf-8", "replace")
+    text = sqldump.cmangos(fetcher)
     ccol = columns(text, "creature")
     spawns = [dict(zip(ccol, r)) for r in sql_rows(text, "creature")]
     spawns = [s for s in spawns if s["map"] in maps]
@@ -368,22 +191,22 @@ def world_db(fetcher, maps):
 
 class Floors:
     def __init__(self, fetcher):
-        self.uimap = {int(r["ID"]): r for r in fetcher.table("UiMap")}
-        self.group = {int(r["UiMapID"]): r for r in fetcher.table("UiMapGroupMember")}
-        self.areas = {int(r["ID"]): r["AreaName_lang"] for r in fetcher.table("AreaTable")}
+        self.uimap = {int(r["ID"]): r for r in table(fetcher, "UiMap")}
+        self.group = {int(r["UiMapID"]): r for r in table(fetcher, "UiMapGroupMember")}
+        self.areas = {int(r["ID"]): r["AreaName_lang"] for r in table(fetcher, "AreaTable")}
         self.assign = {}
-        for r in fetcher.table("UiMapAssignment"):
+        for r in table(fetcher, "UiMapAssignment"):
             m = int(r["MapID"])
             row = {k: float(r[k]) for k in ("UiMin_0", "UiMin_1", "UiMax_0", "UiMax_1", "Region_0", "Region_1",
                                              "Region_2", "Region_3", "Region_4", "Region_5")}
             row.update(uimap=int(r["UiMapID"]), area=int(r["AreaID"]), order=int(r["OrderIndex"]))
             self.assign.setdefault(m, []).append(row)
         self.art = {}
-        for r in fetcher.table("UiMapXMapArt"):
+        for r in table(fetcher, "UiMapXMapArt"):
             if r["PhaseID"] == "0":
                 self.art.setdefault(int(r["UiMapID"]), int(r["UiMapArtID"]))
         self.tiles = {}
-        for r in fetcher.table("UiMapArtTile"):
+        for r in table(fetcher, "UiMapArtTile"):
             if r["LayerIndex"] == "0":
                 self.tiles.setdefault(int(r["UiMapArtID"]), []).append(
                     (int(r["RowIndex"]), int(r["ColIndex"]), int(r["FileDataID"])))
@@ -644,7 +467,7 @@ def hostile_factions(fetcher):
     hostile mobs (wolves: "Prey") are hostile only through their faction's default
     reputation, so friendliness is what is tested, not the enemy masks."""
     out = set()
-    for r in fetcher.table("FactionTemplate"):
+    for r in table(fetcher, "FactionTemplate"):
         group, friend = int(r["FactionGroup"]), int(r["FriendGroup"])
         if group & 7 or friend & 7:
             continue
@@ -658,7 +481,7 @@ def fmt(v):
 
 
 def lua_str(s):
-    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    return luawrite.lua_str(s, lf="keep", cr="keep")  # quotes and backslashes only
 
 
 def file_name(key, n):
@@ -676,7 +499,7 @@ def main():
     if missing:
         print("not in AtlasLoot:", missing)
     floors = Floors(fetcher)
-    names = {int(r["ID"]): r["MapName_lang"] for r in fetcher.table("Map", CLASSIC_BUILD)}
+    names = {int(r["ID"]): r["MapName_lang"] for r in table(fetcher, "Map", CLASSIC_BUILD)}
     hostile = hostile_factions(fetcher)
 
     by_map = {}

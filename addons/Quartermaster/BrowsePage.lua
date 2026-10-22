@@ -11,11 +11,8 @@ local MakeEditBox, MakeNumberBox, MakeCheckbox = W.MakeEditBox, W.MakeNumberBox,
 local PER_PAGE = 50
 local CAT_W = 150
 
-local function AgeText(days)
-    if not days then return "" end
-    if days < 1 then return "today" end
-    return math.floor(days) .. "d ago"
-end
+local AGE = { days = true, today = true, missing = "" }
+local function AgeText(days) return ns.Format.Ago(days, AGE) end
 
 local function Build(p)
     local state = { page = 1, sortKey = "name", desc = false, filters = {}, results = {} }

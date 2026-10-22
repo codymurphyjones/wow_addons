@@ -16,7 +16,6 @@ Blockers (walls, fences, cliff edges) and narrow passes are packaged as they wer
 Output: ns.Roads[continent] = { roads = { { n, w, n, w, ... } }, blockers = { { n, w, ... } },
 passes = { { n, w } } }, world yards to a tenth.
 """
-import glob
 import math
 import os
 import sys
@@ -29,8 +28,9 @@ REPO = os.path.dirname(TOOLS)
 ADDON = os.path.join(REPO, "addons", "Waypoint")
 SMOOTH = os.path.join(REPO, "addons", "RoadLog", "Smooth.lua")
 OUT = os.path.join(ADDON, "Data", "Roads.lua")
-WTF = os.environ.get("WOW_WTF") or r"Z:\Games\World of Warcraft\_classic_beta_\WTF"
 sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(TOOLS, "_shared"))
+import savedvars  # noqa: E402
 import check_water as CW  # noqa: E402  (reads Data/Water.lua's squares and links)
 
 CHECK_EVERY = 10  # yards between the points a road is checked at against the land map
@@ -47,11 +47,9 @@ def lua_dict(t):
 def read_logs(lua):
     """Every account's RoadLog: { continent: { "roads": [(at, flat)], "blockers": [...], "passes": [(n, w)] } }."""
     out = {}
-    files = glob.glob(os.path.join(WTF, "Account", "*", "SavedVariables", "RoadLog.lua"))
+    files = savedvars.files("RoadLog")
     for path in files:
-        lua.execute("RoadLogDB = nil")
-        lua.execute(open(path, encoding="utf-8").read())
-        db = lua.globals().RoadLogDB
+        db = savedvars.load(path, "RoadLogDB", lua=lua)  # one runtime for every file (Smooth.lua's)
         if db is None:
             continue
         for key in ("roads", "blockers"):

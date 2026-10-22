@@ -355,7 +355,7 @@ end
 Rules[#Rules + 1] = function(f, ctx)
     local m = f.meter
     if not (m and m.ledger) then return nil end
-    local me = UnitName("player")
+    local me = ns.Compat.Me()
     local best, bestTotal = nil, 0
     for name, h in pairs(m.ledger) do
         if name ~= me and h.total > bestTotal then best, bestTotal = name, h.total end

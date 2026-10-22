@@ -1,7 +1,9 @@
 local _, ns = ...
 
 -- Settings: job estimates, map pins, the tracker and price history. (The investment target lives
--- on the Invest tab at the auction house.)
+-- on the Invest tab at the auction house.) Every control writes through ns:SetOption, so
+-- Options > AddOns > Wealth Planner (Settings.lua) shows the same values; the options' applies
+-- there redo the job board and the analytics.
 local W = ns.Widgets
 local UI = ns.UI
 local Label, Muted, Hint = W.Label, W.Muted, W.Hint
@@ -16,7 +18,7 @@ UI:RegisterPage("settings", function(p)
         Muted(Label(p, unit, "WealthPlannerGameFontHighlightSmall", 278, y, 300))
         local function Save(self)
             local v = self:GetValue()
-            if v then o[key] = math.max(min, math.min(max, math.floor(v + 0.5))); ns.Jobs:Invalidate(); ns:Changed() end
+            if v then ns:SetOption("db.options." .. key, math.max(min, math.min(max, math.floor(v + 0.5)))) end
             self:SetValue(o[key])
         end
         box:SetScript("OnEnterPressed", function(self) Save(self); self:ClearFocus() end)
@@ -24,14 +26,10 @@ UI:RegisterPage("settings", function(p)
         Hint(box, title, hint)
         p[key] = box
     end
-    local function Toggle(y, text, key, hint, onChange)
+    local function Toggle(y, text, key, hint)
         local c = W.MakeCheckbox(p, text)
         c:SetPoint("TOPLEFT", -4, y)
-        c:SetScript("OnClick", function(self)
-            o[key] = self:GetChecked() and true or false
-            if onChange then onChange() end
-            ns:Changed()
-        end)
+        c:SetScript("OnClick", function(self) ns:SetOption("db.options." .. key, self:GetChecked() and true or false) end)
         if hint then Hint(c, text, hint) end
         p[key] = c
     end
@@ -53,8 +51,7 @@ UI:RegisterPage("settings", function(p)
     Toggle(-286, "Use Beta Crash Monitoring", "betaCrash",
         ("The beta goes offline at the start of %s. The Invest tool plans around it: prices are expected to slide as players cash out, "
             .. "crashes to hold rather than recover, selling plans end by then, and nothing is suggested that can't be resold in time."):format(
-            date("%a %m/%d", ns.BETA_END)),
-        function() ns.Analytics:Invalidate() end)
+            date("%a %m/%d", ns.BETA_END)))
 
     Muted(Label(p, "Your investment target, cash reserve and most per item are set on the Invest tab at the auction house.",
         "WealthPlannerGameFontHighlightSmall", 0, -324, 586))

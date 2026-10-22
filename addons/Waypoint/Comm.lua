@@ -12,53 +12,29 @@ local Comm = {}
 ns.Comm = Comm
 
 local PREFIX, VER = "WAYPT", "1"
-local SPACING = 0.2
 
-local outbox, sending, warned = {}, false, false
 local batches = {} -- sender -> count of quiet adds still to report
 
-local function Channel()
-    if not (IsInGroup and IsInGroup()) then return nil end
-    if LE_PARTY_CATEGORY_INSTANCE and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then return "INSTANCE_CHAT" end
-    if IsInRaid and IsInRaid() then return "RAID" end
-    return "PARTY"
-end
+-- The channel (shared GroupComm.lua): plain "KIND|1|rest" messages, one every 0.2 s, the instance
+-- group first, then raid, then party. Senders arrive as keys (Compat.Full: Units.KeyOf), your own
+-- are dropped (Units.IsMe also knows the "GivenFamily" and "-Server" shapes).
+local comm = ns.NewGroupComm(PREFIX, {
+    framing = "plain", version = VER, pace = 0.2, instance = "first",
+    normalize = C.Full, isMe = ns.Units.IsMe,
+    onFail = function()
+        ns:Print("Couldn't reach your group right now (the game may be blocking addon messages); your waypoints stayed on your map.")
+    end,
+})
+Comm.comm = comm
 
-local function Pump()
-    local msg = table.remove(outbox, 1)
-    if not msg then
-        sending = false
-        return
-    end
-    local channel = Channel()
-    if channel then
-        local ok, result = pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, channel)
-        -- Newer clients return a result code (0 is success), older ones a boolean.
-        local failed = not ok or result == false or (type(result) == "number" and result ~= 0)
-        if failed and not warned then
-            warned = true
-            ns:Print("Couldn't reach your group right now (the game may be blocking addon messages); your waypoints stayed on your map.")
-        elseif not failed then
-            warned = false
-        end
-    end
-    C_Timer.After(SPACING, Pump)
-end
-
--- Queues "KIND|rest" (the version is added here).
+-- Queues "KIND|rest" (the version is added on the way out: "KIND|1|rest").
 function Comm:Send(msg)
-    if not (ns.db.share and Channel() and C_ChatInfo and C_ChatInfo.SendAddonMessage) then return end
+    if not ns.db.share then return end
     local kind, rest = msg:match("^(%u)|?(.*)$")
-    outbox[#outbox + 1] = kind .. "|" .. VER .. (rest ~= "" and ("|" .. rest) or "")
-    if not sending then
-        sending = true
-        Pump()
-    end
+    comm:Send(kind, rest)
 end
 
-local function Clean(text)
-    return text and text:gsub("|", "/"):sub(1, 60) or ""
-end
+local function Clean(text) return ns.GroupComm.Clean(text, "|", "/", 60) end
 
 function Comm:SendAdd(p, after, quiet)
     self:Send(table.concat({ quiet and "S" or "A", ns.Chain:Starter() or C.Me(), p.id, after or "",
@@ -78,19 +54,6 @@ function Comm:AskForPath()
     self:Send("Q")
 end
 
-local function Split(s)
-    local out, start = {}, 1
-    while true do
-        local i = s:find("|", start, true)
-        if not i then
-            out[#out + 1] = s:sub(start)
-            return out
-        end
-        out[#out + 1] = s:sub(start, i - 1)
-        start = i + 1
-    end
-end
-
 local function ReportBatch(sender)
     local n = batches[sender]
     batches[sender] = nil
@@ -99,19 +62,18 @@ local function ReportBatch(sender)
     end
 end
 
-local function OnMessage(prefix, msg, _, sender)
-    if prefix ~= PREFIX or type(C.Readable(msg)) ~= "string" then return end
-    sender = C.Full(sender)
-    if not sender or sender == C.Me() or not ns.db.share then return end
-    local f = Split(msg)
-    local kind = f[1]
-    if f[2] ~= VER then return end
+-- A message from someone else in the group (GroupComm has dropped your own, secret and other
+-- versions'): f = its fields, "KIND|1|..." split on "|".
+local function OnMessage(kind, _, sender, m)
+    if not ns.db.share then return end
+    local f = m.fields
     local who = C.Short(sender)
     if kind == "A" or kind == "S" then
-        local p = { id = f[4], by = f[4] and f[4]:match("^(.-)#%d+$") or sender,
+        -- Who added it and who started the path, as the sender wrote them: in key form here.
+        local p = { id = f[4], by = C.Full(f[4] and f[4]:match("^(.-)#%d+$")) or sender,
             mapID = tonumber(f[6]), x = tonumber(f[7]), y = tonumber(f[8]), title = f[9] ~= "" and f[9] or nil }
         if not (p.id and p.mapID and p.x and p.y) then return end
-        local starter = f[3] ~= "" and f[3] or sender
+        local starter = C.Full(f[3]) or sender
         if not ns.Chain:Insert(p, f[5] ~= "" and f[5] or nil, starter) then return end
         if kind == "A" then
             ns:Print(("%s added waypoint %d: %s."):format(who, ns.Chain:Count(), ns.Nav:Describe(p)))
@@ -133,12 +95,7 @@ local function OnMessage(prefix, msg, _, sender)
 end
 
 local asked = false
-ns:OnLoad(function()
-    if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
-        pcall(C_ChatInfo.RegisterAddonMessagePrefix, PREFIX)
-    end
-end)
-ns:On("CHAT_MSG_ADDON", OnMessage)
+comm:OnAny(OnMessage)
 ns:On("GROUP_JOINED", function()
     C_Timer.After(2, function() Comm:AskForPath() end)
 end)

@@ -18,14 +18,13 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "Spyglass"))
 import fetch_wowhead_quests as wh  # noqa: E402
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # sibling modules, also under python -I
-from questiedb import DEFAULT_TOC  # noqa: E402
+sys.path.insert(0, os.path.join(HERE, "..", "_shared"))
+import paths  # noqa: E402
 
 OUT = os.path.join(HERE, "data", "wowhead_quests.json")
-XP_DB = os.path.join(os.path.dirname(os.environ.get("QUESTIEDB_TOC") or DEFAULT_TOC),
+XP_DB = os.path.join(os.path.dirname(paths.QUESTIEDB_TOC),
                      "support", "Forever", "QuestXP", "xpDB-classic.lua")
 
 

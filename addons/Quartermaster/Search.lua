@@ -15,28 +15,14 @@ local CLASS_ORDER = { 2, 4, 1, 0, 7, 6, 11, 9, 5, 15, 12 }
 -- The same table drives the offline Browse page, the live Buying tab, and search entries on lists.
 
 -- "Usable" means no red requirement line on the tooltip, the same thing the Browse checkbox tests.
+-- The level requirement counts too: the Browse checkbox hides what you can't use yet.
 local usableCache = {}
-local scanner
-local function IsRed(fs)
-    if not fs or not fs:IsShown() or (fs:GetText() or "") == "" then return false end
-    local r, g, b = fs:GetTextColor()
-    return r > 0.9 and g < 0.2 and b < 0.2
-end
+local WITH_LEVEL = { level = true }
 function Search:IsUsable(e)
     if usableCache[e.id] ~= nil then return usableCache[e.id] end
     if not e.link then return true end
-    if not scanner then
-        scanner = CreateFrame("GameTooltip", "QuartermasterScanTooltip", nil, "GameTooltipTemplate")
-    end
-    scanner:SetOwner(WorldFrame, "ANCHOR_NONE")
-    scanner:ClearLines()
-    scanner:SetHyperlink(e.link)
-    local usable = true
-    for i = 2, scanner:NumLines() do
-        if IsRed(_G["QuartermasterScanTooltipTextLeft" .. i]) or IsRed(_G["QuartermasterScanTooltipTextRight" .. i]) then
-            usable = false; break
-        end
-    end
+    local T = ns.Tooltip
+    local usable = not T.Unusable(T.Lines("hyperlink", e.link), WITH_LEVEL)
     usableCache[e.id] = usable
     return usable
 end

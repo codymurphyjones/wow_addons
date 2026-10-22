@@ -1,25 +1,17 @@
 local _, ns = ...
 local C = ns.Compat
 
--- Decides whether a grey/white armor or weapon piece in your bags might beat what you wear.
--- Rules: an empty slot is always an upgrade; any non-armor stat beats a pure-armor piece;
--- between two pure-armor pieces the higher armor (or weapon DPS) wins; when both carry
--- extra stats it isn't judged here.
+-- Decides whether a grey/white armor or weapon piece in your bags might beat what you wear, with
+-- the shared GearEngine.lua (addons/shared): the same verdict Tape Measure and SpyGlass give, by
+-- your StatLedger stat priority. An empty slot is always an upgrade. When nothing your priority
+-- ranks tells the two apart (plain armor and weapons), the old rules decide: any extra stat beats
+-- pure armor, then the higher weapon DPS, then the higher armor. It only ever keeps an item.
 local Gear = {}
 ns.Gear = Gear
 
-local CLASS_WEAPON, CLASS_ARMOR = 2, 4
+local E = ns.GearEngine
+local CLASS_WEAPON, CLASS_ARMOR = ns.Items.CLASS.WEAPON, ns.Items.CLASS.ARMOR
 local POOR, COMMON = 0, 1
-
-local SLOT_MAP = {
-    INVTYPE_HEAD = { 1 }, INVTYPE_NECK = { 2 }, INVTYPE_SHOULDER = { 3 },
-    INVTYPE_CHEST = { 5 }, INVTYPE_ROBE = { 5 }, INVTYPE_WAIST = { 6 }, INVTYPE_LEGS = { 7 },
-    INVTYPE_FEET = { 8 }, INVTYPE_WRIST = { 9 }, INVTYPE_HAND = { 10 },
-    INVTYPE_FINGER = { 11, 12 }, INVTYPE_TRINKET = { 13, 14 }, INVTYPE_CLOAK = { 15 },
-    INVTYPE_WEAPON = { 16 }, INVTYPE_2HWEAPON = { 16 }, INVTYPE_WEAPONMAINHAND = { 16 },
-    INVTYPE_WEAPONOFFHAND = { 17 }, INVTYPE_SHIELD = { 17 }, INVTYPE_HOLDABLE = { 17 },
-    INVTYPE_RANGED = { 18 }, INVTYPE_RANGEDRIGHT = { 18 }, INVTYPE_THROWN = { 18 },
-}
 
 local ARMOR_KEYS = { RESISTANCE0_NAME = true, ITEM_MOD_ARMOR_SHORT = true, ITEM_MOD_EXTRA_ARMOR_SHORT = true }
 local DPS_KEY = "ITEM_MOD_DAMAGE_PER_SECOND_SHORT"
@@ -27,44 +19,18 @@ local BLOCK_KEYS = { ITEM_MOD_BLOCK_VALUE_SHORT = true, ITEM_MOD_BLOCK_VALUE = t
 
 local cache = {}
 
-local function FormatToPattern(fmt, capture)
+local function FormatToPattern(fmt)
     if not fmt then return nil end
     fmt = fmt:gsub("([%(%)%.%+%-%*%?%[%]%^%$])", "%%%1")
-    return "^" .. fmt:gsub("%%[sd]", capture and "(%%d+)" or "%%d+") .. "$"
+    return "^" .. fmt:gsub("%%[sd]", "(%%d+)") .. "$"
 end
-local LEVEL_PATTERN = FormatToPattern(ITEM_MIN_LEVEL)
-local ARMOR_PATTERN = FormatToPattern(ARMOR_TEMPLATE, true)
+local ARMOR_PATTERN = FormatToPattern(ARMOR_TEMPLATE)
 
-local scanner
-local function Scan(link)
-    if not scanner then
-        scanner = CreateFrame("GameTooltip", "WallyScanTooltip", nil, "GameTooltipTemplate")
-        scanner:SetOwner(WorldFrame, "ANCHOR_NONE")
-    end
-    scanner:ClearLines()
-    scanner:SetOwner(WorldFrame, "ANCHOR_NONE")
-    scanner:SetHyperlink(link)
-    local usable, armor = true, nil
-    for i = 2, scanner:NumLines() do
-        for _, side in ipairs({ "TextLeft", "TextRight" }) do
-            local fs = _G["WallyScanTooltip" .. side .. i]
-            local text = fs and fs:GetText()
-            if text and text ~= "" then
-                local r, g, b = fs:GetTextColor()
-                -- Red text = a requirement you don't meet. Level requirements are ignored:
-                -- you'll grow into the item.
-                if r > 0.95 and g < 0.2 and b < 0.2 and not (LEVEL_PATTERN and text:match(LEVEL_PATTERN)) then
-                    usable = false
-                end
-                if not armor and ARMOR_PATTERN then
-                    local a = text:match(ARMOR_PATTERN)
-                    if a then armor = tonumber(a) end
-                end
-            end
-        end
-    end
-    -- A tooltip with only the name line hasn't loaded yet; its "usable" answer means nothing.
-    return usable, armor, scanner:NumLines() >= 2
+-- Armor from the tooltip, for clients whose GetItemStats leaves it out.
+local function ScanArmor(link)
+    if not ARMOR_PATTERN then return nil end
+    local _, _, a = ns.Tooltip.Find(ns.Tooltip.Lines("hyperlink", link), ARMOR_PATTERN)
+    return tonumber(a)
 end
 
 -- Summarizes an item: armor, dps, and the list of extra (non-base) stats.
@@ -86,23 +52,13 @@ local function Profile(link, equipLoc)
             end
         end
     end
-    if p.armor == 0 then
-        local _, scanned = Scan(link)
-        p.armor = scanned or 0
-    end
+    if p.armor == 0 then p.armor = ScanArmor(link) or 0 end
     p.hasExtras = #p.extras > 0
     return p
 end
 
-local function CanDualWield()
-    if IsPlayerSpell then return IsPlayerSpell(674) end
-    if IsSpellKnown then return IsSpellKnown(674) end
-end
-
--- Compares a candidate with one equipped slot. Returns isBetter, detail; nil detail means "not judged".
-local function CompareTo(new, slotID, equipLoc)
-    local equippedLink = GetInventoryItemLink("player", slotID)
-    if not equippedLink then return true, "empty slot" end
+-- The old rules, against one equipped piece. Returns isBetter, detail.
+local function CompareTo(new, equippedLink, equipLoc)
     local old = Profile(equippedLink, equipLoc)
     if not old then return true, "checking equipped item" end
     if new.hasExtras and not old.hasExtras then
@@ -118,39 +74,51 @@ local function CompareTo(new, slotID, equipLoc)
     return false, ("%d armor lower"):format(old.armor - new.armor)
 end
 
+local function Label(stat)
+    return StatLedger and StatLedger.GetStatLabel and StatLedger:GetStatLabel(stat) or stat
+end
+
+-- "+4.2% (+3 Stamina, +2 Strength)"
+local function Detail(cmp)
+    local parts = {}
+    for i = 1, math.min(2, #cmp.deltas) do
+        local d = cmp.deltas[i]
+        parts[i] = ("%s%s%s %s"):format(d.value < 0 and "-" or "+", math.floor(math.abs(d.value) + 0.5), d.percent and "%" or "", Label(d.stat))
+    end
+    local head = cmp.percent and ("%+.1f%%"):format(cmp.percent) or ("%+.1f"):format(cmp.diff or 0)
+    return #parts > 0 and (head .. " (" .. table.concat(parts, ", ") .. ")") or head
+end
+
 local function Evaluate(link)
     local _, _, quality, _, _, _, _, _, equipLoc, _, _, classID = C.GetItemInfo(link)
     if not quality then return nil, "loading" end
     if quality > COMMON or quality < POOR then return false end
     if classID ~= CLASS_ARMOR and classID ~= CLASS_WEAPON then return false end
-    local slots = SLOT_MAP[equipLoc or ""]
-    if not slots then return false end
+    if not E.SLOT_MAP[equipLoc or ""] then return false end
     if not C.IsEquippableItem(link) then return false end
-    local usable = Scan(link)
-    if not usable then return false, "can't use" end
+    local values, info = E.Read(link)
+    if not values then return nil, "loading" end
+    if info.unusable then return false, "can't use" end
 
-    local mainLink = GetInventoryItemLink("player", 16)
-    local mainLoc = mainLink and select(9, C.GetItemInfo(mainLink))
-    if slots[1] == 17 and mainLoc == "INVTYPE_2HWEAPON" then return false, "two-hander equipped" end
-    if equipLoc == "INVTYPE_WEAPON" and CanDualWield() then slots = { 16, 17 } end
-
-    local new = Profile(link, equipLoc)
-    if not new then return nil, "loading" end
-    -- Two-slot items are upgrades if they beat the weaker of the two equipped pieces.
-    local lastDetail
-    for _, slotID in ipairs(slots) do
-        local better, detail = CompareTo(new, slotID, equipLoc)
-        if better then return true, detail end
-        lastDetail = detail
+    local cmp = E.Compare(link)
+    if not cmp then return nil, "loading" end
+    if cmp.verdict == "none" then return false, cmp.reason end
+    if cmp.verdict == "equipped" then return false, "equipped" end
+    if cmp.verdict == "new" then return true, "empty slot" end
+    if cmp.verdict == "upgrade" then return true, Detail(cmp) end
+    -- Your stat priority can't tell them apart: plain armor and weapons go by the old rules.
+    if math.abs(cmp.new.total) < 0.05 and math.abs(cmp.base or 0) < 0.05 then
+        local new = Profile(link, equipLoc)
+        if not new then return nil, "loading" end
+        local lastDetail
+        for _, worn in ipairs(cmp.replaced) do
+            local better, detail = CompareTo(new, worn, equipLoc)
+            if better then return true, detail end
+            lastDetail = detail
+        end
+        return false, lastDetail
     end
-    -- The rules above say no. With Tape Measure installed, its verdict by your StatLedger stats gets a
-    -- say too (it can judge two pieces that both carry stats). It can only keep an item, never sell one.
-    if TapeMeasureAPI and TapeMeasureAPI.IsUpgrade then
-        local ok, better, detail = pcall(TapeMeasureAPI.IsUpgrade, link)
-        if ok and better then return true, "Tape Measure: " .. (detail or "upgrade") end
-        if ok and better == nil then return nil, "loading" end
-    end
-    return false, lastDetail
+    return false, cmp.verdict
 end
 
 -- Returns isUpgrade, detail. isUpgrade is nil while item data is still loading.
@@ -173,48 +141,27 @@ function Gear:IsUnusableGear(link)
     local _, _, quality, _, _, _, _, _, equipLoc, _, _, classID = C.GetItemInfo(link)
     if not quality then return false end
     local result = false
-    if (classID == CLASS_ARMOR or classID == CLASS_WEAPON) and SLOT_MAP[equipLoc or ""] then
-        local usable, _, complete = Scan(link)
-        if not complete then
-            -- Ask again next time instead of remembering a half-loaded answer.
-            C.RequestItem(C.IDFromLink(link))
-            return false
-        end
-        result = not usable
+    if (classID == CLASS_ARMOR or classID == CLASS_WEAPON) and E.SLOT_MAP[equipLoc or ""] then
+        -- Not loaded yet: ask again next time instead of remembering a half-loaded answer.
+        local values, info = E.Read(link)
+        if not values then return false end
+        result = info.unusable
     end
     unusableCache[link] = result
     return result
 end
 
--- Enchanting (skill line 333) means unusable greens and better are worth disenchanting.
-local ENCHANTING_SKILL = 333
-local hasEnchanting
-function Gear:HasEnchanting()
-    if hasEnchanting ~= nil then return hasEnchanting end
-    hasEnchanting = false
-    if GetProfessions and GetProfessionInfo then
-        for _, index in pairs({ GetProfessions() }) do
-            if index and select(7, GetProfessionInfo(index)) == ENCHANTING_SKILL then hasEnchanting = true end
-        end
-    elseif GetNumSkillLines and GetSkillLineInfo then
-        local spellName = (C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(7411))
-            or (GetSpellInfo and GetSpellInfo(7411)) or "Enchanting"
-        for i = 1, GetNumSkillLines() do
-            local name, isHeader = GetSkillLineInfo(i)
-            if not isHeader and name == spellName then hasEnchanting = true end
-        end
-    end
-    return hasEnchanting
-end
+-- Enchanting means unusable greens and better are worth disenchanting.
+function Gear:HasEnchanting() return ns.Player.HasEnchanting() end
 
-function Gear:ClearCache() wipe(cache); wipe(unusableCache); hasEnchanting = nil end
+function Gear:ClearCache() wipe(cache); wipe(unusableCache); ns.Player.Invalidate(); E.Invalidate() end
 
 local function Invalidate() Gear:ClearCache(); if ns.db then ns:Changed() end end
 ns:On("PLAYER_EQUIPMENT_CHANGED", Invalidate)
 ns:On("SKILL_LINES_CHANGED", Invalidate)
 ns:On("PLAYER_LEVEL_UP", Invalidate)
 ns:On("SPELLS_CHANGED", Invalidate)
--- A new stat priority changes Tape Measure's verdicts.
+-- A new stat priority changes the verdicts.
 ns:On("PLAYER_LOGIN", function()
     if StatLedger and StatLedger.RegisterCallback then StatLedger:RegisterCallback("Wally", Invalidate) end
 end)

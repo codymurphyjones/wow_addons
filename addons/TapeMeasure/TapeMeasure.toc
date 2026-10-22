@@ -2,7 +2,7 @@
 ## Title: Tape Measure
 ## Notes: Tells you whether gear is an upgrade and why, using your StatLedger stat order. /tape
 ## Author: Dinoblankie + Claude
-## Version: 1.0.3
+## Version: 1.0.4
 ## Dependencies: StatLedger
 ## SavedVariables: TapeMeasureDB
 ## SavedVariablesPerCharacter: TapeMeasureCharDB
@@ -11,14 +11,22 @@
 ## AddonCompartmentFunc: TapeMeasure_OnCompartmentClick
 ## X-Curse-Project-ID: 1735039
 
-Fonts.lua
-Palette.lua
+..\shared\Fonts.lua
+..\shared\Palette.lua
+..\shared\Core.lua
+..\shared\Units.lua
+..\shared\Items.lua
 Compat.lua
 Core.lua
+..\shared\Tooltip.lua
+..\shared\GearEngine.lua
 Stats.lua
 Scoring.lua
 Tooltip.lua
-Widgets.lua
+..\shared\Widgets.lua
+..\shared\OptionsPage.lua
+..\shared\Window.lua
 UI.lua
 Bags.lua
+..\shared\MinimapButton.lua
 Minimap.lua

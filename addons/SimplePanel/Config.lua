@@ -12,9 +12,7 @@ local PK = ns.PluginKit
 local ACCENT = W.ACCENT
 local SetBackdrop, Label, Muted, MakeButton, Hint = W.SetBackdrop, W.Label, W.Muted, W.MakeButton, W.Hint
 
-local frame
-local pages, tabs = {}, {}
-local activeTab = "bar"
+local win -- the window (shared\Window.lua), made under "Window" below
 local searchText = ""
 
 local TABS = {
@@ -25,12 +23,7 @@ local TABS = {
     { "about", "About", "INV_Misc_Note_01" },
 }
 
-local function NewPage(name)
-    local p = CreateFrame("Frame", nil, frame)
-    p:SetPoint("TOPLEFT", 196, -76); p:SetPoint("BOTTOMRIGHT", -18, 18)
-    p:Hide(); pages[name] = p
-    return p
-end
+local function NewPage(name) return win:NewPage(name) end
 
 -- Wally's page header: a title, a muted summary and (on settings pages) a search box.
 local function Header(p, title, summary, withSearch)
@@ -59,7 +52,7 @@ end
 
 local function ResetWindows()
     ns.char.window = { point = "CENTER", x = 0, y = 0 }
-    if frame then frame:ClearAllPoints(); frame:SetPoint("CENTER") end
+    if win.frame then win.frame:ClearAllPoints(); win.frame:SetPoint("CENTER") end
     ns.ChartWindow:ResetPositions()
     ns:Print("Window positions reset.", true)
 end
@@ -69,6 +62,15 @@ local function ResetLaunchers()
     wipe(ns.char.launchers.placement)
     ns.Launchers:ApplyAll()
     ns:Print("Every launcher is back in the drawer.", true)
+end
+
+local OWN_PANELS_DESC = "SimplePanel's own panels in Wally's style, latched to their plugin: the Durability plugin opens SimplePanel's character sheet, and the Professions plugin its professions window (recipes, reagents, crafting, and a search through every recipe you've seen). Every profession window opens there: professions opened from your spellbook, action bars or the game's Professions book (K), and profession trainers (with Train all). The Friends & Guild and Full Social plugins open its social window: Friends (friends, recent allies, ignore, who, raid, quick join) and Guild (roster, chat, info, news, communities, calendar, finder) as two tabs of one window; the game's Social key (O) opens it on Friends and its Guild key (J) on Guild. Shift-click those plugins for their quick menu. The game's C key still opens the game's character sheet."
+
+-- What turning Own Panels on or off does, whichever UI did it.
+local function ApplyOwnPanels(v)
+    if not v and ns.CharacterSheet then ns.CharacterSheet:Hide() end
+    if not v and ns.SocialWindow then ns.SocialWindow:Hide() end
+    if ns.SocialWindow and ns.SocialWindow.ApplyKeys then ns.SocialWindow:ApplyKeys() end
 end
 
 -- Where each quick setting went. Its keywords let the window's search still find them.
@@ -86,13 +88,9 @@ local function BarDefs()
         { type = "note", text = QUICK, keywords = "auto-hide autohide combat minimap buffs screen adjust lock dividers chat messages height opacity alpha scale font text size launcher drawer sort tile columns color colour scheme theme accent class profile switch reload size bigger larger readable zoom edit mode move drag reorder arrange layout section" },
 
         { type = "group", id = "panels", label = "Panels" },
+        -- Its side effect is the Options page's apply (ApplyOwnPanels below): this row saves through ns:SetOption.
         { type = "check", key = "ownPanels", label = "Own Panels", keywords = "character sheet paper doll gear stats wally panel durability repair",
-            desc = "SimplePanel's own panels in Wally's style, latched to their plugin: the Durability plugin opens SimplePanel's character sheet, and the Professions plugin its professions window (recipes, reagents, crafting, and a search through every recipe you've seen). Every profession window opens there: professions opened from your spellbook, action bars or the game's Professions book (K), and profession trainers (with Train all). The Friends & Guild and Full Social plugins open its social window: Friends (friends, recent allies, ignore, who, raid, quick join) and Guild (roster, chat, info, news, communities, calendar, finder) as two tabs of one window; the game's Social key (O) opens it on Friends and its Guild key (J) on Guild. Shift-click those plugins for their quick menu. The game's C key still opens the game's character sheet.",
-            apply = function(v)
-                if not v and ns.CharacterSheet then ns.CharacterSheet:Hide() end
-                if not v and ns.SocialWindow then ns.SocialWindow:Hide() end
-                if ns.SocialWindow and ns.SocialWindow.ApplyKeys then ns.SocialWindow:ApplyKeys() end
-            end },
+            desc = OWN_PANELS_DESC },
 
         { type = "group", id = "reset", label = "Reset" },
         { type = "buttons", keywords = "reset layout positions windows", buttons = {
@@ -134,7 +132,7 @@ local function BuildPluginsPage()
     local page = NewPage("plugins")
     Header(page, "Plugins", "Turn plugins on and off, pick their section, or open their menu. Edit the bar to drag them around.", true)
     local editBar = MakeButton(page, "Edit the bar", 120, 26); editBar:SetPoint("TOPRIGHT", 0, -46)
-    editBar:SetScript("OnClick", function() frame:Hide(); ns.Bar:SetEditMode(true) end)
+    editBar:SetScript("OnClick", function() win:Hide(); ns.Bar:SetEditMode(true) end)
     Hint(editBar, "Edit the bar", "Outlines the three sections. Drag plugins to move or reorder them, right-click for options, and hide them with the small x.")
     local _, child = W.ScrollArea(Body(page))
     local rows, heads, collapsed = {}, {}, {}
@@ -283,7 +281,10 @@ local function BuildLaunchersPage()
     scan:SetScript("OnClick", function() ns.Launchers:Scan(true) end)
     local perChar = W.MakeCheckbox(page, "Use separate placement on this character")
     perChar:SetPoint("LEFT", scan, "RIGHT", 16, 0)
-    perChar:SetScript("OnClick", function(self) ns.char.launchers.useCharacter = self:GetChecked() and true or false; ns.Launchers:ApplyAll(); page.Refresh() end)
+    perChar:SetScript("OnClick", function(self)
+        ns:SetOption("char.launchers.useCharacter", self:GetChecked() and true or false)
+        ns.Launchers:ApplyAll(); page.Refresh()
+    end)
 
     for i, key in ipairs(ns.Launchers.ORDER) do
         local b = CreateFrame("Frame", nil, child, "BackdropTemplate")
@@ -577,15 +578,9 @@ local function TabLabel(d, count)
     return d[2] .. "  " .. (count > 0 and T.hex.accent or "|cff8fa3b3") .. count .. "|r"
 end
 
-local function ShowTab(name)
-    activeTab = name
-    for key, p in pairs(pages) do p:SetShown(key == name) end
-    for key, b in pairs(tabs) do
-        b.selected:SetShown(key == name)
-        local c = key == name and T.active or T.button
-        b:SetBackdropColor(c[1], c[2], c[3], 1)
-    end
-    local p = pages[name]
+-- Showing a tab refreshes its page (even while the window is still hidden).
+local function RefreshTab(_, name)
+    local p = win.pages[name]
     if p and p.Refresh then p.Refresh() end
 end
 
@@ -593,7 +588,7 @@ end
 function Config:SetSearch(text)
     searchText = ns.Trim(text)
     for _, d in ipairs(TABS) do
-        local p = pages[d[1]]
+        local p = win.pages[d[1]]
         local count
         if p and p.Filter then
             if p.search and p.search:GetText() ~= text then
@@ -601,118 +596,122 @@ function Config:SetSearch(text)
             end
             count = p.Filter(searchText)
         end
-        local b = tabs[d[1]]
+        local b = win.tabs[d[1]]
         b.text:SetText(TabLabel(d, count))
         b.text:SetAlpha((searchText ~= "" and p and p.Filter and count == 0) and 0.45 or 1)
     end
 end
 
-local function CreateMainFrame()
-    if frame then return end
-    frame = CreateFrame("Frame", "SimplePanelWindow", UIParent, "BackdropTemplate")
-    frame:SetSize(780, 560); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true)
-    frame:SetClampedToScreen(true); frame:SetMovable(true); frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton"); SetBackdrop(frame, 0.985)
-    local w = ns.char.window
-    frame:SetPoint(w.point or "CENTER", UIParent, w.point or "CENTER", w.x or 0, w.y or 0)
-    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local point, _, _, x, y = self:GetPoint()
-        ns.char.window = { point = point, x = x, y = y }
-    end)
-    frame:SetScript("OnShow", function() Config:Refresh() end)
-    tinsert(UISpecialFrames, "SimplePanelWindow")
-
-    local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
-    logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "SimplePanel", "SimplePanelFontLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Your info bar, plugins and launchers", "SimplePanelFontSmall", 70, -42))
-    local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
-    close:SetScript("OnClick", function() frame:Hide() end)
-
-    local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-    side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    SetBackdrop(side); side:SetBackdropColor(T.side[1], T.side[2], T.side[3], 1)
-    for i, d in ipairs(TABS) do
-        local b = MakeButton(side, d[2], 147, 40); b:SetPoint("TOPLEFT", 9, -12 - (i - 1) * 46)
-        b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
-        local icon = b:CreateTexture(nil, "ARTWORK"); icon:SetSize(23, 23); icon:SetPoint("LEFT", 9, 0)
-        icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
-        b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(T.button[1], T.button[2], T.button[3], 1) end end)
-        b:SetScript("OnClick", function() ShowTab(d[1]) end)
-        tabs[d[1]] = b
-    end
-    Muted(Label(side, "Right-click the bar\nfor quick options.\n\n/spanel edit to arrange\nthe plugins.", "SimplePanelFontSmall", 12, -14 - #TABS * 46, 145))
-    local reload = MakeButton(side, "Reload UI", 147, 26); reload:SetPoint("BOTTOMLEFT", 9, 30)
-    reload:SetScript("OnClick", function() ReloadUI() end)
-    Hint(reload, "Reload UI", "Reloads the interface. Some changes, like a new color scheme, finish applying after a reload.")
-    local version = Label(side, "v" .. ns.VERSION, "SimplePanelFontSmall", 12, 0, 145)
-    version:ClearAllPoints(); version:SetPoint("BOTTOMLEFT", 12, 10)
-    version:SetTextColor(T.version[1], T.version[2], T.version[3])
-
-    OptionsPage("bar", "Bar", "Quick settings are drop-downs on the bar itself. The reset buttons live here.", BarDefs())
-    BuildPluginsPage()
-    BuildLaunchersPage()
-    BuildProfilesPage()
-    BuildAboutPage()
-    ShowTab(activeTab)
-    frame:Hide()
-end
+-- SimplePanel's own theme (ns.Theme) and fonts, a Reload button at the bottom of the sidebar.
+win = ns.NewWindow({
+    name = "SimplePanelWindow", title = "SimplePanel", subtitle = "Your info bar, plugins and launchers",
+    width = 780, tabs = TABS, active = "bar",
+    fonts = { large = "SimplePanelFontLarge", small = "SimplePanelFontSmall" },
+    theme = { panel = T.side, button = T.button, idle = T.button, active = T.active, version = T.version },
+    refresh = function() Config:Refresh() end,
+    tabClickRefresh = false, onTab = RefreshTab,
+    sideNote = "Right-click the bar\nfor quick options.\n\n/spanel edit to arrange\nthe plugins.",
+    sideButtons = { { "Reload UI", onClick = function() ReloadUI() end,
+        hint = { "Reload UI", "Reloads the interface. Some changes, like a new color scheme, finish applying after a reload." } } },
+    versionBottom = 10,
+    build = function()
+        OptionsPage("bar", "Bar", "Quick settings are drop-downs on the bar itself. The reset buttons live here.", BarDefs())
+        BuildPluginsPage()
+        BuildLaunchersPage()
+        BuildProfilesPage()
+        BuildAboutPage()
+    end,
+})
+Config.window = win
 
 function Config:Show(tab)
-    CreateMainFrame()
-    if tab then ShowTab(tab) end
-    frame:Show()
+    win:Build()
+    if tab then win:ShowTab(tab) end
+    win.frame:Show()
 end
 
-function Config:Toggle()
-    CreateMainFrame()
-    if frame:IsShown() then frame:Hide() else frame:Show() end
-end
+function Config:Toggle() win:Toggle() end
 
 function Config:Refresh()
-    if not frame or not frame:IsShown() then return end
-    local p = pages[activeTab]
-    if p and p.Refresh then p.Refresh() end
+    win:Refresh()
 end
 
 -- ---------------------------------------------------------------------------
 -- Options > AddOns > SimplePanel
 -- ---------------------------------------------------------------------------
 
-local settingsPanel, settingsCategory
+-- The bar's main settings (the same as its right-click menu and the Appearance plugin's), Own
+-- Panels, the reset buttons, and a button to this window. Built with the shared OptionsPage.lua
+-- (addons/shared): the bar menu, the Appearance menu, this window's Bar view and /spanel autohide|lock
+-- change the same options through ns:SetOption, so every UI shows the same value. Each plugin's own
+-- settings stay on its menu.
 
-local function CreateSettingsPanel()
-    if settingsPanel then return end
-    settingsPanel = CreateFrame("Frame", "SimplePanelSettingsPanel")
-    settingsPanel.name = "SimplePanel"
-    local inner = CreateFrame("Frame", nil, settingsPanel)
-    inner:SetPoint("TOPLEFT", 16, -16); inner:SetPoint("BOTTOMRIGHT", -16, 16)
-    local logo = inner:CreateTexture(nil, "ARTWORK"); logo:SetSize(40, 40)
-    logo:SetPoint("TOPLEFT", 0, 0); logo:SetTexture(ns.ICON)
-    Label(inner, "SimplePanel", "SimplePanelFontLarge", 50, -3):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(inner, "v" .. ns.VERSION .. "  ·  An info bar with plugins, rich menus, charts and a launcher drawer.", "SimplePanelFontSmall", 50, -24, 560))
-    local divider = inner:CreateTexture(nil, "ARTWORK")
-    divider:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 0.6); divider:SetHeight(2)
-    divider:SetPoint("TOPLEFT", 0, -48); divider:SetPoint("TOPRIGHT", 0, -48)
-    local open = MakeButton(inner, "Open the SimplePanel window", 200, 26); open:SetPoint("TOPRIGHT", 0, -8)
-    open:SetScript("OnClick", function()
-        if SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end
-        if InterfaceOptionsFrame and InterfaceOptionsFrame:IsShown() then HideUIPanel(InterfaceOptionsFrame) end
-        Config:Show("plugins")
-    end)
-    local holder = CreateFrame("Frame", nil, inner)
-    holder:SetPoint("TOPLEFT", 0, -64); holder:SetPoint("BOTTOMRIGHT")
-    local view = ns.Options:Build(holder, BarDefs())
-    settingsPanel:SetScript("OnShow", function() view:Refresh() end)
-    if Settings and Settings.RegisterCanvasLayoutCategory then
-        settingsCategory = Settings.RegisterCanvasLayoutCategory(settingsPanel, "SimplePanel")
-        Settings.RegisterAddOnCategory(settingsCategory)
-    elseif InterfaceOptions_AddCategory then
-        InterfaceOptions_AddCategory(settingsPanel)
-    end
+local function OpenWindow()
+    if SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end
+    Config:Show("plugins")
 end
-ns:OnLoad(CreateSettingsPanel)
+
+local function ApplyBar() if ns.Bar then ns.Bar:ApplySettings() end end
+local function LayoutBar() if ns.Bar then ns.Bar:Layout() end end
+local function RefreshBar() if ns.Bar then ns.Bar:RefreshAll() end end
+local function ApplyLook()
+    W.ApplyDesign()
+    W.RepaintPanels()
+    local p = PK:Find("Appearance")
+    if p and p.enabled then p:Refresh() end
+end
+local function Pct(v) return ns.Format.Pct(v) end
+
+local function SchemeChoices()
+    local out = {}
+    for _, s in ipairs(W.SCHEMES) do out[#out + 1] = { s.id, s.name } end
+    return out
+end
+
+-- A reset button from BarDefs, asking first when it does there.
+local function ResetButton(p, d)
+    p:Button({ label = d.text, text = "Reset", tooltip = d.hint, fn = function()
+        if d.confirm then W.Confirm(d.confirm, d.fn) else d.fn() end
+    end })
+end
+
+Config.page = ns.NewOptionsPage({ name = "SimplePanel", build = function(p)
+    p:Header("SimplePanel  v" .. ns.VERSION)
+    p:Button({ label = "Plugins, launchers and profiles are in the SimplePanel window", text = "Open SimplePanel", fn = OpenWindow,
+        tooltip = "Turn plugins on and off, place launchers, switch and share profiles (/spanel)." })
+
+    p:Header("Bar")
+    p:Check({ path = "db.options.autoHide", label = "Auto-hide", tooltip = "Slide the bar away until the mouse touches the top of the screen (/spanel autohide).", apply = ApplyBar })
+    p:Check({ path = "db.options.hideInCombat", label = "Hide in combat", apply = ApplyBar })
+    p:Check({ path = "db.options.screenAdjust", label = "Push minimap and buffs down",
+        tooltip = "Moves the minimap and buff frames below the bar so it doesn't cover them. Not used while auto-hide is on: the bar takes no room then.", apply = ApplyBar })
+    p:Check({ path = "db.options.locked", label = "Lock plugins", tooltip = "When unlocked, shift-drag a plugin to move it (/spanel lock)." })
+    p:Check({ path = "db.options.divider", label = "Dividers", apply = LayoutBar })
+    p:Check({ path = "db.options.chat", label = "Chat messages", tooltip = "Notices such as 'freed 2.1 MB' or launcher changes." })
+    p:Slider({ path = "db.options.height", label = "Height", min = 16, max = 36, step = 1,
+        format = function(v) return ("%d px"):format(v) end, apply = ApplyBar })
+    p:Slider({ path = "db.options.alpha", label = "Background opacity", min = 0, max = 1, step = 0.05,
+        format = function(v) return ("%.2f"):format(v) end, apply = LayoutBar })
+    p:Slider({ path = "db.options.scale", label = "Scale (bar and charts)", min = 0.6, max = 1.6, step = 0.05, format = Pct, apply = ApplyBar })
+    p:Dropdown({ path = "db.options.font", label = "Font", choices = { { "small", "Small" }, { "normal", "Normal" } }, apply = RefreshBar })
+
+    p:Header("Panels")
+    p:Check({ path = "db.options.ownPanels", label = "Own Panels", tooltip = OWN_PANELS_DESC, apply = ApplyOwnPanels })
+
+    p:Header("Appearance")
+    p:Dropdown({ path = "db.options.scheme", label = "Color scheme", choices = SchemeChoices, apply = ApplyLook,
+        tooltip = "Also on the Appearance plugin. The bar and window backgrounds change at once; buttons and rows that are already built take new colors after a reload." })
+    p:Check({ path = "db.options.classAccent", label = "Accent in my class color",
+        tooltip = "Uses your class color for highlights, titles and charts instead of the scheme's accent.", apply = ApplyLook })
+    p:Slider({ path = "db.options.panelAlpha", label = "Window opacity", min = 0.5, max = 1, step = 0.05, format = Pct, apply = ApplyLook })
+    p:Slider({ path = "db.options.textScale", label = "Text size", min = 0.8, max = 1.3, step = 0.05, format = Pct, apply = ApplyLook })
+
+    p:Header("Reset")
+    for _, def in ipairs(BarDefs()) do
+        if def.type == "buttons" then
+            for _, d in ipairs(def.buttons) do ResetButton(p, d) end
+        end
+    end
+end })
+
+function Config:OpenOptions() return self.page:Open() end

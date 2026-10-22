@@ -27,8 +27,10 @@ function R:Init()
     if self.name then pending = self.name; self:Flush() end
 end
 
--- Sets who the key targets (the full "Name-Realm" when the game gave it).
+-- Sets who the key targets: /targetexact needs the full "Given Family" on WoW Forever, so the
+-- name the game gave ("Given Family-Server" too) is keyed first.
 function R:SetTarget(name)
+    name = ns.Units.KeyOf(name)
     if not name or name == "" then return end
     self.name = name
     pending = name

@@ -15,7 +15,8 @@ local CHANNELS = {
 
 local function Plain(text) return ((text or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")) end
 local function Class(class) local c = ns.ClassName(class); return c and (" (" .. c .. ")") or "" end
-local function Pct(n) return ("%d%%"):format(math.floor((n or 0) + 0.5)) end
+local PCT = { isPercent = true, missing = 0 }
+local function Pct(n) return ns.Format.Pct(n, PCT) end
 
 ---------------------------------------------------------------------------
 -- The text

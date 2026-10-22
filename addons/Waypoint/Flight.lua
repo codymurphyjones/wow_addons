@@ -189,12 +189,9 @@ function F:FlightTime(a, b)
     return Dist(a.n, a.w, b.n, b.w) * SecondsPerYard(), false
 end
 
--- "3m 05s"
-function F.Clock(secs)
-    secs = math.max(0, math.floor(secs + 0.5))
-    if secs < 60 then return ("%ds"):format(secs) end
-    return ("%dm %02ds"):format(secs / 60, secs % 60)
-end
+-- "3m 05s" (the shared Format.lua)
+local CLOCK = { round = "round", style = "ms" }
+function F.Clock(secs) return ns.Format.Clock(secs, CLOCK) end
 
 -- ---------------------------------------------------------------------------------------------
 -- Planning
@@ -319,8 +316,7 @@ local menuAt = 0 -- when a flight master's menu last showed
 
 local function OnTaxiNow() return UnitOnTaxi and C.Readable(UnitOnTaxi("player")) and true or false end
 
--- The flight map's button for a slot: the classic TaxiFrame's TaxiButtonN, or a pin on the newer
--- FlightMapFrame.
+-- The flight map's button for a slot: TaxiFrame's TaxiButtonN, or a pin on FlightMapFrame.
 local function SlotButton(slot)
     local b = _G["TaxiButton" .. slot]
     if b and b:IsVisible() then return b end
@@ -345,7 +341,7 @@ local function TaxiOption()
             if o.icon == 132057 or o.type == "taxi" or (type(name) == "string" and name:lower():find("fly")) then return o end
         end
     end
-    if GetGossipOptions then -- older clients: name, type, name, type, ...
+    if GetGossipOptions then -- without C_GossipInfo: name, type, name, type, ...
         local t = { GetGossipOptions() }
         for i = 1, #t, 2 do
             if t[i + 1] == "taxi" then return { index = (i + 1) / 2 } end

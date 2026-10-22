@@ -3,29 +3,29 @@ local C, M = ns.Compat, ns.Media
 
 -- A small marker next to friends (Battle.net or character friends) and guild members.
 local Social = { name = "Social" }
-local friends, guild = {}, {}
-
-local function Short(name) return name and name:match("^([^%-]+)") or name end
+-- By name in any of its shapes ("Given Family", "GivenFamily", "Given Family-Server", or the given
+-- name alone): C.NameSet.
+local friends, guild = C.NameSet(), C.NameSet()
 
 local function Rebuild()
-    wipe(friends); wipe(guild)
+    C.NameSetWipe(friends); C.NameSetWipe(guild)
     if C_FriendList and C_FriendList.GetNumFriends then
         for i = 1, C_FriendList.GetNumFriends() or 0 do
             local info = C_FriendList.GetFriendInfoByIndex(i)
-            if info and info.name then friends[Short(info.name)] = true end
+            if info and info.name then C.NameSetAdd(friends, info.name) end
         end
     end
     if BNGetNumFriends and C_BattleNet and C_BattleNet.GetFriendAccountInfo then
         for i = 1, BNGetNumFriends() or 0 do
             local acc = C_BattleNet.GetFriendAccountInfo(i)
             local game = acc and acc.gameAccountInfo
-            if game and game.characterName then friends[Short(game.characterName)] = true end
+            if game and game.characterName then C.NameSetAdd(friends, game.characterName) end
         end
     end
     if IsInGuild() and GetNumGuildMembers then
         for i = 1, GetNumGuildMembers() or 0 do
             local name = GetGuildRosterInfo(i)
-            if name then guild[Short(name)] = true end
+            if name then C.NameSetAdd(guild, name) end
         end
     end
 end
@@ -39,8 +39,8 @@ end
 
 function Social:Update(f)
     local u, t = f.unit, f.social
-    local name = u.isPlayer and u.reaction == "FRIENDLY" and ns.db.widgets.social and Short(u.name)
-    local kind = name and (friends[name] and "friend" or guild[name] and "guild")
+    local look = u.isPlayer and u.reaction == "FRIENDLY" and ns.db.widgets.social
+    local kind = look and (C.NameSetFind(friends, u.unitid) and "friend" or C.NameSetFind(guild, u.unitid) and "guild")
     if not kind then return t:Hide() end
     if kind == "friend" then
         t:SetTexture("Interface\\FriendsFrame\\UI-Toast-FriendOnlineIcon")

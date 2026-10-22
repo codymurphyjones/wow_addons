@@ -204,7 +204,8 @@ function R:SetMode(mode)
     if mode ~= "road" and mode ~= "blocker" and mode ~= "cave" then return end
     if self.current and self.current.kind ~= mode then self:Finish() end
     ns.db.mode = mode
-    ns:Changed()
+    -- /roadlog road|blocker|cave, the minimap menu and the page all come here: the page shows it.
+    ns:OptionChanged("db.mode")
 end
 
 -- A narrow pass where you stand: a spot you can get through (a gap, a ramp, a gate).

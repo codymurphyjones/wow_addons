@@ -1,4 +1,4 @@
-## Interface: 16001, 11509, 20506, 50504, 120100
+## Interface: 16001
 ## Title: Wealth Planner
 ## Notes: A Wally plugin that treats the auction house like a stock market, keeps a share of your wealth invested, and posts the best-paying jobs (farming, gathering, crafting) on a Jobs Board with map pins (and the Waypoint addon's arrow, if installed). /wp
 ## Author: Dinoblankie + Claude
@@ -11,18 +11,29 @@
 ## Category: Auction & Economy
 ## AddonCompartmentFunc: WealthPlanner_OnCompartmentClick
 
-Fonts.lua
-Palette.lua
+..\shared\Fonts.lua
+..\shared\Palette.lua
+..\shared\Core.lua
+..\shared\API.lua
+..\shared\Units.lua
+..\shared\Format.lua
+..\shared\Items.lua
+..\shared\WorldMap.lua
+..\shared\Player.lua
 Compat.lua
 Core.lua
-Widgets.lua
-Chart.lua
+..\shared\AuctionPrice.lua
+..\shared\Widgets.lua
+..\shared\WidgetsPlus.lua
+..\shared\Chart.lua
 Data\Farms.lua
-Data\Crafts.lua
+..\shared\Recipes.lua
+CraftData.lua
 Data\VendorItems.lua
 Prices.lua
 History.lua
 Analytics.lua
+API.lua
 Portfolio.lua
 Invest.lua
 Patterns.lua
@@ -38,6 +49,7 @@ Nav.lua
 MapPins.lua
 MinimapPins.lua
 Tracker.lua
+..\shared\Window.lua
 UI.lua
 OverviewPage.lua
 MarketPage.lua
@@ -47,4 +59,7 @@ JobsPage.lua
 WorkLogPage.lua
 SettingsPage.lua
 InvestTab.lua
+..\shared\MinimapButton.lua
 Minimap.lua
+..\shared\OptionsPage.lua
+Settings.lua

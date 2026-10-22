@@ -5,18 +5,11 @@ local T = SimplePanel.Theme
 
 local sessionStart, gained, lastXP, lastMax, lastKill = time(), 0, nil, nil, nil
 
-local function Short(v)
-    if v >= 1e6 then return ("%.1fm"):format(v / 1e6) end
-    if v >= 1e4 then return ("%.1fk"):format(v / 1e3) end
-    return tostring(math.floor(v))
-end
+local SHORT = { abs = false }
+local function Short(v) return ns.Format.Short(v, SHORT) end
 
-local function Duration(secs)
-    if not secs or secs == math.huge or secs <= 0 then return "?" end
-    local h, m = math.floor(secs / 3600), math.floor(secs / 60) % 60
-    if h > 0 then return ("%dh %02dm"):format(h, m) end
-    return ("%dm"):format(m)
-end
+local DURATION = { days = false, positive = true } -- nil, 0 and "never" (math.huge) read "?"
+local function Duration(secs) return ns.Format.Duration(secs, DURATION) end
 
 local function MaxLevel()
     local maxLevel = (GetMaxLevelForPlayerExpansion and GetMaxLevelForPlayerExpansion()) or MAX_PLAYER_LEVEL or 60

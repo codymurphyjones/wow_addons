@@ -1,81 +1,54 @@
 local _, ns = ...
 
--- Options > AddOns > Field Guide, built with Blizzard's Settings API.
+-- Options > AddOns > Field Guide, built with the shared OptionsPage.lua (addons/shared). /fg
+-- (lock, questie, dock, minimap, section) changes the same options, so the page shows them.
 local S = {}
 ns.Settings = S
 
 local AUTO = "auto"
 
 -- The sections of the guide you follow, for the dropdown: "Ashenvale  15-23".
-local function SectionOptions()
-    local container = Settings.CreateControlTextContainer()
-    container:Add(AUTO, "Automatic")
+local function SectionChoices()
+    local out = { { AUTO, "Automatic" } }
     local guide = ns.Engine:Guide()
     for _, s in ipairs(guide and guide.sections or {}) do
-        container:Add(s.id, ("%s  |cff8a948e%d-%d|r"):format(s.title, s.from or 1, s.to or 60))
+        out[#out + 1] = { s.id, ("%s  |cff8a948e%d-%d|r"):format(s.title, s.from or 1, s.to or 60) }
     end
-    return container:GetData()
+    return out
 end
 
--- Called once you're logged in (the guide depends on your faction).
-function S:Register()
-    if self.category or not (Settings and Settings.RegisterVerticalLayoutCategory) then return end
-    local category, layout = Settings.RegisterVerticalLayoutCategory("Field Guide " .. ns.IconMarkup(16))
-    if layout and layout.AddInitializer and CreateSettingsListSectionHeaderInitializer then
-        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(ns.IconMarkup(28) .. "  Field Guide: Leveling guide"))
-    end
-
-    local CreateDropdown = Settings.CreateDropdown or Settings.CreateDropDown
-    if CreateDropdown and Settings.CreateControlTextContainer and Settings.VarType.String then
-        local zone = Settings.RegisterProxySetting(category, "FieldGuide_Section", Settings.VarType.String,
-            "Zone guide", AUTO,
-            function() return ns.char.section or AUTO end,
-            function(value) ns.Engine:SetSection(value ~= AUTO and value or nil) end)
-        CreateDropdown(category, zone, SectionOptions,
-            "Which zone's leveling guide to follow. Automatic: the zone you're in when it has quests worth "
+-- Built once you're logged in (the guide depends on your faction).
+S.page = ns.NewOptionsPage({ name = "Field Guide", icon = true, build = function(p)
+    p:Header(ns.IconMarkup(28) .. "  Field Guide: Leveling guide")
+    -- "Automatic" is no section of your own (char.section nil).
+    p:Dropdown({ id = "Section", label = "Zone guide", default = AUTO, choices = SectionChoices,
+        get = function() return ns.char.section or AUTO end,
+        set = function(value) ns.Engine:SetSection(value ~= AUTO and value or nil) end,
+        tooltip = "Which zone's leveling guide to follow. Automatic: the zone you're in when it has quests worth "
             .. "doing at your level, otherwise the one you were on, or the nearest one for your level. "
             .. "Automatic looks at zones within 4 levels of yours either way, and prefers the ones whose quests "
             .. "are at your level to 2 above. Walking into a zone that doesn't suit you now (under your level, or "
             .. "more than 2 above it) counts as traveling: the zone you were on stays. Nothing changes while you're on a flight. "
-            .. "A zone you pick here stays until you pick Automatic again (/fg section auto).")
-    end
-
-    local CreateCheckbox = Settings.CreateCheckbox or Settings.CreateCheckBox
-    if CreateCheckbox then
-        local dock = Settings.RegisterProxySetting(category, "FieldGuide_Dock", Settings.VarType.Boolean,
-            "Sit under Waypoint's arrow", true,
-            function() return ns.db.dock and true or false end,
-            function(value)
-                ns.db.dock = value and true or false
-                if ns.UI then ns.UI:Dock() end
-            end)
-        CreateCheckbox(category, dock,
-            "The guide window sits under Waypoint's arrow and moves with it (the arrow's right-click menu sets left, center or right). "
-            .. "Off: drag the guide anywhere on its own (/fg dock).")
-    end
-
-    if CreateCheckbox then
-        local tracking = Settings.RegisterProxySetting(category, "FieldGuide_Tracking", Settings.VarType.Boolean,
-            "Manage quest tracking", true,
-            function() return ns.db.manageTracking and true or false end,
-            function(value)
-                ns.db.manageTracking = value and true or false
-                ns:Changed()
-            end)
-        CreateCheckbox(category, tracking,
-            "The guide tracks the quests your next steps are about, and untracks the other quests addons tracked. "
+            .. "A zone you pick here stays until you pick Automatic again (/fg section auto)." })
+    p:Check({ id = "Dock", path = "db.dock", label = "Sit under Waypoint's arrow",
+        apply = function() if ns.UI then ns.UI:Dock() end end,
+        tooltip = "The guide window sits under Waypoint's arrow and moves with it (the arrow's right-click menu sets left, center or right). "
+            .. "Off: drag the guide anywhere on its own (/fg dock)." })
+    p:Check({ id = "Tracking", path = "db.manageTracking", label = "Manage quest tracking",
+        tooltip = "The guide tracks the quests your next steps are about, and untracks the other quests addons tracked. "
             .. "Quests you track yourself stay tracked until they're done or you untrack them, and come first on the arrow "
-            .. "(over the guide's step while the guide window is closed). A quest you untrack yourself isn't tracked again.")
-    end
+            .. "(over the guide's step while the guide window is closed). A quest you untrack yourself isn't tracked again." })
 
-    Settings.RegisterAddOnCategory(category)
-    self.category = category
-end
+    p:Header("The guide window")
+    p:Check({ path = "db.locked", label = "Lock the window", tooltip = "The guide window can't be dragged (/fg lock)." })
+    p:Slider({ path = "db.nextSteps", label = "Next steps shown", min = 0, max = 10, step = 1,
+        format = function(v) return ("%d"):format(v) end,
+        tooltip = "How many of the steps after the current one the guide window lists under it." })
+    p:Check({ path = "db.focusQuestie", label = "Focus the current quest in Questie",
+        tooltip = "The current step's quest goes to the top of Questie's tracker (/fg questie)." })
+    p:Check({ path = "char.minimap.hide", invert = true, label = "Show the minimap button",
+        tooltip = "Field Guide's minimap button (/fg minimap).",
+        apply = function() if ns.MinimapButton then ns.MinimapButton:Refresh() end end })
+end })
 
-function S:Open()
-    if self.category and Settings and Settings.OpenToCategory then
-        Settings.OpenToCategory(self.category:GetID())
-    end
-end
-
-ns:On("PLAYER_LOGIN", function() S:Register() end)
+function S:Open() return self.page:Open() end

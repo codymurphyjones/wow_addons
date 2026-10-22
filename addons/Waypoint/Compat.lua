@@ -2,7 +2,7 @@ local _, ns = ...
 
 -- Safe calls and names. On WoW Forever (a 12.x engine) some values are "secret": comparing or
 -- printing one is an error, so anything read from the game that might be goes through Readable.
--- (From GroupHistory's Compat.lua.)
+-- (From GroupHistory's Compat.lua; names from the shared Units.lua.)
 local C = {}
 ns.Compat = C
 
@@ -23,15 +23,13 @@ function C.Call(fn, ...)
     if ok then return a, b, c, d, e end
 end
 
--- "Name" -> "Name-Realm" (your realm).
-function C.Full(name)
-    if type(C.Readable(name)) ~= "string" or name == "" then return nil end
-    if name:find("-", 1, true) then return name end
-    local realm = GetNormalizedRealmName and GetNormalizedRealmName() or (GetRealmName() or ""):gsub("%s", "")
-    return name .. "-" .. realm
-end
+-- A name from any game source as a key: "Given Family" ("Given Family-Server" and the old saved
+-- "Given-Family" shapes fold into it).
+C.Full = ns.Units.KeyOf
 
-function C.Short(name) return name and (name:match("^([^%-]+)") or name) end
+-- A name to show: the full "Given Family" (given names repeat; the family name tells players
+-- apart), without any "-Server".
+C.Short = ns.Units.Display
 
--- You, as "Name-Realm".
-function C.Me() return C.Full(UnitName("player")) or "?" end
+-- You, as a key: "Given Family" ("?" before the game says).
+C.Me = ns.Units.Me

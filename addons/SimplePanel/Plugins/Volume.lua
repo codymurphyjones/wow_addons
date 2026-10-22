@@ -18,7 +18,7 @@ local function Has(cvar) return GetCVar(cvar) ~= nil end
 local function Get(cvar) return tonumber(GetCVar(cvar)) or 1 end
 local function Set(cvar, v) SetCVar(cvar, ("%.2f"):format(math.max(0, math.min(1, v)))) end
 local function Muted() return Has(ALL_SOUND) and GetCVar(ALL_SOUND) == "0" end
-local function Pct(v) return ("%d%%"):format(v * 100 + 0.5) end
+local function Pct(v) return ns.Format.Pct(v) end
 
 local function AddEntries(p, m)
     m:Checkbox({ text = "Mute", get = Muted, set = function(v) SetCVar(ALL_SOUND, v and "0" or "1"); p:Refresh() end })

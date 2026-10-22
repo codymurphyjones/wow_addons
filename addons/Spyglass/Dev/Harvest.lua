@@ -12,7 +12,7 @@ local H = {}
 ns.Harvest = H
 
 local GetItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
-local GetItemInfoInstant = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
+local GetItemInfoInstant = C_Item.GetItemInfoInstant -- no global on WoW Forever
 local RequestLoadItemDataByID = C_Item and C_Item.RequestLoadItemDataByID
 
 local MAX_TRIES, RETRY_AFTER = 3, 5

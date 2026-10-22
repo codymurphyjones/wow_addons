@@ -11,6 +11,8 @@ local _, ns = ...
     m:Color({ text = "Color", get = function() return r, g, b end, set = function(r, g, b) end })
     m:Input({ text = "Name", get = ..., set = ... })
     m:Divider(); m:Header("Section"); m:Button({ text, icon, fn, disabled, tooltip, shortcut, keepOpen })
+    m:Slots({ size = 30, slots = { { icon, text, color, fn = function(button) end, tooltip = function(GameTooltip) end,
+        disabled, keepOpen, border = { r, g, b }, onEnter, onLeave }, ... } }) -- a row of item-slot buttons (left or right click)
     m:Show()                                    -- at the anchor, or at the cursor
 
     Any `text` may be a function returning the text. `tooltip` is a string or function(tt).
@@ -48,6 +50,7 @@ function Builder:Submenu(o) return Add(self, "submenu", o) end
 function Builder:Slider(o) return Add(self, "slider", o) end
 function Builder:Color(o) return Add(self, "color", o) end
 function Builder:Input(o) return Add(self, "input", o) end
+function Builder:Slots(o) return Add(self, "slots", o) end
 function Builder:Count() return #self.items end
 -- Drops a trailing divider (handy when sections are optional).
 function Builder:Trim()
@@ -156,6 +159,7 @@ local function HideParts(r)
     for _, k in ipairs({ "icon", "box", "boxIn", "boxBg", "right", "arrow", "swatch", "swatchBorder", "rule" }) do r[k]:Hide() end
     if r.slider then r.slider:Hide() end
     if r.edit then r.edit:Hide() end
+    for _, b in ipairs(r.slotButtons or {}) do b:Hide() end
     r.hl:Hide()
     r.text:SetTextColor(1, 1, 1); r.text:SetAlpha(1)
     r.text:SetFontObject("SimplePanelFontSmall")
@@ -302,6 +306,66 @@ local function SetupInput(row, item, width, labelW)
     e:Show()
 end
 
+-- Slot buttons: the item's tooltip in GameTooltip, either click runs fn(button).
+local function SlotEnter(b)
+    local s = b.slot
+    SlotBorder(b, true)
+    if s and s.onEnter then SafeCall(s.onEnter) end
+    if not (s and s.tooltip) then return end
+    GameTooltip:SetOwner(b, "ANCHOR_RIGHT")
+    SafeCall(s.tooltip, GameTooltip)
+    GameTooltip:Show()
+end
+
+local function SlotBorder(b, hover)
+    local c = hover and T.accent or Resolve(b.slot and b.slot.border) or T.border
+    b:SetBackdropBorderColor(c[1], c[2], c[3], 1)
+end
+
+local function SlotLeave(b)
+    SlotBorder(b, false)
+    if b.slot and b.slot.onLeave then SafeCall(b.slot.onLeave) end
+    if GameTooltip:IsOwned(b) then GameTooltip:Hide() end
+end
+
+local function SlotClick(b, button)
+    local s = b.slot
+    if not s or Resolve(s.disabled) then return end
+    SlotLeave(b)
+    if not s.keepOpen then Menu:Close() end
+    SafeCall(s.fn, button)
+end
+
+local function SetupSlots(row, item)
+    row.slotButtons = row.slotButtons or {}
+    local size = item.size or 30
+    for i, s in ipairs(item.slots) do
+        local b = row.slotButtons[i]
+        if not b then
+            b = CreateFrame("Button", nil, row, "BackdropTemplate")
+            W.SetBackdrop(b)
+            b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+            b.icon = b:CreateTexture(nil, "ARTWORK"); b.icon:SetPoint("TOPLEFT", 2, -2); b.icon:SetPoint("BOTTOMRIGHT", -2, 2)
+            b.hl = b:CreateTexture(nil, "HIGHLIGHT"); b.hl:SetAllPoints(b.icon); b.hl:SetColorTexture(1, 1, 1, 0.15)
+            b.count = b:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall"); b.count:SetPoint("BOTTOMRIGHT", -2, 2)
+            b:SetScript("OnEnter", SlotEnter); b:SetScript("OnLeave", SlotLeave); b:SetScript("OnClick", SlotClick)
+            row.slotButtons[i] = b
+        end
+        b.slot = s
+        -- Wally's item wells: a dark field, a 1px edge (or the slot's own colour), the accent on hover.
+        b:SetBackdropColor(T.well[1], T.well[2], T.well[3], 1)
+        SlotBorder(b, false)
+        b:SetSize(size, size)
+        b:ClearAllPoints(); b:SetPoint("LEFT", 6 + (i - 1) * (size + 4), 0)
+        W.SetIcon(b.icon, Resolve(s.icon))
+        b.icon:SetDesaturated(Resolve(s.disabled) and true or false)
+        b.count:SetText(Resolve(s.text) or "")
+        local c = Resolve(s.color) or T.text
+        b.count:SetTextColor(c[1], c[2], c[3])
+        b:Show()
+    end
+end
+
 -- ---------------------------------------------------------------------------
 -- Render a builder into a level frame
 -- ---------------------------------------------------------------------------
@@ -326,6 +390,7 @@ function Render(f, builder, keepPosition)
         if it.shortcut then measure:SetText(it.shortcut); w = w + measure:GetStringWidth() + 14 end
         if it.kind == "color" or it.swatch then w = w + 28 end
         if it.kind == "input" then w = w + 110 end
+        if it.kind == "slots" then w = #it.slots * ((it.size or 30) + 4) + 16 end
         width = math.max(width, w)
     end
     width = math.min(width, 360)
@@ -337,7 +402,7 @@ function Render(f, builder, keepPosition)
         f.rows[i] = row
         row.item, row.frame = it, f
         HideParts(row)
-        local h = HEIGHTS[it.kind] or ROW_H
+        local h = it.kind == "slots" and (it.size or 30) + 8 or HEIGHTS[it.kind] or ROW_H
         row:ClearAllPoints(); row:SetPoint("TOPLEFT", PAD, y); row:SetSize(rowW, h)
         row.disabled = Resolve(it.disabled) and true or false
         local text = Resolve(it.text) or ""
@@ -362,6 +427,9 @@ function Render(f, builder, keepPosition)
             row.rule:ClearAllPoints(); row.rule:SetPoint("LEFT", 6, 0); row.rule:SetPoint("RIGHT", -6, 0)
             row.rule:SetColorTexture(T.border[1], T.border[2], T.border[3], 1); row.rule:Show()
             row:EnableMouse(false)
+        elseif it.kind == "slots" then
+            row:EnableMouse(false) -- the slot buttons take the clicks
+            SetupSlots(row, it)
         elseif it.kind == "slider" then
             SetupSlider(row, it, rowW)
         elseif it.kind == "input" then

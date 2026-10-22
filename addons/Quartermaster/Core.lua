@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.4"
+ns.VERSION = "0.1.5"
 ns.PREFIX = "|cff55d6beQuartermaster|r"
 -- Built from the folder name so the path survives renaming the folder.
 ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon.png"
@@ -9,6 +9,9 @@ ns.CALLER = "Quartermaster" -- callerID for Auctionator.API.v1
 BINDING_HEADER_QUARTERMASTER = "Quartermaster"
 BINDING_NAME_QUARTERMASTER_BUY_NEXT = "Buy next cart item (at the auction house)"
 BINDING_NAME_QUARTERMASTER_TOGGLE = "Open / close Quartermaster"
+
+-- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
+ns.SAVED = { db = "QuartermasterDB", char = "QuartermasterCharDB" }
 
 ns.DEFAULTS = {
     options = {
@@ -37,90 +40,19 @@ ns.CHAR_DEFAULTS = {
     searches = { recent = {} }, -- Buying tab recent searches, newest first
 }
 
--- Saved arrays (lists, entries) are never merged by index: that would scramble their order.
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then
-                dst[k] = {}
-                Merge(dst[k], v)
-            elseif v[1] == nil then
-                Merge(dst[k], v)
-            end
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
-    end
-    return dst
-end
-
-function ns:Print(msg, force)
-    if force or not self.db or self.db.options.chat then
-        DEFAULT_CHAT_FRAME:AddMessage(self.PREFIX .. ": " .. tostring(msg))
-    end
-end
-
-function ns.Trim(s) return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
-
--- Coalesce change notifications from many edits into one refresh next frame.
-local pending
-function ns:Changed()
-    if pending then return end
-    pending = true
-    C_Timer.After(0, function()
-        pending = false
-        if ns.UI and ns.UI.Refresh then ns.UI:Refresh() end
-        if ns.CartTab and ns.CartTab.Refresh then ns.CartTab:Refresh() end
-        if ns.Reagents and ns.Reagents.Refresh then ns.Reagents:Refresh() end
-        if ns.AuctionTab and ns.AuctionTab.Refresh then ns.AuctionTab:Refresh() end
-        if ns.AHTabs and ns.AHTabs.CartChanged then ns.AHTabs:CartChanged() end
-    end)
-end
-
-local frame = CreateFrame("Frame")
-ns.EventFrame = frame
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
-    end
-    table.insert(handlers[event], fn)
-end
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do fn(...) end
+-- What a change refreshes (ns:Changed coalesces many edits into one refresh next frame).
+ns:OnChanged(function()
+    if ns.UI and ns.UI.Refresh then ns.UI:Refresh() end
+    if ns.CartTab and ns.CartTab.Refresh then ns.CartTab:Refresh() end
+    if ns.Reagents and ns.Reagents.Refresh then ns.Reagents:Refresh() end
+    if ns.AuctionTab and ns.AuctionTab.Refresh then ns.AuctionTab:Refresh() end
+    if ns.AHTabs and ns.AHTabs.CartChanged then ns.AHTabs:CartChanged() end
 end)
 
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    QuartermasterDB = Merge(QuartermasterDB or {}, ns.DEFAULTS)
-    QuartermasterCharDB = Merge(QuartermasterCharDB or {}, ns.CHAR_DEFAULTS)
-    ns.db, ns.char = QuartermasterDB, QuartermasterCharDB
+ns:OnLoad(function()
     -- Leftovers from the removed Post tab.
     ns.db.options.postDuration, ns.db.options.postFloor, ns.char.sell = nil, nil, nil
-    for _, fn in ipairs(ns.onLoad or {}) do fn() end
 end)
-
--- The game names any call of ours it blocks ("Interface action failed because of an AddOn"); say
--- which, once per function, so a failure always has a visible cause.
--- "blocked": the call needed a click/key press or secure code it didn't get. "forbidden": addons may
--- never make that call on this client.
-local reportedBlocks = {}
-local function OnBlocked(kind, addon, func)
-    if addon ~= addonName then return end
-    ns.lastBlocked = func
-    local key = kind .. tostring(func)
-    if reportedBlocks[key] then return end
-    reportedBlocks[key] = true
-    ns:Print(("The game %s Quartermaster's call to %s."):format(kind, tostring(func)), true)
-end
-ns:On("ADDON_ACTION_BLOCKED", function(addon, func) OnBlocked("blocked", addon, func) end)
-ns:On("ADDON_ACTION_FORBIDDEN", function(addon, func) OnBlocked("forbade", addon, func) end)
-
-function ns:OnLoad(fn)
-    self.onLoad = self.onLoad or {}
-    table.insert(self.onLoad, fn)
-end
 
 ns:On("PLAYER_LOGIN", function()
     ns:Print("v" .. ns.VERSION .. " loaded. Type |cffffffff/qm|r to build a shopping list.")
@@ -166,8 +98,7 @@ SlashCmdList.QUARTERMASTER = function(msg)
         local item, qty = rest:match("^(.-)%s+(%d+)$")
         ns.Lists:AddItem(item or rest, tonumber(qty) or 1)
     elseif cmd == "minimap" then
-        ns.char.minimap.hide = not ns.char.minimap.hide
-        if ns.MinimapButton then ns.MinimapButton:Refresh() end
+        ns:ToggleOption("char.minimap.hide")
     elseif cmd == "reset" then
         ns.Lists:ResetProgress(ns.Lists:Active())
     elseif cmd == "reagents" then
@@ -180,9 +111,7 @@ SlashCmdList.QUARTERMASTER = function(msg)
     end
 end
 
-function Quartermaster_OnCompartmentClick()
-    if ns.UI then ns.UI:Toggle() end
-end
+ns:Compartment()
 
 function Quartermaster_Toggle()
     if ns.UI then ns.UI:Toggle() end

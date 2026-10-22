@@ -319,12 +319,15 @@ function A.AddLedger(recap, segments)
         end
     end
     if not next(merged) then return end
-    local me = UnitName("player")
-    local killer = recap.killer and not recap.killer.env and recap.killer.name
+    local killer = recap.killer and not recap.killer.env and (recap.killer.fullName or recap.killer.name)
     local L = { healers = {}, onMe = 0, allyTotal = 0, enemyTotal = 0 }
     for _, m in pairs(merged) do
-        m.onMe = m.targets[me] or 0
-        m.onKiller = killer and m.targets[killer] or 0
+        -- Targets are named as the meter gives them; you and the killer by any shape of the name.
+        m.onMe, m.onKiller = 0, 0
+        for target, amount in pairs(m.targets) do
+            if ns.IsMe(target) then m.onMe = m.onMe + amount
+            elseif killer and ns.SameName(target, killer) then m.onKiller = m.onKiller + amount end
+        end
         local list = {}
         for target, amount in pairs(m.targets) do list[#list + 1] = { name = target, amount = amount } end
         table.sort(list, function(a, b) return a.amount > b.amount end)
@@ -399,10 +402,10 @@ function A.BuildFromMeter(rows, meta)
     recap.dealt = A.Dealt(meta.dealt, { duration = recap.duration, taken = T.damage, healed = meta.healed, targets = meta.targets })
 
     -- The opponent; their biggest spell stands in for the killing blow, which the meter doesn't know.
-    local opponent = meta.opponent and (meta.opponent:match("^([^%-]+)") or meta.opponent)
+    local opponent = meta.opponent and ns.Units.Short(meta.opponent)
     local top
     for _, a in ipairs(recap.attackers) do
-        if a.name == opponent then top = a; break end
+        if a.name == opponent or ns.SameName(a.name, opponent) then top = a; break end
     end
     top = top or recap.attackers[1]
     local k = { name = opponent or (top and top.name) or "Unknown", fullName = meta.opponentFull,

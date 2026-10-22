@@ -15,6 +15,8 @@ SimplePanel.Tooltip = Tooltip
 
 local W, T = ns.Widgets, ns.Theme
 local PAD, GAP, MIN_W, WRAP_W = 9, 3, 150, 260
+-- AddBar's bar (shared\Bar.lua): the theme's track, text in it left and right.
+local BAR = { track = T.track, fillAlpha = 0.85, minFill = 0.01, inside = "SimplePanelFontSmall" }
 
 local tt
 local pools = { text = {}, bar = {}, rule = {}, chart = {}, icon = {} }
@@ -182,19 +184,10 @@ function M:Show()
         elseif r.kind == "space" then
             y = y - r.h
         elseif r.kind == "bar" then
-            local b = Take("bar", function()
-                local f = CreateFrame("Frame", nil, self)
-                f.bg = f:CreateTexture(nil, "BACKGROUND"); f.bg:SetAllPoints(); f.bg:SetColorTexture(T.track[1], T.track[2], T.track[3], 1)
-                f.fill = f:CreateTexture(nil, "ARTWORK"); f.fill:SetPoint("TOPLEFT"); f.fill:SetPoint("BOTTOMLEFT")
-                f.left = f:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall"); f.left:SetPoint("LEFT", 3, 0)
-                f.right = f:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall"); f.right:SetPoint("RIGHT", -3, 0)
-                return f
-            end)
+            local b = Take("bar", function() return ns.NewProgressBar(self, nil, nil, BAR) end)
             b:ClearAllPoints(); b:SetPoint("TOPLEFT", PAD, y); b:SetSize(width, 12)
-            local pct = r.max > 0 and math.min(1, math.max(0, r.value / r.max)) or 0
-            b.fill:SetColorTexture(r.color[1], r.color[2], r.color[3], 0.85)
-            b.fill:SetWidth(math.max(0.01, width * pct))
-            b.left:SetText(r.left or ""); b.right:SetText(r.right or "")
+            b:SetValue(r.max > 0 and r.value / r.max or 0, r.color)
+            b:SetText(r.left, r.right)
             b:Show()
             y = y - 12 - GAP - 1
         elseif r.kind == "chart" then

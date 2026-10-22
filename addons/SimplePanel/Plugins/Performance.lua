@@ -76,7 +76,8 @@ SimplePanel.RegisterPlugin({
 
     chart = function(p, view)
         local now = time()
-        local function Ago(x) local s = now - x; return s < 60 and (s .. "s ago") or (("%dm %02ds ago"):format(math.floor(s / 60), s % 60)) end
+        local ago = { now = now, seconds = true }
+        local function Ago(x) return ns.Format.Ago(x, ago) end
         if view == "Latency" then
             return { type = "line", xFormat = Ago, yFormat = function(v) return ("%d ms"):format(v) end,
                 thresholds = { { value = 300, color = T.red, label = "300 ms" } },

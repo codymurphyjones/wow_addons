@@ -2,52 +2,34 @@ local ADDON, ns = ...
 
 ns.name = ADDON
 
-local DEFAULTS = {}
+-- Events, saved variables, the combat queue and timers: the shared Core.lua (addons/shared).
+-- BandolierDB is per character (ns.db); BandolierData, account-wide, is ns.data (see the OnLoad below).
+ns.SAVED = { db = "BandolierDB" }
+-- Bandolier's logo, shipped in the addon (Media\make_icon.py draws it).
+ns.ICON = "Interface\\AddOns\\Bandolier\\Media\\Icon"
 
+-- Its own Print: several values, like print(). A trailing true is the shared Core's "print even
+-- with chat off" flag, not something to show.
 function ns:Print(...)
-    print("|cff33ff99Bandolier|r:", ...)
+    local n = select("#", ...)
+    if n > 1 and select(n, ...) == true then n = n - 1 end
+    print("|cff33ff99Bandolier|r:", unpack({ ... }, 1, n))
 end
 
 ---------------------------------------------------------------------------
--- API compatibility (the classic clients have moved some of these into C_*)
+-- API compatibility: the shared Items.lua (ns.Items), Tooltip.lua (ns.Tooltip) and Player.lua
+-- (ns.Player) answer on every client; these names stay so the call sites don't change.
 ---------------------------------------------------------------------------
 
-function ns.ItemInfo(item)
-    if C_Item and C_Item.GetItemInfo then return C_Item.GetItemInfo(item) end
-    return GetItemInfo(item)
-end
+local Items = ns.Items
 
-function ns.ItemInfoInstant(item)
-    if C_Item and C_Item.GetItemInfoInstant then return C_Item.GetItemInfoInstant(item) end
-    return GetItemInfoInstant(item)
-end
-
+ns.ItemInfo = Items.GetItemInfo
+ns.ItemInfoInstant = Items.GetItemInfoInstant
 -- Name and ID of the spell the item casts on use, or nil if it has no use effect.
-function ns.ItemSpell(itemID)
-    if C_Item and C_Item.GetItemSpell then return C_Item.GetItemSpell(itemID) end
-    return GetItemSpell(itemID)
-end
+ns.ItemSpell = Items.ItemSpell
 
 -- The "Use: ..." line of an item's tooltip, without the "Use: " prefix.
-local scanTip
-function ns.ItemUseText(itemID)
-    if not scanTip then
-        scanTip = CreateFrame("GameTooltip", "BandolierScanTooltip", nil, "GameTooltipTemplate")
-    end
-    scanTip:SetOwner(WorldFrame, "ANCHOR_NONE")
-    scanTip:ClearLines()
-    scanTip:SetItemByID(itemID)
-    local prefix = ITEM_SPELL_TRIGGER_ONUSE or "Use:"
-    for i = 2, scanTip:NumLines() do
-        local line = _G["BandolierScanTooltipTextLeft" .. i]
-        local text = line and line:GetText()
-        if text and text:sub(1, #prefix) == prefix then
-            scanTip:Hide()
-            return strtrim(text:sub(#prefix + 1))
-        end
-    end
-    scanTip:Hide()
-end
+function ns.ItemUseText(itemID) return ns.Tooltip.UseText(itemID) end
 
 -- This client hides aura data from addons in combat ("secret" values, and
 -- reading them is an error), so buffs are only read out of combat.
@@ -212,45 +194,20 @@ function ns.SpellDescription(spellID)
     return text or ""
 end
 
-function ns.IsUsableItem(itemID)
-    local isUsable = C_Item and C_Item.IsUsableItem or IsUsableItem
-    if not isUsable then return true end
-    return (isUsable(itemID)) and true or false
-end
-
-function ns.ItemIcon(itemID)
-    if not itemID then return end
-    if C_Item and C_Item.GetItemIconByID then return C_Item.GetItemIconByID(itemID) end
-    return GetItemIcon and GetItemIcon(itemID)
-end
-
-function ns.ItemCount(itemID)
-    if C_Item and C_Item.GetItemCount then return C_Item.GetItemCount(itemID) or 0 end
-    return GetItemCount(itemID) or 0
-end
-
-function ns.ItemCooldown(itemID)
-    if C_Container and C_Container.GetItemCooldown then return C_Container.GetItemCooldown(itemID) end
-    return GetItemCooldown(itemID)
-end
-
-function ns.ContainerNumSlots(bag)
-    if C_Container and C_Container.GetContainerNumSlots then return C_Container.GetContainerNumSlots(bag) end
-    return GetContainerNumSlots(bag)
-end
+ns.IsUsableItem = Items.IsUsableItem
+ns.ItemIcon = Items.ItemIcon
+function ns.ItemCount(itemID) return Items.ItemCount(itemID) end
+-- start, duration, enable; 0, 0 while ready (or unreadable).
+ns.ItemCooldown = Items.ItemCooldown
+ns.ContainerNumSlots = Items.GetNumSlots
 
 -- Returns itemID, stack count, hyperlink, has-loot (can be opened) for a bag slot.
 function ns.ContainerItem(bag, slot)
-    if C_Container and C_Container.GetContainerItemInfo then
-        local info = C_Container.GetContainerItemInfo(bag, slot)
-        if info then return info.itemID, info.stackCount, info.hyperlink, info.hasLoot end
-        return
-    end
-    local _, count, _, _, _, lootable, link, _, _, itemID = GetContainerItemInfo(bag, slot)
-    return itemID, count, link, lootable
+    local i = Items.GetSlotInfo(bag, slot)
+    if i then return i.id, i.count, i.link, i.lootable end
 end
 
--- GetMacroIndexByName returns 0 (or nil on some clients) when not found.
+-- GetMacroIndexByName returns 0 (or nil) when not found.
 function ns.MacroIndex(name)
     local index = name and GetMacroIndexByName(name)
     if index and index > 0 then return index end
@@ -258,27 +215,13 @@ end
 
 -- Name and icon of Fishing if the character knows any rank, else nil.
 -- Casting it by name uses the highest rank.
-local FISHING_RANKS = { 18248, 7732, 7731, 7620 }
 function ns.FishingSpell()
-    for _, id in ipairs(FISHING_RANKS) do
-        if (IsPlayerSpell and IsPlayerSpell(id)) or (IsSpellKnown and IsSpellKnown(id)) then
-            local name, icon
-            if C_Spell and C_Spell.GetSpellName then
-                name, icon = C_Spell.GetSpellName(id), C_Spell.GetSpellTexture(id)
-            else
-                local _, _, texture = GetSpellInfo(id)
-                name, icon = GetSpellInfo(id), texture
-            end
-            if name then return name, icon end
-        end
-    end
+    local _, name, icon = ns.Player.FishingSpell()
+    return name, icon
 end
 
 -- The localized "Fishing Poles" weapon subclass name.
-function ns.FishingPoleType()
-    if C_Item and C_Item.GetItemSubClassInfo then return C_Item.GetItemSubClassInfo(2, 20) end
-    return GetItemSubClassInfo and GetItemSubClassInfo(2, 20)
-end
+function ns.FishingPoleType() return Items.GetSubClassName(Items.CLASS.WEAPON, 20) end
 
 local MAIN_HAND, OFF_HAND = 16, 17
 
@@ -322,24 +265,8 @@ end
 -- Combat queue: macro and secure attribute writes are blocked in combat
 ---------------------------------------------------------------------------
 
-ns.pending = {}
-
--- Runs fn now, or after combat ends. A later call with the same key replaces
--- the earlier one. Returns true if it ran immediately.
-function ns:RunOutOfCombat(key, fn)
-    if InCombatLockdown() then
-        self.pending[key] = fn
-        return false
-    end
-    fn()
-    return true
-end
-
-local function FlushPending()
-    local queue = ns.pending
-    ns.pending = {}
-    for _, fn in pairs(queue) do fn() end
-end
+-- ns:AfterCombat(key, fn) (shared Core.lua) runs fn now, or after combat ends; a later call with
+-- the same key replaces the earlier one.
 
 ---------------------------------------------------------------------------
 -- Refresh (bag events come in bursts, so coalesce them)
@@ -363,10 +290,14 @@ function ns:Refresh()
     self.Usage:Update(self.list) -- what was used up since the last scan (API.lua)
     self.Flyout:UpdateVisuals() -- counts and cooldowns are safe in combat
     local deferred = InCombatLockdown()
-    self:RunOutOfCombat("rebuild", function()
+    self:AfterCombat("rebuild", function()
         -- Queued during a fight: that scan is stale (in combat, cooldowns and
         -- buffs read differently), so scan again now that the fight is over.
         if deferred then
+            -- The shared queue runs before Bandolier's PLAYER_REGEN_ENABLED
+            -- handler: match the fight's items to their buffs first, while
+            -- the snapshot from before the fight is still there.
+            self:LearnAfterCombat()
             if ns.CanReadAuras() then self.buffSnapshot = BuffSnapshot() end
             self.list = self.Scanner:Scan()
         end
@@ -417,103 +348,96 @@ end
 -- Events
 ---------------------------------------------------------------------------
 
-local events = CreateFrame("Frame")
-events:RegisterEvent("ADDON_LOADED")
-events:RegisterEvent("PLAYER_ENTERING_WORLD")
-events:RegisterEvent("PLAYER_REGEN_ENABLED")
-events:RegisterEvent("PLAYER_REGEN_DISABLED")
-events:RegisterEvent("BAG_UPDATE_DELAYED")
-events:RegisterEvent("BAG_UPDATE_COOLDOWN")
-events:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
-events:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
-events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-pcall(events.RegisterEvent, events, "ENCOUNTER_START")
--- Respec changes the automatic stat priority.
-pcall(events.RegisterEvent, events, "CHARACTER_POINTS_CHANGED")
-pcall(events.RegisterEvent, events, "PLAYER_TALENT_UPDATE")
-pcall(events.RegisterEvent, events, "ACTIVE_TALENT_GROUP_CHANGED")
-pcall(events.RegisterEvent, events, "INSTANCE_ENCOUNTER_ENGAGE_UNIT")
-events:RegisterUnitEvent("UNIT_AURA", "player")
-events:RegisterEvent("MODIFIER_STATE_CHANGED")
-events:RegisterEvent("PLAYER_LEVEL_UP")
--- Learning Fishing, and equipping a fishing pole, change what a press does.
-pcall(events.RegisterEvent, events, "SKILL_LINES_CHANGED")
-pcall(events.RegisterEvent, events, "LEARNED_SPELL_IN_TAB")
-events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
-
-events:SetScript("OnEvent", function(_, event, arg1)
-    if event == "ADDON_LOADED" then
-        if arg1 ~= ADDON then return end
-        BandolierDB = BandolierDB or {}
-        for k, v in pairs(DEFAULTS) do
-            if BandolierDB[k] == nil then BandolierDB[k] = v end
+-- The saved variables are set up by the shared Core.lua (ns.SAVED above).
+ns:OnLoad(function()
+    -- What Bandolier learns about items (cooldown and buff lengths, which
+    -- buff an item gives, what can't be used in combat) is the same for
+    -- every character, so it is saved account-wide. Older versions kept
+    -- it per character: merge that in once.
+    BandolierData = BandolierData or {}
+    ns.data = BandolierData
+    for _, key in ipairs({ "cooldowns", "itemBuffs", "ooc" }) do
+        ns.data[key] = ns.data[key] or {}
+        for k, v in pairs(ns.db[key] or {}) do
+            if ns.data[key][k] == nil then ns.data[key][k] = v end
         end
-        ns.db = BandolierDB
-        -- What Bandolier learns about items (cooldown and buff lengths, which
-        -- buff an item gives, what can't be used in combat) is the same for
-        -- every character, so it is saved account-wide. Older versions kept
-        -- it per character: merge that in once.
-        BandolierData = BandolierData or {}
-        ns.data = BandolierData
-        for _, key in ipairs({ "cooldowns", "itemBuffs", "ooc" }) do
-            ns.data[key] = ns.data[key] or {}
-            for k, v in pairs(ns.db[key] or {}) do
-                if ns.data[key][k] == nil then ns.data[key][k] = v end
-            end
-            ns.db[key] = nil
-        end
-        for itemID, buff in pairs(ns.data.itemBuffs) do
-            if ns.IsMealAura(buff.name) then ns.data.itemBuffs[itemID] = nil end
-        end
-        ns.Flyout:Create()
-        ns.Settings:Register()
-        if StatLedger and StatLedger.RegisterCallback then
-            StatLedger:RegisterCallback(ADDON, function() ns:RequestRefresh() end)
-        end
-        events:UnregisterEvent("ADDON_LOADED")
-    elseif event == "PLAYER_ENTERING_WORLD" then
-        -- Give the client time to load macros and action bars.
-        C_Timer.After(2, function()
-            ns:TrackWeapons()
-            ns:Refresh()
-        end)
-    elseif event == "PLAYER_REGEN_DISABLED" then
-        ns.Macro:UpdateIcon(true)
-        ns:LearnOutOfCombatItems()
-    elseif event == "PLAYER_REGEN_ENABLED" then
-        ns:LearnAfterCombat()
-        ns.Macro:UpdateIcon(false)
-        FlushPending()
-        ns:RequestRefresh()
-        -- Potions used in the fight start their cooldown as it ends; look
-        -- again shortly in case that lands after the first rescan.
-        C_Timer.After(1.5, function() ns:RequestRefresh() end)
-    elseif event == "BAG_UPDATE_COOLDOWN" then
-        ns.Flyout:UpdateVisuals()
-        ns:RequestRefresh() -- an item went on cooldown: reorder (after combat if needed)
-    elseif event == "ENCOUNTER_START" or event == "INSTANCE_ENCOUNTER_ENGAGE_UNIT" then
-        ns.Macro:UpdateIcon() -- a boss fight switches the plain press to buffs
-    elseif event == "PLAYER_EQUIPMENT_CHANGED" then
-        -- A two-handed pole changes both hands, one event each: read the
-        -- weapons once they've settled, so the in-between state isn't saved.
-        C_Timer.After(0.3, function()
-            ns:TrackWeapons()
-            ns.Macro:UpdateIcon()
-            ns:RequestRefresh() -- writes the rearm macro (after combat if needed)
-        end)
-    elseif event == "MODIFIER_STATE_CHANGED" then
-        ns.Macro:UpdateIcon() -- show what Shift/Alt+press would use while held
-    elseif event == "UNIT_AURA" then
-        ns:LearnItemBuff()
-        -- Buffs gained or lost change which buff items are needed. In combat
-        -- nothing can be rebuilt anyway, so don't rescan on every aura.
-        if not InCombatLockdown() then ns:RequestRefresh() end
-    elseif event == "GET_ITEM_INFO_RECEIVED" then
-        if ns.Scanner.waitingForInfo then ns:RequestRefresh() end
-    else -- BAG_UPDATE_DELAYED, ACTIONBAR_*_CHANGED, PLAYER_LEVEL_UP, SKILL_LINES_CHANGED, ...
-        ns:RequestRefresh()
+        ns.db[key] = nil
+    end
+    for itemID, buff in pairs(ns.data.itemBuffs) do
+        if ns.IsMealAura(buff.name) then ns.data.itemBuffs[itemID] = nil end
+    end
+    ns.Flyout:Create()
+    if StatLedger and StatLedger.RegisterCallback then
+        StatLedger:RegisterCallback(ADDON, function() ns:RequestRefresh() end)
     end
 end)
+
+ns:On("PLAYER_ENTERING_WORLD", function()
+    -- Give the client time to load macros and action bars.
+    C_Timer.After(2, function()
+        ns:TrackWeapons()
+        ns:Refresh()
+    end)
+end)
+
+ns:On("PLAYER_REGEN_DISABLED", function()
+    ns.Macro:UpdateIcon(true)
+    ns:LearnOutOfCombatItems()
+end)
+
+-- (What was queued for after combat has already run: the shared Core.lua.)
+ns:On("PLAYER_REGEN_ENABLED", function()
+    ns:LearnAfterCombat()
+    ns.Macro:UpdateIcon(false)
+    ns:RequestRefresh()
+    -- Potions used in the fight start their cooldown as it ends; look
+    -- again shortly in case that lands after the first rescan.
+    C_Timer.After(1.5, function() ns:RequestRefresh() end)
+end)
+
+ns:On("BAG_UPDATE_COOLDOWN", function()
+    ns.Flyout:UpdateVisuals()
+    ns:RequestRefresh() -- an item went on cooldown: reorder (after combat if needed)
+end)
+
+-- A boss fight switches the plain press to buffs.
+ns:On("ENCOUNTER_START", function() ns.Macro:UpdateIcon() end)
+ns:On("INSTANCE_ENCOUNTER_ENGAGE_UNIT", function() ns.Macro:UpdateIcon() end)
+
+ns:On("PLAYER_EQUIPMENT_CHANGED", function()
+    -- A two-handed pole changes both hands, one event each: read the
+    -- weapons once they've settled, so the in-between state isn't saved.
+    C_Timer.After(0.3, function()
+        ns:TrackWeapons()
+        ns.Macro:UpdateIcon()
+        ns:RequestRefresh() -- writes the rearm macro (after combat if needed)
+    end)
+end)
+
+-- Show what Shift/Alt+press would use while held.
+ns:On("MODIFIER_STATE_CHANGED", function() ns.Macro:UpdateIcon() end)
+
+ns:On("UNIT_AURA", function(unit)
+    if unit ~= "player" then return end
+    ns:LearnItemBuff()
+    -- Buffs gained or lost change which buff items are needed. In combat
+    -- nothing can be rebuilt anyway, so don't rescan on every aura.
+    if not InCombatLockdown() then ns:RequestRefresh() end
+end)
+-- Only the player's auras.
+if ns.EventFrame.RegisterUnitEvent then ns.EventFrame:RegisterUnitEvent("UNIT_AURA", "player") end
+
+ns:On("GET_ITEM_INFO_RECEIVED", function()
+    if ns.Scanner.waitingForInfo then ns:RequestRefresh() end
+end)
+
+-- Everything else just rescans: bags, action bars, level ups, respecs (they change the automatic
+-- stat priority), and learning Fishing.
+for _, event in ipairs({ "BAG_UPDATE_DELAYED", "ACTIONBAR_SLOT_CHANGED", "ACTIONBAR_PAGE_CHANGED",
+        "CHARACTER_POINTS_CHANGED", "PLAYER_TALENT_UPDATE", "ACTIVE_TALENT_GROUP_CHANGED",
+        "PLAYER_LEVEL_UP", "SKILL_LINES_CHANGED", "LEARNED_SPELL_IN_TAB" }) do
+    ns:On(event, function() ns:RequestRefresh() end)
+end
 
 ---------------------------------------------------------------------------
 -- Slash commands
@@ -524,7 +448,7 @@ SLASH_BANDOLIER2 = "/bando"
 SlashCmdList.BANDOLIER = function(msg)
     msg = strlower(strtrim(msg or ""))
     if msg == "reset" then
-        ns:RunOutOfCombat("reset", function()
+        ns:AfterCombat("reset", function()
             local index = ns.MacroIndex(ns.Macro.NAME)
             if index then DeleteMacro(index) end
             ns:Refresh()
@@ -546,7 +470,7 @@ SlashCmdList.BANDOLIER = function(msg)
         ns:Print("Stat priority reset to your class and spec default: " .. (ns.Stats:Describe()))
     elseif msg == "boss" then
         ns.forceBoss = not ns.forceBoss
-        ns:RunOutOfCombat("boss", function()
+        ns:AfterCombat("boss", function()
             ns.Flyout.bar:SetAttribute("forceboss", ns.forceBoss or nil)
         end)
         ns:Print("Boss mode " .. (ns.forceBoss and "on: every fight is treated as a boss fight (buffs first)." or "off: only fights with a boss unit use buffs first.")

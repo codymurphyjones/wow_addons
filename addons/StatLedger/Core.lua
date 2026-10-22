@@ -5,12 +5,18 @@ local D = ns.Data
 -- see README.md. Getters return copies, so callers can change what they get.
 -- class is a class token ("MAGE") and spec a talent tab index (1-3); both
 -- default to the player's when left out.
-local API = {}
-StatLedger = API
+local API, Fire = ns.NewAPI("StatLedger", 1)
+
+-- Events and saved variables: the shared Core.lua (addons/shared).
+ns.SAVED = { db = "StatLedgerDB" }
+ns.DEFAULTS = {
+    custom = {}, -- ["CLASS:spec"] = your own stat list for that spec
+}
+
 StatPriority = API -- the old name, for addons not yet updated
 ns.API = API
 
-API.API_VERSION = 1
+API.API_VERSION = API.VERSION -- the field's older name
 API.MAX_SLOTS = D.MAX_SLOTS
 
 local function Copy(list)
@@ -30,54 +36,32 @@ end
 -- StatLedger's logo, shipped in the addon (Media\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\StatLedger\\Media\\Icon"
 
--- The logo as inline text markup, size x size pixels.
-function ns.IconMarkup(size)
-    return ("|T%s:%d:%d|t"):format(ns.ICON, size, size)
-end
+-- (ns.IconMarkup(size), the logo as inline text markup: the shared Core.lua.)
 
+-- Its own Print: the logo, and several values like print(). A trailing true is the shared Core's
+-- "print even with chat off" flag, not something to show.
 function ns:Print(...)
-    print(ns.IconMarkup(14) .. " |cff66bbffStatLedger|r:", ...)
+    local n = select("#", ...)
+    if n > 1 and select(n, ...) == true then n = n - 1 end
+    print(ns.IconMarkup(14) .. " |cff66bbffStatLedger|r:", unpack({ ... }, 1, n))
 end
 
 ---------------------------------------------------------------------------
 -- Callbacks
 ---------------------------------------------------------------------------
 
-local callbacks = {} -- [owner] = function(event, class, spec)
-
--- fn(event, class, spec); event is "PRIORITY_CHANGED", "SPEC_CHANGED" or "VALUES_CHANGED"
--- (what stats are worth changed: your level, see Convert.lua).
--- One callback per owner: registering again replaces it.
-function API:RegisterCallback(owner, fn)
-    callbacks[owner] = fn
-end
-
-function API:UnregisterCallback(owner)
-    callbacks[owner] = nil
-end
-
-local function Fire(event, class, spec)
-    local handler = geterrorhandler and geterrorhandler() or print
-    for _, fn in pairs(callbacks) do
-        xpcall(fn, handler, event, class, spec)
-    end
-end
+-- StatLedger:RegisterCallback(owner, fn) (the shared API.lua): fn(event, class, spec); event is
+-- "PRIORITY_CHANGED" or "SPEC_CHANGED", or "VALUES_CHANGED" (no class or spec: what stats are worth
+-- changed with your level, see Convert.lua). One callback per owner: registering again replaces it.
 ns.Fire = Fire
 
 ---------------------------------------------------------------------------
 -- Spec detection
 ---------------------------------------------------------------------------
 
--- Points spent in a talent tab. The return values of GetTalentTabInfo
--- differ between clients: (name, icon, points, ...) or (id, name, desc,
--- icon, points, ...).
-local function TabPoints(tab)
-    if not GetTalentTabInfo then return 0 end
-    local ok, a, _, c, _, e = pcall(GetTalentTabInfo, tab)
-    if not ok then return 0 end
-    if type(a) == "string" then return tonumber(c) or 0 end
-    return tonumber(e) or 0
-end
+-- Points spent in a talent tab (shared Player.lua: both GetTalentTabInfo shapes, 0 without the
+-- API). Not ns.Player.ActiveSpec: that asks StatLedger:GetActiveSpec, which is this.
+local TabPoints = ns.Player.TabPoints
 
 -- The player's class and the talent tab with the most points (the class's
 -- default tab before any talents are spent).
@@ -314,54 +298,48 @@ local function Redetect()
     Fire("SPEC_CHANGED", class, spec)
 end
 
-local events = CreateFrame("Frame")
-events:RegisterEvent("ADDON_LOADED")
+-- StatLedgerDB is set up by the shared Core.lua (ns.SAVED above); then this.
+ns:OnLoad(function()
+    local db = ns.db
+    db.version = 1
+    for key, list in pairs(db.custom) do
+        if type(list) == "table" then
+            db.custom[key] = Clean(list)
+        else
+            db.custom[key] = nil
+        end
+    end
+    ns.Settings:Register()
+end)
+
 for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "CHARACTER_POINTS_CHANGED", "PLAYER_TALENT_UPDATE",
     "ACTIVE_TALENT_GROUP_CHANGED" }) do
-    pcall(events.RegisterEvent, events, event)
+    ns:On(event, function() Redetect() end)
 end
-
-events:SetScript("OnEvent", function(_, event, arg1)
-    if event == "ADDON_LOADED" then
-        if arg1 ~= ADDON then return end
-        StatLedgerDB = type(StatLedgerDB) == "table" and StatLedgerDB or {}
-        local db = StatLedgerDB
-        db.version = 1
-        db.custom = type(db.custom) == "table" and db.custom or {}
-        for key, list in pairs(db.custom) do
-            if type(list) == "table" then
-                db.custom[key] = Clean(list)
-            else
-                db.custom[key] = nil
-            end
-        end
-        ns.db = db
-        ns.Settings:Register()
-        events:UnregisterEvent("ADDON_LOADED")
-    else
-        Redetect()
-    end
-end)
 
 ---------------------------------------------------------------------------
 -- Slash command
 ---------------------------------------------------------------------------
 
-SLASH_STATLEDGER1 = "/statledger"
-SLASH_STATLEDGER2 = "/statprio"
-SLASH_STATLEDGER3 = "/statpriority"
-SlashCmdList.STATLEDGER = function(msg)
-    msg = strlower(strtrim(msg or ""))
-    local class, spec, specName = API:GetActiveSpec()
-    local label = API:GetClassName(class or "?") .. ": " .. (specName or "?")
-    if msg == "show" then
-        ns:Print(("%s (%s): %s"):format(label, API:IsCustom() and "custom" or "default", API:Describe()))
-    elseif msg == "reset" then
+local function Label()
+    local class, _, specName = API:GetActiveSpec()
+    return API:GetClassName(class or "?") .. ": " .. (specName or "?")
+end
+
+local Help
+Help = ns:Slash({ "/statledger", "/statprio", "/statpriority" }, {
+    { "show", function()
+        ns:Print(("%s (%s): %s"):format(Label(), API:IsCustom() and "custom" or "default", API:Describe()))
+    end, "print your current priority" },
+    { "reset", function()
+        local label = Label()
         API:ResetPriority()
         ns:Print(label .. " reset to default: " .. API:Describe())
-    elseif msg == "" or msg == "options" then
-        ns.Settings:Open()
-    else
-        ns:Print("/statledger - open settings, /statledger show - print your current priority, /statledger reset - reset your current spec to its default")
-    end
-end
+    end, "reset your current spec to its default" },
+    { "options", function() ns.Settings:Open() end, "open settings (also just /statledger)" },
+    -- No command: the settings; one not listed: the help.
+    default = function(msg)
+        if msg == "" then return ns.Settings:Open() end
+        Help()
+    end,
+})

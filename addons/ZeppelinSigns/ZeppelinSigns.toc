@@ -8,6 +8,13 @@
 ## IconTexture: Interface\AddOns\ZeppelinSigns\Media\Icon
 ## X-Curse-Project-ID: 1740482
 
-Fonts.lua
+..\shared\Fonts.lua
+..\shared\Core.lua
+..\shared\API.lua
+..\shared\WorldMap.lua
+..\shared\Format.lua
 ZeppelinSigns.lua
+..\shared\Bar.lua
 Rides.lua
+..\shared\OptionsPage.lua
+Settings.lua

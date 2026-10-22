@@ -159,7 +159,8 @@ function Tr:Stats(id)
     return t
 end
 
-local function Pct(x) return x and ("%+.1f%%"):format(x * 100) or "?" end
+local PCT = { decimals = 1, signed = true }
+local function Pct(x) return ns.Format.Pct(x, PCT) end
 
 -- How the trend reads in words.
 function Tr:Describe(t)

@@ -3,23 +3,22 @@ are skinned for, and which nodes give each farmable trade good (cloth, leather, 
 herbs, elemental, enchanting dust, meat, fish...), with drop chances and where those
 mobs and nodes spawn (uiMapID, 0-100 coords). Writes Data/Farms.lua.
 
-Fetching (paced, cached, retried) and Wowhead's JS literal parsing are copied from
-tools/Spyglass/fetch_wowhead_quests.py (copied, not imported: the addons stay apart).
-Spyglass's page cache is read as an extra read-only cache when present.
+Fetching (paced, cached, retried: tools/_shared/fetcher.py) and Wowhead's JS literals
+(tools/_shared/wowhead.py) are the tools' shared modules. Spyglass's page cache is read as an
+extra read-only cache when present.
 
     python tools/WealthPlanner/fetch_farms.py
     python tools/WealthPlanner/fetch_farms.py --only 2589,2318      # a few items (testing)
 """
 import argparse
-import hashlib
-import html
-import json
 import os
 import re
 import sys
-import time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_shared"))
-import webfetch  # noqa: E402  (pages from a real browser: Wowhead refuses curl)
+import fetcher as fetching  # noqa: E402  (paced, cached; pages from a real browser: Wowhead refuses curl)
+import wowhead  # noqa: E402
+from luawrite import lua_num, lua_str  # noqa: E402  (newlines escaped, CRs dropped)
+from wowhead import balanced, js_literal, not_in_game, page_listview  # noqa: E402
 
 ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "WealthPlanner")  # tools/WealthPlanner/ builds addons/WealthPlanner/
 OUT = os.path.join(ADDON, "Data", "Farms.lua")
@@ -27,133 +26,14 @@ CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".wowhead_cache
 # Read-only extra cache (same key scheme): pages Spyglass's tools already fetched.
 EXTRA_CACHES = [os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Spyglass", ".wowhead_cache")]
 BASE = "https://www.wowhead.com/forever/"
-# A plain UA: Wowhead now answers longer custom ones ("... addon data tool") with an
-# empty HTTP 202 bot challenge, and full browser strings with 403.
-UA = "Mozilla/5.0"
 PACE = 2.5  # seconds between requests (Wowhead refuses faster runs after a hundred or so)
 
 
-# ---------------------------------------------------------------------------
-# Fetching: paced, cached, retried
-# ---------------------------------------------------------------------------
-
-class RetryLater(Exception):
-    pass
-
-
-def download(url):
-    # A real browser session (tools/_shared/webfetch.py): Wowhead refuses curl and urllib.
-    code, body = webfetch.fetch(url, timeout=40)
-    if code in (403, 429) or code >= 500 or code == 0:
-        raise RetryLater("HTTP %d" % code)
-    if code == 202 or not body.strip():
-        # A bot challenge (or nothing): never cached.
-        raise RetryLater("HTTP %d, empty page" % code)
-    return body
-
-
-class Fetcher:
-    def __init__(self, refresh=False):
-        self.refresh, self.last, self.requests, self.failures = refresh, 0.0, 0, 0
-        os.makedirs(CACHE, exist_ok=True)
-
-    def get(self, url):
-        name = hashlib.sha1(url.encode("utf-8")).hexdigest() + ".html"
-        path = os.path.join(CACHE, name)
-        if not self.refresh:
-            for p in [path] + [os.path.join(d, name) for d in EXTRA_CACHES]:
-                if os.path.exists(p) and os.path.getsize(p) > 0:  # empty: a refused answer
-                    with open(p, encoding="utf-8") as f:
-                        return f.read()
-        delay = PACE
-        for _ in range(6):
-            wait = self.last + delay - time.time()
-            if wait > 0:
-                time.sleep(wait)
-            self.last = time.time()
-            self.requests += 1
-            try:
-                text = download(url)
-            except RetryLater as e:
-                print("  %s (%s); waiting %.0fs" % (url, e, delay * 4), flush=True)
-                delay *= 4
-                continue
-            self.failures = 0
-            with open(path, "w", encoding="utf-8", newline="\n") as f:
-                f.write(text)
-            return text
-        self.failures += 1
-        if self.failures >= 5:
-            raise SystemExit("Wowhead keeps refusing; stopped. Rerun later: the cache keeps what's done.")
-        return None
-
-
-# ---------------------------------------------------------------------------
-# Wowhead's JS literals
-# ---------------------------------------------------------------------------
-
-KEY = re.compile(r"([A-Za-z_]\w*)(\s*:)")
-
-
-def js_literal(text):
-    """Wowhead's JS object literals as Python values (bare keys quoted)."""
-    out, i, n, last = [], 0, len(text), ""
-    while i < n:
-        c = text[i]
-        if c == '"':
-            j = i + 1
-            while text[j] != '"':
-                j += 2 if text[j] == "\\" else 1
-            out.append(text[i:j + 1])
-            last, i = '"', j + 1
-            continue
-        if last in ("{", ","):
-            m = KEY.match(text, i)
-            if m:
-                out.append('"%s"%s' % (m.group(1), m.group(2)))
-                last, i = ":", m.end()
-                continue
-        out.append(c)
-        if not c.isspace():
-            last = c
-        i += 1
-    return json.loads("".join(out))
-
-
-def balanced(s, i):
-    """The [...] or {...} starting at s[i]."""
-    depth, j, in_str = 0, i, False
-    while j < len(s):
-        c = s[j]
-        if in_str:
-            if c == "\\":
-                j += 1
-            elif c == '"':
-                in_str = False
-        elif c == '"':
-            in_str = True
-        elif c in "[{":
-            depth += 1
-        elif c in "]}":
-            depth -= 1
-            if depth == 0:
-                return s[i:j + 1]
-        j += 1
-    raise ValueError("unbalanced literal")
-
-
-def page_listview(text, lv_id):
-    """The data of the page's Listview with this id ('dropped-by', 'skinned-from'...)."""
-    i = text.find("id: '%s'" % lv_id)
-    if i < 0:
-        return []
-    j = text.find("data:", i)
-    if j < 0:
-        return []
-    try:
-        return js_literal(balanced(text, text.index("[", j)))
-    except ValueError:
-        return []
+def Fetcher(refresh=False):
+    """The paced, cached fetcher (fetcher.py) on this tool's cache, Spyglass's read too;
+    tools/shared/build_recipes.py uses it for the recipes."""
+    return fetching.Fetcher(CACHE, extra_caches=EXTRA_CACHES, refresh=refresh, pace=PACE, skip_empty=True,
+                            flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -183,12 +63,11 @@ INSTANCE_CATEGORIES = {2, 3, 6}
 
 def zones(fetcher):
     """{ area ID: (name, is_instance) } for every zone Wowhead Forever lists."""
-    text = fetcher.get(BASE + "zones") or ""
-    start = text.find('"template":"zone","data":')
-    if start < 0:
+    rows = wowhead.zone_rows(fetcher)
+    if rows is None:
         raise SystemExit("Wowhead's zone list didn't parse; stopped.")
     out = {}
-    for r in js_literal(balanced(text, text.index("[", start))):
+    for r in rows:
         inst = bool(r.get("instance")) or r.get("category") in INSTANCE_CATEGORIES
         out[r["id"]] = (r.get("name") or "", inst)
     return out
@@ -210,12 +89,6 @@ SKIP_CLASSIFICATION = {2, 3, 4}
 ELITE = {1, 2}
 # Wowhead object types: -3 herb, -4 mining node, -5 locked chest, 3 container.
 CHEST_TYPES = {3, -5}
-
-
-def not_in_game(item_id):
-    """TBC on (25000-199999) and Season of Discovery's (to 239999): not in this game.
-    Classic's items are below 25000, the server's own from 240000."""
-    return 25000 <= item_id < 240000
 
 
 def item_list(fetcher):
@@ -316,7 +189,7 @@ def downsample(points):
 
 
 def fmt(v):
-    return ("%.1f" % v).rstrip("0").rstrip(".")
+    return lua_num(v, 1)
 
 
 def spawns(text, zone_info, area_map):
@@ -354,11 +227,6 @@ SKILL = re.compile(r"Requires (?:Herbalism|Mining|Lockpicking) \((\d+)\)")
 # ---------------------------------------------------------------------------
 # Lua
 # ---------------------------------------------------------------------------
-
-def lua_str(s):
-    s = (s or "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "")
-    return '"' + s + '"'
-
 
 def fmt_chance(c):
     s = ("%.3f" % c).rstrip("0").rstrip(".")

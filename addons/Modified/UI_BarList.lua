@@ -119,9 +119,9 @@ function UI:Create()
     local showEmpty = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
     showEmpty:SetSize(24, 24)
     showEmpty:SetPoint("TOPLEFT", 12, -28)
+    -- The same option as Options > AddOns > Modified; its apply redraws this list.
     showEmpty:SetScript("OnClick", function(self)
-        ns.db.showEmpty = self:GetChecked() and true or false
-        UI:Refresh()
+        ns:SetOption("db.showEmpty", self:GetChecked() and true or false)
     end)
     local showEmptyLabel = showEmpty:CreateFontString(nil, "OVERLAY", "ModifiedGameFontNormalSmall")
     showEmptyLabel:SetPoint("LEFT", showEmpty, "RIGHT", 2, 0)

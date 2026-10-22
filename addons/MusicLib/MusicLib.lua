@@ -1,6 +1,7 @@
 -- MusicLib: custom wand sound + zone music demo
 -- Audio files must exist when the game starts; /reload won't pick up new ones.
 
+local _, ns = ... -- ns:On (events): the shared Core.lua (addons/shared)
 local ADDON = "MusicLib"
 local PATH = "Interface\\AddOns\\" .. ADDON .. "\\"
 
@@ -140,28 +141,24 @@ end
 
 -- Events ----------------------------------------------------------------------
 
-local frame = CreateFrame("Frame")
-frame:RegisterEvent("PLAYER_LOGIN")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-frame:RegisterEvent("ZONE_CHANGED")
-frame:RegisterEvent("ZONE_CHANGED_INDOORS")
-frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-frame:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
-
-frame:SetScript("OnEvent", function(_, event, ...)
-    if event == "PLAYER_LOGIN" then
-        for _, id in ipairs(MUTED_WAND_SOUNDS) do
-            MuteSoundFile(id)
-        end
-    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-        local _, _, spellID = ...
-        if spellID == WAND_SHOOT then
-            PlaySoundFile(WAND_SOUND, "SFX")
-        end
-    else
-        UpdateMusic()
+ns:On("PLAYER_LOGIN", function()
+    for _, id in ipairs(MUTED_WAND_SOUNDS) do
+        MuteSoundFile(id)
     end
 end)
+
+ns:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
+    if unit ~= "player" then return end
+    if spellID == WAND_SHOOT then
+        PlaySoundFile(WAND_SOUND, "SFX")
+    end
+end)
+-- Only the player's casts.
+if ns.EventFrame.RegisterUnitEvent then ns.EventFrame:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player") end
+
+for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "ZONE_CHANGED_NEW_AREA" }) do
+    ns:On(event, UpdateMusic)
+end
 
 -- Slash commands for testing --------------------------------------------------
 

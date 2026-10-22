@@ -2,7 +2,7 @@
 ## Title: SpyGlass
 ## Notes: Dungeon and raid gear for your level and class, ranked by your StatLedger stat order, on the Character window, plus a loot journal with boss abilities. /sg, /sgj
 ## Author: Dinoblankie + Claude
-## Version: 1.0.7
+## Version: 1.0.8
 ## Dependencies: StatLedger
 ## OptionalDeps: Waypoint, AtlasLootClassic, AtlasLootContinued
 ## SavedVariables: SpyGlassDB, SpyGlassJournalDB, LootPriorityDB, LootPriorityJournalDB
@@ -11,10 +11,21 @@
 ## AddonCompartmentFunc: SpyGlass_Toggle
 ## X-Curse-Project-ID: 1735103
 
-Fonts.lua
+..\shared\Fonts.lua
+..\shared\Core.lua
+..\shared\API.lua
+..\shared\Units.lua
+..\shared\Format.lua
+..\shared\Items.lua
+..\shared\Player.lua
+..\shared\GroupComm.lua
+..\shared\Tooltip.lua
+..\shared\GearEngine.lua
+..\shared\Instances.lua
 Data.lua
 Data\Items.lua
-Data\Professions.lua
+..\shared\Recipes.lua
+ProfessionData.lua
 Data\Anchors.lua
 Data\Loot.lua
 Core.lua
@@ -44,6 +55,8 @@ Journal\Group.lua
 Journal\DungeonMap.lua
 Journal\Pulls.lua
 Journal\Scrapbook.lua
+..\shared\MinimapButton.lua
 Journal\Minimap.lua
 CharPanel.lua
+..\shared\OptionsPage.lua
 Settings.lua

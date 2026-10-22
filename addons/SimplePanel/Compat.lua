@@ -1,11 +1,13 @@
 local _, ns = ...
 
--- Normalizes APIs that moved between clients (C_AddOns, C_Container, C_Map, money strings).
+-- Normalizes APIs that moved between clients (C_AddOns, currencies, quests, loot...). Money, bags,
+-- items, map coordinates, skills and player names come from the shared files (addons/shared):
+-- Format.lua, Items.lua, WorldMap.lua, Player.lua and Units.lua.
 local Compat = {}
 ns.Compat = Compat
 
 local CA = C_AddOns
-local CC = C_Container
+local F, I = ns.Format, ns.Items
 
 -- ---------------------------------------------------------------------------
 -- Add-ons, memory and CPU
@@ -45,60 +47,22 @@ function Compat.GetAddOnCPUUsage(i) return GetAddOnCPUUsage and GetAddOnCPUUsage
 -- Money
 -- ---------------------------------------------------------------------------
 
-function Compat.Money(copper)
-    copper = math.floor(tonumber(copper) or 0)
-    if C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString then return C_CurrencyInfo.GetCoinTextureString(copper) end
-    if GetCoinTextureString then return GetCoinTextureString(copper) end
-    return GetMoneyString(copper)
-end
+function Compat.Money(copper) return F.Money(copper) end
 
 -- Short money with coin icons, for the bar's gold: "123[g] 45[s]" / "45[s] 12[c]".
-local COIN = "%s|TInterface\\MoneyFrame\\UI-%sIcon:0:0:2:0|t"
-function Compat.CoinMoney(copper)
-    copper = math.floor(math.abs(tonumber(copper) or 0))
-    local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
-    if g > 0 then return COIN:format(BreakUpLargeNumbers and BreakUpLargeNumbers(g) or g, "Gold") .. " " .. COIN:format(s, "Silver") end
-    if s > 0 then return COIN:format(s, "Silver") .. " " .. COIN:format(c, "Copper") end
-    return COIN:format(c, "Copper")
-end
+function Compat.CoinMoney(copper) return F.Money(copper, F.MONEY_COIN) end
 
 -- Short money text with letters: "123g 45s" / "45s 12c" (compact: the session change).
-function Compat.ShortMoney(copper)
-    copper = math.floor(math.abs(tonumber(copper) or 0))
-    local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
-    if g > 0 then return ("%s|cffffd24dg|r %d|cffc7c7cfs|r"):format(BreakUpLargeNumbers and BreakUpLargeNumbers(g) or g, s) end
-    if s > 0 then return ("%d|cffc7c7cfs|r %d|cffeda55fc|r"):format(s, c) end
-    return ("%d|cffeda55fc|r"):format(c)
-end
+function Compat.ShortMoney(copper) return F.Money(copper, F.MONEY_LETTERS) end
 
 -- ---------------------------------------------------------------------------
 -- Bags
 -- ---------------------------------------------------------------------------
 
-Compat.NUM_BAGS = NUM_BAG_SLOTS or 4
-
-function Compat.GetNumSlots(bag)
-    if CC and CC.GetContainerNumSlots then return CC.GetContainerNumSlots(bag) or 0 end
-    return GetContainerNumSlots(bag) or 0
-end
-
--- free, family (0 = normal bag)
-function Compat.GetFreeSlots(bag)
-    if CC and CC.GetContainerNumFreeSlots then
-        local free, family = CC.GetContainerNumFreeSlots(bag)
-        return free or 0, family or 0
-    end
-    local free, family = GetContainerNumFreeSlots(bag)
-    return free or 0, family or 0
-end
-
-function Compat.GetBagName(bag)
-    if bag == 0 then return BACKPACK_TOOLTIP or "Backpack" end
-    local fn = (CC and CC.GetBagName) or GetBagName
-    if not fn then return nil end
-    local ok, name = pcall(fn, bag)
-    return ok and name or nil
-end
+Compat.NUM_BAGS = I.NUM_BAGS
+Compat.GetNumSlots = I.GetNumSlots
+Compat.GetFreeSlots = I.GetFreeSlots -- free, family (0 = normal bag)
+Compat.GetBagName = I.GetBagName
 
 -- ---------------------------------------------------------------------------
 -- Map
@@ -106,37 +70,18 @@ end
 
 -- x, y in 0..100, or nil inside instances.
 function Compat.PlayerCoords()
-    if C_Map and C_Map.GetBestMapForUnit then
-        local map = C_Map.GetBestMapForUnit("player")
-        if not map then return nil end
-        local pos = C_Map.GetPlayerMapPosition(map, "player")
-        if not pos then return nil end
-        local x, y = pos:GetXY()
-        if not x or (x == 0 and y == 0) then return nil end
-        return x * 100, y * 100
-    end
-    if GetPlayerMapPosition then
-        local x, y = GetPlayerMapPosition("player")
-        if x and x > 0 then return x * 100, y * 100 end
-    end
+    local x, y = ns.WorldMap.PlayerPos()
+    if x then return x * 100, y * 100 end
 end
 
 -- ---------------------------------------------------------------------------
 -- Items and currencies
 -- ---------------------------------------------------------------------------
 
-function Compat.ItemCount(itemID)
-    local fn = (C_Item and C_Item.GetItemCount) or GetItemCount
-    return fn and (fn(itemID) or 0) or 0
-end
+function Compat.ItemCount(itemID) return I.ItemCount(itemID) end
 
--- start, duration (0, 0 when ready)
-function Compat.ItemCooldown(itemID)
-    local fn = (CC and CC.GetItemCooldown) or GetItemCooldown
-    if not fn then return 0, 0 end
-    local start, duration = fn(itemID)
-    return start or 0, duration or 0
-end
+-- start, duration (0, 0 when ready), enable
+function Compat.ItemCooldown(itemID) return I.ItemCooldown(itemID) end
 
 -- name, quantity, maxQuantity (0 = no cap), icon; nil for an unknown currency.
 function Compat.CurrencyInfo(id)
@@ -174,15 +119,8 @@ function Compat.CurrencyList()
 end
 
 -- name, link, quality, ..., icon (the classic GetItemInfo returns)
-function Compat.ItemInfo(id)
-    local fn = (C_Item and C_Item.GetItemInfo) or GetItemInfo
-    if fn then return fn(id) end
-end
-
-function Compat.ItemIcon(id)
-    local fn = (C_Item and C_Item.GetItemIconByID) or GetItemIcon
-    return fn and fn(id) or select(10, Compat.ItemInfo(id))
-end
+Compat.ItemInfo = I.GetItemInfo
+Compat.ItemIcon = I.ItemIcon
 
 function Compat.IsSpellKnown(id)
     if IsPlayerSpell and IsPlayerSpell(id) then return true end
@@ -206,60 +144,8 @@ end
 -- Skills: primary professions and the secondary ones (Cooking, First Aid, Fishing)
 -- ---------------------------------------------------------------------------
 
--- { { name, rank, max, primary } ... } from the skill list. Primaries are the skills you can
--- unlearn; secondaries are matched by their spell names, so it works in any language.
--- Names the secondary skills go by on this client, lower-cased.
-local function SecondaryNames()
-    local names = {}
-    for _, n in ipairs({ PROFESSIONS_COOKING, PROFESSIONS_FIRST_AID, PROFESSIONS_FISHING, Compat.SpellName(2550),
-        Compat.SpellName(3273), Compat.SpellName(7620), "Cooking", "First Aid", "Fishing" }) do
-        if type(n) == "string" then names[n:lower()] = true end
-    end
-    return names
-end
-
-function Compat.Skills()
-    local out, seen = {}, {}
-    local function Add(name, rank, max, primary)
-        if type(name) ~= "string" or name == "" or seen[name] then return end
-        seen[name] = true
-        out[#out + 1] = { name = name, rank = rank or 0, max = max or 0, primary = primary and true or false }
-    end
-
-    -- Clients with the profession API (the way the game's own spellbook reads them).
-    if GetProfessions and GetProfessionInfo then
-        local slots = { GetProfessions() }
-        for i = 1, 6 do
-            local index = slots[i]
-            if index then
-                local ok, name, _, rank, max = pcall(GetProfessionInfo, index)
-                if ok then Add(name, rank, max, i <= 2) end
-            end
-        end
-    end
-
-    -- The skill list: primaries are the skills you can unlearn or that sit under the Professions
-    -- heading; secondaries are matched by name or by their own heading.
-    if GetNumSkillLines and GetSkillLineInfo then
-        local secondary, section = SecondaryNames(), nil
-        for i = 1, GetNumSkillLines() or 0 do
-            local name, header, _, rank, _, _, max, abandonable = GetSkillLineInfo(i)
-            if header then
-                section = name
-            elseif name then
-                local underPrimary = section and (section == TRADE_SKILLS or section == PROFESSIONS_LABEL)
-                local underSecondary = section and (section == SECONDARY_SKILLS or section == SECONDARY_SKILLS_LABEL)
-                if abandonable or underPrimary then Add(name, rank, max, true)
-                elseif secondary[name:lower()] or underSecondary then Add(name, rank, max, false) end
-            end
-        end
-    end
-    table.sort(out, function(a, b)
-        if a.primary ~= b.primary then return a.primary end
-        return a.name < b.name
-    end)
-    return out
-end
+-- { { name, rank, max, primary } ... }: primaries first, then by name (shared Player.lua).
+function Compat.Skills() return ns.Player.Skills() end
 
 -- What the game hands back, line by line, for when Skills() finds nothing it recognises.
 function Compat.SkillsReport()
@@ -290,7 +176,7 @@ end
 -- Group loot
 -- ---------------------------------------------------------------------------
 
--- Loot methods by their classic names; newer clients number them.
+-- Loot methods by name; C_PartyInfo numbers them (LOOT_BY_NUMBER).
 Compat.LOOT_METHODS = { "freeforall", "roundrobin", "master", "group", "needbeforegreed" }
 local LOOT_BY_NUMBER = { [0] = "freeforall", [1] = "roundrobin", [2] = "master", [3] = "group", [4] = "needbeforegreed", [5] = "personalloot" }
 
@@ -341,21 +227,26 @@ end
 -- Friends and guild
 -- ---------------------------------------------------------------------------
 
--- A player name as you'd type it: "Zewski Two" for someone on your own realm, "Name-Realm" for
--- anyone else. The game writes realms with and without spaces ("Classic Beta PvP" and
--- "ClassicBetaPvP"), so both count as yours.
-function Compat.PlayerName(full)
-    if type(full) ~= "string" then return full end
-    if Ambiguate then
-        local ok, short = pcall(Ambiguate, full, "none")
-        if ok and type(short) == "string" and short ~= "" then full = short end
-    end
-    local name, realm = full:match("^(.-)%-(.+)$")
-    if not name then return full end
-    local function Squash(s) return (tostring(s or ""):gsub("[%s%-']", ""):lower()) end
-    local mine = Squash(GetNormalizedRealmName and GetNormalizedRealmName() or GetRealmName())
-    if Squash(realm) == mine or Squash(realm) == Squash(GetRealmName()) then return name end
-    return full
+-- A player name as you'd type it, show it and send it (whisper, invite, guild and friend calls):
+-- WoW Forever's realmless "Given Family". Names come from the game as "Given Family",
+-- "Given Family-Server" or (older saves) "Given-Family"; all give "Given Family". A name with one
+-- word ("Aranalia", UnitName's first value) stays as it is. A hidden or empty name comes back as
+-- it was given.
+function Compat.PlayerName(name)
+    return ns.Units.KeyOf(name) or ns.Units.Display(name)
+end
+
+-- The shared Units.lua's name helpers, under the names SimplePanel's files call:
+--   SamePlayer(a, b): one player, any of the shapes above ("GivenFamily" too; ns.Units.Same).
+--   IsMe(name):       you (ns.Units.IsMe).
+--   NameByGUID(guid): a player's name from their GUID ("Given Family"), or nil.
+--   FullName(name, guid): name when it has the family name, else what the GUID gives, else name's key.
+Compat.SamePlayer, Compat.IsMe = ns.Units.Same, ns.Units.IsMe
+Compat.NameByGUID, Compat.FullName = ns.Units.NameByGUID, ns.Units.FullName
+
+-- A unit's name to show and send: "Given Family" (UnitName's two values joined), or its one name.
+function Compat.UnitPlayer(unit)
+    return ns.Units.UnitFull(unit)
 end
 
 -- Online friends (in-game and Battle.net friends playing WoW) as { name, level, class, zone, bnet }.
@@ -376,7 +267,7 @@ function Compat.OnlineFriends()
             local acc = C_BattleNet.GetFriendAccountInfo(i)
             local g = acc and acc.gameAccountInfo
             if g and g.isOnline and g.clientProgram == (BNET_CLIENT_WOW or "WoW") and g.characterName then
-                out[#out + 1] = { name = Compat.PlayerName(g.characterName .. (g.realmName and g.realmName ~= "" and ("-" .. g.realmName) or "")),
+                out[#out + 1] = { name = Compat.PlayerName(g.characterName),
                     level = g.characterLevel, class = g.className, zone = g.areaName, bnet = acc.accountName }
             end
         end
@@ -391,10 +282,9 @@ function Compat.OnlineGuild()
     local out = {}
     if not (IsInGuild and IsInGuild() and GetNumGuildMembers) then return out, 0 end
     local total = GetNumGuildMembers() or 0
-    local me = UnitName and UnitName("player")
     for i = 1, total do
         local name, rank, _, level, class, zone, _, _, online, _, classFile = GetGuildRosterInfo(i)
-        if name and online and Compat.PlayerName(name) ~= me then
+        if name and online and not Compat.IsMe(name) then
             out[#out + 1] = { name = Compat.PlayerName(name), level = level,
                 class = class, classFile = classFile, zone = zone, rank = rank }
         end
@@ -410,7 +300,7 @@ function Compat.RequestRosters()
     end
 end
 
--- Both take any spelling of the name: the server refuses your own realm written on the end.
+-- Both take any spelling of the name and send the full "Given Family" (a "-Server" ending is dropped).
 function Compat.Whisper(name)
     name = Compat.PlayerName(name)
     if ChatFrame_SendTell then ChatFrame_SendTell(name) elseif ChatFrame_OpenChat then ChatFrame_OpenChat("/w " .. name .. " ") end
@@ -472,7 +362,7 @@ function Compat.StandingColor(s)
     return c and { c.r, c.g, c.b } or { 0.6, 0.6, 0.6 }
 end
 
--- pvpType, isFFA, faction. The global moved to C_PvP on newer clients.
+-- pvpType, isFFA, faction (C_PvP's, else the global).
 function Compat.ZonePVPInfo()
     local fn = (C_PvP and C_PvP.GetZonePVPInfo) or GetZonePVPInfo
     if fn then return fn() end
@@ -483,7 +373,7 @@ end
 -- ---------------------------------------------------------------------------
 
 -- One row of the quest log: title, level, suggested group, header, collapsed, complete, questID.
--- Complete is 1 when done and -1 when failed; newer clients answer through C_QuestLog instead.
+-- Complete is 1 when done and -1 when failed (GetQuestLogTitle, else C_QuestLog).
 local function QuestRow(i)
     if GetQuestLogTitle then
         local title, level, group, header, collapsed, complete, _, id = GetQuestLogTitle(i)

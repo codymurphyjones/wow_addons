@@ -1,23 +1,20 @@
 local _, ns = ...
 
--- One place for API differences between Classic Era, the Classic progression clients and Retail.
--- Everything checks for the feature, never the version number, except the few flags below.
+-- One place for the game API SmartPlates reads on WoW Forever (Interface 16001, the 12.x engine).
+-- Everything checks for the feature, never the version number.
 local C = {}
 ns.Compat = C
 
-local project = WOW_PROJECT_ID
-C.IS_MAINLINE = project == WOW_PROJECT_MAINLINE
-C.IS_CLASSIC_ERA = WOW_PROJECT_CLASSIC ~= nil and project == WOW_PROJECT_CLASSIC
--- Specializations (and so roles from spec) exist from Mists on, on Retail and Classic alike.
+-- Specializations (and so roles from spec), where the game has them.
 C.HAS_SPECS = type(GetSpecialization) == "function" and type(GetSpecializationRole) == "function"
--- Secret values: Midnight hides some combat numbers from addons. Arithmetic on them errors.
+-- Secret values: WoW Forever (the 12.x engine) hides some combat numbers from addons. Arithmetic on them errors.
 C.HAS_SECRETS = type(issecretvalue) == "function"
 
 local issecret = issecretvalue
 function C.IsSecret(v) return issecret ~= nil and issecret(v) or false end
 
--- true when every value can be read and compared.
-function C.Readable(...)
+-- true when every value can be read and compared (a boolean; ns.Units.Readable is the value-or-nil guard).
+function C.AllReadable(...)
     if not issecret then return true end
     for i = 1, select("#", ...) do
         if issecret((select(i, ...))) then return false end
@@ -71,7 +68,7 @@ function C.PlayerAura(spellId)
     return false
 end
 
--- Returns one aura as a table with the fields Retail's AuraData uses, or nil past the last aura.
+-- Returns one aura as a table with the fields C_UnitAuras' AuraData uses, or nil past the last aura.
 function C.GetAura(unit, index, filter)
     if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
         local ok, a = pcall(C_UnitAuras.GetAuraDataByIndex, unit, index, filter)
@@ -110,7 +107,7 @@ function C.DetailedThreat(unit, mob)
     if not UnitDetailedThreatSituation then return nil end
     local ok, tanking, status, scaled, raw, value = pcall(UnitDetailedThreatSituation, unit, mob)
     if not ok then return nil end
-    if not C.Readable(tanking, status, scaled) then return nil end
+    if not C.AllReadable(tanking, status, scaled) then return nil end
     return tanking, status, scaled, raw, value
 end
 
@@ -124,10 +121,65 @@ function C.ScaledThreatAny(unit, mob)
     return tonumber(scaled)
 end
 
-function C.UnitIsUnit(a, b)
-    local ok, same = pcall(UnitIsUnit, a, b)
-    if not ok or (issecret and issecret(same)) then return false end
-    return same
+C.UnitIsUnit = ns.Units.UnitIsUnit
+
+-- Player names (WoW Forever: realmless "Given Family"). One player's name comes as "Given Family",
+-- "GivenFamily" or "Given Family-Server", and some sources (UnitName's first value, a plate that
+-- only tells the given name) give the given name alone.
+local U = ns.Units
+
+-- One player, whatever the shapes; a given name alone matches a full name that starts with it.
+C.SameName = U.SameName
+
+-- A name's given part (or the whole name when it has one word), trimmed; for the NameSet index.
+local function GivenOf(name)
+    local s = U.Short(U.Str(name))
+    s = s and s:match("^%s*(.-)%s*$")
+    return (s and s ~= "") and s or nil
+end
+
+-- A set of players by name (friends, guild, nemeses) that a plate's unit is looked up in.
+-- Kept by the compact key (every shape of a full name gives the same one) and by given name, for
+-- the plates and list entries that only tell that. A number value keeps the highest one added.
+function C.NameSet() return { keys = {}, givenOnly = {}, given = {} } end
+
+function C.NameSetWipe(set)
+    wipe(set.keys); wipe(set.givenOnly); wipe(set.given)
+end
+
+local function Put(t, k, v)
+    local old = t[k]
+    if old == nil or (type(v) == "number" and type(old) == "number" and v > old) then t[k] = v end
+end
+
+function C.NameSetAdd(set, name, value)
+    if value == nil then value = true end
+    local key, given = U.Compact(name), GivenOf(name)
+    if not key then return end
+    Put(set.keys, key, value)
+    if given then
+        given = given:lower()
+        local first = given:match("^(%S+)")
+        Put(set.given, first, value)
+        if first == given then Put(set.givenOnly, given, value) end
+    end
+end
+
+-- The value for a plate's unit (or for a name), or nil.
+function C.NameSetFind(set, unit, name)
+    local full = unit and U.UnitKey(unit) or name
+    local given = GivenOf(name or (unit and U.Call(UnitName, unit)))
+    given = given and (given:match("^(%S+)") or given):lower()
+    local base = GivenOf(full)
+    if base and base:find(" ", 1, true) then
+        local v = set.keys[U.Compact(full)]
+        if v == nil and given then v = set.givenOnly[given] end
+        return v
+    end
+    -- Only a given name (or a compact one) to go on.
+    local key = U.Compact(full)
+    if key and set.keys[key] ~= nil then return set.keys[key] end
+    return given and set.given[given] or nil
 end
 
 -- Only nameplate tokens: the API errors on raid/party tokens.
@@ -148,22 +200,12 @@ function C.WidgetsOnly(unit)
 end
 
 -- Group members that can hold threat, as unit tokens: party or raid members and their pets, plus your pet.
+local GROUP = { pets = true, raidSelf = true }
 function C.GroupUnits(out)
-    out = out or {}
-    wipe(out)
-    if IsInRaid() then
-        for i = 1, GetNumGroupMembers() do
-            out[#out + 1] = "raid" .. i
-            out[#out + 1] = "raidpet" .. i
-        end
-    else
-        for i = 1, GetNumSubgroupMembers() do
-            out[#out + 1] = "party" .. i
-            out[#out + 1] = "partypet" .. i
-        end
-        out[#out + 1] = "pet"
-    end
-    return out
+    GROUP.out = out
+    local units = ns.Units.GroupUnits(GROUP)
+    GROUP.out = nil
+    return units
 end
 
 -- Who is this unit? Each value may be hidden (secret) on Forever/Midnight, so every read has a fallback:
@@ -178,79 +220,41 @@ end
 
 function C.Identity(unit)
     local guid = Read(UnitGUID, unit)
-    if not C.Readable(guid) then guid = nil end
+    if not C.AllReadable(guid) then guid = nil end
     local isPlayer = Read(UnitIsPlayer, unit)
-    if not C.Readable(isPlayer) then isPlayer = nil end
+    if not C.AllReadable(isPlayer) then isPlayer = nil end
     if isPlayer == nil and guid then isPlayer = guid:find("^Player%-") ~= nil end
     local _, class = Read(UnitClass, unit)
-    if not C.Readable(class) then class = nil end
+    if not C.AllReadable(class) then class = nil end
     if not class and UnitClassBase then
         local c = Read(UnitClassBase, unit)
-        if C.Readable(c) then class = c end
+        if C.AllReadable(c) then class = c end
     end
     local _, race = Read(UnitRace, unit)
-    if not C.Readable(race) then race = nil end
+    if not C.AllReadable(race) then race = nil end
     if guid and isPlayer and (not class or not race) and GetPlayerInfoByGUID then
         local _, gClass, _, gRace = Read(GetPlayerInfoByGUID, guid)
-        if not class and C.Readable(gClass) then class = gClass end
-        if not race and C.Readable(gRace) then race = gRace end
+        if not class and C.AllReadable(gClass) then class = gClass end
+        if not race and C.AllReadable(gRace) then race = gRace end
     end
     return isPlayer, class, race, guid
 end
 
--- Class colour for a class token the client hides. Addons can't look a hidden value up themselves,
--- but some game functions may accept one and return a (hidden) colour we can pass on to a bar.
--- Returns true, r, g, b (possibly hidden values), or false when every route is refused. The results
--- are never tested here: a test on a hidden value is itself an error.
-function C.SecretClassColor(class)
-    if C_ClassColor and C_ClassColor.GetClassColor then
-        local ok, r, g, b = pcall(function()
-            local color = C_ClassColor.GetClassColor(class)
-            return color:GetRGB()
-        end)
-        if ok then return true, r, g, b end
-    end
-    if GetClassColor then
-        local ok, r, g, b = pcall(GetClassColor, class)
-        if ok then return true, r, g, b end
-    end
-    return false
-end
+-- Class colour for a class token the client hides: true, r, g, b (possibly hidden values), or false.
+C.SecretClassColor = ns.Units.SecretClassColor
 
+local GREY = { 0.8, 0.8, 0.8 }
 function C.ClassColor(class)
-    if (issecret and issecret(class)) or class == nil then return 0.8, 0.8, 0.8 end
-    local c = (CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS[class]) or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class])
-    if c then return c.r, c.g, c.b end
-    return 0.8, 0.8, 0.8
+    local _, r, g, b = ns.Units.ClassColor(class, GREY)
+    return r, g, b
 end
 
+-- The unit tooltip's lines as { text, type, r, g, b }: every line that carries a C_TooltipInfo type,
+-- plus lines 2 on (ns.Tooltip.Lines).
 function C.GetQuestTooltipLines(unit)
-    -- Off Retail, quest addons add the objective lines to the real tooltip only.
-    if C.IS_MAINLINE and C_TooltipInfo and C_TooltipInfo.GetUnit then
-        local ok, data = pcall(C_TooltipInfo.GetUnit, unit)
-        if ok and data and data.lines then
-            local lines = {}
-            for _, line in ipairs(data.lines) do
-                lines[#lines + 1] = { text = line.leftText, type = line.type, r = line.leftColor and line.leftColor.r, g = line.leftColor and line.leftColor.g, b = line.leftColor and line.leftColor.b }
-            end
-            return lines
-        end
-    end
-    local tip = C.scanTip
-    if not tip then
-        tip = CreateFrame("GameTooltip", "SmartPlatesScanTooltip", nil, "GameTooltipTemplate")
-        C.scanTip = tip
-    end
-    tip:SetOwner(WorldFrame, "ANCHOR_NONE") -- a hidden tooltip loses its owner, so set it every scan
-    tip:ClearLines()
-    tip:SetUnit(unit)
     local lines = {}
-    for i = 2, tip:NumLines() do
-        local fs = _G["SmartPlatesScanTooltipTextLeft" .. i]
-        if fs then
-            local r, g, b = fs:GetTextColor()
-            lines[#lines + 1] = { text = fs:GetText(), r = r, g = g, b = b }
-        end
+    for i, l in ipairs(ns.Tooltip.Lines("unit", unit) or {}) do
+        if i >= 2 or l.type then lines[#lines + 1] = { text = l[1], type = l.type, r = l[3], g = l[4], b = l[5] } end
     end
     return lines
 end

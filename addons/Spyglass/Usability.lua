@@ -82,7 +82,7 @@ function U:Facts(itemID)
         local text = line[1]
         if StartsWith(text, CLASSES_PREFIX) then
             result.classes = text:sub(#CLASSES_PREFIX + 1)
-            result.classesRed = ns.IsRed(line[3], line[4], line[5])
+            result.classesRed = ns.Tooltip.IsRed(line[3], line[4], line[5])
         elseif text:find("^%(%d+%)") then
             result.effects[#result.effects + 1] = text
         else

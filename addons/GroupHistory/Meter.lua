@@ -3,52 +3,29 @@ local C = ns.Compat
 
 -- Reads Blizzard's built-in damage meter (C_DamageMeter) for one fight, for the whole group. This
 -- client forbids addons the combat log, but the meter is readable once combat ends (its values are
--- secret during combat). The calls and fields are the ones Details! uses on this client
--- (Details/core/parser_nocleu1.lua) and BattleRecap's Meter.lua:
---   GetAvailableCombatSessions()                          -> { { sessionID } }, newest last
---   GetCombatSessionFromID(id, meterType)                 -> { combatSources = { { name, sourceGUID,
---       classFilename, totalAmount, deathRecapID, deathTimeSeconds, isLocalPlayer } }, durationSeconds }
---   GetCombatSessionSourceFromID(id, meterType, guid, creatureID) -> { combatSpells = { { spellID,
---       totalAmount, overkillAmount, creatureName, isAvoidable, isDeadly } } }
+-- secret during combat). The calls themselves are the shared DamageMeter.lua (addons/shared), which
+-- lists the fields.
 local Meter = {}
 ns.Meter = Meter
 
+local DM = ns.DamageMeter
 local RETRIES, RETRY_DELAY = 10, 1
 
 function Meter.Available()
-    return C_DamageMeter and C_DamageMeter.GetCombatSessionFromID and Enum and Enum.DamageMeterType and true or false
+    return DM.Available() and C_DamageMeter.GetCombatSessionFromID and true or false
 end
 
-function Meter.NewestSessionID()
-    if not (C_DamageMeter and C_DamageMeter.GetAvailableCombatSessions) then return nil end
-    local list = C.Readable(C.Call(C_DamageMeter.GetAvailableCombatSessions))
-    local last = type(list) == "table" and list[#list]
-    return type(last) == "table" and C.Num(last.sessionID) or nil
-end
-
-local function Session(id, meterType)
-    if meterType == nil then return nil end
-    return C.Call(C_DamageMeter.GetCombatSessionFromID, id, meterType)
-end
-
-local function Spells(id, meterType, source)
-    if not C_DamageMeter.GetCombatSessionSourceFromID then return nil end
-    local s = C.Call(C_DamageMeter.GetCombatSessionSourceFromID, id, meterType, C.Str(source.sourceGUID), C.Num(source.sourceCreatureID))
-    local list = type(s) == "table" and C.Readable(s.combatSpells)
-    return type(list) == "table" and list or nil
-end
+Meter.NewestSessionID = DM.NewestSessionID
 
 -- Sources of one meter type: { [shortName] = { amount, guid, class, recap, deathTime, src } }, or
 -- nil, "secret" while the values are hidden.
 local function Sources(id, meterType)
-    local session = Session(id, meterType)
-    if type(session) ~= "table" then return {}, nil end
-    local list = C.Readable(session.combatSources)
-    if session.combatSources ~= nil and list == nil then return nil, "secret" end
+    local session, handle = DM.Session(meterType, id)
+    local list, why, duration = DM.Sources(session)
+    if not list then return nil, why end
     local out = {}
-    for _, s in ipairs(type(list) == "table" and list or {}) do
+    for _, s in ipairs(list) do
         if type(s) == "table" then
-            if s.name ~= nil and not C.Str(s.name) then return nil, "secret" end
             local name = C.Short(C.Str(s.name))
             if name then
                 out[name] = {
@@ -58,7 +35,7 @@ local function Sources(id, meterType)
             end
         end
     end
-    return out, nil, C.Num(session.durationSeconds)
+    return out, nil, duration, handle
 end
 
 -- Everything about one fight for the group: by short name, { done, healed, taken, avoidable,
@@ -79,7 +56,7 @@ function Meter.ReadFight(id)
     end
     for field, meterType in pairs(types) do
         if meterType ~= nil then
-            local sources, why, len = Sources(id, meterType)
+            local sources, why, len, handle = Sources(id, meterType)
             if not sources then return nil, why end
             duration = duration or len
             for name, s in pairs(sources) do
@@ -94,7 +71,7 @@ function Meter.ReadFight(id)
                 -- The avoidable hits, spell by spell, to recognise them in death recaps.
                 if field == "avoidable" and s.amount > 0 then
                     p.avoidSpells = {}
-                    for _, sp in ipairs(Spells(id, meterType, s.src) or {}) do
+                    for _, sp in ipairs(DM.Spells(handle, s.src) or {}) do
                         local spell = type(sp) == "table" and C.Num(sp.spellID)
                         if spell then p.avoidSpells[spell] = C.Num(sp.totalAmount) or 0 end
                     end
@@ -115,16 +92,16 @@ function Meter.Ledger(id)
     local ledger = {}
     for _, meterType in ipairs({ T.HealingDone, T.Absorbs }) do
         if meterType ~= nil then
-            local session = Session(id, meterType)
-            local list = type(session) == "table" and C.Readable(session.combatSources)
-            if session and session.combatSources ~= nil and list == nil then return nil end
-            for _, s in ipairs(type(list) == "table" and list or {}) do
+            local session, handle = DM.Session(meterType, id)
+            local list = DM.Sources(session)
+            if not list then return nil end
+            for _, s in ipairs(list) do
                 local name = type(s) == "table" and C.Short(C.Str(s.name))
                 if name then
                     local h = ledger[name] or { total = 0, class = C.Str(s.classFilename), targets = {}, spells = {} }
                     ledger[name] = h
                     h.total = h.total + (C.Num(s.totalAmount) or 0)
-                    for _, sp in ipairs(Spells(id, meterType, s) or {}) do
+                    for _, sp in ipairs(DM.Spells(handle, s) or {}) do
                         if type(sp) == "table" then
                             local amount = C.Num(sp.totalAmount) or 0
                             local d = type(sp.combatSpellDetails) == "table" and sp.combatSpellDetails or {}

@@ -78,11 +78,10 @@ function L:Collect(itemIDs, sourceOf, out, seen, filter, inst, hint)
                 -- stats, or made for your class (its effect is its worth).
                 local classEffect = score <= 0 and ns.Usability:IsClassSpecific(itemID)
                 if score > 0 or classEffect or filter.showAll or filter.keepZero then
-                    local group = D.EQUIP_GROUP[cached.equipLoc]
-                    local worn, empty = ns.Scoring:EquippedScore(group)
+                    local upgrade, _, worn, empty = ns.Scoring:Beats(itemID, score, cached.equipLoc)
                     out[#out + 1] = {
                         itemID = itemID, score = score, top = top, source = sourceOf(itemID),
-                        delta = score - worn, empty = empty, classEffect = classEffect or nil,
+                        delta = score - (worn or 0), empty = empty, upgrade = upgrade or nil, classEffect = classEffect or nil,
                         worn = ns.Scoring:IsWorn(itemID) or nil,
                         instKey = inst and inst.key, bossIndex = inst and inst.bossOf[itemID],
                     }
@@ -428,6 +427,6 @@ function L:UpgradeText(row)
     if row.worn then return "|cff40ff40equipped|r" end
     if row.score <= 0 then return row.classEffect and "|cff9a9a9aclass effect|r" or "" end
     if row.empty then return "|cff40ff40new|r" end
-    if row.delta > 0.05 then return string.format("|cff40ff40+%.1f|r", row.delta) end
+    if row.upgrade then return string.format("|cff40ff40+%.1f|r", row.delta) end
     return ""
 end

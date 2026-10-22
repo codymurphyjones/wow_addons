@@ -166,14 +166,12 @@ function P:SearchRanks(cache, limit)
 end
 
 -- Learning a spell (or a new rank) invalidates the rank list.
-local events = CreateFrame("Frame")
 for _, event in ipairs({ "LEARNED_SPELL_IN_TAB", "LEARNED_SPELL_IN_SKILL_LINE" }) do
-    pcall(events.RegisterEvent, events, event)
+    ns:On(event, function()
+        P.rankCache = nil
+        P.searching = false
+    end)
 end
-events:SetScript("OnEvent", function()
-    P.rankCache = nil
-    P.searching = false
-end)
 
 ---------------------------------------------------------------------------
 -- Window

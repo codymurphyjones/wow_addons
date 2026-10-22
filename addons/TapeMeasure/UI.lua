@@ -1,5 +1,4 @@
 local _, ns = ...
-local PAL = ns.Palette
 local C = ns.Compat
 
 -- The Tape Measure window (Upgrades, Equipped, Stat Priority, Help) and the
@@ -7,14 +6,12 @@ local C = ns.Compat
 local UI = {}
 ns.UI = UI
 
-local frame
-local pages, tabs = {}, {}
-local activeTab = "upgrades"
+local win -- the window (shared\Window.lua), made under "Window" below
 
 local W = ns.Widgets
-local ACCENT, UNKNOWN_ICON = W.ACCENT, W.UNKNOWN_ICON
-local SetBackdrop, Label, Muted, MakeButton, Hint = W.SetBackdrop, W.Label, W.Muted, W.MakeButton, W.Hint
-local MakeCheckbox, MakeEditBox, IconFor, CreateRowList = W.MakeCheckbox, W.MakeEditBox, W.IconFor, W.CreateRowList
+local UNKNOWN_ICON = W.UNKNOWN_ICON
+local Label, Muted, MakeButton, Hint = W.Label, W.Muted, W.MakeButton, W.Hint
+local IconFor, CreateRowList = W.IconFor, W.CreateRowList
 
 local GOOD, BAD = { 0.35, 0.96, 0.55 }, { 1, 0.42, 0.42 }
 
@@ -35,12 +32,7 @@ local function StatIcon(stat) return "Interface\\Icons\\" .. (STAT_ICONS[stat] o
 -- Pages
 -- ---------------------------------------------------------------------------
 
-local function NewPage(name)
-    local p = CreateFrame("Frame", nil, frame)
-    p:SetPoint("TOPLEFT", 196, -76); p:SetPoint("BOTTOMRIGHT", -18, 18)
-    p:Hide(); pages[name] = p
-    return p
-end
+local function NewPage(name) return win:NewPage(name) end
 
 local function CreateUpgradesPage()
     local p = NewPage("upgrades")
@@ -163,7 +155,9 @@ local function CreateHelpPage()
 end
 
 -- ---------------------------------------------------------------------------
--- Settings panel (Options > AddOns > Tape Measure)
+-- Settings page (Options > AddOns > Tape Measure)
+-- Built with the shared OptionsPage.lua (addons/shared): /tape on|off, /tape minimap and the
+-- window's Settings tab change the same options, so every UI shows the same value.
 -- ---------------------------------------------------------------------------
 
 local OPTION_DEFS = {
@@ -175,95 +169,34 @@ local OPTION_DEFS = {
     { "bagPercent", "Percent badges", "+12.4%, or NEW for an empty slot, on the bag slot." },
 }
 
-local NUMBER_DEFS = {
-    { "tooltipLines", "Stat lines in tooltips", "Hold Shift to see them all.", 1, 30 },
-    { "sidegrade", "Sidegrade band (%)", "Changes smaller than this are called a sidegrade.", 0, 50 },
-    { "minUpgrade", "Minimum upgrade (%)", "Smaller upgrades aren't highlighted or listed.", 0, 1000 },
-}
+local function Percent(v) return ("%.3g%%"):format(v) end
 
-local settingsPanel, settingsCategory
-
-local function BuildSettings(p)
-    local logo = p:CreateTexture(nil, "ARTWORK"); logo:SetSize(28, 28)
-    logo:SetPoint("TOPLEFT", 0, 6); logo:SetTexture(ns.ICON)
-    Label(p, "Tape Measure", "TapeMeasureGameFontNormalLarge", 36, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    local prio = MakeButton(p, "Edit stat priority", 130, 26); prio:SetPoint("TOPRIGHT", 0, 4)
-    prio:SetScript("OnClick", function() ns:OpenStatLedger() end)
-    Hint(prio, "StatLedger", "Tape Measure's weights come from your stat order in StatLedger.")
-    local test = MakeButton(p, "Test bag pulse", 110, 26); test:SetPoint("RIGHT", prio, "LEFT", -8, 0)
-    test:SetScript("OnClick", function() ns.Bags:TestPulse() end)
-    Hint(test, "Preview", "Open your bags: every item is marked TEST and flashes for six seconds.")
-
-    p.checks = {}
-    for i, d in ipairs(OPTION_DEFS) do
-        local y = -34 - (i - 1) * 44
-        local b = MakeCheckbox(p, d[2]); b:SetPoint("TOPLEFT", -4, y)
-        b:SetScript("OnClick", function(self) ns.db[d[1]] = self:GetChecked() and true or false; ns:Changed() end)
-        Muted(Label(p, d[3], "TapeMeasureGameFontHighlightSmall", 27, y - 25, 270))
-        p.checks[d[1]] = b
+UI.page = ns.NewOptionsPage({ name = "Tape Measure", icon = true, build = function(p)
+    p:Header(ns.IconMarkup(28) .. "  Tape Measure")
+    for _, d in ipairs(OPTION_DEFS) do
+        p:Check({ path = "db." .. d[1], label = d[2], tooltip = d[3] })
     end
-    local mini = MakeCheckbox(p, "Minimap button"); mini:SetPoint("TOPLEFT", -4, -34 - #OPTION_DEFS * 44)
-    mini:SetScript("OnClick", function(self)
-        ns.char.minimap.hide = not self:GetChecked()
-        ns.MinimapButton:Refresh()
-    end)
-    p.mini = mini
+    p:Check({ path = "char.minimap.hide", invert = true, label = "Minimap button", tooltip = "Tape Measure's minimap button (/tape minimap).",
+        apply = function() if ns.MinimapButton then ns.MinimapButton:Refresh() end end })
 
-    local col = 330
-    p.numbers = {}
-    for i, d in ipairs(NUMBER_DEFS) do
-        local y = -38 - (i - 1) * 64
-        Label(p, d[2], "TapeMeasureGameFontHighlight", col, y)
-        local box = MakeEditBox(p, 60); box:SetPoint("TOPLEFT", col + 180, y + 6)
-        box:SetJustifyH("CENTER")
-        box:SetScript("OnEditFocusLost", function(self)
-            local v = tonumber(self:GetText())
-            if v then ns.db[d[1]] = math.max(d[4], math.min(d[5], v)) end
-            self:SetText(tostring(ns.db[d[1]]))
-            ns:Changed()
-        end)
-        Muted(Label(p, d[3], "TapeMeasureGameFontHighlightSmall", col, y - 20, 260))
-        p.numbers[d[1]] = box
-    end
+    p:Header("Numbers")
+    p:Slider({ path = "db.tooltipLines", label = "Stat lines in tooltips", min = 1, max = 30, step = 1,
+        tooltip = "Hold Shift to see them all." })
+    p:Slider({ path = "db.sidegrade", label = "Sidegrade band (%)", min = 0, max = 50, step = 0.5, format = Percent,
+        tooltip = "Changes smaller than this are called a sidegrade." })
+    p:Slider({ path = "db.minUpgrade", label = "Minimum upgrade (%)", min = 0, max = 50, step = 0.5, format = Percent,
+        tooltip = "Smaller upgrades aren't highlighted or listed." })
 
-    p.Refresh = function()
-        for key, b in pairs(p.checks) do b:SetChecked(ns.db[key]) end
-        p.mini:SetChecked(not ns.char.minimap.hide)
-        for key, box in pairs(p.numbers) do
-            if not box:HasFocus() then box:SetText(tostring(ns.db[key])) end
-        end
-    end
-end
-
-local function CreateSettingsPanel()
-    settingsPanel = CreateFrame("Frame", "TapeMeasureSettingsPanel")
-    settingsPanel.name = "Tape Measure"
-    local view = CreateFrame("Frame", nil, settingsPanel)
-    view:SetPoint("TOPLEFT", 16, -16); view:SetPoint("BOTTOMRIGHT", -16, 16)
-    settingsPanel.view = view
-    -- A new parentless frame counts as shown, so OnShow would never fire. Start hidden.
-    settingsPanel:Hide()
-    settingsPanel:SetScript("OnShow", function()
-        if not view.Refresh then BuildSettings(view) end
-        view.Refresh()
-    end)
-    if Settings and Settings.RegisterCanvasLayoutCategory then
-        settingsCategory = Settings.RegisterCanvasLayoutCategory(settingsPanel, "Tape Measure")
-        Settings.RegisterAddOnCategory(settingsCategory)
-    elseif InterfaceOptions_AddCategory then
-        InterfaceOptions_AddCategory(settingsPanel)
-    end
-end
-ns:OnLoad(CreateSettingsPanel)
+    p:Header("Stat priority and preview")
+    p:Button({ label = "Stat priority", text = "Edit stat priority", fn = function() ns:OpenStatLedger() end,
+        tooltip = "Tape Measure's weights come from your stat order in StatLedger." })
+    p:Button({ label = "Preview", text = "Test bag pulse", fn = function() ns.Bags:TestPulse() end,
+        tooltip = "Open your bags: every item is marked TEST and flashes for six seconds." })
+end })
 
 function UI:OpenSettings()
-    if frame then frame:Hide() end
-    if Settings and Settings.OpenToCategory and settingsCategory then
-        Settings.OpenToCategory(settingsCategory:GetID())
-    elseif InterfaceOptionsFrame_OpenToCategory then
-        -- Called twice: the old options frame ignores the first call when it isn't open yet.
-        InterfaceOptionsFrame_OpenToCategory(settingsPanel); InterfaceOptionsFrame_OpenToCategory(settingsPanel)
-    end
+    win:Hide()
+    return self.page:Open()
 end
 
 -- ---------------------------------------------------------------------------
@@ -275,92 +208,35 @@ local TABS = {
     { "equipped", "Equipped", "INV_Chest_Chain_05" },
     { "priority", "Stat Priority", "INV_Misc_Note_01" },
     { "help", "Help", "INV_Misc_Book_09" },
-    { "settings", "Settings", "INV_Misc_Gear_01" },
+    { "settings", "Settings", "INV_Misc_Gear_01", onClick = function() UI:OpenSettings() end,
+        hint = { "Settings", "Opens Options > AddOns > Tape Measure." } },
 }
 
-local function ShowTab(name)
-    activeTab = name
-    for key, p in pairs(pages) do p:SetShown(key == name) end
-    for key, b in pairs(tabs) do
-        b.selected:SetShown(key == name)
-        b:SetBackdropColor(key == name and 0.09 or 0.075, key == name and 0.15 or 0.105, key == name and 0.17 or 0.13, 1)
-    end
-end
-
-local function CreateMainFrame()
-    if frame then return end
-    frame = CreateFrame("Frame", "TapeMeasureWindow", UIParent, "BackdropTemplate")
-    frame:SetSize(800, 560); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true)
-    frame:SetClampedToScreen(true); frame:SetMovable(true); frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton"); SetBackdrop(frame, 0.985)
-    local w = ns.char.window
-    frame:SetPoint(w.point or "CENTER", UIParent, w.point or "CENTER", w.x or 0, w.y or 0)
-    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local point, _, _, x, y = self:GetPoint()
-        ns.char.window = { point = point, x = x, y = y }
-    end)
-    frame:SetScript("OnShow", function() UI:Refresh() end)
-    tinsert(UISpecialFrames, "TapeMeasureWindow")
-
-    local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
-    logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "Tape Measure", "TapeMeasureGameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Measures your gear against what you wear", "TapeMeasureGameFontHighlightSmall", 70, -42))
-    local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
-    close:SetScript("OnClick", function() frame:Hide() end)
-
-    local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-    side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    SetBackdrop(side); side:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
-    for i, d in ipairs(TABS) do
-        local b = MakeButton(side, d[2], 147, 40); b:SetPoint("TOPLEFT", 9, -12 - (i - 1) * 46)
-        b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
-        local icon = b:CreateTexture(nil, "ARTWORK"); icon:SetSize(23, 23); icon:SetPoint("LEFT", 9, 0)
-        icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
-        b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end end)
-        if d[1] == "settings" then
-            b:SetScript("OnClick", function() UI:OpenSettings() end)
-            Hint(b, "Settings", "Opens Options > AddOns > Tape Measure.")
-        else
-            b:SetScript("OnClick", function() ShowTab(d[1]); UI:Refresh() end)
-        end
-        tabs[d[1]] = b
-    end
-    Muted(Label(side, "Hover any gear to see\nwhy it's better or worse.\n\nHold Shift on a tooltip\nfor every stat line.", "TapeMeasureGameFontHighlightSmall", 12, -14 - #TABS * 46, 145))
-    Label(side, "v" .. ns.VERSION, "TapeMeasureGameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
-
-    CreateUpgradesPage(); CreateEquippedPage(); CreatePriorityPage(); CreateHelpPage()
-    ShowTab(activeTab); frame:Hide()
-end
+win = ns.NewWindow({
+    name = "TapeMeasureWindow", title = "Tape Measure", subtitle = "Measures your gear against what you wear",
+    tabs = TABS, active = "upgrades",
+    refresh = function() UI:Refresh() end,
+    sideNote = "Hover any gear to see\nwhy it's better or worse.\n\nHold Shift on a tooltip\nfor every stat line.",
+    build = function() CreateUpgradesPage(); CreateEquippedPage(); CreatePriorityPage(); CreateHelpPage() end,
+})
+UI.window = win
 
 function UI:Refresh()
     if not ns.db then return end
-    if settingsPanel and settingsPanel.view.Refresh and settingsPanel:IsVisible() then settingsPanel.view.Refresh() end
-    if not frame or not frame:IsShown() then return end
-    local p = pages[activeTab]
-    if p and p.Refresh then p.Refresh() end
+    win:Refresh()
 end
 
 function UI:Toggle()
     if not ns.db then return end
-    CreateMainFrame()
-    frame:SetShown(not frame:IsShown())
+    win:Toggle()
 end
 
 function UI:Show(tab)
     if not ns.db then return end
-    CreateMainFrame()
-    if tab then ShowTab(tab) end
-    frame:Show(); self:Refresh()
+    win:Show(tab)
 end
 
-function UI:Hide()
-    if frame then frame:Hide() end
-end
+function UI:Hide() win:Hide() end
 
-ns:On("BAG_UPDATE_DELAYED", function() if activeTab == "upgrades" then UI:Refresh() end end)
+ns:On("BAG_UPDATE_DELAYED", function() if win.active == "upgrades" then UI:Refresh() end end)
 ns:On("PLAYER_EQUIPMENT_CHANGED", function() UI:Refresh() end)

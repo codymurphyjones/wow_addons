@@ -39,12 +39,7 @@ local function Active()
     return out
 end
 
-local function Clock(secs)
-    if not secs then return "--" end
-    secs = math.max(0, math.floor(secs))
-    if secs >= 3600 then return ("%d:%02d:%02d"):format(secs / 3600, secs / 60 % 60, secs % 60) end
-    return ("%d:%02d"):format(secs / 60, secs % 60)
-end
+local function Clock(secs) return ns.Format.Clock(secs) end
 
 local function Check(p)
     local warn = p:Get("warnMinutes") * 60

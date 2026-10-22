@@ -18,7 +18,8 @@ local RING = "Interface\\Cooldown\\star4"
 local DEPART = { 0.35, 0.95, 0.55 } -- A: the ride's timer is running from here
 local ARRIVE = { 1, 0.82, 0.3 }     -- B: the ride ends here
 
-local pins, used = {}, 0
+local WM = ns.WorldMap
+local layer -- the shared WorldMap.lua layer the docks are on (below)
 local warned -- the icons didn't load (the game only finds new files after a restart)
 
 local function SetIcon(tex, path)
@@ -105,28 +106,21 @@ local function OnClick(pin, button)
     end
 end
 
-local function GetPin(canvas)
-    used = used + 1
-    local pin = pins[used]
-    if not pin then
-        pin = CreateFrame("Button", nil, canvas)
-        pin.waypoint = true -- town badges never cover it (Towns.lua)
-        pin:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-        pin.ring = pin:CreateTexture(nil, "BACKGROUND")
-        pin.ring:SetPoint("CENTER")
-        pin.ring:SetSize(SIZE * 2, SIZE * 2)
-        pin.ring:SetTexture(RING)
-        pin.ring:SetBlendMode("ADD")
-        pin.icon = pin:CreateTexture(nil, "ARTWORK")
-        pin.icon:SetAllPoints()
-        pin.time = pin:CreateFontString(nil, "OVERLAY", "WaypointGameFontHighlightSmall")
-        pin.time:SetPoint("TOP", pin, "BOTTOM", 0, -1)
-        pin:SetScript("OnEnter", OnEnter)
-        pin:SetScript("OnLeave", OnLeave)
-        pin:SetScript("OnClick", OnClick)
-        pins[used] = pin
-    end
-    return pin
+local function CreatePin(pin)
+    pin.waypoint = true -- town badges never cover it (Towns.lua)
+    pin:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    pin.ring = pin:CreateTexture(nil, "BACKGROUND")
+    pin.ring:SetPoint("CENTER")
+    pin.ring:SetSize(SIZE * 2, SIZE * 2)
+    pin.ring:SetTexture(RING)
+    pin.ring:SetBlendMode("ADD")
+    pin.icon = pin:CreateTexture(nil, "ARTWORK")
+    pin.icon:SetAllPoints()
+    pin.time = pin:CreateFontString(nil, "OVERLAY", "WaypointGameFontHighlightSmall")
+    pin.time:SetPoint("TOP", pin, "BOTTOM", 0, -1)
+    pin:SetScript("OnEnter", OnEnter)
+    pin:SetScript("OnLeave", OnLeave)
+    pin:SetScript("OnClick", OnClick)
 end
 
 -- A: the ride is on from here; B: it ends here; nil: neither.
@@ -141,63 +135,50 @@ local function SetState(pin, state)
     end
 end
 
-local function Place(pin, canvas, mapID, x, y)
-    local cx, cy = ns.Nav:OnCanvas(mapID, x, y, WorldMapFrame:GetMapID())
-    if not cx then return false end
-    local w, h = canvas:GetSize()
-    local scale = 1 / (WorldMapFrame:GetCanvasScale() or 1) -- the same size on screen at any zoom
-    pin:SetSize(SIZE, SIZE)
-    pin:SetScale(scale)
-    pin:SetFrameLevel(ns:MapBase(canvas) + LEVEL)
-    pin:ClearAllPoints()
-    pin:SetPoint("CENTER", canvas, "TOPLEFT", cx * w / scale, -cy * h / scale)
-    pin:Show()
-    return true
-end
-
 -- Shown on zone and continent maps; the world map would be a pile of icons.
 local function MapShows(mapID)
-    local info = mapID and C_Map.GetMapInfo(mapID)
+    local info = mapID and C_Map and WM.Call(C_Map.GetMapInfo, mapID)
     return info and info.mapType and Enum and Enum.UIMapType and info.mapType >= Enum.UIMapType.Continent
 end
 
-function Pins:Refresh()
-    for i = 1, used do pins[i]:Hide() end
-    used = 0
-    if not (ns.db and ns.db.transportPins and ns.Transports and WorldMapFrame and WorldMapFrame:IsShown()) then return end
-    if not MapShows(WorldMapFrame:GetMapID()) then return end
-    local canvas = WorldMapFrame:GetCanvas()
+-- Drawn on the open map (the layer below has hidden the last ones and gives each pin its place,
+-- size and level).
+local function Refresh(l, mapID)
+    if not (ns.db and ns.db.transportPins and ns.Transports) then return end
+    if not MapShows(mapID) then return end
     local mine, ride = MyFaction(), Ride()
     local landed -- B's dock was drawn
     for _, d in ipairs(ns.Route:Docks()) do
         if not d.t.faction or d.t.faction == mine then
-            local pin = GetPin(canvas)
-            pin.dock = d
-            SetIcon(pin.icon, ICONS[d.t.kind] or ICONS.ship)
-            if Place(pin, canvas, d.point.mapID, d.point.x, d.point.y) then
+            local pin = l:PinAt(d.point.mapID, d.point.x, d.point.y)
+            if pin then
+                pin.dock = d
+                SetIcon(pin.icon, ICONS[d.t.kind] or ICONS.ship)
                 local state = ride and (ride.fromKey == d.t.key and "from" or ride.toKey == d.t.key and "to") or nil
                 if state == "to" then landed = true end
                 SetState(pin, state)
-            else
-                used = used - 1
             end
         end
     end
     -- Where the ride lands, when that isn't a dock (you got off there last time).
     if ride and not landed and ride.landing then
-        local pin = GetPin(canvas)
-        pin.dock = nil
-        SetIcon(pin.icon, ICONS[ride.kind] or ICONS.ship)
-        if Place(pin, canvas, ride.landing.mapID, ride.landing.x, ride.landing.y) then SetState(pin, "to") else used = used - 1 end
+        local pin = l:PinAt(ride.landing.mapID, ride.landing.x, ride.landing.y)
+        if pin then
+            pin.dock = nil
+            SetIcon(pin.icon, ICONS[ride.kind] or ICONS.ship)
+            SetState(pin, "to")
+        end
     end
-    self:Tick()
+    Pins:Tick()
 end
+
+function Pins:Refresh() layer:Refresh() end
 
 -- The time left under A and B, while a ride is on.
 function Pins:Tick()
-    local ride = used > 0 and Ride()
-    for i = 1, used do
-        local pin = pins[i]
+    local ride = layer.used > 0 and Ride()
+    for i = 1, layer.used do
+        local pin = layer.pins[i]
         if pin.state == "from" then
             pin.time:SetText(ride and Clock(ride.left) or "")
         elseif pin.state == "to" then
@@ -206,17 +187,10 @@ function Pins:Tick()
     end
 end
 
-ns:On("PLAYER_LOGIN", function()
-    if not WorldMapFrame then return end
-    local function Refresh() Pins:Refresh() end
-    hooksecurefunc(WorldMapFrame, "OnMapChanged", Refresh)
-    if WorldMapFrame.OnCanvasScaleChanged then hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", Refresh) end
-    WorldMapFrame:HookScript("OnShow", Refresh)
-    local acc = 0
-    CreateFrame("Frame"):SetScript("OnUpdate", function(_, elapsed)
-        acc = acc + elapsed
-        if acc < 0.5 then return end
-        acc = 0
-        if WorldMapFrame:IsShown() and used > 0 then Pins:Tick() end
-    end)
-end)
+-- One layer on the world map (shared WorldMap.lua): redrawn when the map, its zoom or its
+-- visibility changes; the times under A and B tick every half second while it's open.
+layer = WM.NewLayer({
+    pinLevel = LEVEL, size = SIZE, create = CreatePin, refresh = Refresh,
+    interval = 0.5, every = function(l) if l.used > 0 then Pins:Tick() end end,
+})
+Pins.layer = layer

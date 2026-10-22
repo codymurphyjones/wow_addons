@@ -31,33 +31,9 @@ local function Color(s)
     return nil
 end
 
--- Each profession's icon, from the spell that goes with it (matched by name, so any language).
--- Herbalism's spell is "Herb Gathering", so names the spells don't match fall back to the English
--- skill name.
-local ICON_SPELLS = { 2259, 2018, 7411, 4036, 2108, 3908, 2550, 3273, 25229, 45357, 2575, 8613, 7620, 2366 }
-local ICON_FALLBACK = {
-    Alchemy = "Trade_Alchemy", Blacksmithing = "Trade_BlackSmithing", Enchanting = "Trade_Engraving",
-    Engineering = "Trade_Engineering", Leatherworking = "Trade_LeatherWorking", Tailoring = "Trade_Tailoring",
-    Cooking = "INV_Misc_Food_15", ["First Aid"] = "Spell_Holy_SealOfSacrifice", Jewelcrafting = "INV_Misc_Gem_01",
-    Inscription = "INV_Inscription_Tradeskill01", Mining = "Trade_Mining", Skinning = "INV_Misc_Pelt_Wolf_01",
-    Fishing = "Trade_Fishing", Herbalism = "Trade_Herbalism",
-}
-
-local iconBySpellName
-local function Icon(s)
-    if not s then return nil end
-    if not iconBySpellName then
-        iconBySpellName = {}
-        for _, id in ipairs(ICON_SPELLS) do
-            local n = C.SpellName(id)
-            if n then iconBySpellName[n] = id end
-        end
-    end
-    local id = iconBySpellName[s.name]
-    local icon = id and C.SpellIcon(id)
-    if icon then return icon end
-    return ICON_FALLBACK[s.name] and ("Interface\\Icons\\" .. ICON_FALLBACK[s.name]) or nil
-end
+-- Each profession's icon, from the spell that goes with it (matched by name, so any language;
+-- shared Player.lua, with the English names and stock icons to fall back on).
+local function Icon(s) return s and ns.Player.ProfessionIcon(s.name) end
 
 -- One profession on the bar: its icon and skill, or its name when asked for (or with no icon).
 local function Segment(p, s)
@@ -69,35 +45,11 @@ end
 
 -- Spells that matter for opening a window: Fishing has none (casting it fishes), Mining's window
 -- is Smelting.
-local FISHING, MINING, SMELTING = 7620, 2575, 2656
+local FISHING, MINING, SMELTING = ns.Player.FISHING_SPELL, ns.Player.PROFESSIONS.Mining.spell, ns.Player.PROFESSIONS.Mining.open
 
--- The professions with a window of their own, by the spell that opens it. Matched by name through
--- these IDs, which the game can always name, so it works in any language and doesn't depend on the
--- spellbook answering a lookup by name.
-local CRAFTING = {
-    2259,  -- Alchemy
-    2018,  -- Blacksmithing
-    7411,  -- Enchanting
-    4036,  -- Engineering
-    2108,  -- Leatherworking
-    3908,  -- Tailoring
-    2550,  -- Cooking
-    3273,  -- First Aid
-    25229, -- Jewelcrafting
-    45357, -- Inscription
-}
-
-local craftNames
-local function IsCrafting(name)
-    if not craftNames then
-        craftNames = {}
-        for _, id in ipairs(CRAFTING) do
-            local n = C.SpellName(id)
-            if n then craftNames[n] = true end
-        end
-    end
-    return craftNames[name] or false
-end
+-- The professions with a window of their own (shared Player.lua: matched by name through the
+-- spells that open them, so it works in any language).
+local function IsCrafting(name) return ns.Player.IsCrafting(name) end
 
 -- The spell that opens a profession's window, or nil for skills without one (Herbalism, Skinning,
 -- Fishing). Mining's window is Smelting.

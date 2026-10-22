@@ -8,19 +8,14 @@ ns.UI = UI
 
 local ACCENT = W.ACCENT
 local Label, Muted, MakeButton, Hint = W.Label, W.Muted, W.MakeButton, W.Hint
-local frame
-local pages, tabs = {}, {}
-local activeTab = "general"
+local win -- the window (shared\Window.lua), made under "Window" below
 
 local LEVEL_NAMES = { LOW = "Low threat", MEDIUM = "Medium threat", HIGH = "High threat", OFFTANK = "Off-tanked" }
 
 local function NewPage(name, title, summary)
-    local p = CreateFrame("Frame", nil, frame)
-    p:SetPoint("TOPLEFT", 196, -76); p:SetPoint("BOTTOMRIGHT", -18, 18)
+    local p = win:NewPage(name)
     Label(p, title, "SmartPlatesGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     Muted(Label(p, summary, "SmartPlatesGameFontHighlightSmall", 0, -24, 560))
-    p:Hide()
-    pages[name] = p
     return p
 end
 
@@ -271,10 +266,7 @@ local function VisibilityPage()
         { "slider", "cvars.distance", "View distance", 10, ns.CVars:Max(), 1, "%d",
             -- The top of the slider is "Max" (stored as 0, so it follows the game's maximum).
             get = function() return ns.CVars:Distance() end,
-            set = function(v)
-                ns.db.cvars.distance = v >= ns.CVars:Max() and 0 or v
-                ns:Changed()
-            end,
+            set = function(v) ns:SetOption("db.cvars.distance", v >= ns.CVars:Max() and 0 or v) end,
             format = function(v) return v >= ns.CVars:Max() and ("Max (%d yd)"):format(v) or ("%d yd"):format(v) end },
         { "check", "cvars.stacking", "Stack plates", "Off: plates overlap." },
         { "slider", "cvars.spacingV", "Stacking: vertical spacing", 0.8, 3, 0.1, "%.1f" },
@@ -316,8 +308,9 @@ local function CustomPage()
     add:SetScript("OnClick", function() AddName(box:GetText()) end)
     box:SetScript("OnEnterPressed", function(self) AddName(self:GetText()); self:ClearFocus() end)
     addTarget:SetScript("OnClick", function()
-        local ok, name = pcall(UnitName, "target")
-        if ok and ns.Compat.Readable(name) and name then AddName(name) end
+        -- A player target by their full "Given Family" (WoW Forever), a mob by its name.
+        local name = ns.Units.UnitFull("target")
+        if name then AddName(name) end
     end)
 
     local content = W.ScrollPage(p)
@@ -455,10 +448,7 @@ local function ProfilePage()
     local reset = MakeButton(p, "Reset this profile", 150, 28); reset:SetPoint("LEFT", test, "RIGHT", 10, 0)
     reset:SetScript("OnClick", function() W.Confirm("Reset every setting in this profile to its default?", function() ns:ResetSettings() end) end)
     local mini = W.MakeCheckbox(p, "Minimap button"); mini:SetPoint("LEFT", reset, "RIGHT", 14, 0)
-    mini:SetScript("OnClick", function(self)
-        ns.char.minimap.hide = not self:GetChecked()
-        if ns.MinimapButton then ns.MinimapButton:Refresh() end
-    end)
+    mini:SetScript("OnClick", function(self) ns:SetOption("char.minimap.hide", not self:GetChecked()) end)
     local credit = Muted(Label(p, "SmartPlates is inspired by Threat Plates (Suicidal Katt, Blacksalsify) and Tidy Plates (danltiger).", "SmartPlatesGameFontHighlightSmall", 0, 0, 540))
     p.Refresh = function()
         Layout()
@@ -484,99 +474,65 @@ local TABS = {
     { "profile", "Profile", "INV_Misc_Book_09", ProfilePage },
 }
 
-local function ShowTab(name)
-    activeTab = name
-    for key, p in pairs(pages) do p:SetShown(key == name) end
-    for key, b in pairs(tabs) do
-        b.selected:SetShown(key == name)
-        b:SetBackdropColor(key == name and 0.09 or 0.075, key == name and 0.15 or 0.105, key == name and 0.17 or 0.13, 1)
-    end
-    UI:Refresh()
-end
+-- Shorter tab buttons than Wally's (eight tabs), a Preview button by the close button, and the
+-- anchor's relative point saved too. Showing a tab refreshes it.
+win = ns.NewWindow({
+    name = "SmartPlatesWindow", title = "SmartPlates", subtitle = "Threat-reactive nameplates with an aggro percentage",
+    tabs = TABS, active = "general",
+    tabHeight = 36, tabGap = 4, tabTop = 10, versionBottom = 8, relPoint = true,
+    buttons = { { "Preview", width = 80, onClick = function() ns.TestMode:Toggle() end } },
+    refresh = function() UI:Refresh() end,
+    tabClickRefresh = false,
+    onTab = function() UI:Refresh() end,
+    build = function() for _, d in ipairs(TABS) do d[4]() end end,
+})
+UI.window = win
 
-local function CreateMainFrame()
-    if frame then return end
-    frame = CreateFrame("Frame", "SmartPlatesWindow", UIParent, "BackdropTemplate")
-    frame:SetSize(800, 560); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true)
-    frame:SetClampedToScreen(true); frame:SetMovable(true); frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton"); W.SetBackdrop(frame, 0.985)
-    local w = ns.char.window
-    frame:SetPoint(w.point or "CENTER", UIParent, w.relPoint or w.point or "CENTER", w.x or 0, w.y or 0)
-    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local point, _, relPoint, x, y = self:GetPoint()
-        ns.char.window = { point = point, relPoint = relPoint, x = x, y = y }
-    end)
-    frame:SetScript("OnShow", function() UI:Refresh() end)
-    tinsert(UISpecialFrames, "SmartPlatesWindow")
-
-    local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
-    logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "SmartPlates", "SmartPlatesGameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Threat-reactive nameplates with an aggro percentage", "SmartPlatesGameFontHighlightSmall", 70, -42))
-    local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
-    close:SetScript("OnClick", function() frame:Hide() end)
-    local preview = MakeButton(frame, "Preview", 80, 26); preview:SetPoint("RIGHT", close, "LEFT", -8, 0)
-    preview:SetScript("OnClick", function() ns.TestMode:Toggle() end)
-
-    local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-    side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    W.SetBackdrop(side); side:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
-    for i, d in ipairs(TABS) do
-        local b = MakeButton(side, d[2], 147, 36); b:SetPoint("TOPLEFT", 9, -10 - (i - 1) * 40)
-        b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
-        local icon = b:CreateTexture(nil, "ARTWORK"); icon:SetSize(23, 23); icon:SetPoint("LEFT", 9, 0)
-        icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
-        b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end end)
-        b:SetScript("OnClick", function() ShowTab(d[1]) end)
-        tabs[d[1]] = b
-        d[4]()
-    end
-    local version = side:CreateFontString(nil, "OVERLAY", "SmartPlatesGameFontHighlightSmall")
-    version:SetPoint("BOTTOMLEFT", 12, 8); version:SetText("v" .. ns.VERSION)
-    version:SetTextColor(0.38, 0.50, 0.57)
-    ShowTab(activeTab); frame:Hide()
-end
-
-function UI:Refresh()
-    if not frame or not frame:IsShown() then return end
-    local p = pages[activeTab]
-    if p and p.Refresh then p.Refresh() end
-end
+function UI:Refresh() win:Refresh() end
 
 function UI:Toggle()
     if not ns.db then return end
-    CreateMainFrame()
-    frame:SetShown(not frame:IsShown())
+    win:Toggle()
 end
 
 function UI:Show(tab)
     if not ns.db then return end
-    CreateMainFrame()
-    if tab then ShowTab(tab) end
-    frame:Show(); self:Refresh()
+    win:Show(tab)
 end
 
--- A small entry in Options > AddOns that opens the window.
-ns:OnLoad(function()
-    local panel = CreateFrame("Frame", "SmartPlatesSettingsPanel")
-    panel.name = "SmartPlates"
-    panel:Hide()
-    Label(panel, "SmartPlates", "SmartPlatesGameFontNormalLarge", 16, -16):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(panel, "All settings are in the SmartPlates window.", "SmartPlatesGameFontHighlightSmall", 16, -42, 400))
-    local open = MakeButton(panel, "Open SmartPlates", 150, 28); open:SetPoint("TOPLEFT", 16, -70)
-    open:SetScript("OnClick", function()
-        if SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end
-        if InterfaceOptionsFrame and InterfaceOptionsFrame:IsShown() then HideUIPanel(InterfaceOptionsFrame) end
-        UI:Show()
-    end)
-    if Settings and Settings.RegisterCanvasLayoutCategory then
-        local cat = Settings.RegisterCanvasLayoutCategory(panel, "SmartPlates")
-        Settings.RegisterAddOnCategory(cat)
-    elseif InterfaceOptions_AddCategory then
-        InterfaceOptions_AddCategory(panel)
-    end
-end)
+-- Options > AddOns > SmartPlates: the main settings and a button to the window, which has the rest.
+-- Built with the shared OptionsPage.lua (addons/shared); the window's controls (W.Set), /sp role and
+-- /sp minimap change the same options, so both show the same value.
+local function OpenWindow()
+    if SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end
+    UI:Show()
+end
+
+UI.page = ns.NewOptionsPage({ name = "SmartPlates", build = function(p)
+    p:Header("SmartPlates")
+    p:Button({ label = "Every setting is in the SmartPlates window", text = "Open SmartPlates", fn = OpenWindow,
+        tooltip = "Sizes, colours, castbars, auras, widgets, custom plates and profiles (/sp)." })
+    p:Header("Threat")
+    p:Dropdown({ path = "char.role", label = "Role (this character)", default = "auto",
+        choices = { { "auto", "Automatic" }, { "tank", "Tank" }, { "dps", "DPS / Healer" } },
+        tooltip = "Automatic: from your spec, stance, form or tank aura (/sp role auto|tank|dps).",
+        apply = function() ns.Role:Update() end })
+    p:Check({ path = "db.threat.enabled", label = "React to threat", tooltip = "Turn off to colour plates by reaction only." })
+    p:Header("Plates")
+    p:Slider({ path = "db.general.scale", label = "Scale", min = 0.5, max = 2, step = 0.05,
+        format = function(v) return ("%.2f"):format(v) end })
+    p:Check({ path = "db.general.friendlyPlayerBars", label = "Friendly players: small bars", tooltip = "A health and power bar a quarter the size of an enemy plate." })
+    p:Check({ path = "db.general.friendlyNameOnly", label = "Friendly NPCs: name only", tooltip = "No healthbar on friendly NPCs, just a coloured name." })
+    p:Check({ path = "db.castbar.enabled", label = "Show castbars" })
+    p:Check({ path = "db.auras.enabled", label = "Show auras on enemies" })
+    p:Check({ path = "db.cvars.manage", label = "Let SmartPlates manage the game's nameplate settings",
+        tooltip = "View distance, stacking, always showing plates and enemy plates (the window's Visibility tab). Off: your previous game settings are put back." })
+    p:Check({ path = "char.minimap.hide", invert = true, label = "Minimap button", tooltip = "SmartPlates' minimap button (/sp minimap).",
+        apply = function() if ns.MinimapButton then ns.MinimapButton:Refresh() end end })
+end })
+
+function UI:OpenOptions() return self.page:Open() end
+
+-- A new profile, or a reset one, changes every value at once.
+ns:Listen("ProfileChanged", function() UI.page:Refresh() end)
+ns:Listen("SettingsChanged", function() UI.page:Refresh() end)

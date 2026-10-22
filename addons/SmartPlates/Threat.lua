@@ -21,7 +21,7 @@ local groupUnits = {}
 
 local function NpcID(unit)
     local guid = UnitGUID(unit)
-    if not guid or not C.Readable(guid) then return nil end
+    if not guid or not C.AllReadable(guid) then return nil end
     local kind, _, _, _, _, id = strsplit("-", guid)
     if kind == "Creature" or kind == "Pet" or kind == "Vehicle" then return tonumber(id) end
 end
@@ -66,7 +66,7 @@ function Threat:Level(u)
     else
         -- No threat table entry (or heuristic mode): judge from what the mob is attacking.
         local inCombat = UnitAffectingCombat(unit)
-        if not C.Readable(inCombat) or not inCombat then return nil end
+        if not C.AllReadable(inCombat) or not inCombat then return nil end
         local target = unit .. "target"
         if C.UnitIsUnit(target, "player") or C.UnitIsUnit(target, "vehicle") then
             level = "HIGH"

@@ -126,19 +126,14 @@ ns:On("MERCHANT_SHOW", function() C_Timer.After(0.2, ReadMerchant) end)
 ns:On("MERCHANT_UPDATE", ReadMerchant)
 
 -- ---------------------------------------------------------------------------
--- Auctionator (public API only)
+-- Auctionator (public API only, through the shared AuctionPrice.lua in addons/shared)
 -- ---------------------------------------------------------------------------
 
 local function API() return type(Auctionator) == "table" and Auctionator.API and Auctionator.API.v1 end
 
 function Prices:HasAuctionator() return API() and API().GetAuctionPriceByItemID ~= nil or false end
 
-function Prices:AuctionatorPrice(id)
-    local api = API()
-    if not (api and api.GetAuctionPriceByItemID) then return nil end
-    local ok, price = pcall(api.GetAuctionPriceByItemID, ns.CALLER, id)
-    return ok and type(price) == "number" and price > 0 and price or nil
-end
+function Prices:AuctionatorPrice(id) return ns.AuctionPrice.Market(id) end
 
 -- Items worth sampling from Auctionator: the watchlist, your holdings and everything farmable.
 function Prices:Tracked()
@@ -153,12 +148,7 @@ function Prices:Tracked()
 end
 
 -- Days since Auctionator last saw the item, or nil.
-function Prices:AuctionatorAge(id)
-    local api = API()
-    if not (api and api.GetAuctionAgeByItemID) then return nil end
-    local ok, age = pcall(api.GetAuctionAgeByItemID, ns.CALLER, id)
-    return ok and type(age) == "number" and age or nil
-end
+function Prices:AuctionatorAge(id) return ns.AuctionPrice.Age(id) end
 
 local function SampleAuctionator()
     local items = Items()

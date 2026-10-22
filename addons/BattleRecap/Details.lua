@@ -15,7 +15,8 @@ local GREY = { 0.55, 0.62, 0.68 }
 local RED = { 1, 0.35, 0.3 }
 local WHITE = { 1, 1, 1 }
 
-local function Pct(n) return ("%.1f%%"):format(n or 0) end
+local PCT = { isPercent = true, decimals = 1, missing = 0 }
+local function Pct(n) return ns.Format.Pct(n, PCT) end
 
 local function SchoolText(text, school)
     local r, g, b = ns.SchoolColor(school)
@@ -690,7 +691,7 @@ local function SummaryText(r, taken)
             line = line .. (", biggest %s %s%s"):format(w.biggest.spell or "?", ns.Num(w.biggest.amount), w.biggest.crit and " crit" or "")
         end
         if w.earlier > 0 then line = line .. (", %s of it before combat dropped"):format(ns.Num(w.earlier)) end
-        if r.killer and r.killer.name == name and not r.killer.won then line = line .. ". |cffff5555Killing blow.|r" end
+        if r.killer and ns.SameName(r.killer.name, name) and not r.killer.won then line = line .. ". |cffff5555Killing blow.|r" end
         lines[1] = line
     else
         lines[1] = ns.ColorName(name, (DealtTo(r, name) or {}).class) .. " didn't hit you" .. (graph.windowOnly and " in the death window." or ".")

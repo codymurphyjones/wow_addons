@@ -9,6 +9,16 @@ Z.RADIUS = { zeppelin = 15, ship = 60 }
 -- How far /zep mark and /zep remove look for the sign to change.
 Z.MARK_RANGE = 60
 Z.TICK = 0.25
+-- Events and saved variables: the shared Core.lua (addons/shared). ZeppelinSignsDB is Z.db.
+Z.SAVED = { db = "ZeppelinSignsDB" }
+-- Its defaults; enabled and timer are the options' (Options > AddOns > Zeppelin Signs, Settings.lua).
+Z.DEFAULTS = {
+    enabled = true,
+    timer = true,
+    moved = {},  -- [sign key] = { mapID, x, y }: built-in signs you moved
+    custom = {}, -- signs you added
+    rides = {},  -- timed rides (Rides.lua)
+}
 
 local KIND_LABEL = { zeppelin = "Zeppelin", ship = "Ship" }
 Z.KIND_LABEL = KIND_LABEL
@@ -59,31 +69,22 @@ Z.spots = spots
 local signByNpc = {} -- NPC ID -> sign
 local testUntil = 0
 
-local function Print(msg)
-    print("|cff33ff99Zeppelin Signs|r " .. msg)
+-- Its own Print (no colon after the name). Z:Print(msg) for the shared Core.lua and Rides.lua.
+function Z:Print(msg)
+    print("|cff33ff99Zeppelin Signs|r " .. tostring(msg))
 end
-Z.Print = Print
+local function Print(msg) Z:Print(msg) end
 
 local function Label(sign)
     return KIND_LABEL[sign.kind] .. ": " .. sign.dest
 end
 Z.Label = Label
 
-local function WorldPos(mapID, x, y)
-    if not mapID or not x then return end
-    local continent, pos = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(x, y))
-    if not continent or not pos then return end
-    return continent, pos.x, pos.y
-end
-
-local function PlayerWorldPos()
-    local mapID = C_Map.GetBestMapForUnit("player")
-    if not mapID then return end
-    local pos = C_Map.GetPlayerMapPosition(mapID, "player")
-    if not pos then return end
-    local continent, wx, wy = WorldPos(mapID, pos.x, pos.y)
-    return continent, wx, wy, mapID, pos.x, pos.y
-end
+-- World positions (shared WorldMap.lua): continent, wx, wy (and for you mapID, x, y); nil when
+-- the map can't say (or you're in an instance).
+local WM = Z.WorldMap
+local function WorldPos(mapID, x, y) return WM.World(mapID, x, y) end
+local function PlayerWorldPos() return WM.Player() end
 Z.WorldPos, Z.PlayerWorldPos = WorldPos, PlayerWorldPos
 
 local function AddSpot(sign, mapID, x, y)
@@ -328,24 +329,22 @@ local function ShowMarkPopup()
     target:SetScript("OnClick", function() Save(true) end)
 end
 
-local events = CreateFrame("Frame")
-events:RegisterEvent("PLAYER_LOGIN")
-events:SetScript("OnEvent", function(_, event)
-    if event == "PLAYER_LOGIN" then
-        ZeppelinSignsDB = ZeppelinSignsDB or {}
-        if ZeppelinSignsDB.enabled == nil then ZeppelinSignsDB.enabled = true end
-        ZeppelinSignsDB.moved = ZeppelinSignsDB.moved or {}
-        ZeppelinSignsDB.custom = ZeppelinSignsDB.custom or {}
-        ZeppelinSignsDB.learned = nil -- 1.0.0's guessed Gaznik Gearsnaps spot
-        ZeppelinSignsDB.rides = ZeppelinSignsDB.rides or {} -- timed rides (Rides.lua)
-        if ZeppelinSignsDB.timer == nil then ZeppelinSignsDB.timer = true end
-        BuildSpots()
-        Z.Rides:Init()
-        C_Timer.NewTicker(Z.TICK, Z.Update)
-        for _, e in ipairs({ "UPDATE_MOUSEOVER_UNIT", "PLAYER_TARGET_CHANGED",
-                             "PLAYER_SOFT_FRIEND_CHANGED", "PLAYER_SOFT_INTERACT_CHANGED" }) do
-            pcall(events.RegisterEvent, events, e)
-        end
+-- The shared Core.lua sets up ZeppelinSignsDB (Z.SAVED, Z.DEFAULTS) when the addon loads.
+Z:OnLoad(function()
+    ZeppelinSignsDB.learned = nil -- 1.0.0's guessed Gaznik Gearsnaps spot
+end)
+
+-- The saved table (Z.db, the shared OptionsPage.lua's "db." paths). Settings.lua calls this.
+function Z.InitDB() return Z.db end
+
+Z:On("PLAYER_LOGIN", function()
+    BuildSpots()
+    Z.Rides:Init()
+    C_Timer.NewTicker(Z.TICK, Z.Update)
+    -- Mousing over or targeting a zeppelin master shows its sign.
+    for _, e in ipairs({ "UPDATE_MOUSEOVER_UNIT", "PLAYER_TARGET_CHANGED",
+                         "PLAYER_SOFT_FRIEND_CHANGED", "PLAYER_SOFT_INTERACT_CHANGED" }) do
+        Z:On(e, function() Z.Update() end)
     end
     Z.Update()
 end)
@@ -364,15 +363,15 @@ SlashCmdList.ZEPPELINSIGNS = function(msg)
     elseif msg == "remove" then
         RemoveNearest()
     elseif msg == "timer" then
-        ZeppelinSignsDB.timer = not ZeppelinSignsDB.timer
+        -- Through Z:ToggleOption, so Options > AddOns > Zeppelin Signs shows it; its apply redraws the timer.
+        Z:ToggleOption("db.timer")
         Print("Ride timer " .. (ZeppelinSignsDB.timer and "on." or "off."))
-        Z.Rides:Refresh()
     elseif msg == "rides" then
         Z.Rides:List()
     elseif msg == "test ride" then
         Z.Rides:Test()
     elseif msg == "" then
-        ZeppelinSignsDB.enabled = not ZeppelinSignsDB.enabled
+        Z:ToggleOption("db.enabled")
         Print(ZeppelinSignsDB.enabled and "on." or "off.")
     else
         Print("commands:")

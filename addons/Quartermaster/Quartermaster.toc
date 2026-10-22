@@ -1,8 +1,8 @@
-## Interface: 16001, 11509, 20506, 50504, 120100
+## Interface: 16001
 ## Title: Quartermaster
 ## Notes: Keeps your supply lists from Auctionator's prices, searches the live auction house with Auctionator-style filters, and buys one click at a time. /qm
 ## Author: Dinoblankie + Claude
-## Version: 0.1.4
+## Version: 0.1.5
 ## RequiredDeps: Auctionator
 ## Dependencies: Auctionator
 ## OptionalDeps: Waypoint, Bandolier
@@ -13,11 +13,19 @@
 ## AddonCompartmentFunc: Quartermaster_OnCompartmentClick
 ## X-Curse-Project-ID: 1735119
 
-Fonts.lua
-Palette.lua
+..\shared\Fonts.lua
+..\shared\Palette.lua
+..\shared\Core.lua
+..\shared\API.lua
+..\shared\Units.lua
+..\shared\Format.lua
+..\shared\Items.lua
+..\shared\Tooltip.lua
 Compat.lua
 Core.lua
-Widgets.lua
+..\shared\AuctionPrice.lua
+..\shared\Widgets.lua
+..\shared\WidgetsPlus.lua
 Catalog.lua
 Search.lua
 Crates.lua
@@ -29,6 +37,8 @@ FullScan.lua
 Purchase.lua
 Buyer.lua
 Compare.lua
+..\shared\OptionsPage.lua
+..\shared\Window.lua
 UI.lua
 BrowsePage.lua
 ListsPage.lua
@@ -39,4 +49,5 @@ AuctionSearch.lua
 CartTab.lua
 AuctionTab.lua
 Reagents.lua
+..\shared\MinimapButton.lua
 Minimap.lua

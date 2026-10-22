@@ -40,7 +40,7 @@ local WIDTH, HEIGHT = 860, 560
 local LEFT_W = 220
 local TRAIN_WITHIN = 25
 local CAP = 300
-local GATHERING = { [182] = true, [186] = true, [393] = true, [356] = true } -- Herbalism, Mining, Skinning, Fishing
+local GATHERING = ns.Player.GATHERING -- Herbalism, Mining, Skinning, Fishing
 local DIFFICULTY = {
     [0] = { 1, 0.50, 0.25, "Optimal: a skill-up every time" },
     [1] = { 1, 1, 0, "Medium: usually a skill-up" },
@@ -56,7 +56,6 @@ local pendingRecipe      -- a recipe to select once its profession opens: { id, 
 local filters = { search = "", makeable = false, skillUp = false, unlearned = false }
 local folded = {}        -- [category name] = true while folded
 local schematics = {}    -- [recipeID] = { out, qmin, qmax, reagents = { { itemID, count } } } (this session)
-local callbacks = {}
 local enchantTarget      -- ItemLocation picked for an enchant
 local trainerFilters = { known = false, notYet = true }
 local trainerPick        -- the trainer service shown (its name and rank)
@@ -79,27 +78,19 @@ local function Read(fn, ...)
 end
 
 local TS = C_TradeSkillUI
-local function ItemCount(id, bank)
-    local fn = C_Item and C_Item.GetItemCount or GetItemCount
-    return Read(fn, id, bank) or 0
-end
+local function ItemCount(id, bank) return ns.Items.ItemCount(id, bank) end
 local function ItemName(id)
-    local fn = C_Item and C_Item.GetItemInfo or GetItemInfo
-    local name, link, quality, _, _, _, _, _, _, icon = Read(fn, id)
-    if not name and C_Item and C_Item.RequestLoadItemDataByID then pcall(C_Item.RequestLoadItemDataByID, id) end
+    local name, link, quality, _, _, _, _, _, _, icon = Read(ns.Items.GetItemInfo, id)
+    if not name then ns.Items.RequestItem(id) end
     return name, link, quality, icon
 end
-local function ItemIcon(id)
-    local fn = C_Item and C_Item.GetItemIconByID or GetItemIcon
-    return Read(fn, id)
-end
+local function ItemIcon(id) return Read(ns.Items.ItemIcon, id) end
 
-local function Fire()
-    for owner, fn in pairs(callbacks) do
-        local ok, err = pcall(fn)
-        if not ok then geterrorhandler()(("SimplePanelProfessions callback (%s): %s"):format(owner, tostring(err))) end
-    end
-end
+-- SimplePanelProfessions:RegisterCallback(owner, fn) (the shared API.lua): fn("CHANGED") when the
+-- window opens or closes, or the recipe shown changes.
+local ProfessionsAPI, FireAPI = ns.NewAPI("SimplePanelProfessions", 1)
+ProfessionsAPI.API_VERSION = ProfessionsAPI.VERSION -- the field's older name
+local function Fire() FireAPI("CHANGED") end
 
 local function Saved()
     ns.char.professions = ns.char.professions or {}
@@ -409,8 +400,9 @@ end
 local function OthersProfession()
     local linked, name = Read(TS and TS.IsTradeSkillLinked)
     if not linked then return false end
-    local me = UnitName("player")
-    return not (type(name) == "string" and me and (name == me or name:match("^[^-]+") == me))
+    -- The game may name the crafter "Given Family" (any shape) or by the given name alone.
+    if type(name) ~= "string" or not ns.Units.Readable(name) then return true end
+    return not (ns.Compat.IsMe(name) or ns.Compat.SamePlayer(name, UnitName("player")))
 end
 
 -- Whether the open profession is held back now (it's re-checked once the hold is over).
@@ -548,19 +540,9 @@ end
 
 local profRows, cards = {}, {}
 
-local function Bar(parent, height)
-    local track = parent:CreateTexture(nil, "ARTWORK")
-    track:SetHeight(height or 5)
-    local fill = parent:CreateTexture(nil, "OVERLAY")
-    fill:SetHeight(height or 5); fill:SetPoint("TOPLEFT", track, "TOPLEFT")
-    local function Set(frac, color)
-        track:SetColorTexture(T.track[1], T.track[2], T.track[3], 1)
-        local c = color or T.accent
-        fill:SetColorTexture(c[1], c[2], c[3], 1)
-        fill:SetWidth(math.max(0.01, (track:GetWidth() > 0 and track:GetWidth() or 100) * ns.Clamp(frac or 0, 0, 1)))
-    end
-    return track, Set
-end
+-- A skill bar (shared\Bar.lua): bar:SetValue(frac, color), in the theme's track and accent.
+local BAR = { track = T.track, color = T.accent, minFill = 0.01 }
+local function Bar(parent, height) return ns.NewProgressBar(parent, nil, height or 5, BAR) end
 
 local function RankColor(p)
     if p.max > 0 and p.max < CAP and p.rank >= p.max - TRAIN_WITHIN then return T.yellow end
@@ -574,7 +556,7 @@ local function MakeProfRow(parent)
     r.icon = r:CreateTexture(nil, "ARTWORK"); r.icon:SetSize(30, 30); r.icon:SetPoint("LEFT", 8, 0)
     r.name = r:CreateFontString(nil, "OVERLAY", "SimplePanelFont"); r.name:SetPoint("TOPLEFT", 46, -7); r.name:SetJustifyH("LEFT")
     r.rank = r:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall"); r.rank:SetPoint("TOPRIGHT", -8, -8)
-    r.track, r.SetBar = Bar(r, 4)
+    r.track = Bar(r, 4)
     r.track:SetPoint("BOTTOMLEFT", 46, 10); r.track:SetPoint("BOTTOMRIGHT", -8, 10)
     r:SetScript("OnEnter", function(self)
         self:SetBackdropColor(T.buttonHover[1], T.buttonHover[2], T.buttonHover[3], 1)
@@ -611,7 +593,7 @@ local function MakeCard(parent)
     c.name = c:CreateFontString(nil, "OVERLAY", "SimplePanelFontTitle"); c.name:SetPoint("TOPLEFT", 54, -10)
     c.sub = Muted(c:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall")); c.sub:SetPoint("TOPLEFT", 54, -28)
     c.rank = c:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall"); c.rank:SetPoint("TOPRIGHT", -40, -12)
-    c.track, c.SetBar = Bar(c, 6)
+    c.track = Bar(c, 6)
     c.track:SetPoint("TOPLEFT", 54, -46); c.track:SetPoint("TOPRIGHT", -40, -46)
     c.unlearn = MakeButton(c, "X", 22, 20); c.unlearn:SetPoint("TOPRIGHT", -10, -8)
     c.unlearn:SetScript("OnClick", function(self)
@@ -680,7 +662,7 @@ local function Build()
     local cr = panel.craft
     cr.name = Label(cr, "", "SimplePanelFontTitle", 0, 0)
     cr.rank = cr:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall"); cr.rank:SetPoint("TOPRIGHT", 0, -2)
-    cr.track, cr.SetBar = Bar(cr, 6)
+    cr.track = Bar(cr, 6)
     cr.track:SetPoint("TOPLEFT", 0, -22); cr.track:SetPoint("TOPRIGHT", 0, -22)
     cr.search = W.MakeEditBox(cr, 230, "Search recipes and reagents")
     cr.search:SetPoint("TOPLEFT", 0, -36)
@@ -778,7 +760,7 @@ local function Build()
     local tr = panel.trainer
     tr.name = Label(tr, "", "SimplePanelFontTitle", 0, 0)
     tr.rank = tr:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall"); tr.rank:SetPoint("TOPRIGHT", 0, -2)
-    tr.track, tr.SetBar = Bar(tr, 6)
+    tr.track = Bar(tr, 6)
     tr.track:SetPoint("TOPLEFT", 0, -22); tr.track:SetPoint("TOPRIGHT", 0, -22)
     tr.money = tr:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall"); tr.money:SetPoint("TOPLEFT", 0, -40)
     tr.toggles = {}
@@ -868,7 +850,7 @@ local function DrawProfessions(list, current)
         r.track:Show()
         r:ClearAllPoints(); r:SetPoint("TOPLEFT", 0, -y); r:SetPoint("TOPRIGHT", 0, -y)
         r:Show()
-        r.SetBar(p.max > 0 and p.rank / p.max or 0, c)
+        r.track:SetValue(p.max > 0 and p.rank / p.max or 0, c)
         r.on = IsOpen(p, current) or (panel.focus == p.skillLine and not current) or false
         W.SetActive(r, r.on)
         r:SetBackdropColor((r.on and T.active or T.button)[1], (r.on and T.active or T.button)[2], (r.on and T.active or T.button)[3], 1)
@@ -914,7 +896,7 @@ local function DrawCards(list)
         local col = RankColor(p)
         c.rank:SetText(("%d / %d%s"):format(p.rank, p.max, p.modifier > 0 and (" (+" .. p.modifier .. ")") or ""))
         c.rank:SetTextColor(col[1], col[2], col[3])
-        c.SetBar(p.max > 0 and p.rank / p.max or 0, col)
+        c.track:SetValue(p.max > 0 and p.rank / p.max or 0, col)
         c.unlearn:SetShown(p.primary)
         local x, n = 54, 0
         for s, sp in ipairs(p.spells) do
@@ -1150,7 +1132,7 @@ function PP:DrawCrafting(prof)
     local col = (prof.max > 0 and prof.max < CAP and prof.rank >= prof.max - TRAIN_WITHIN) and T.yellow or T.accent
     cr.rank:SetText(("%d / %d%s"):format(prof.rank, prof.max, prof.modifier > 0 and (" (+" .. prof.modifier .. ")") or ""))
     cr.rank:SetTextColor(col[1], col[2], col[3])
-    cr.SetBar(prof.max > 0 and prof.rank / prof.max or 0, col)
+    cr.track:SetValue(prof.max > 0 and prof.rank / prof.max or 0, col)
     for key, b in pairs(cr.toggles) do W.SetActive(b, filters[key]) end
 
     local all = Recipes()
@@ -1343,7 +1325,7 @@ function PP:DrawTrainer()
     tr.name:SetText((profName and profName ~= "" and (profName .. " trainer") or "Profession trainer") .. (npc and (" - " .. npc) or ""))
     if rank and rank > 0 and max and max > 0 then
         tr.rank:SetText(("%d / %d%s"):format(rank, max, (mod and mod > 0) and (" (+" .. mod .. ")") or ""))
-        tr.SetBar(rank / max, T.accent)
+        tr.track:SetValue(rank / max, T.accent)
         tr.track:Show()
     else
         tr.rank:SetText(""); tr.track:Hide()
@@ -1687,8 +1669,7 @@ end
 -- For other addons
 -- ---------------------------------------------------------------------------
 
-SimplePanelProfessions = {
-    API_VERSION = 1,
+for k, v in pairs({
     -- The window (for anchoring), shown or not.
     GetFrame = function() return panel end,
     -- Whether this window holds the open profession (and shows its recipes).
@@ -1700,7 +1681,4 @@ SimplePanelProfessions = {
         pendingRecipe = { id = recipeID, name = name, time = GetTime() }
         PP:Dirty()
     end,
-    -- fn() runs when the window opens or closes, or the recipe shown changes.
-    RegisterCallback = function(owner, fn) callbacks[owner] = fn end,
-    UnregisterCallback = function(owner) callbacks[owner] = nil end,
-}
+}) do ProfessionsAPI[k] = v end

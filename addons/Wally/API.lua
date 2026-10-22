@@ -2,11 +2,11 @@ local _, ns = ...
 
 -- WallyAPI: the small public surface plugins use (Wealth Planner). Everything else in Wally stays
 -- private. Plugins require Wally in their TOC (## Dependencies: Wally), so this exists when they load.
-local API = { version = 1 }
+-- Version 2: the shared registry (RegisterCallback, event "CHANGED"). Version 3: bag sorting
+-- (SortBags, auto sort, anchored items, HoldSorting).
+local API, Fire = ns.NewAPI("WallyAPI", 3)
+API.version = API.VERSION -- the field's older name
 ns.API = API
-WallyAPI = API
-
-local listeners = {}
 
 -- Adds a tab to Wally's window, just above Settings. icon is an icon name ("INV_Misc_Coin_01") or a
 -- full texture path. builder(page) fills the page (586 x 466);
@@ -21,11 +21,35 @@ function API.Toggle() if ns.UI then ns.UI:Toggle() end end
 function API.ActiveTab() return ns.UI and ns.UI:ActiveTab() end
 function API.Refresh() if ns.UI then ns.UI:Refresh() end end
 
--- fn() runs after Wally's data changes (lists, auctions, sales), at most once a frame.
-function API.OnChanged(fn) listeners[#listeners + 1] = fn end
-function API:FireChanged()
-    for _, fn in ipairs(listeners) do pcall(fn) end
+-- Event "CHANGED" (no arguments) after Wally's data changes (lists, auctions, sales), at most once
+-- a frame; OnChanged(fn) is the older hook, fn().
+ns.APIListener(API, "OnChanged", "CHANGED")
+function API:FireChanged() Fire("CHANGED") end
+
+-- Bag sorting. SortBags() sorts with your Bag Sorting rules (it says why when it can't).
+function API.SortBags() ns.Sorter:Start("bags") end
+function API.IsSorting() return ns.Sorter:IsBusy() end
+
+-- Auto sort: when = "bags" (the bags close), "merchant" or "mail" (that window closes).
+local AUTO = { bags = "onBagsClose", merchant = "onMerchantClose", mail = "onMailClose" }
+function API.AutoSort(when) return AUTO[when] ~= nil and ns.db.options.sort[AUTO[when]] == true end
+function API.SetAutoSort(when, on)
+    if not AUTO[when] then return end
+    ns.db.options.sort[AUTO[when]] = on and true or false
+    ns:Changed()
 end
+
+-- Anchored items (ctrl-right-click in the bags): sorting never moves them.
+-- Anchors() = { { bag, slot, id } }; SetAnchor(bag, slot, on) anchors whatever is in that slot now.
+function API.IsAnchored(bag, slot) return ns.Sorter:IsAnchored(bag, slot) end
+function API.SetAnchor(bag, slot, on) return ns.Sorter:SetAnchor(bag, slot, on) end
+function API.Anchors() return ns.Sorter:Anchors() end
+
+-- Lights up one bag's slots in Wally's bag window (nil: none), e.g. while a bag button is hovered.
+function API.HighlightBag(bag) if ns.BagWindow then ns.BagWindow:Highlight(bag) end end
+
+-- Holds sorting off (auto sorts too) while another addon moves items; owner is any key.
+function API.HoldSorting(owner, on) ns.Sorter:Hold(owner, on) end
 
 -- Whether Wally's auction features are on (modern auction house and Auctionator).
 function API.AuctionsEnabled() return ns:AuctionsEnabled() end

@@ -1,11 +1,10 @@
 local _, ns = ...
 
 -- The public API, for other addons (and the built-in loot journal):
---   if SpyGlass and SpyGlass.API_VERSION >= 1 then ... end
+--   if SpyGlass and SpyGlass.VERSION >= 1 then ... end
 -- Instances and rows are SpyGlass's own tables; treat them as read-only.
-local API = {}
-SpyGlass = API
-API.API_VERSION = 1
+local API, FireAPI = ns.NewAPI("SpyGlass", 1)
+API.API_VERSION = API.VERSION -- the field's older name
 
 -- Makes sure the dungeon and raid loot is ready, then calls onReady (it's
 -- shipped with SpyGlass, so that's right away). Returns true.
@@ -26,6 +25,14 @@ end
 -- server (use RequestItem for items shown on screen).
 function API:PeekItem(itemID)
     return ns:Peek(itemID)
+end
+
+-- { [stat] = amount } the item's "Equip:" effects are worth to you (shapeshift costs, weapon skill,
+-- spell cost...: Effects.lua), for the shared GearEngine.lua in other addons, so Tape Measure counts
+-- them as SpyGlass does.
+function API:EffectStats(itemID)
+    if not itemID then return nil end
+    return (ns.Effects:Stats(itemID))
 end
 
 -- What the game knows about the item without asking the server (or, for
@@ -239,18 +246,6 @@ function API:OpenInAtlasLoot(instKey, bossIndex)
     if instKey then ns.Atlas:OpenTo(instKey, bossIndex) else ns.Atlas:Open() end
 end
 
--- fn() runs when the lists should be redrawn: item details arrived, your
--- level, gear or stat priority changed. One callback per owner.
-local callbacks = {}
-function API:RegisterCallback(owner, fn)
-    callbacks[owner] = fn
-end
-
-function API:UnregisterCallback(owner)
-    callbacks[owner] = nil
-end
-
-function ns:FireCallbacks()
-    local handler = geterrorhandler and geterrorhandler() or print
-    for _, fn in pairs(callbacks) do xpcall(fn, handler) end
-end
+-- SpyGlass:RegisterCallback(owner, fn) (the shared API.lua): fn("REFRESH") when the lists should be
+-- redrawn: item details arrived, your level, gear or stat priority changed. One callback per owner.
+function ns:FireCallbacks() FireAPI("REFRESH") end

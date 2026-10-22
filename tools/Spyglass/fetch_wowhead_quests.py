@@ -19,15 +19,15 @@ nothing and an interrupted run carries on where it stopped.
 """
 import argparse
 import datetime
-import hashlib
 import html
 import json
 import os
 import re
 import sys
-import time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_shared"))
-import webfetch  # noqa: E402  (pages from a real browser: Wowhead refuses curl)
+import fetcher as fetching  # noqa: E402  (paced, cached; pages from a real browser: Wowhead refuses curl)
+from luawrite import lua_val  # noqa: E402  (strings: newlines escaped, CRs dropped; floats to 1 place)
+from wowhead import balanced, js_literal  # noqa: E402
 
 ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "Spyglass")  # tools/Spyglass/ builds addons/Spyglass/
 QUEST_DATA = os.path.join(ADDON, "..", "SpyglassPluginQuests", "Data")
@@ -35,7 +35,6 @@ OUT = os.path.join(QUEST_DATA, "QuestDB.lua")
 REPORT = os.path.join(QUEST_DATA, "questdb_report.txt")
 CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".wowhead_cache")
 BASE = "https://www.wowhead.com/forever/"
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SpyGlass addon data tool"
 PACE = 3.0  # seconds between requests: faster runs get refused (HTTP 403) after a hundred or so
 MAX_LEVEL = 60
 SPLIT_AT = 950
@@ -51,110 +50,9 @@ HORDE = sum(2 ** (r - 1) for r in (2, 5, 6, 8)) + 2 ** 33
 SIDE_MASK = {1: ALLIANCE, 2: HORDE}
 
 
-# ---------------------------------------------------------------------------
-# Fetching: paced, cached, retried
-# ---------------------------------------------------------------------------
-
-class RetryLater(Exception):
-    pass
-
-
-def download(url):
-    # A real browser session (tools/_shared/webfetch.py): Wowhead refuses curl and urllib.
-    code, body = webfetch.fetch(url, timeout=40)
-    if code in (403, 429) or code >= 500 or code == 0:
-        raise RetryLater("HTTP %d" % code)
-    if code == 202 or not body.strip():
-        # A bot challenge (or nothing): never cached.
-        raise RetryLater("HTTP %d, empty page" % code)
-    return body
-
-
-class Fetcher:
-    def __init__(self, refresh=False):
-        self.refresh, self.last, self.requests, self.failures = refresh, 0.0, 0, 0
-        os.makedirs(CACHE, exist_ok=True)
-
-    def get(self, url):
-        path = os.path.join(CACHE, hashlib.sha1(url.encode("utf-8")).hexdigest() + ".html")
-        if not self.refresh and os.path.exists(path):
-            with open(path, encoding="utf-8") as f:
-                return f.read()
-        delay = PACE
-        for _ in range(6):
-            wait = self.last + delay - time.time()
-            if wait > 0:
-                time.sleep(wait)
-            self.last = time.time()
-            self.requests += 1
-            try:
-                text = download(url)
-            except RetryLater as e:
-                print("  %s (%s); waiting %.0fs" % (url, e, delay * 4))
-                delay *= 4
-                continue
-            self.failures = 0
-            with open(path, "w", encoding="utf-8", newline="\n") as f:
-                f.write(text)
-            return text
-        self.failures += 1
-        if self.failures >= 5:
-            raise SystemExit("Wowhead keeps refusing; stopped. Rerun later: the cache keeps what's done.")
-        return None
-
-
-# ---------------------------------------------------------------------------
-# Wowhead's JS literals
-# ---------------------------------------------------------------------------
-
-KEY = re.compile(r"([A-Za-z_]\w*)(\s*:)")
-
-
-def js_literal(text):
-    """Wowhead's JS object literals as Python values (bare keys quoted)."""
-    out, i, n, last = [], 0, len(text), ""
-    while i < n:
-        c = text[i]
-        if c == '"':
-            j = i + 1
-            while text[j] != '"':
-                j += 2 if text[j] == "\\" else 1
-            out.append(text[i:j + 1])
-            last, i = '"', j + 1
-            continue
-        if last in ("{", ","):
-            m = KEY.match(text, i)
-            if m:
-                out.append('"%s"%s' % (m.group(1), m.group(2)))
-                last, i = ":", m.end()
-                continue
-        out.append(c)
-        if not c.isspace():
-            last = c
-        i += 1
-    return json.loads("".join(out))
-
-
-def balanced(s, i):
-    """The [...] or {...} starting at s[i]."""
-    depth, j, in_str = 0, i, False
-    while j < len(s):
-        c = s[j]
-        if in_str:
-            if c == "\\":
-                j += 1
-            elif c == '"':
-                in_str = False
-        elif c == '"':
-            in_str = True
-        elif c in "[{":
-            depth += 1
-        elif c in "]}":
-            depth -= 1
-            if depth == 0:
-                return s[i:j + 1]
-        j += 1
-    raise ValueError("unbalanced literal")
+def Fetcher(refresh=False):
+    """The paced, cached fetcher (fetcher.py) on this tool's cache; fetch_zone_art.py uses it too."""
+    return fetching.Fetcher(CACHE, refresh=refresh, pace=PACE)
 
 
 # ---------------------------------------------------------------------------
@@ -280,31 +178,6 @@ def reward_ids(row):
 def Needed(row):
     """A quest SpyGlass uses: it rewards an item, or belongs to a dungeon or raid."""
     return bool(reward_ids(row)) or row.get("category2") in INSTANCE_CATEGORIES
-
-
-def lua_str(s):
-    s = (s or "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "")
-    return '"' + s + '"'
-
-
-def lua_val(v):
-    if isinstance(v, bool):
-        return "true" if v else "false"
-    if isinstance(v, int):
-        return str(v)
-    if isinstance(v, float):
-        return ("%.1f" % v).rstrip("0").rstrip(".")
-    if isinstance(v, str):
-        return lua_str(v)
-    if isinstance(v, (list, tuple)):
-        return "{ " + ", ".join(lua_val(x) for x in v) + " }"
-    if isinstance(v, dict):
-        parts = []
-        for k in sorted(v, key=lambda k: (isinstance(k, str), k)):
-            key = k if isinstance(k, str) and re.match(r"^[A-Za-z_]\w*$", k) else "[%s]" % lua_val(k)
-            parts.append("%s = %s" % (key, lua_val(v[k])))
-        return "{ " + ", ".join(parts) + " }"
-    raise TypeError(v)
 
 
 def main(argv):

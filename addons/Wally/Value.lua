@@ -1,8 +1,9 @@
 local _, ns = ...
 local C = ns.Compat
 
--- What an item is worth: Auctionator's auction price when it has one, otherwise an estimate from
--- rarity, tier (item level) and kind of item. Vendor price is only a floor, because valuable
+-- What an item is worth: its 30-day normal price from Wealth Planner's history when it keeps one,
+-- else Auctionator's auction price, otherwise an estimate from rarity, tier (item level) and kind
+-- of item. Prices come from the shared AuctionPrice.lua (addons/shared). Vendor price is only a floor, because valuable
 -- reagents such as enchanting materials often can't be sold to a vendor at all.
 local Value = {}
 ns.Value = Value
@@ -11,33 +12,24 @@ local CACHE_SECONDS = 300
 local RARE = 3
 -- Copper per item at item level 10, by quality.
 local QUALITY_BASE = { [0] = 5, [1] = 25, [2] = 250, [3] = 2000, [4] = 15000, [5] = 100000 }
-local CLASS_GEM, CLASS_REAGENT, CLASS_TRADE, CLASS_QUEST, CLASS_KEY = 3, 5, 7, 12, 13
+local CLASS = ns.Items.CLASS
+local CLASS_GEM, CLASS_REAGENT, CLASS_TRADE, CLASS_QUEST, CLASS_KEY = CLASS.GEM, CLASS.REAGENT, CLASS.TRADEGOODS, CLASS.QUEST, CLASS.KEY
 -- Trade goods subclasses worth more than their tier suggests: jewelcrafting, elemental, enchanting.
 local PRECIOUS_TRADE = { [4] = true, [10] = true, [12] = true }
-local WORTHLESS = { [6948] = true } -- Hearthstone
+local WORTHLESS = { [ns.Items.ITEMS.HEARTHSTONE] = true }
 
 local cache = {}
 local protectedSet
 
-function Value:HasAuctionator()
-    return type(Auctionator) == "table" and Auctionator.API and Auctionator.API.v1
-        and Auctionator.API.v1.GetAuctionPriceByItemLink and true or false
-end
+local AP = ns.AuctionPrice
 
-local function AuctionPrice(link)
-    if not Value:HasAuctionator() then return nil end
-    local ok, price = pcall(Auctionator.API.v1.GetAuctionPriceByItemLink, "Wally", link)
-    if ok and type(price) == "number" and price > 0 then return price end
-end
+function Value:HasAuctionator() return AP.HasAuctionator() end
+
+local function AuctionPrice(link) return AP.Market(link) end
 function Value:AuctionPrice(link) return AuctionPrice(link) end
 
 -- Days since Auctionator last saw the item on the auction house, or nil (never, or over 21 days).
-function Value:AuctionAge(link)
-    local api = self:HasAuctionator() and Auctionator.API.v1.GetAuctionAgeByItemLink
-    if not api then return nil end
-    local ok, age = pcall(api, "Wally", link)
-    if ok and type(age) == "number" then return age end
-end
+function Value:AuctionAge(link) return AP.Age(link) end
 
 -- ---------------------------------------------------------------------------
 -- Posting prices: Auctionator's price minus your undercut. The modern auction house only takes
@@ -68,9 +60,9 @@ function Value:DescribeUndercut()
 end
 
 -- Off: price match, 1 below Auctionator's price. On: your own undercut amount.
+-- Through ns:SetOption, so Options > AddOns > Wally shows it too.
 function Value:SetUndercutOn(on)
-    ns.db.options.auction.undercutOn = on and true or false
-    ns:Changed()
+    ns:SetOption("db.options.auction.undercutOn", on and true or false)
 end
 
 function Value:SetUndercut(value, mode)
@@ -80,11 +72,12 @@ function Value:SetUndercut(value, mode)
     value = math.max(0, tonumber(value) or 0)
     if o.undercutMode == "percent" then value = math.min(value, 90) end
     o.undercut = value
-    ns:Changed()
+    ns:OptionChanged("db.options.auction.undercut") -- the page shows undercutOn and the mode too; calls ns:Changed()
 end
 
 -- Returns (unit, details). unit is nil when the item shouldn't be posted; details.reason says why.
--- details = { market, age, stale, vendor, reason }
+-- details = { market, age, stale, vendor, reason, normal (30-day, from Wealth Planner), crashed
+-- (the market far under normal: posting now sells cheap) }
 function Value:PostPrice(link)
     local d = {}
     local name, _, _, _, _, _, _, _, _, _, vendor = C.GetItemInfo(link)
@@ -101,6 +94,7 @@ function Value:PostPrice(link)
         d.reason = "No Auctionator price yet. Search for it first."
         return nil, d
     end
+    d.crashed, d.normal = AP.Crashed(d.market, link)
     local unit = self:Undercut(d.market)
     if d.vendor > 0 and unit <= d.vendor then
         d.reason = "Worth more at a vendor (" .. C.Money(d.vendor) .. ")."
@@ -127,7 +121,7 @@ function Value:UnitWorth(link)
     if WORTHLESS[C.IDFromLink(link)] or classID == CLASS_QUEST or classID == CLASS_KEY then
         worth, source = 0, "none"
     else
-        worth = AuctionPrice(link)
+        worth = AP.Normal(link) or AuctionPrice(link)
         if worth then
             source = "auction"
         else

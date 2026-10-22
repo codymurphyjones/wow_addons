@@ -67,19 +67,8 @@ SW.Try = Try
 
 -- Class colour from a class file ("WARRIOR"), a localized class name, or a class ID.
 local function ClassColor(class)
-    local colors = RAID_CLASS_COLORS or {}
-    if type(class) == "number" then
-        local info = C_CreatureInfo and Read(C_CreatureInfo.GetClassInfo, class)
-        class = info and info.classFile
-    end
-    if type(class) ~= "string" or Secret(class) then return T.text end
-    if colors[class] then local c = colors[class]; return { c.r, c.g, c.b } end
-    for _, names in ipairs({ LOCALIZED_CLASS_NAMES_MALE or {}, LOCALIZED_CLASS_NAMES_FEMALE or {} }) do
-        for token, name in pairs(names) do
-            if name == class and colors[token] then local c = colors[token]; return { c.r, c.g, c.b } end
-        end
-    end
-    return T.text
+    local _, r, g, b = ns.Units.ClassColor(class, T.text)
+    return { r, g, b }
 end
 SW.ClassColor = ClassColor
 
@@ -87,13 +76,10 @@ local function Short(name) return name and ns.Compat.PlayerName(name) or "?" end
 SW.Short = Short
 
 -- "3h ago", "2d ago" from a time() stamp.
+local AGO = { months = true }
 local function Ago(stamp)
-    if type(stamp) ~= "number" or stamp <= 0 then return nil end
-    local s = time() - stamp
-    if s < 3600 then return math.max(1, math.floor(s / 60)) .. "m ago" end
-    if s < 86400 then return math.floor(s / 3600) .. "h ago" end
-    if s < 86400 * 60 then return math.floor(s / 86400) .. "d ago" end
-    return math.floor(s / (86400 * 30)) .. " months ago"
+    if type(stamp) ~= "number" then return nil end
+    return ns.Format.Ago(stamp, AGO)
 end
 SW.Ago = Ago
 
@@ -660,7 +646,8 @@ local function Friends()
         if acc then
             local g = acc.gameAccountInfo or {}
             local wow = g.isOnline and g.clientProgram == BNetClient() and Str(g.characterName)
-            local char = wow and (g.characterName .. ((Str(g.realmName) and g.realmName ~= (GetRealmName and GetRealmName())) and ("-" .. g.realmName) or "")) or nil
+            -- WoW Forever names are realmless "Given Family": the realm is only the server's label.
+            local char = wow and ns.Compat.PlayerName(g.characterName) or nil
             out[#out + 1] = { kind = "bnet", id = acc.bnetAccountID, title = Str(acc.accountName) or Str(acc.battleTag) or "?",
                 tag = Str(acc.battleTag), name = char, bnet = Str(acc.accountName), online = g.isOnline or false,
                 level = wow and g.characterLevel or nil, class = wow and g.className or nil,
@@ -971,14 +958,17 @@ local function Members()
         for i = 1, n do
             local name, rank, subgroup, level, class, file, zone, online, dead, role = Read(GetRaidRosterInfo, i)
             if name then
-                out[#out + 1] = { index = i, name = name, rank = rank or 0, group = subgroup or 1, level = level, class = file or class,
+                -- The unit's "Given Family" (the roster may give only the given name).
+                local unit = "raid" .. i
+                name = ns.Compat.UnitPlayer(unit) or ns.Compat.PlayerName(name)
+                out[#out + 1] = { index = i, unit = unit, name = name, rank = rank or 0, group = subgroup or 1, level = level, class = file or class,
                     zone = Str(zone), online = online, dead = dead, role = UnitGroupRolesAssigned and Read(UnitGroupRolesAssigned, "raid" .. i) }
             end
         end
     elseif n > 0 then
         for _, unit in ipairs({ "player", "party1", "party2", "party3", "party4" }) do
             if UnitExists(unit) then
-                local name = Read(GetUnitName, unit, true) or Read(UnitName, unit)
+                local name = ns.Compat.UnitPlayer(unit)
                 local _, file = Read(UnitClass, unit)
                 out[#out + 1] = { unit = unit, name = name or "?", rank = (UnitIsGroupLeader and Read(UnitIsGroupLeader, unit)) and 2 or 0,
                     group = 1, level = Read(UnitLevel, unit), class = file, online = Read(UnitIsConnected, unit) ~= false,
@@ -992,15 +982,17 @@ end
 local function MemberMenu(anchor, mem, raid)
     local lead = UnitIsGroupLeader and UnitIsGroupLeader("player")
     local assist = lead or (UnitIsGroupAssistant and UnitIsGroupAssistant("player"))
-    local me = mem.name == UnitName("player")
-    SW.PersonMenu(anchor, { name = mem.name, invite = false }, function(m)
+    local me = mem.unit == "player" or ns.Compat.IsMe(mem.name) or (mem.unit and ns.Units.UnitIsUnit(mem.unit, "player"))
+    -- Leader, assistant and remove calls take the unit: no name to spell.
+    local target = mem.unit or mem.name
+    SW.PersonMenu(anchor, { name = mem.name, guid = mem.unit and Read(UnitGUID, mem.unit), invite = false }, function(m)
         if lead and not me then
-            m:Button({ text = "Make leader", fn = function() Try("promote", (C_PartyInfo and C_PartyInfo.PromoteToLeader) or PromoteToLeader, mem.name) end })
+            m:Button({ text = "Make leader", fn = function() Try("promote", (C_PartyInfo and C_PartyInfo.PromoteToLeader) or PromoteToLeader, target) end })
             if raid then
                 if mem.rank == 1 then
-                    m:Button({ text = "Remove assistant", fn = function() Try("demote", (C_PartyInfo and C_PartyInfo.DemoteAssistant) or DemoteAssistant, mem.name) end })
+                    m:Button({ text = "Remove assistant", fn = function() Try("demote", (C_PartyInfo and C_PartyInfo.DemoteAssistant) or DemoteAssistant, target) end })
                 else
-                    m:Button({ text = "Make assistant", fn = function() Try("promote", (C_PartyInfo and C_PartyInfo.PromoteToAssistant) or PromoteToAssistant, mem.name) end })
+                    m:Button({ text = "Make assistant", fn = function() Try("promote", (C_PartyInfo and C_PartyInfo.PromoteToAssistant) or PromoteToAssistant, target) end })
                 end
             end
         end
@@ -1014,7 +1006,7 @@ local function MemberMenu(anchor, mem, raid)
         if assist and not me then
             m:Button({ text = "Remove from group", fn = function()
                 W.Confirm(("Remove %s from the group?"):format(Short(mem.name)), function()
-                    Try("remove", (C_PartyInfo and C_PartyInfo.UninviteUnit) or UninviteUnit, mem.name)
+                    Try("remove", (C_PartyInfo and C_PartyInfo.UninviteUnit) or UninviteUnit, target)
                 end)
             end })
         end
@@ -1093,10 +1085,12 @@ local SQ = C_SocialQueue
 
 local function GuidName(guid)
     if not guid then return nil end
+    -- GetPlayerInfoByGUID first: its second name is the family name ("Given Family").
+    local name = ns.Compat.NameByGUID(guid)
+    if name and name:find(" ", 1, true) then return name end
     local g = C_BattleNet and Read(C_BattleNet.GetGameAccountInfoByGUID, guid)
-    if g and Str(g.characterName) then return g.characterName end
-    local _, _, _, _, _, name, realm = Read(GetPlayerInfoByGUID, guid)
-    return Str(name) and (name .. (Str(realm) and ("-" .. realm) or "")) or nil
+    if g and Str(g.characterName) then return ns.Compat.FullName(g.characterName, nil) end
+    return name
 end
 
 local function QueueName(q)

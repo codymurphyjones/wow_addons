@@ -4,6 +4,9 @@ ns.VERSION = "0.1.0"
 ns.PREFIX = "|cff55d6beGroup History|r"
 ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon"
 
+-- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
+ns.SAVED = { db = "GroupHistoryDB", char = "GroupHistoryCharDB" }
+
 ns.DEFAULTS = {
     options = {
         chat = true,
@@ -25,68 +28,9 @@ ns.CHAR_DEFAULTS = {
     minimap = { angle = 160, hide = false },
 }
 
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then
-                dst[k] = {}
-                Merge(dst[k], v)
-            elseif v[1] == nil then
-                Merge(dst[k], v)
-            end
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
-    end
-    return dst
-end
-
-function ns:Print(msg, force)
-    if force or not self.db or self.db.options.chat then
-        DEFAULT_CHAT_FRAME:AddMessage(self.PREFIX .. ": " .. tostring(msg))
-    end
-end
-
-function ns:Debug(msg)
-    if self.db and self.db.options.debug then DEFAULT_CHAT_FRAME:AddMessage("|cff888888[GH]|r " .. tostring(msg)) end
-end
-
-function ns.Trim(s) return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
-
-local pending
-function ns:Changed()
-    if pending then return end
-    pending = true
-    C_Timer.After(0, function()
-        pending = false
-        if ns.UI and ns.UI.Refresh then ns.UI:Refresh() end
-    end)
-end
-
-local frame = CreateFrame("Frame")
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
-    end
-    table.insert(handlers[event], fn)
-end
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do fn(...) end
-end)
-
-function ns:OnLoad(fn)
-    self.onLoad = self.onLoad or {}
-    table.insert(self.onLoad, fn)
-end
-
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    GroupHistoryDB = Merge(GroupHistoryDB or {}, ns.DEFAULTS)
-    GroupHistoryCharDB = Merge(GroupHistoryCharDB or {}, ns.CHAR_DEFAULTS)
-    ns.db, ns.char = GroupHistoryDB, GroupHistoryCharDB
-    for _, fn in ipairs(ns.onLoad or {}) do fn() end
+-- What a change refreshes (ns:Changed coalesces many edits into one refresh next frame).
+ns:OnChanged(function()
+    if ns.UI and ns.UI.Refresh then ns.UI:Refresh() end
 end)
 
 ns:On("PLAYER_LOGIN", function()
@@ -118,11 +62,10 @@ SlashCmdList.GROUPHISTORY = function(msg)
     elseif cmd == "run" then
         ns.UI:ShowRun(ns.Run.current and ns.Run.current.id)
     elseif cmd == "debug" then
-        ns.db.options.debug = not ns.db.options.debug
+        ns:ToggleOption("db.options.debug")
         ns:Print("Debug output " .. (ns.db.options.debug and "on." or "off."), true)
     elseif cmd == "minimap" then
-        ns.char.minimap.hide = not ns.char.minimap.hide
-        if ns.MinimapButton then ns.MinimapButton:Refresh() end
+        ns:ToggleOption("char.minimap.hide")
     elseif cmd == "help" then
         Help()
     else
@@ -130,6 +73,4 @@ SlashCmdList.GROUPHISTORY = function(msg)
     end
 end
 
-function GroupHistory_OnCompartmentClick()
-    if ns.UI then ns.UI:Toggle() end
-end
+ns:Compartment()

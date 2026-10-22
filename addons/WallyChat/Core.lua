@@ -1,4 +1,4 @@
-local addonName, ns = ...
+local _, ns = ...
 
 -- WallyChat: the game's chat windows in the suite's look (WallyHUD's design tokens and its font,
 -- Roboto Condensed). Skin.lua restyles the windows, their tabs and the edit box; Toolbar.lua puts a
@@ -8,6 +8,9 @@ local addonName, ns = ...
 -- Without WallyHUD the same colours are used (copied below) and the game's chat font is kept.
 WallyChat = WallyChat or {}
 ns.VERSION = "0.1.0"
+
+-- Events and saved variables: the shared Core.lua (addons/shared). Print stays here.
+ns.SAVED = { db = "WallyChatDB" }
 
 ns.DEFAULTS = {
     weight = "medium",    -- the chat text's weight in Roboto Condensed: regular, medium, semibold, bold
@@ -126,46 +129,12 @@ function ns.IconButton(parent, file, size, tip, body)
     return b
 end
 
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then dst[k] = {} end
-            Merge(dst[k], v)
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
-    end
-    return dst
-end
-
 function ns:Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(ns.Hex(ns.T().accent) .. "WallyChat|r: " .. tostring(msg))
 end
 
-local frame = CreateFrame("Frame")
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
-    end
-    table.insert(handlers[event], fn)
-end
--- Each handler on its own: one that fails is reported and the others still run.
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do
-        local ok, err = pcall(fn, ...)
-        if not ok then geterrorhandler()(err) end
-    end
-end)
-
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    WallyChatDB = Merge(type(WallyChatDB) == "table" and WallyChatDB or {}, ns.DEFAULTS)
-    ns.db = WallyChatDB
-end)
-
--- /wchat
+-- /wchat (font and bg go through ns:SetOption, so Options > AddOns > WallyChat shows them; their
+-- applies there reskin the windows)
 SLASH_WALLYCHAT1 = "/wchat"
 SlashCmdList.WALLYCHAT = function(msg)
     local cmd, arg = strtrim(msg or ""):match("^(%S*)%s*(.-)$")
@@ -173,12 +142,10 @@ SlashCmdList.WALLYCHAT = function(msg)
     if cmd == "full" or cmd == "fullscreen" then
         ns.FullScreen:Toggle()
     elseif cmd == "font" and ({ regular = true, medium = true, semibold = true, bold = true })[arg:lower()] then
-        ns.db.weight = arg:lower()
-        ns.Skin:All()
+        ns:SetOption("db.weight", arg:lower())
         ns:Print("Chat text in " .. arg:lower() .. ".")
     elseif cmd == "bg" and tonumber(arg) then
-        ns.db.background = math.max(0, math.min(100, tonumber(arg)))
-        ns.Skin:All()
+        ns:SetOption("db.background", math.max(0, math.min(100, tonumber(arg))))
         ns:Print(("Chat panel at %d%% opacity."):format(ns.db.background))
     elseif cmd == "debug" then
         ns.Skin:Debug()

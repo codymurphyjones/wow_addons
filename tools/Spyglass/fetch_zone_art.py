@@ -17,22 +17,23 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(site.getusersitepackages())  # Pillow from a --user install
-import fetch_wowhead_quests as fq  # noqa: E402  (its paced, cached fetcher)
+import fetch_wowhead_quests as fq  # noqa: E402  (its paced, cached fetcher; puts tools/_shared on sys.path)
 from PIL import Image  # noqa: E402
+import paths  # noqa: E402
+import wowhead  # noqa: E402
+from luawrite import lua_str  # noqa: E402
+from wowhead import js_literal  # noqa: E402
 
 ADDON = fq.ADDON
 MEDIA = os.path.join(ADDON, "Media", "Zones")
 OUT = os.path.join(ADDON, "Journal", "ZoneArt.lua")
-ZONES = "https://www.wowhead.com/forever/zones"
 MAP = "https://wow.zamimg.com/images/wow/classic/maps/enus/original/%d.jpg"
 SIZE = (256, 128)  # power-of-two sides (the client wants them), about the tile's shape
 
 
 def zone_list(fetcher):
     """{ name: area ID } for the open-world zones (not instances), classic IDs first."""
-    text = fetcher.get(ZONES) or ""
-    start = text.find('"template":"zone","data":')
-    rows = fq.js_literal(fq.balanced(text, text.index("[", start))) if start >= 0 else []
+    rows = wowhead.zone_rows(fetcher) or []
     out = {}
     for r in sorted(rows, key=lambda r: r["id"]):
         if r.get("instance") == 0 and r.get("name") and r["name"] not in out:
@@ -42,18 +43,7 @@ def zone_list(fetcher):
 
 def fetch_image(fetcher, url):
     """The image's bytes (cached like every other answer), or None."""
-    path = os.path.join(fq.CACHE, "img-" + url.rsplit("/", 1)[-1])
-    if os.path.exists(path):
-        with open(path, "rb") as f:
-            return f.read()
-    import time
-    time.sleep(fq.PACE)
-    status, data = fq.webfetch.fetch(url, binary=True)  # the browser session fq uses
-    if status != 200 or not data:
-        return None
-    with open(path, "wb") as f:
-        f.write(data)
-    return data
+    return fetcher.get(url, binary=True, name="img-" + url.rsplit("/", 1)[-1], retry=False)
 
 
 ZONE_PAGES = ("https://www.wowhead.com/classic/zone=%d", "https://www.wowhead.com/forever/zone=%d")
@@ -69,8 +59,6 @@ def scenic_url(fetcher, area):
     return None
 
 
-ATLAS_DATA = os.path.join(os.environ.get("WOW_ADDONS") or r"Z:\Games\World of Warcraft\_classic_beta_\Interface\AddOns",
-                          "AtlasLootClassic_DungeonsAndRaids", "data.lua")  # third-party: read from the game
 SHOT = "https://wow.zamimg.com/uploads/screenshots/normal/%d.jpg"
 
 # Screenshots that aren't views of the place: Wowhead's batch of loading
@@ -100,8 +88,9 @@ def shot_id(url):
 def instances():
     """AtlasLoot's classic dungeons and raids with a zone: [ (key, area ID) ] in its order
     (the TBC file isn't read; Forever's own places have no zone on Wowhead)."""
+    path = paths.atlasloot_data()  # third party: read from the game
     try:
-        text = open(ATLAS_DATA, encoding="utf-8").read()
+        text = open(path, encoding="utf-8").read() if path else ""
     except OSError:
         return []
     out = []
@@ -122,7 +111,7 @@ def gallery(fetcher, area):
     m = re.search(r"var lv_screenshots = (\[.*?\]);", text, re.S)
     if m:
         try:
-            shots = fq.js_literal(m.group(1))
+            shots = js_literal(m.group(1))
         except ValueError:
             shots = []
         for shot in shots:
@@ -195,9 +184,9 @@ def main():
         "-- World tab zones, by name: Media\\Zones\\<area ID>.tga",
         "ns.ZoneArt = {",
     ]
-    lines += ["    [%s] = %d," % (fq.lua_str(n), a) for n, a in sorted(made.items())]
+    lines += ["    [%s] = %d," % (lua_str(n), a) for n, a in sorted(made.items())]
     lines += ["}", "-- Dungeons and raids, by AtlasLoot key: Media\\Zones\\<name>.tga", "ns.InstanceArt = {"]
-    lines += ["    [%s] = %s," % (fq.lua_str(k), fq.lua_str(n)) for k, n in sorted(inst_made.items())]
+    lines += ["    [%s] = %s," % (lua_str(k), lua_str(n)) for k, n in sorted(inst_made.items())]
     lines += ["}", ""]
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))

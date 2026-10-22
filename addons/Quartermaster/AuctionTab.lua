@@ -81,7 +81,7 @@ end
 -- For other addons: open Quartermaster's Buying tab and search for an item (by name) at the auction
 -- house. Returns true when the search started (the auction house has to be open).
 --   QuartermasterAPI.SearchAuction("Linen Cloth")
-QuartermasterAPI = QuartermasterAPI or {}
+ns.NewAPI("QuartermasterAPI", 1)
 function QuartermasterAPI.SearchAuction(text)
     if type(text) ~= "string" or text == "" then return false end
     local ok, started = pcall(AuctionTab.Search, AuctionTab, text)

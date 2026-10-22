@@ -9,8 +9,8 @@ this folder: CurseForge's APIs can upload files but can't create projects or cha
     the same for a device-verification code. Anything it can't handle (a captcha, a passkey
     prompt) you finish in the window; it waits for you.
 
-Needs Playwright and Markdown:
-    python -m pip install --user playwright markdown  &&  python -m playwright install chromium
+Needs Playwright:
+    python -m pip install --user playwright  &&  python -m playwright install chromium
 """
 import getpass
 import os
@@ -20,7 +20,7 @@ import sys
 import time
 from pathlib import Path
 
-# Playwright and Markdown installed with --user: python -I leaves the user site out of sys.path.
+# Playwright installed with --user: python -I leaves the user site out of sys.path.
 try:
     if site.getusersitepackages() not in sys.path:
         sys.path.append(site.getusersitepackages())
@@ -38,15 +38,6 @@ LOGIN_WAIT = 300   # seconds you get to finish a sign-in step in the window
 
 
 # --------------------------------------------------------------------------- text
-
-def to_html(markdown_text):
-    """Markdown as HTML, for a rich-text editor."""
-    try:
-        import markdown
-    except ImportError:
-        raise SystemExit("Markdown isn't installed: python -m pip install --user markdown")
-    return markdown.markdown(markdown_text, extensions=["extra", "sane_lists"])
-
 
 def ask(prompt, secret=False, allow_blank=False):
     print(flush=True)
@@ -203,27 +194,14 @@ def sign_in(page):
 
 # --------------------------------------------------------------------------- forms
 
-# Runs in the page: finds the (largest visible) description editor and sets its content. Returns
-# what it did, or null when there's no editor. Rich editors get HTML; plain Markdown editors get
-# the Markdown.
+# Runs in the page: puts the Markdown, unchanged, into the visible Markdown editor (a CodeMirror
+# or a plain text box). Returns what it filled, or null when there's none. Rich-text (WYSIWYG)
+# editors are never filled: the page has to be switched to Markdown first.
 SET_CONTENT = r"""
-([html, md]) => {
+md => {
   const shown = el => el && el.offsetParent !== null;
-  const ck = [...document.querySelectorAll('.ck-editor__editable')].find(e => shown(e) && e.ckeditorInstance);
-  if (ck) { ck.ckeditorInstance.setData(html); return 'CKEditor (HTML)'; }
-  if (window.tinymce && tinymce.activeEditor) { tinymce.activeEditor.setContent(html); tinymce.activeEditor.fire('change'); return 'TinyMCE (HTML)'; }
   const cm = [...document.querySelectorAll('.CodeMirror')].find(e => shown(e) && e.CodeMirror);
   if (cm) { cm.CodeMirror.setValue(md); return 'CodeMirror (Markdown)'; }
-  const editable = [...document.querySelectorAll('[contenteditable=true]')].find(shown);
-  if (editable) {
-    editable.focus();
-    document.execCommand('selectAll', false, null);
-    const data = new DataTransfer();
-    data.setData('text/html', html);
-    data.setData('text/plain', md);
-    editable.dispatchEvent(new ClipboardEvent('paste', {clipboardData: data, bubbles: true, cancelable: true}));
-    return 'rich-text editor (pasted HTML)';
-  }
   const area = [...document.querySelectorAll('textarea')].filter(shown).sort((a, b) => b.offsetHeight - a.offsetHeight)[0];
   if (area) {
     const set = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
@@ -236,41 +214,187 @@ SET_CONTENT = r"""
 }
 """
 
+# Runs in the page: switches the description's markup type to Markdown, through a <select> with a
+# Markdown option or a visible Markdown button, tab, radio or label. Returns what it used, or null.
+SET_MARKDOWN = r"""
+() => {
+  const shown = el => el && el.offsetParent !== null;
+  for (const sel of document.querySelectorAll('select')) {
+    const opt = [...sel.options].find(o => /^\s*markdown\s*$/i.test(o.text));
+    if (opt && shown(sel)) {
+      if (sel.value !== opt.value) {
+        const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+        set.call(sel, opt.value);
+        sel.dispatchEvent(new Event('input', {bubbles: true}));
+        sel.dispatchEvent(new Event('change', {bubbles: true}));
+      }
+      return 'select';
+    }
+  }
+  const radio = [...document.querySelectorAll('input[type=radio]')].find(r =>
+    /markdown/i.test(r.value) || /^\s*markdown\s*$/i.test((r.labels && r.labels[0] && r.labels[0].innerText) || ''));
+  if (radio) { (radio.labels && radio.labels[0] || radio).click(); return 'radio'; }
+  const el = [...document.querySelectorAll('button, [role=button], [role=tab], [role=option], label, li, a')]
+    .find(e => shown(e) && /^\s*markdown\s*$/i.test(e.innerText || ''));
+  if (el) { el.click(); return 'button'; }
+  return null;
+}
+"""
+
+RICH_EDITORS = ".ck-editor__editable, iframe.tox-edit-area__iframe, [contenteditable=true]"
+
 EDITORS = ".ck-editor__editable, .CodeMirror, [contenteditable=true], textarea, iframe.tox-edit-area__iframe"
 
 
 def set_editor(page, markdown_text):
-    """Fill the page's description editor. Returns how, or None when there's none."""
-    return page.evaluate(SET_CONTENT, [to_html(markdown_text), markdown_text])
-
-
-def click_button(page, labels):
-    """Click the first visible, enabled button whose text is one of labels (in that order).
-    Returns its text, or None."""
-    for label in labels:
-        for el in page.query_selector_all(f"button:has-text('{label}'), input[type=submit][value*='{label}' i]"):
-            try:
-                if el.is_visible() and el.is_enabled():
-                    text = (el.inner_text() or el.get_attribute("value") or label).strip()
-                    el.click()
-                    return text
-            except Exception:
-                pass
+    """Put the Markdown, unchanged, in the page's description editor, switching the page to
+    Markdown first when it shows a rich-text editor. Returns how, or None when there's no Markdown
+    editor (nothing is filled then)."""
+    how = page.evaluate(SET_CONTENT, markdown_text)
+    if how:
+        return how
+    if not page.evaluate(SET_MARKDOWN):
+        return None
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        page.wait_for_timeout(500)
+        # A confirm dialog about losing formatting may follow the switch.
+        click_button(page, ["Confirm", "Yes", "OK", "Continue", "Switch"])
+        if not any(el.is_visible() for el in page.query_selector_all(RICH_EDITORS)):
+            how = page.evaluate(SET_CONTENT, markdown_text)
+            if how:
+                return how
     return None
 
 
+def nudge_editor(page):
+    """Type a space and delete it in the description editor: a real user edit, for sites that only
+    turn their Save button on after one. The text stays the same. True when it found an editor."""
+    targets = [page.frame_locator("iframe.tox-edit-area__iframe").locator("body"),
+               page.locator(".ck-editor__editable, .CodeMirror, [contenteditable=true], textarea")]
+    for loc in targets:
+        try:
+            for i in range(loc.count()):
+                item = loc.nth(i)
+                if item.is_visible():
+                    item.click()
+                    page.keyboard.press("Control+End")
+                    page.keyboard.type(" ")
+                    page.keyboard.press("Backspace")
+                    return True
+        except Exception:
+            pass
+    return False
+
+
+BUTTONS = "button, [role=button], a, input[type=submit], input[type=button]"
+
+# Runs on a button: whether it's disabled, by attribute, aria-disabled or a "disabled" class.
+IS_DISABLED = r"""e => e.disabled || e.getAttribute('aria-disabled') === 'true' ||
+  (typeof e.className === 'string' && /(^|[\s_-])disabled($|[\s_-])/i.test(e.className))"""
+
+
+def find_buttons(page, labels):
+    """The visible buttons whose text is one of labels: [(text, enabled, element)], in labels order."""
+    shown = []
+    for el in page.query_selector_all(BUTTONS):
+        try:
+            if el.is_visible():
+                text = (el.inner_text() or el.get_attribute("value") or "").strip()
+                link = el.evaluate("e => e.tagName === 'A' && e.getAttribute('role') !== 'button'")
+                shown.append((text, link, el))
+        except Exception:
+            pass
+    found = []
+    for label in labels:
+        for text, link, el in shown:
+            # A plain link must match exactly, so a menu link like "Updates" is never clicked.
+            hit = text.lower() == label.lower() if link else label.lower() in text.lower()
+            if hit and all(f[2] is not el for f in found):
+                try:
+                    found.append((text, el.is_enabled() and not el.evaluate(IS_DISABLED), el))
+                except Exception:
+                    pass
+    return found
+
+
+def button_names(page):
+    """The text of every visible button on the page, for a message when the one wanted isn't there."""
+    return page.evaluate(r"""sel => [...document.querySelectorAll(sel)]
+      .filter(e => e.offsetParent !== null)
+      .map(e => (e.innerText || e.value || '').trim().slice(0, 30)).filter(t => t)""", BUTTONS)
+
+
+def click_button(page, labels, wait=0):
+    """Click the first visible, enabled button whose text is one of labels (in that order), waiting
+    up to wait seconds for one to turn on. Returns its text, or None."""
+    deadline = time.time() + wait
+    while True:
+        for text, enabled, el in find_buttons(page, labels):
+            if enabled:
+                try:
+                    el.click()
+                    return text
+                except Exception:
+                    pass
+        if time.time() >= deadline:
+            return None
+        page.wait_for_timeout(500)
+
+
+# Runs in the page: marks (data-cf-field) the first visible text box or dropdown after, in page
+# order, a short text matching pattern - for forms whose labels aren't tied to their fields (the
+# Create Project form). Returns true when it marked one.
+FIND_FIELD = r"""
+pattern => {
+  const re = new RegExp(pattern, 'i');
+  const shown = el => el.offsetParent !== null;
+  document.querySelectorAll('[data-cf-field]').forEach(e => e.removeAttribute('data-cf-field'));
+  const fields = [...document.querySelectorAll(
+    'input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([aria-hidden=true]), ' +
+    'textarea, select, [role=combobox]')].filter(shown);
+  for (const el of document.querySelectorAll('label, legend, h1, h2, h3, h4, h5, h6, p, span, div')) {
+    if (!shown(el) || el.closest('nav, header, aside, footer')) continue;
+    const own = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ').trim();
+    if (!own || own.length > 60 || !re.test(own)) continue;
+    const next = fields.find(f => el.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING);
+    if (next) { next.setAttribute('data-cf-field', '1'); return true; }
+  }
+  return false;
+}
+"""
+
+
+# Runs on an element: whether it's a form control someone can type in or pick from.
+IS_CONTROL = r"""e => e.getAttribute('aria-hidden') !== 'true' &&
+  (/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName) || e.isContentEditable ||
+   /^(combobox|textbox|listbox|searchbox|spinbutton)$/.test(e.getAttribute('role') || ''))"""
+
+
 def _field(page, labels):
-    """The first visible form control labelled (or placeholdered) like one of labels."""
+    """The first visible form control labelled (or placeholdered) like one of labels, else the
+    first one after a text like it."""
     for label in labels:
         pattern = re.compile(label, re.I)
         for loc in (page.get_by_label(pattern), page.get_by_placeholder(pattern)):
             try:
                 for i in range(loc.count()):
                     item = loc.nth(i)
-                    if item.is_visible():
+                    # Only a control: a tab panel can be labelled too. Not aria-hidden: that's a
+                    # dropdown's hidden native input, which can't be clicked.
+                    if item.is_visible() and item.evaluate(IS_CONTROL):
                         return item
             except Exception:
                 pass
+        try:
+            if page.evaluate(FIND_FIELD, label):
+                # Pin it by its own id: the mark is gone once another field is looked up.
+                key = page.evaluate("() => { const e = document.querySelector('[data-cf-field]');"
+                                    " e.removeAttribute('data-cf-field'); return e.id ||"
+                                    " (e.id = 'cf-field-' + Math.random().toString(36).slice(2)); }")
+                return page.locator(f"[id='{key}']")
+        except Exception:
+            pass
     return None
 
 
@@ -286,21 +410,67 @@ def fill_field(page, labels, value):
         return False
 
 
+# Runs in the page: marks (data-cf-tile) the smallest clickable element - a tile, card or button -
+# whose text, alt, aria-label or title is exactly name. Skips the site's header, menus and links
+# that would leave the form. Returns true when it marked one.
+FIND_TILE = r"""
+name => {
+  const shown = el => el && el.offsetParent !== null;
+  const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const want = norm(name);
+  const clickable = el => el.matches('button, a, label, [role=button], [role=option], [role=radio], [onclick]') ||
+    getComputedStyle(el).cursor === 'pointer';
+  const leaves = el => el.tagName === 'A' && !/^(#?|javascript:.*)$/i.test(el.getAttribute('href') || '');
+  document.querySelectorAll('[data-cf-tile]').forEach(e => e.removeAttribute('data-cf-tile'));
+  let best = null;
+  for (const el of document.querySelectorAll('button, [role=button], [role=option], [role=radio], a, label, li, div, span, p, img')) {
+    if (!shown(el) || el.closest('nav, header, aside, footer')) continue;
+    if (![el.innerText, el.getAttribute('alt'), el.getAttribute('aria-label'), el.getAttribute('title')]
+          .some(n => norm(n) === want)) continue;
+    let t = el;
+    while (t && t !== document.body && !clickable(t)) t = t.parentElement;
+    if (!t || t === document.body || leaves(t)) continue;
+    if (!best || best.contains(t)) best = t;
+  }
+  if (!best) return false;
+  best.setAttribute('data-cf-tile', '1');
+  return true;
+}
+"""
+
+
+def click_tile(page, option):
+    """Click the tile, card or button named option (like CurseForge's grid of games). True when clicked."""
+    try:
+        if not page.evaluate(FIND_TILE, option):
+            return False
+        page.click("[data-cf-tile]")
+        page.wait_for_timeout(500)
+        return True
+    except Exception:
+        return False
+    finally:
+        try:
+            page.evaluate("() => document.querySelectorAll('[data-cf-tile]').forEach(e => e.removeAttribute('data-cf-tile'))")
+        except Exception:
+            pass
+
+
 def choose(page, labels, option):
     """Pick option in the dropdown labelled like one of labels: a real <select>, or a custom
-    dropdown opened by clicking it. True when picked."""
+    dropdown opened by clicking it. Without one, a tile or button named option. True when picked."""
     field = _field(page, labels)
     if not field:
-        return False
+        return click_tile(page, option)
     try:
         if field.evaluate("e => e.tagName") == "SELECT":
             names = field.evaluate("e => [...e.options].map(o => o.text.trim())")
             pick = next((n for n in names if n.lower() == option.lower()), None) \
                 or next((n for n in names if option.lower() in n.lower()), None)
-            if not pick:
-                return False
-            field.select_option(label=pick)
-            return True
+            if pick:
+                field.select_option(label=pick)
+                return True
+            return click_tile(page, option)
         field.click()
         if field.evaluate("e => e.tagName") == "INPUT":
             field.fill(option)  # a searchable dropdown
@@ -314,7 +484,7 @@ def choose(page, labels, option):
         page.keyboard.press("Escape")
     except Exception:
         pass
-    return False
+    return click_tile(page, option)
 
 
 def describe_page(page):
@@ -332,10 +502,18 @@ def describe_page(page):
           .filter(e => shown(e) || e.type === 'file').map(e => d(e) + `  type=${e.type || ''}  label="${label(e).slice(0, 40)}"`),
         buttons: [...document.querySelectorAll('button, input[type=submit], [role=tab], [role=combobox]')]
           .filter(shown).map(e => d(e) + '  "' + (e.innerText || e.value || '').trim().slice(0, 40) + '"'),
+        // Clickable tiles and cards (outermost only), like the grid of games.
+        tiles: [...document.querySelectorAll('[role=option], [role=radio], label, li, div, img')]
+          .filter(e => shown(e) && getComputedStyle(e).cursor === 'pointer' &&
+                       !(e.parentElement && getComputedStyle(e.parentElement).cursor === 'pointer'))
+          .map(e => d(e) + '  "' + (e.innerText || e.getAttribute('alt') || e.getAttribute('aria-label') || '')
+                             .replace(/\s+/g, ' ').trim().slice(0, 40) + '"')
+          .slice(0, 40),
       };
     }""")
     print(f"URL: {page.url}")
-    for title, key in (("Editors", "editors"), ("Fields", "fields"), ("Buttons, tabs and dropdowns", "buttons")):
+    for title, key in (("Editors", "editors"), ("Fields", "fields"), ("Buttons, tabs and dropdowns", "buttons"),
+                       ("Tiles", "tiles")):
         print(f"{title}:")
         for line in info[key] or ["(none)"]:
             print("  " + line)

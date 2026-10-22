@@ -2,12 +2,13 @@ local _, ns = ...
 local D = ns.Data
 
 -- Scores items against the StatLedger weights for your spec:
--- score = sum of stat amount x stat unit value x priority weight.
+-- score = sum of stat amount x stat unit value x priority weight. Reading stats, the weights and
+-- what counts as an upgrade are the shared GearEngine.lua (addons/shared), the same as Tape
+-- Measure's and Wally's; this adds SpyGlass's shipped stats (items not loaded yet) and its effects.
 local S = {}
 ns.Scoring = S
 
-local GetItemStats = (C_Item and C_Item.GetItemStats) or GetItemStats
-local EQUIP_PREFIX = ITEM_SPELL_TRIGGER_ONEQUIP or "Equip:"
+local GE = ns.GearEngine
 
 local itemStats = {} -- [itemID] = { [stat] = amount }
 local scores = {}    -- [itemID] = { score, top }
@@ -28,6 +29,7 @@ end
 
 function S:Reset()
     weights = nil
+    GE.Invalidate()
     wipe(scores)
     wipe(bakedScores)
     self:EquipmentChanged()
@@ -125,14 +127,37 @@ function S:EquippedScore(group)
     return lowest or 0, empty
 end
 
-function S:HasStatLedger()
-    return StatLedger and StatLedger.GetWeights and true or false
+-- What you wear where an item of this equip location goes, the way Tape Measure compares it:
+-- rings, trinkets and dual-wielded one-handers against the weaker, a two-hander against main hand
+-- plus off hand. base, empty; nil, why when it can't go on (an off hand under a two-hander) or
+-- while a worn item is loading.
+function S:WornScore(equipLoc)
+    local key = "loc:" .. (equipLoc or "")
+    local cached = worn[key]
+    if cached then return cached[1], cached[2] end
+    local base, empty = GE.Worn(equipLoc, function(slot)
+        local itemID = GetInventoryItemID("player", slot)
+        if not ns:Info(itemID) then return nil end
+        return (self:Score(itemID))
+    end)
+    if base then worn[key] = { base, empty } end
+    return base, empty
 end
 
+-- Whether an item scoring score beats what you wear: upgrade (true for "upgrade" or "new"), the
+-- engine's verdict, and the worn score. Nil verdict while it can't be told.
+function S:Beats(itemID, score, equipLoc)
+    equipLoc = equipLoc or ns:Instant(itemID)
+    local base, empty = self:WornScore(equipLoc)
+    if not base then return false, nil, nil end
+    local verdict = GE.Verdict(score, base, empty)
+    return verdict == "upgrade" or verdict == "new", verdict, base, empty
+end
+
+function S:HasStatLedger() return GE.HasStatLedger() end
+
 function S:Weights()
-    if not weights then
-        weights = self:HasStatLedger() and StatLedger:GetWeights() or D.FALLBACK_WEIGHTS
-    end
+    if not weights then weights = GE.Weights() end
     return weights
 end
 
@@ -155,27 +180,7 @@ end
 local function EquipStats(itemID, out)
     local f = ns.Usability:Facts(itemID)
     if not f then return end
-    for _, text in ipairs(f.effects) do
-        if text:sub(1, #EQUIP_PREFIX) == EQUIP_PREFIX then
-            local lower = text:lower():gsub(",", "")
-            for _, rule in ipairs(D.EQUIP_PATTERNS) do
-                local a, b = lower:match(rule[1])
-                if a then
-                    local found = {}
-                    if rule[2] == "SCHOOL" then
-                        local stat = D.SCHOOLS[a]
-                        if stat then found[stat] = tonumber(b) end
-                    else
-                        for _, stat in ipairs(rule[2]) do found[stat] = tonumber(a) end
-                    end
-                    for stat, amount in pairs(found) do
-                        if amount then out[stat] = (out[stat] or 0) + amount end
-                    end
-                    break
-                end
-            end
-        end
-    end
+    for _, text in ipairs(f.effects) do GE.EquipLine(text, out) end
 end
 
 -- { [stat] = amount } in StatLedger's stat keys. GetItemStats and the
@@ -192,22 +197,9 @@ function S:ItemStats(itemID)
         return s and s.stats or {}
     end
 
-    local fromApi = {}
-    local ok, raw = pcall(GetItemStats, info.link)
-    if ok and type(raw) == "table" then
-        for key, value in pairs(raw) do
-            local stat = D.STAT_ALIASES[key]
-            if stat and type(value) == "number" then fromApi[stat] = (fromApi[stat] or 0) + value end
-        end
-    end
     local fromText = {}
     EquipStats(itemID, fromText)
-
-    local stats = {}
-    for stat, value in pairs(fromApi) do stats[stat] = value end
-    for stat, value in pairs(fromText) do
-        if not stats[stat] or value > stats[stat] then stats[stat] = value end
-    end
+    local stats = GE.Merge(GE.ApiStats(info.link), fromText)
     itemStats[itemID] = stats
     return stats
 end
@@ -230,7 +222,7 @@ function S:Score(itemID)
     local values = {}
     for stat, amount in pairs(stats) do values[stat] = amount end
     for stat, amount in pairs((ns.Effects:Stats(itemID))) do values[stat] = (values[stat] or 0) + amount end
-    local score, contrib = StatLedger:Score(values, self:Weights())
+    local score, contrib = GE.ScoreValues(values)
     local parts = {}
     for stat, value in pairs(contrib) do
         if value > 0 then parts[#parts + 1] = { stat, values[stat], value } end

@@ -6,7 +6,7 @@ local C = ns.Compat
 local JF = {}
 ns.JunkFilter = JF
 
-local CLASS_QUEST = 12
+local CLASS_QUEST = ns.Items.CLASS.QUEST
 local POOR, UNCOMMON = 0, 2
 
 function JF:ClearCache() end

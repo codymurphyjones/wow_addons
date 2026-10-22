@@ -45,7 +45,7 @@ end
 local function Changed() ns:Changed() end
 
 -- Prices are per realm and faction, so the last scan time is too (time(), not GetTime(): it spans sessions).
-local function ScanKey() return (GetRealmName() or "?") .. "-" .. (UnitFactionGroup("player") or "?") end
+local function ScanKey() return ns.Units.ServerKey() end
 
 local function MarkScanned()
     if ns.db and ns.db.lastFullScan then ns.db.lastFullScan[ScanKey()] = time() end

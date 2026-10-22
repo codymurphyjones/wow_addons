@@ -1,9 +1,12 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.5"
+ns.VERSION = "0.1.6"
 ns.PREFIX = "|cff55d6beWally|r"
 ns.ICON = "Interface/AddOns/Wally/Media/Wally"
 ns.HISTORY_MAX = 200
+
+-- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
+ns.SAVED = { db = "WallyDB", char = "WallyCharDB" }
 
 ns.DEFAULTS = {
     inclusions = {},
@@ -36,6 +39,8 @@ ns.DEFAULTS = {
         guildRepair = true,
         tooltip = true,
         chat = true,
+        -- Wally's bag window (Bags.lua) in place of the game's bag windows.
+        bags = { window = true, columns = 12 },
         -- Lists here are filled and repaired by Sorter:Validate().
         sort = {
             criteria = {},
@@ -46,7 +51,9 @@ ns.DEFAULTS = {
             bagButton = true,
             buttonSide = "left",
             afterSell = false,
-            onMerchantClose = false,
+            onMerchantClose = true,   -- auto sort when a merchant closes
+            onBagsClose = true,       -- auto sort when the bags close
+            onMailClose = true,       -- auto sort when the mailbox closes
             protectTop = 10,
             protectRare = true,
             reagentsByWorth = true,
@@ -69,31 +76,9 @@ ns.CHAR_DEFAULTS = {
     minimap = { angle = 200, hide = false },
     merchantButton = nil,
     sortIgnore = {},
+    sortAnchors = {},         -- ["bag:slot"] = itemID: anchored items sorting leaves alone (Sort.lua)
     auctionView = "history",
 }
-
--- Saved arrays (reorderable lists) are never merged by index: that would scramble their order.
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then
-                dst[k] = {}
-                Merge(dst[k], v)
-            elseif v[1] == nil then
-                Merge(dst[k], v)
-            end
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
-    end
-    return dst
-end
-
-function ns:Print(msg, force)
-    if force or not self.db or self.db.options.chat then
-        DEFAULT_CHAT_FRAME:AddMessage(self.PREFIX .. ": " .. tostring(msg))
-    end
-end
 
 function ns.Key(name)
     if type(name) ~= "string" then return nil end
@@ -102,24 +87,16 @@ function ns.Key(name)
     return name:lower()
 end
 
-function ns.Trim(s) return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
-
--- Coalesce change notifications from many list edits into one refresh next frame.
-local pending
-function ns:Changed()
-    if pending then return end
-    pending = true
-    C_Timer.After(0, function()
-        pending = false
-        if ns.Value then ns.Value:Clear() end
-        if ns.JunkFilter then ns.JunkFilter:ClearCache() end
-        if ns.UI and ns.UI.Refresh then ns.UI:Refresh() end
-        if ns.Merchant and ns.Merchant.UpdateState then ns.Merchant:UpdateState() end
-        if ns.Auction and ns.Auction.supported then ns.Auction:Build() end
-        if ns.AuctionTab and ns.AuctionTab.Refresh then ns.AuctionTab:Refresh() end
-        if ns.API then ns.API:FireChanged() end
-    end)
-end
+-- What a change refreshes (ns:Changed coalesces many list edits into one refresh next frame).
+ns:OnChanged(function()
+    if ns.Value then ns.Value:Clear() end
+    if ns.JunkFilter then ns.JunkFilter:ClearCache() end
+    if ns.UI and ns.UI.Refresh then ns.UI:Refresh() end
+    if ns.Merchant and ns.Merchant.UpdateState then ns.Merchant:UpdateState() end
+    if ns.Auction and ns.Auction.supported then ns.Auction:Build() end
+    if ns.AuctionTab and ns.AuctionTab.Refresh then ns.AuctionTab:Refresh() end
+    if ns.API then ns.API:FireChanged() end
+end)
 
 function ns:AddHistory(kind, link, count, copper, byWally)
     local h = self.db.history
@@ -141,36 +118,9 @@ function ns:AddAuctionCancel(link, count, unit, byWally)
     for i = #h, self.HISTORY_MAX + 1, -1 do h[i] = nil end
 end
 
--- Auctions are offered only on clients with the modern auction house, and only with Auctionator.
+-- Auctions are offered only when the modern auction house is there, and only with Auctionator.
 function ns:AuctionsEnabled()
     return ns.Auction and ns.Auction.supported and ns.Value:HasAuctionator() or false
-end
-
-local frame = CreateFrame("Frame")
-ns.EventFrame = frame
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
-    end
-    table.insert(handlers[event], fn)
-end
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do fn(...) end
-end)
-
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    WallyDB = Merge(WallyDB or {}, ns.DEFAULTS)
-    WallyCharDB = Merge(WallyCharDB or {}, ns.CHAR_DEFAULTS)
-    ns.db, ns.char = WallyDB, WallyCharDB
-    for _, fn in ipairs(ns.onLoad or {}) do fn() end
-end)
-
-function ns:OnLoad(fn)
-    self.onLoad = self.onLoad or {}
-    table.insert(self.onLoad, fn)
 end
 
 ns:On("PLAYER_LOGIN", function()
@@ -291,9 +241,7 @@ SlashCmdList.WALLY = function(msg)
     elseif cmd == "auction" or cmd == "auctions" or cmd == "ah" then
         AuctionCommand(rest)
     elseif cmd == "minimap" then
-        ns.char.minimap.hide = not ns.char.minimap.hide
-        if ns.MinimapButton then ns.MinimapButton:Refresh() end
-        ns:Changed()
+        ns:ToggleOption("char.minimap.hide")
     elseif cmd == "resetbutton" then
         ns.char.merchantButton = nil
         if ns.Merchant then ns.Merchant:UpdatePosition() end
@@ -303,6 +251,4 @@ SlashCmdList.WALLY = function(msg)
     end
 end
 
-function Wally_OnCompartmentClick()
-    if ns.UI then ns.UI:Toggle() end
-end
+ns:Compartment()

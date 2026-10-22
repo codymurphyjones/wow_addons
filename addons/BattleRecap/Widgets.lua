@@ -1,80 +1,19 @@
 local _, ns = ...
-local PAL = ns.Palette
 
--- Shared widgets for the recap windows. Same look as Wally and Tape Measure (the basics are copied
--- from TapeMeasure/Widgets.lua so the addons match).
-local W = {}
-ns.Widgets = W
+-- BattleRecap's own widgets: bars and the scrolling table. The basics (buttons, labels, checkboxes,
+-- ...) are the shared kit (addons/shared/Widgets.lua, loaded first); the recap windows' title-bar
+-- frame is W.MakeWindow(name, width, height, title, pos) from shared/Window.lua.
+local W = ns.Widgets
 
-local WHITE = "Interface\\Buttons\\WHITE8X8"
-local ACCENT = PAL.accent
-local MUTED = PAL.muted
-W.WHITE, W.ACCENT, W.MUTED = WHITE, ACCENT, MUTED
+-- BattleRecap's look on the shared basics: disabled buttons dim their text, and checkboxes are
+-- a little smaller.
+W.style.dimDisabled = true
+W.style.checkSize, W.style.checkGap = 24, 2
 
-function W.SetBackdrop(f, alpha)
-    f:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
-    f:SetBackdropColor(PAL.bg[1], PAL.bg[2], PAL.bg[3], alpha or 1)
-    f:SetBackdropBorderColor(PAL.border[1], PAL.border[2], PAL.border[3], 1)
-end
-local SetBackdrop = W.SetBackdrop
-
-function W.Label(parent, text, font, x, y, width)
-    local t = parent:CreateFontString(nil, "OVERLAY", font or "BattleRecapGameFontHighlight")
-    t:SetPoint("TOPLEFT", x, y)
-    t:SetJustifyH("LEFT")
-    if width then t:SetWidth(width) end
-    t:SetText(text)
-    return t
-end
+local ACCENT = W.ACCENT
 local Label = W.Label
 
-function W.Muted(fs) fs:SetTextColor(MUTED[1], MUTED[2], MUTED[3]); return fs end
-
-function W.MakeButton(parent, text, width, height)
-    local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
-    b:SetSize(width or 110, height or 28)
-    SetBackdrop(b)
-    b:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1)
-    b.text = b:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall")
-    b.text:SetPoint("CENTER"); b.text:SetText(text)
-    b:SetScript("OnEnter", function(self) if self:IsEnabled() then self:SetBackdropColor(PAL.hover[1], PAL.hover[2], PAL.hover[3], 1) end end)
-    b:SetScript("OnLeave", function(self) self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end)
-    b:SetScript("OnDisable", function(self) self.text:SetAlpha(0.35) end)
-    b:SetScript("OnEnable", function(self) self.text:SetAlpha(1) end)
-    return b
-end
-local MakeButton = W.MakeButton
-
-function W.Hint(widget, title, body)
-    widget:HookScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine(title, ACCENT[1], ACCENT[2], ACCENT[3])
-        if body then GameTooltip:AddLine(body, 0.8, 0.85, 0.9, true) end
-        GameTooltip:Show()
-    end)
-    widget:HookScript("OnLeave", function() GameTooltip:Hide() end)
-end
-
-function W.MakeCheckbox(parent, text)
-    local b = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-    b:SetSize(24, 24)
-    b.label = b:CreateFontString(nil, "OVERLAY", "BattleRecapGameFontHighlightSmall")
-    b.label:SetPoint("LEFT", b, "RIGHT", 2, 0); b.label:SetText(text)
-    return b
-end
-
--- A flat bar: bg + fill, value 0..1.
-function W.MakeBar(parent, width, height)
-    local bar = CreateFrame("Frame", nil, parent)
-    bar:SetSize(width, height)
-    bar.bg = bar:CreateTexture(nil, "ARTWORK"); bar.bg:SetAllPoints(); bar.bg:SetColorTexture(0.12, 0.16, 0.19, 1)
-    bar.fill = bar:CreateTexture(nil, "OVERLAY"); bar.fill:SetPoint("TOPLEFT"); bar.fill:SetPoint("BOTTOMLEFT")
-    function bar:SetValue(v, r, g, b)
-        self.fill:SetWidth(math.max(0.5, self:GetWidth() * math.max(0, math.min(1, v or 0))))
-        self.fill:SetColorTexture(r or ACCENT[1], g or ACCENT[2], b or ACCENT[3], 1)
-    end
-    return bar
-end
+W.MakeBar = ns.NewProgressBar -- shared\Bar.lua: (parent, width, height), bar:SetValue(v, r, g, b)
 
 -- Health % colour: green at full, yellow at half, red near death.
 function W.HealthColor(pct)
@@ -83,59 +22,6 @@ function W.HealthColor(pct)
     return 1, pct * 2, 0.1
 end
 
----------------------------------------------------------------------------
--- Windows
----------------------------------------------------------------------------
-
--- A movable dark window with a title, an icon and a close button. pos is the saved-position table.
-function W.MakeWindow(name, width, height, title, pos)
-    local f = CreateFrame("Frame", name, UIParent, "BackdropTemplate")
-    f:SetSize(width, height)
-    SetBackdrop(f, 0.96)
-    f:SetFrameStrata("DIALOG")
-    f:SetClampedToScreen(true)
-    f:SetMovable(true); f:EnableMouse(true)
-    f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local point, _, _, x, y = self:GetPoint()
-        pos.point, pos.x, pos.y = point, x, y
-    end)
-    function f:RestorePosition()
-        self:ClearAllPoints()
-        self:SetPoint(pos.point or "CENTER", UIParent, pos.point or "CENTER", pos.x or 0, pos.y or 0)
-    end
-    f:RestorePosition()
-
-    local band = f:CreateTexture(nil, "BORDER")
-    band:SetPoint("TOPLEFT", 1, -1); band:SetPoint("TOPRIGHT", -1, -1); band:SetHeight(26)
-    band:SetColorTexture(0.06, 0.08, 0.10, 1)
-    local accent = f:CreateTexture(nil, "ARTWORK")
-    accent:SetPoint("TOPLEFT", band, "BOTTOMLEFT"); accent:SetPoint("TOPRIGHT", band, "BOTTOMRIGHT"); accent:SetHeight(1)
-    accent:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 0.6)
-
-    local icon = f:CreateTexture(nil, "OVERLAY")
-    icon:SetSize(18, 18); icon:SetPoint("TOPLEFT", 6, -5); icon:SetTexture(ns.ICON)
-    f.title = Label(f, title, "BattleRecapGameFontNormal", 28, -7)
-    f.subtitle = Label(f, "", "BattleRecapGameFontHighlightSmall", 0, -8)
-    f.subtitle:ClearAllPoints(); f.subtitle:SetPoint("LEFT", f.title, "RIGHT", 8, 0)
-    W.Muted(f.subtitle)
-    if WallyHUD and WallyHUD.Tokens then
-        -- the suite's look (WallyHUD): the header in the panel colour, the title in primary text
-        band:SetColorTexture(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
-        f.title:SetTextColor(WallyHUD.RGBA(WallyHUD.Tokens.text.primary))
-    end
-
-    local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-    close:SetSize(24, 24); close:SetPoint("TOPRIGHT", -1, -1)
-    close:SetScript("OnClick", function() f:Hide() end)
-    f.close = close
-
-    tinsert(UISpecialFrames, name) -- Escape closes it
-    f:Hide()
-    return f
-end
 
 ---------------------------------------------------------------------------
 -- Scrolling table

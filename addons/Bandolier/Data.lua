@@ -43,76 +43,17 @@ D.CATEGORY_NAMES = {
 }
 
 -- [itemID] = { category, power }. Power is the average amount restored and
--- decides the order inside a category.
-D.ITEMS = {
-    -- Healthstones (base, 1/2 and 2/2 Improved Healthstone)
-    [5512]  = { D.HEALTHSTONE, 100 },  -- Minor Healthstone
-    [19004] = { D.HEALTHSTONE, 110 },
-    [19005] = { D.HEALTHSTONE, 120 },
-    [5511]  = { D.HEALTHSTONE, 250 },  -- Lesser Healthstone
-    [19006] = { D.HEALTHSTONE, 275 },
-    [19007] = { D.HEALTHSTONE, 300 },
-    [5509]  = { D.HEALTHSTONE, 500 },  -- Healthstone
-    [19008] = { D.HEALTHSTONE, 550 },
-    [19009] = { D.HEALTHSTONE, 600 },
-    [5510]  = { D.HEALTHSTONE, 800 },  -- Greater Healthstone
-    [19010] = { D.HEALTHSTONE, 880 },
-    [19011] = { D.HEALTHSTONE, 960 },
-    [9421]  = { D.HEALTHSTONE, 1200 }, -- Major Healthstone
-    [19012] = { D.HEALTHSTONE, 1320 },
-    [19013] = { D.HEALTHSTONE, 1440 },
-
-    -- Healing and rejuvenation potions
-    [118]   = { D.HEALING, 80 },   -- Minor Healing Potion
-    [2456]  = { D.HEALING, 120 },  -- Minor Rejuvenation Potion
-    [858]   = { D.HEALING, 160 },  -- Lesser Healing Potion
-    [4596]  = { D.HEALING, 160 },  -- Discolored Healing Potion
-    [929]   = { D.HEALING, 320 },  -- Healing Potion
-    [1710]  = { D.HEALING, 520 },  -- Greater Healing Potion
-    [17349] = { D.HEALING, 640 },  -- Superior Healing Draught
-    [3928]  = { D.HEALING, 800 },  -- Superior Healing Potion
-    [18839] = { D.HEALING, 800 },  -- Combat Healing Potion
-    [17348] = { D.HEALING, 1120 }, -- Major Healing Draught
-    [13446] = { D.HEALING, 1400 }, -- Major Healing Potion
-    [18253] = { D.HEALING, 1600 }, -- Major Rejuvenation Potion
-
-    -- Other instant heals
-    [11952] = { D.EMERGENCY, 425 }, -- Night Dragon's Breath
-    [11951] = { D.EMERGENCY, 800 }, -- Whipper Root Tuber
-
-    -- Random-effect items: their text mentions health, but they aren't heals.
-    [6522]  = { D.OTHER }, -- Deviate Fish
-    [6657]  = { D.OTHER }, -- Savory Deviate Delight
-
-    -- Mana
-    [2455]  = { D.MANA, 160 },  -- Minor Mana Potion
-    [3385]  = { D.MANA, 320 },  -- Lesser Mana Potion
-    [5514]  = { D.MANA, 400 },  -- Mana Agate
-    [3827]  = { D.MANA, 520 },  -- Mana Potion
-    [5513]  = { D.MANA, 600 },  -- Mana Jade
-    [17352] = { D.MANA, 640 },  -- Superior Mana Draught
-    [6149]  = { D.MANA, 800 },  -- Greater Mana Potion
-    [8007]  = { D.MANA, 850 },  -- Mana Citrine
-    [8008]  = { D.MANA, 1100 }, -- Mana Ruby
-    [17351] = { D.MANA, 1120 }, -- Major Mana Draught
-    [13443] = { D.MANA, 1200 }, -- Superior Mana Potion
-    [18841] = { D.MANA, 1200 }, -- Combat Mana Potion
-    [12662] = { D.MANA, 1200 }, -- Demonic Rune
-    [20520] = { D.MANA, 1200 }, -- Dark Rune
-    [13444] = { D.MANA, 1800 }, -- Major Mana Potion
-
-    -- Bandages
-    [1251]  = { D.BANDAGE, 66 },   -- Linen Bandage
-    [2581]  = { D.BANDAGE, 114 },  -- Heavy Linen Bandage
-    [3530]  = { D.BANDAGE, 161 },  -- Wool Bandage
-    [3531]  = { D.BANDAGE, 301 },  -- Heavy Wool Bandage
-    [6450]  = { D.BANDAGE, 400 },  -- Silk Bandage
-    [6451]  = { D.BANDAGE, 640 },  -- Heavy Silk Bandage
-    [8544]  = { D.BANDAGE, 800 },  -- Mageweave Bandage
-    [8545]  = { D.BANDAGE, 1104 }, -- Heavy Mageweave Bandage
-    [14529] = { D.BANDAGE, 1360 }, -- Runecloth Bandage
-    [14530] = { D.BANDAGE, 2000 }, -- Heavy Runecloth Bandage
+-- decides the order inside a category. Built from the shared Consumables.lua
+-- (addons/shared), the list Mr. Miyagi suggests potions from.
+local KIND_CATEGORY = {
+    healthstone = D.HEALTHSTONE, heal = D.HEALING, emergency = D.EMERGENCY, mana = D.MANA,
+    bandage = D.BANDAGE, random = D.OTHER,
 }
+D.ITEMS = {}
+for _, c in ipairs(ns.CONSUMABLES) do
+    local category = KIND_CATEGORY[c[3]]
+    if category then D.ITEMS[c[1]] = { category, c.power } end
+end
 
 -- Consumable (class 0) subclasses, when the client provides them.
 local SUBCLASS = {
@@ -131,7 +72,7 @@ local SPELLS = {
     Drink = D.DRINK,
 }
 
--- Name patterns for items missing from ITEMS (Classic Era files most
+-- Name patterns for items missing from ITEMS (the game files most
 -- consumables under subclass 0). Checked in order; enUS only.
 -- Camp items and weapon enhancements, by name (enUS). Checked for every item
 -- class, before anything else.

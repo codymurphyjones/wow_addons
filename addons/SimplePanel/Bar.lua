@@ -261,7 +261,8 @@ function Bar:UpdateButton(p)
     b:SetHeight(h)
     b.text:SetFontObject(Font())
     local x = 6
-    local showIcon = l.showIcon and p.icon
+    -- p.hideIcon: this time the plugin's values carry their own icons (Bags, a figure per kind)
+    local showIcon = l.showIcon and p.icon and not p.hideIcon
     if p.kind == "launcher" then showIcon = true end
     if showIcon then
         b.icon:ClearAllPoints()
@@ -802,34 +803,37 @@ function Bar:BuildMenu(m)
             end })
         end
     end })
+    -- Through ns:SetOption, so Options > AddOns > SimplePanel shows the change; the options' applies
+    -- there (Config.lua) re-apply the bar.
+    local function Setter(key) return function(v) ns:SetOption("db.options." .. key, v) end end
     m:Submenu({ text = "Bar", build = function(sub)
-        sub:Checkbox({ text = "Auto-hide", get = function() return o.autoHide end, set = function(v) o.autoHide = v; Bar:ApplySettings() end,
+        sub:Checkbox({ text = "Auto-hide", get = function() return o.autoHide end, set = Setter("autoHide"),
             tooltip = "Slide the bar away until the mouse touches the top of the screen." })
-        sub:Checkbox({ text = "Hide in combat", get = function() return o.hideInCombat end, set = function(v) o.hideInCombat = v; Bar:ApplySettings() end })
+        sub:Checkbox({ text = "Hide in combat", get = function() return o.hideInCombat end, set = Setter("hideInCombat") })
         sub:Checkbox({ text = "Push minimap and buffs down", get = function() return o.screenAdjust end,
-            set = function(v) o.screenAdjust = v; Bar:ApplySettings() end,
+            set = Setter("screenAdjust"),
             disabled = function() return o.autoHide end,
             tooltip = function(tt)
                 tt:SetTitle("Push minimap and buffs down")
                 tt:AddLine("Moves the minimap and buff frames below the bar so it doesn't cover them.", T.text, true)
                 if o.autoHide then tt:AddLine("Not used while auto-hide is on: the bar takes no room then.", T.yellow, true) end
             end })
-        sub:Checkbox({ text = "Lock plugins", get = function() return o.locked end, set = function(v) o.locked = v end,
+        sub:Checkbox({ text = "Lock plugins", get = function() return o.locked end, set = Setter("locked"),
             tooltip = "When unlocked, shift-drag a plugin to move it." })
-        sub:Checkbox({ text = "Dividers", get = function() return o.divider end, set = function(v) o.divider = v; Bar:Layout() end })
-        sub:Checkbox({ text = "Chat messages", get = function() return o.chat end, set = function(v) o.chat = v end,
+        sub:Checkbox({ text = "Dividers", get = function() return o.divider end, set = Setter("divider") })
+        sub:Checkbox({ text = "Chat messages", get = function() return o.chat end, set = Setter("chat"),
             tooltip = "Notices such as 'freed 2.1 MB' or launcher changes." })
         sub:Divider()
         sub:Slider({ text = "Height", min = 16, max = 36, step = 1, format = "%d px", get = function() return o.height end,
-            set = function(v) o.height = v; Bar:ApplySettings() end })
+            set = Setter("height") })
         sub:Slider({ text = "Background opacity", min = 0, max = 1, step = 0.05, format = "%.2f", get = function() return o.alpha end,
-            set = function(v) o.alpha = v; Bar:Layout() end })
+            set = Setter("alpha") })
         sub:Slider({ text = "Scale (bar and charts)", min = 0.6, max = 1.6, step = 0.05, format = function(v) return ("%d%%"):format(v * 100 + 0.5) end,
             get = function() return o.scale end,
-            set = function(v) o.scale = v; Bar:ApplySettings() end })
+            set = Setter("scale") })
         sub:Header("Font")
-        sub:Radio({ text = "Small", value = "small", get = function() return o.font end, set = function(v) o.font = v; Bar:RefreshAll() end })
-        sub:Radio({ text = "Normal", value = "normal", get = function() return o.font end, set = function(v) o.font = v; Bar:RefreshAll() end })
+        sub:Radio({ text = "Small", value = "small", get = function() return o.font end, set = Setter("font") })
+        sub:Radio({ text = "Normal", value = "normal", get = function() return o.font end, set = Setter("font") })
     end })
     m:Divider()
     m:Button({ text = "Rescan minimap buttons", fn = function() ns.Launchers:Scan(true) end })

@@ -604,7 +604,7 @@ function Invest:OpenAtAuction(id)
         return false
     end
     local name = C.GetItemInfo(id)
-    if not name then C.RequestItem(id); ns:Print("That item isn't loaded yet; click again in a moment.", true); return false end
+    if not name then C.RequestItem(id, true); ns:Print("That item isn't loaded yet; click again in a moment.", true); return false end
     if QuartermasterAPI and QuartermasterAPI.SearchAuction and QuartermasterAPI.SearchAuction(name) then return true end
     -- The auction house's own Buy tab.
     if AuctionHouseFrameBuyTab and AuctionHouseFrameBuyTab.Click then AuctionHouseFrameBuyTab:Click() end

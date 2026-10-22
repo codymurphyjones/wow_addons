@@ -1,19 +1,14 @@
-local ADDON, ns = ...
+local _, ns = ...
 
-ns.VERSION = "1.1.1"
+ns.VERSION = "1.1.2"
 -- BattleRecap's logo, shipped in the addon (Media\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\BattleRecap\\Media\\Icon"
 
--- The logo as inline text markup, size x size pixels.
-function ns.IconMarkup(size)
-    return ("|T%s:%d:%d|t"):format(ns.ICON, size, size)
-end
+-- Events, saved variables, Print and IconMarkup (from ns.ICON): the shared Core.lua (addons/shared).
+-- ns.db is BattleRecapDB: the options' "db." paths (Settings.lua, shared OptionsPage.lua).
+ns.SAVED = { db = "BattleRecapDB" }
 
 ns.PREFIX = ns.IconMarkup(14) .. " |cffff6b5bBattleRecap|r"
-
-function ns:Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage(self.PREFIX .. ": " .. tostring(msg))
-end
 
 ns.MAX_HISTORY = 20 -- deaths kept in BattleRecapDB.history
 
@@ -40,51 +35,88 @@ ns.DEFAULTS = {
 -- The setting that shows the popup for each kind of recap.
 ns.POPUP_KEYS = { bg = "popupBg", arena = "popupArena", pvp = "popupPvp", duel = "popupDuel" }
 
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then dst[k] = {} end
-            Merge(dst[k], v)
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
+ns:OnLoad(function()
+    -- 1.0: one autoPopup setting for every kind.
+    if BattleRecapDB.autoPopup ~= nil then
+        for _, key in pairs(ns.POPUP_KEYS) do BattleRecapDB[key] = BattleRecapDB.autoPopup end
+        BattleRecapDB.autoPopup = nil
     end
-    return dst
-end
+    BattleRecapDB.matches = BattleRecapDB.matches or {}
+    BattleRecapDB.history = BattleRecapDB.history or {}
+    for i = #BattleRecapDB.history, 1, -1 do
+        if BattleRecapDB.history[i].v ~= ns.Analysis.FORMAT then table.remove(BattleRecapDB.history, i) end
+    end
+    while #BattleRecapDB.history > ns.MAX_HISTORY do table.remove(BattleRecapDB.history) end
+    BattleRecapDB.windowSeconds = nil -- setting from 1.0.0, when the combat log was read
+    BattleRecapDB.maxHistory = nil    -- now fixed at ns.MAX_HISTORY
+    ns.Stats:Init()
+end)
 
 ---------------------------------------------------------------------------
 -- Formatting helpers shared by the windows
 ---------------------------------------------------------------------------
 
--- 12345 -> "12,345"
-function ns.Num(n)
-    n = math.floor((n or 0) + 0.5)
-    local s = tostring(math.abs(n))
-    local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
-    return (n < 0 and "-" or "") .. out
+-- Numbers, names and class colours: the shared Format.lua and Units.lua.
+local F, U = ns.Format, ns.Units
+
+-- Player names (WoW Forever: realmless "Given Family"). The game hands one player's name over as
+-- "Given Family", "GivenFamily" or "Given Family-Server", and some sources (UnitName's first value,
+-- a unit that only tells its given name) as the given name alone.
+-- The shared Units.lua's helpers, under the names BattleRecap's files call:
+--   SameName(a, b): one player, whatever the shapes; a given name alone matches a full name that
+--                   starts with it (ns.Units.SameName).
+--   IsMe(name):     you, by any of those shapes (ns.Units.IsMeLoose).
+--   Canon(name):    the one shape to key a table by: your key or a group member's when the name is
+--                   you or someone in your group, else ns.Units.KeyOf(name). nil for nil or secret.
+--   InGroup(name):  someone in your group (not you), by any shape of the name.
+ns.SameName, ns.IsMe, ns.Canon, ns.InGroup = U.SameName, U.IsMeLoose, U.Canon, U.InGroup
+
+-- The key for a player in a table keyed by other players' names: KeyOf(name), or the key the
+-- table already has for that player in another shape ("GivenFamily" next to "Given Family"). An
+-- entry under a compact key moves to the spaced one.
+function ns.NameKey(tbl, name)
+    local key = U.KeyOf(name)
+    if not key or type(tbl) ~= "table" or tbl[key] ~= nil then return key end
+    local c = U.Compact(key)
+    for k in pairs(tbl) do
+        if k ~= key and type(k) == "string" and U.Compact(k) == c then
+            if key:find(" ", 1, true) and not k:find(" ", 1, true) then
+                tbl[key], tbl[k] = tbl[k], nil
+                return key
+            end
+            return k
+        end
+    end
+    return key
 end
 
+-- Saved tables keyed by other players' names, once per load: every key to KeyOf's shape, then keys
+-- that are one player in two shapes ("GivenFamily" and "Given Family") into one, the spaced one
+-- (ns.Units.MigrateNames). merge(kept, moved, key) adds a moved record in.
+function ns.MigrateNames(tbl, merge) U.MigrateNames(tbl, merge) end
+
+-- 12345 -> "12,345"
+local THOUSANDS = { native = false }
+function ns.Num(n) return F.Thousands(n, THOUSANDS) end
+
 -- 12345 -> "12.3k" for tight spots.
-function ns.Short(n)
-    n = n or 0
-    if n >= 10000 then return ("%.1fk"):format(n / 1000) end
-    return ns.Num(n)
-end
+local SHORT = { tiers = F.TIERS_K, abs = false, rest = "thousands" }
+function ns.Short(n) return F.Short(n, SHORT) end
 
 function ns.Secs(s)
     return ("%.1fs"):format(s or 0)
 end
 
+local GREY = { 0.85, 0.85, 0.85 }
 function ns.ClassColor(class)
-    local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
-    if c then return c.r, c.g, c.b end
-    return 0.85, 0.85, 0.85
+    local _, r, g, b = U.ClassColor(class, GREY)
+    return r, g, b
 end
 
--- name in its class colour (pets and NPCs come out light grey).
+-- name in its class colour (pets and NPCs come out light grey). The hex is worked out from r, g, b
+-- as before (the game's colorStr can differ by one step).
 function ns.ColorName(name, class)
-    local r, g, b = ns.ClassColor(class)
-    return ("|cff%02x%02x%02x%s|r"):format(r * 255, g * 255, b * 255, name or "?")
+    return "|c" .. U.Hex(ns.ClassColor(class)) .. (name or "?") .. "|r"
 end
 
 function ns.ClassName(class)
@@ -125,7 +157,7 @@ function ns.Colorize(text, r, g, b)
 end
 
 ---------------------------------------------------------------------------
--- Spell names and icons, for clients with or without C_Spell
+-- Spell names and icons (C_Spell, else the old globals)
 ---------------------------------------------------------------------------
 
 ns.MELEE_ICON = "Interface\\Icons\\INV_Sword_04"
@@ -171,8 +203,7 @@ end
 -- Where you are
 ---------------------------------------------------------------------------
 
-local frame = CreateFrame("Frame")
-ns.frame = frame
+ns.frame = ns.EventFrame
 
 -- "bg", "arena" or "pvp" (anywhere else): what kind of death this would be.
 function ns.Where()
@@ -258,7 +289,7 @@ local function OnDeath()
         local recap = ns.Analysis.Build(events, meta)
         if meta.kind ~= "bg" and not recap.pvp then return end -- killed by monsters: not PvP
         local k = recap.killer
-        if k and not k.env then ns.Revenge:SetTarget(k.fullName or k.name) end
+        if k and not k.env then ns.Revenge:SetTarget(k.fullName or k.name) end -- SetTarget keys it
         ns.Fight:Settle(function()
             AddFight(recap, firstStamp, diedAt)
             Show(recap)
@@ -287,7 +318,7 @@ local function DuelPattern()
     return duelPattern
 end
 
-local function Short(name) return name and (name:match("^([^%-]+)") or name) end
+local Short = U.Short
 
 -- A duel ends at 1 health: no death, no recap. The result counts toward your record against that
 -- opponent right away; the damage meter's totals are read once combat has ended (Meter.lua).
@@ -298,10 +329,10 @@ local function OnSystemMessage(msg)
     if not a then return end
     local winner, loser = a, b
     if not winnerFirst then winner, loser = b, a end
-    local me = UnitName("player")
-    local won = Short(winner) == me
-    if not won and Short(loser) ~= me then return end
-    local opponentFull = won and loser or winner
+    -- The message names each player as the game does ("Given Family", or the given name alone).
+    local won = ns.IsMe(winner)
+    if not won and not ns.IsMe(loser) then return end
+    local opponentFull = U.KeyOf(won and loser or winner) or (won and loser or winner)
     ns.Stats:Duel(opponentFull, won)
     if not BattleRecapDB[won and "duelWins" or "duels"] then return end
 
@@ -352,24 +383,16 @@ end
 
 function ns:History() return BattleRecapDB.history end
 
--- For other addons (SmartPlates' nemesis marks). BattleRecapAPI.OnRecap(fn) calls fn(recap) each
--- time a recap is saved, after its death is counted in the stats.
-BattleRecapAPI = BattleRecapAPI or {}
-local listeners = {}
+-- For other addons (SmartPlates' nemesis marks). Event "RECAP" (recap) each time a recap is saved,
+-- after its death is counted in the stats; BattleRecapAPI.OnRecap(fn) is the older hook, fn(recap).
+local API, Fire = ns.NewAPI("BattleRecapAPI", 1)
+ns.APIListener(API, "OnRecap", "RECAP")
 
-function BattleRecapAPI.OnRecap(fn)
-    if type(fn) == "function" then listeners[#listeners + 1] = fn end
-end
+function ns:Announce(recap) Fire("RECAP", recap) end
 
-function ns:Announce(recap)
-    for _, fn in ipairs(listeners) do
-        local ok, err = pcall(fn, recap)
-        if not ok then geterrorhandler()(err) end -- another addon's error: reported, never fatal here
-    end
-end
-
--- The enemy players who've killed you, most kills first: { key = "Name" or "Name-Realm", name, class,
--- kills, last }. Pets and NPCs (battleground guards) are left out.
+-- The enemy players who've killed you, most kills first: { key = "Given Family" (WoW Forever; the
+-- given name alone when that's all the game told), name, class, kills, last }. Pets and NPCs
+-- (battleground guards) are left out. Compare a key with ns.Units.Same, never ==.
 function BattleRecapAPI.Nemeses()
     local out = {}
     local killers = BattleRecapDB and BattleRecapDB.stats and BattleRecapDB.stats.killers
@@ -385,13 +408,13 @@ function BattleRecapAPI.Nemeses()
     return out
 end
 
--- Who the Revenge key targets: whoever killed you last ("Name-Realm" when the game gave it), or nil.
+-- Who the Revenge key targets: whoever killed you last ("Given Family" when the game gave it), or nil.
 function BattleRecapAPI.RevengeTarget()
     if ns.Revenge.name then return ns.Revenge.name end
     for _, r in ipairs(BattleRecapDB and BattleRecapDB.history or {}) do
         local k = r.killer
         if not r.test and r.kind ~= "duel" then
-            return k and not k.env and (k.fullName or k.name) or nil
+            return k and not k.env and (U.KeyOf(k.fullName or k.name) or k.fullName or k.name) or nil
         end
     end
 end
@@ -402,60 +425,26 @@ end
 
 -- No combat log: this client forbids it to addons (registering for it gets the addon blocked).
 -- The death recap and the damage meter are read instead.
-frame:RegisterEvent("ADDON_LOADED")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-frame:RegisterEvent("PLAYER_DEAD")
-frame:RegisterEvent("PLAYER_ALIVE")
-frame:RegisterEvent("PLAYER_UNGHOST")
-frame:RegisterEvent("CHAT_MSG_SYSTEM")
-frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-frame:RegisterEvent("PLAYER_REGEN_DISABLED")
-pcall(frame.RegisterEvent, frame, "PVP_MATCH_COMPLETE")
-
-frame:SetScript("OnEvent", function(_, event, ...)
-    if event == "PLAYER_DEAD" then
-        OnDeath()
-    elseif event == "PLAYER_ALIVE" or event == "PLAYER_UNGHOST" then
-        OnAlive()
-    elseif event == "CHAT_MSG_SYSTEM" then
-        OnSystemMessage(...)
-    elseif event == "PLAYER_REGEN_DISABLED" then
-        ns.Fight:OnCombatStart()
-    elseif event == "PLAYER_REGEN_ENABLED" then
-        ns.Fight:OnCombatEnd()
-        ns.Revenge:Flush()
-    elseif event == "PVP_MATCH_COMPLETE" then
-        ns.Match:OnComplete()
-    elseif event == "ADDON_LOADED" then
-        if ... ~= ADDON then return end
-        BattleRecapDB = BattleRecapDB or {}
-        -- 1.0: one autoPopup setting for every kind.
-        if BattleRecapDB.autoPopup ~= nil then
-            for _, key in pairs(ns.POPUP_KEYS) do BattleRecapDB[key] = BattleRecapDB.autoPopup end
-            BattleRecapDB.autoPopup = nil
-        end
-        BattleRecapDB = Merge(BattleRecapDB, ns.DEFAULTS)
-        BattleRecapDB.matches = BattleRecapDB.matches or {}
-        BattleRecapDB.history = BattleRecapDB.history or {}
-        for i = #BattleRecapDB.history, 1, -1 do
-            if BattleRecapDB.history[i].v ~= ns.Analysis.FORMAT then table.remove(BattleRecapDB.history, i) end
-        end
-        while #BattleRecapDB.history > ns.MAX_HISTORY do table.remove(BattleRecapDB.history) end
-        BattleRecapDB.windowSeconds = nil -- setting from 1.0.0, when the combat log was read
-        BattleRecapDB.maxHistory = nil    -- now fixed at ns.MAX_HISTORY
-        ns.Stats:Init()
-        frame:UnregisterEvent("ADDON_LOADED")
-    elseif event == "PLAYER_ENTERING_WORLD" then
-        dead = IsDeadOrGhost() or false
-        ns.Match:OnEnterWorld()
-        ns.Revenge:Init()
-        ns.Options:Register()
-        ns.MinimapButton:Initialize()
-        -- Other addons place their minimap buttons a little after login; check again once they have.
-        C_Timer.After(2, function() ns.MinimapButton:AvoidOthers() end)
-        C_Timer.After(8, function() ns.MinimapButton:AvoidOthers() end)
-    end
+-- (ADDON_LOADED: the saved-variable setup above, ns:OnLoad.)
+ns:On("PLAYER_ENTERING_WORLD", function()
+    dead = IsDeadOrGhost() or false
+    ns.Match:OnEnterWorld()
+    ns.Revenge:Init()
+    ns.MinimapButton:Initialize()
+    -- Other addons place their minimap buttons a little after login; check again once they have.
+    C_Timer.After(2, function() ns.MinimapButton:AvoidOthers() end)
+    C_Timer.After(8, function() ns.MinimapButton:AvoidOthers() end)
 end)
+ns:On("PLAYER_DEAD", function() OnDeath() end)
+ns:On("PLAYER_ALIVE", function() OnAlive() end)
+ns:On("PLAYER_UNGHOST", function() OnAlive() end)
+ns:On("CHAT_MSG_SYSTEM", function(msg) OnSystemMessage(msg) end)
+ns:On("PLAYER_REGEN_ENABLED", function()
+    ns.Fight:OnCombatEnd()
+    ns.Revenge:Flush()
+end)
+ns:On("PLAYER_REGEN_DISABLED", function() ns.Fight:OnCombatStart() end)
+ns:On("PVP_MATCH_COMPLETE", function() ns.Match:OnComplete() end)
 
 ---------------------------------------------------------------------------
 -- Slash commands
@@ -521,27 +510,24 @@ SlashCmdList.BATTLERECAP = function(msg)
         ns.Revenge:MakeMacro()
     elseif cmd == "options" or cmd == "config" or cmd == "settings" then
         ns.Options:Open()
+    -- The toggles change the same options as Options > AddOns > BattleRecap (ns:SetOption), so the page shows them.
     elseif cmd == "wins" then
-        BattleRecapDB.duelWins = not BattleRecapDB.duelWins
-        ns:Print("Won duels: " .. OnOff(BattleRecapDB.duelWins))
+        ns:Print("Won duels: " .. OnOff(ns:ToggleOption("db.duelWins")))
     elseif cmd == "pvp" then
-        BattleRecapDB.worldPvP = not BattleRecapDB.worldPvP
-        ns:Print("PvP deaths outside battlegrounds: " .. OnOff(BattleRecapDB.worldPvP))
+        ns:Print("PvP deaths outside battlegrounds: " .. OnOff(ns:ToggleOption("db.worldPvP")))
     elseif cmd == "duels" then
-        BattleRecapDB.duels = not BattleRecapDB.duels
-        ns:Print("Lost duels: " .. OnOff(BattleRecapDB.duels))
+        ns:Print("Lost duels: " .. OnOff(ns:ToggleOption("db.duels")))
     elseif cmd == "toggle" then
         local any = false
         for _, key in pairs(ns.POPUP_KEYS) do any = any or BattleRecapDB[key] end
-        for _, key in pairs(ns.POPUP_KEYS) do BattleRecapDB[key] = not any end
+        for _, key in pairs(ns.POPUP_KEYS) do ns:SetOption("db." .. key, not any) end
         ns:Print("Popup: " .. OnOff(not any) .. " (per kind in |cffffd100/brecap options|r)")
     elseif cmd == "autohide" then
-        BattleRecapDB.autoHide = not BattleRecapDB.autoHide
-        ns:Print("Hide when resurrected: " .. OnOff(BattleRecapDB.autoHide))
+        ns:Print("Hide when resurrected: " .. OnOff(ns:ToggleOption("db.autoHide")))
     elseif cmd == "minimap" then
-        BattleRecapDB.minimap.hide = not BattleRecapDB.minimap.hide
-        ns.MinimapButton:Initialize()
-        ns:Print(BattleRecapDB.minimap.hide and "Minimap button hidden. /brecap minimap shows it again." or "Minimap button shown.")
+        -- The option's apply re-initializes the button.
+        local hidden = ns:ToggleOption("db.minimap.hide")
+        ns:Print(hidden and "Minimap button hidden. /brecap minimap shows it again." or "Minimap button shown.")
     elseif cmd == "clear" and arg == "stats" then
         ns.Stats:Reset()
         ns.Dashboard:Hide()
@@ -564,7 +550,7 @@ SlashCmdList.BATTLERECAP = function(msg)
 end
 
 -- Left-click: the last recap. Right-click: the settings.
-function BattleRecap_OnCompartmentClick(_, button)
+ns:Compartment(function(button)
     if button == "RightButton" then return ns.Options:Open() end
     SlashCmdList.BATTLERECAP("")
-end
+end)

@@ -211,7 +211,7 @@ ns:On("MAIL_INBOX_UPDATE", function()
             local link = GetInboxItemLink(i, a)
             local id = ns.Compat.IDFromLink(link)
             if id then
-                -- Newer clients return name, itemID, texture, count; older ones name, texture, count.
+                -- GetInboxItem gives name, itemID, texture, count (or name, texture, count without the itemID).
                 local r = { GetInboxItem(i, a) }
                 local count = r[2] == id and r[4] or r[3]
                 mail[id] = (mail[id] or 0) + (tonumber(count) or 1)

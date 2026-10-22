@@ -52,13 +52,13 @@ local function BuffTier(a)
             end
         end
     end
-    if not C.Readable(a.name) or not a.name then return 1 end
+    if not C.AllReadable(a.name) or not a.name then return 1 end
     local tier = buffPriority[a.name:lower()]
     if tier then return tier end
     -- Unlisted: short buffs matter, long or permanent ones (Fortitude, Mark of the Wild, food) don't.
     local duration = C.Num(a.duration)
     if duration and (duration == 0 or duration > 120) then return 0 end
-    if C.Readable(a.isStealable) and a.isStealable then return 1.5 end
+    if C.AllReadable(a.isStealable) and a.isStealable then return 1.5 end
     return 1
 end
 ns.Auras = Auras
@@ -86,12 +86,8 @@ function Auras:Create(f)
 end
 
 -- Seconds-left text for aura icons.
-local function TimeText(left)
-    if left >= 3600 then return ("%dh"):format(math.ceil(left / 3600)) end
-    if left >= 60 then return ("%dm"):format(math.ceil(left / 60)) end
-    if left >= 10 then return ("%d"):format(math.floor(left)) end
-    return ("%.1f"):format(left)
-end
+local AURA = { style = "aura" }
+local function TimeText(left) return ns.Format.Duration(left, AURA) end
 Auras.TimeText = TimeText
 
 local function NewIcon(box, i)
@@ -125,7 +121,7 @@ local function FilterSupported(filter)
     return filterOK[filter]
 end
 
-local function Readable(a) return C.Readable(a.name, a.spellId, a.sourceUnit) and a.name ~= nil end
+local function Readable(a) return C.AllReadable(a.name, a.spellId, a.sourceUnit) and a.name ~= nil end
 
 local function Wanted(a, filter, mineFiltered)
     local db = ns.db.auras
@@ -151,7 +147,7 @@ local function Wanted(a, filter, mineFiltered)
         return mine or not db.onlyMine
     end
     if db.buffs then return true end
-    return db.stealable and C.Readable(a.isStealable) and a.isStealable or false
+    return db.stealable and C.AllReadable(a.isStealable) and a.isStealable or false
 end
 
 local list = {}
@@ -163,7 +159,7 @@ function Auras:FindCC(unit)
     for i = 1, 40 do
         local a = C.GetAura(unit, i, "HARMFUL")
         if not a then break end
-        if C.Readable(a.spellId) and CC[a.spellId] then
+        if C.AllReadable(a.spellId) and CC[a.spellId] then
             local expires = C.Num(a.expirationTime) or 0
             local left = expires > 0 and (expires - GetTime()) or math.huge
             if not bestLeft or left > bestLeft then best, bestLeft = a, left end
@@ -174,7 +170,7 @@ end
 
 local function SameAura(a, b)
     if not a or not b then return false end
-    if C.Readable(a.auraInstanceID, b.auraInstanceID) and a.auraInstanceID ~= nil then return a.auraInstanceID == b.auraInstanceID end
+    if C.AllReadable(a.auraInstanceID, b.auraInstanceID) and a.auraInstanceID ~= nil then return a.auraInstanceID == b.auraInstanceID end
     return false
 end
 
@@ -206,7 +202,7 @@ function Auras:Scan(f, skip)
             for i = 1, 40 do
                 local a = C.GetAura(unit, i, "HARMFUL")
                 if not a then break end
-                if C.Readable(a.spellId, a.sourceUnit) and CC[a.spellId] and a.sourceUnit ~= "player" and not SameAura(a, skip) and #list < MAX then
+                if C.AllReadable(a.spellId, a.sourceUnit) and CC[a.spellId] and a.sourceUnit ~= "player" and not SameAura(a, skip) and #list < MAX then
                     a.harmful = true
                     list[#list + 1] = a
                 end
@@ -303,7 +299,7 @@ function Auras:Update(f)
         M.SetFont(icon.time, math.max(7, math.floor(size * 0.42)))
         icon.expires = FillIcon(icon, a, f.unit.unitid, db.timer)
         icon.time:SetText(icon.expires and TimeText(math.max(0, icon.expires - GetTime())) or "")
-        local color = a.harmful and DebuffTypeColor and DebuffTypeColor[C.Readable(a.dispelName) and a.dispelName or "none"]
+        local color = a.harmful and DebuffTypeColor and DebuffTypeColor[C.AllReadable(a.dispelName) and a.dispelName or "none"]
         if not a.harmful then color = { r = M.ACCENT[1], g = M.ACCENT[2], b = M.ACCENT[3] } end
         if color then icon.border:SetColor(color.r, color.g, color.b, 1) end
         icon:Show()
@@ -381,7 +377,7 @@ function Auras:Debug()
             local a = C.GetAura("target", i, filter)
             if not a then break end
             n = n + 1
-            if not C.Readable(a.name, a.spellId, a.sourceUnit, a.duration) then hidden = hidden + 1 end
+            if not C.AllReadable(a.name, a.spellId, a.sourceUnit, a.duration) then hidden = hidden + 1 end
         end
         ns:Print(("%s: %d aura(s), %d with hidden details."):format(filter, n, hidden))
     end

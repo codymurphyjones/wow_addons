@@ -82,6 +82,7 @@ function Scanner:ReadPage(name, page)
             buyout = info[I_BUYOUT] or 0,
             bidAmount = info[I_BID_AMOUNT] or 0,
             owner = info[I_OWNER],
+            mine = ns.Compat.OwnerIsMe(info[I_OWNER]),
             sold = info[I_SALE_STATUS] == 1,
         }
         if not info[I_OWNER] then allOwners = false end
@@ -140,10 +141,9 @@ end
 -- variant (Catalog:Variant): only copies with that enchant/suffix; nil for every copy.
 function Scanner:ScanAll(name, cb, onProgress, variant)
     local all = {}
-    local me = UnitName("player")
     local function OnPage(rows, page, total)
         for _, r in ipairs(rows) do
-            if r.buyout > 0 and not r.sold and r.owner ~= me and (not variant or r.variant == variant) then
+            if r.buyout > 0 and not r.sold and not r.mine and (not variant or r.variant == variant) then
                 r.unit = r.buyout / r.count
                 all[#all + 1] = r
             end
@@ -326,7 +326,7 @@ local function QualityFilters(f)
     local F = Enum and Enum.AuctionHouseFilter
     if not F then return filters end
     if f.usable and F.UsableOnly then filters[#filters + 1] = F.UsableOnly end
-    -- No ExactMatch: the server then finds nothing on some clients. Like Auctionator, search by the
+    -- No ExactMatch: the server can then find nothing. Like Auctionator, search by the
     -- name and keep only exact matches here (Search:LiveMatches).
     if f.quality then
         local byQuality = { F.PoorQuality, F.CommonQuality, F.UncommonQuality, F.RareQuality, F.EpicQuality, F.LegendaryQuality, F.ArtifactQuality }
@@ -405,7 +405,6 @@ ns:On("AUCTION_HOUSE_BROWSE_RESULTS_ADDED", OnBrowseResults)
 -- Classic: QueryAuctionItems with the filters, page by page, grouped by item here.
 local function BrowseLegacy(f, cb, onProgress)
     local mine = generation
-    local me = UnitName("player")
     local query = {
         text = f.text or "", minLevel = f.minLevel, maxLevel = f.maxLevel, usable = f.usable or false,
         quality = f.quality, exact = f.exact or false,
@@ -424,7 +423,7 @@ local function BrowseLegacy(f, cb, onProgress)
                     byItem[variant] = g
                     groups[#groups + 1] = g
                 end
-                if r.owner == me then g.ownerHas = true
+                if r.mine then g.ownerHas = true
                 else
                     g.available = g.available + r.count
                     g.minUnit = math.min(g.minUnit, r.buyout / r.count)

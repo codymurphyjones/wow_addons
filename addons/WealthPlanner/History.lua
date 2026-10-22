@@ -104,7 +104,7 @@ end
 -- Full scans (C_AuctionHouse.ReplicateItems), whoever started them
 -- ---------------------------------------------------------------------------
 
-local reading -- { i, n, agg, me }
+local reading -- { i, n, agg, owners }
 
 local function FinishReplicate()
     local r = reading
@@ -125,13 +125,24 @@ local function FinishReplicate()
     H:Finish()
 end
 
+-- Whether an auction's owner is you (cached per name for the scan). Forever names are "Given Family";
+-- the owner may come as "Given Family", "GivenFamily", "Given Family-Server" or only the given name.
+local function OwnerIsMe(r, owner)
+    if owner == nil then return false end
+    local hit = r.owners[owner]
+    if hit ~= nil then return hit end
+    local mine = ns.Units.IsMeLoose(owner)
+    if type(owner) == "string" then r.owners[owner] = mine end
+    return mine
+end
+
 local function ReadChunk()
     local r = reading
     if not r then return end
     local stop = math.min(r.n, r.i + CHUNK)
     for i = r.i, stop - 1 do
         local _, _, count, _, _, _, _, _, _, buyout, _, _, _, owner, _, _, itemID = C_AuctionHouse.GetReplicateItemInfo(i)
-        if itemID and buyout and buyout > 0 and (count or 0) > 0 and owner ~= r.me then
+        if itemID and buyout and buyout > 0 and (count or 0) > 0 and not OwnerIsMe(r, owner) then
             local a = r.agg[itemID]
             if not a then a = { qty = 0, auctions = 0, units = {} }; r.agg[itemID] = a end
             a.qty, a.auctions = a.qty + count, a.auctions + 1
@@ -148,7 +159,7 @@ local function OnReplicate()
     local n = C_AuctionHouse.GetNumReplicateItems() or 0
     if n == 0 then return end
     H:Begin("full")
-    reading = { i = 0, n = n, agg = {}, me = UnitName("player") }
+    reading = { i = 0, n = n, agg = {}, owners = {} }
     C_Timer.After(0, ReadChunk)
 end
 

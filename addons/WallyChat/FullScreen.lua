@@ -93,6 +93,13 @@ local function AtBottom()
     return max <= 0 or scroll:GetVerticalScroll() >= max - 4
 end
 
+-- After db.plainCopy changes (the PLAIN TEXT button or Options > AddOns > WallyChat): the button
+-- and, when it's open, the text.
+function FS:PlainChanged()
+    if frame and frame.PaintPlain then frame.PaintPlain() end
+    self:Fill(false)
+end
+
 function FS:Fill(toBottom)
     if not (frame and frame:IsShown() and current) then return end
     local bottom = toBottom or AtBottom()
@@ -123,6 +130,54 @@ end
 
 local tabButtons = {}
 
+-- Guild and Raid get tabs of their own here even when no chat window shows only them: Guild while
+-- you're in a guild, Raid while you're in a raid. They hold those messages since you logged in or
+-- reloaded (the game keeps no history to ask for); typing on one says it there. Messages the game
+-- hides from addons (secret, as in some instances) can't be shown, as in every tab here.
+local KEEP = 500
+local VIRTUAL = {
+    { label = GUILD or "Guild", send = "/g ", header = CHAT_GUILD_SEND or "Guild: ",
+        types = { "GUILD", "OFFICER" }, available = function() return IsInGuild() end },
+    { label = RAID or "Raid", send = "/ra ", header = CHAT_RAID_SEND or "Raid: ",
+        types = { "RAID", "RAID_LEADER", "RAID_WARNING" }, available = function() return IsInRaid() end },
+}
+
+-- Each one answers what Build and Show ask a chat window.
+local Source = {}
+Source.__index = Source
+function Source:GetNumMessages() return #self.lines end
+function Source:GetMessageInfo(i) local l = self.lines[i]; return l[1], l[2], l[3], l[4] end
+function Source:GetFont() return (DEFAULT_CHAT_FRAME or ChatFrame1):GetFont() end
+for _, v in ipairs(VIRTUAL) do
+    setmetatable(v, Source)
+    v.virtual, v.lines, v.set = true, {}, {}
+    for _, t in ipairs(v.types) do v.set[t] = true end
+end
+
+-- A message as chat shows it: "[Guild] [Name]: text", in the type's colour, timestamped if chat is.
+local function Line(chatType, text, sender, lineID)
+    if Secret(text) or Secret(sender) or type(text) ~= "string" then return nil end
+    local who = (type(sender) == "string" and sender ~= "") and ("|Hplayer:%s:%s|h[%s]|h"):format(sender, tostring(lineID or 0), sender) or ""
+    local get = _G["CHAT_" .. chatType .. "_GET"]
+    local line = (get and get:format(who) or ("[" .. chatType .. "] " .. who .. ": ")) .. text
+    if CHAT_TIMESTAMP_FORMAT and BetterDate then line = BetterDate(CHAT_TIMESTAMP_FORMAT, time()) .. line end
+    local info = ChatTypeInfo and ChatTypeInfo[chatType]
+    return line, info and info.r or 1, info and info.g or 1, info and info.b or 1
+end
+
+for _, v in ipairs(VIRTUAL) do
+    for _, chatType in ipairs(v.types) do
+        ns:On("CHAT_MSG_" .. chatType, function(text, sender, ...)
+            local lineID = select(9, ...)
+            local line, r, g, b = Line(chatType, text, sender, lineID)
+            if not line then return end
+            v.lines[#v.lines + 1] = { line, r, g, b }
+            if #v.lines > KEEP then table.remove(v.lines, 1) end
+            Changed(v)
+        end)
+    end
+end
+
 local function Windows()
     local out = {}
     for _, cf in ipairs(ns.Skin.Frames()) do
@@ -132,7 +187,28 @@ local function Windows()
     return out
 end
 
+-- A chat window that shows only these message types (a tab of your own for them).
+local function OnlyShows(cf, set)
+    if not (GetChatWindowMessages and cf.GetID) then return false end
+    local groups = { GetChatWindowMessages(cf:GetID()) }
+    if #groups == 0 then return false end
+    for _, g in ipairs(groups) do if not set[g] then return false end end
+    return true
+end
+
+-- The tabs: the chat windows, then Guild and Raid where they apply and no window is theirs already.
+local function Sources()
+    local out = Windows()
+    for _, v in ipairs(VIRTUAL) do
+        local own = false
+        for _, cf in ipairs(out) do if not cf.virtual and OnlyShows(cf, v.set) then own = true; break end end
+        if v.available() and not own then out[#out + 1] = v end
+    end
+    return out
+end
+
 local function WindowName(cf)
+    if cf.virtual then return cf.label end
     local name = FCF_GetChatWindowInfo and FCF_GetChatWindowInfo(cf:GetID())
     if not name or name == "" then
         local tab = _G[cf:GetName() .. "Tab"]
@@ -145,7 +221,7 @@ function FS:Tabs()
     local T = ns.T()
     for _, b in ipairs(tabButtons) do b:Hide() end
     local x = 0
-    for i, cf in ipairs(Windows()) do
+    for i, cf in ipairs(Sources()) do
         local b = tabButtons[i]
         if not b then
             b = CreateFrame("Button", nil, tabs)
@@ -239,11 +315,8 @@ local function Build_()
         plain.text:SetTextColor(ns.RGBA(ns.db.plainCopy and T.accent or T.text.secondary))
         plain:SetWidth(plain.text:GetStringWidth() + 18)
     end
-    plain:SetScript("OnClick", function()
-        ns.db.plainCopy = not ns.db.plainCopy
-        PaintPlain()
-        FS:Fill(false)
-    end)
+    -- Through ns:ToggleOption, so Options > AddOns > WallyChat shows it; its apply repaints (FS:PlainChanged).
+    plain:SetScript("OnClick", function() ns:ToggleOption("db.plainCopy") end)
     plain:SetScript("OnEnter", function(self)
         self:SetBackdropBorderColor(ns.RGBA(T.border.strong))
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
@@ -353,7 +426,8 @@ local function Build_()
             if url then
                 ns.Links.Open(url)
             elseif SetItemRef then
-                pcall(SetItemRef, sp.link, "|H" .. sp.link .. "|h" .. sp.text .. "|h", button or "LeftButton", current)
+                pcall(SetItemRef, sp.link, "|H" .. sp.link .. "|h" .. sp.text .. "|h", button or "LeftButton",
+                    current.virtual and DEFAULT_CHAT_FRAME or current)
             end
         end)
     end)
@@ -386,6 +460,7 @@ end
 
 -- Where a message goes now, as the chat box says it.
 local function Target()
+    if current and current.virtual then return current.header end
     local eb = ChatBox()
     if not eb then return "" end
     if ChatEdit_UpdateHeader then pcall(ChatEdit_UpdateHeader, eb) end
@@ -397,6 +472,8 @@ end
 local function Say(text)
     local eb = ChatBox()
     if not (eb and ChatEdit_SendText) or text == "" then return end
+    -- On the Guild or Raid tab a line goes there (a slash command still goes where it says).
+    if current and current.virtual and not text:find("^/") then text = current.send .. text end
     sending = true
     local ok, err = pcall(function()
         if ChatEdit_ActivateChat then ChatEdit_ActivateChat(eb) end
@@ -564,6 +641,15 @@ end)
 ns:On("PLAYER_REGEN_DISABLED", function()
     if frame and frame:IsShown() then frame:Hide() end
 end)
+
+-- Joining or leaving a raid or a guild: the tabs follow (off a tab that's gone, back to chat).
+local function GroupChanged()
+    if not (frame and frame:IsShown()) then return end
+    if current and current.virtual and not current.available() then return FS:Show(DEFAULT_CHAT_FRAME) end
+    FS:Tabs()
+end
+ns:On("GROUP_ROSTER_UPDATE", GroupChanged)
+ns:On("PLAYER_GUILD_UPDATE", GroupChanged)
 
 -- SimplePanel's bar moving or hiding: the window follows.
 ns:On("UI_SCALE_CHANGED", function() if frame and frame:IsShown() then Place() end end)

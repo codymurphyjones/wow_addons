@@ -1,4 +1,4 @@
-## Interface: 16001, 11509, 20506, 50504, 120100
+## Interface: 16001
 ## Title: Mr. Miyagi
 ## Notes: A coach for deaths to mobs. Reads your actual spells, talents, items and stats, looks at how the fight went, and tells you what to do next time, with your odds now and with the advice. /miyagi
 ## Author: Dinoblankie + Claude
@@ -9,14 +9,22 @@
 ## Category: Combat
 ## AddonCompartmentFunc: MrMiyagi_OnCompartmentClick
 
-Fonts.lua
-Palette.lua
+..\shared\Fonts.lua
+..\shared\Palette.lua
+..\shared\Core.lua
+..\shared\Units.lua
+..\shared\Items.lua
+..\shared\Tooltip.lua
+..\shared\Player.lua
+..\shared\Secrets.lua
 Compat.lua
+..\shared\DeathRecap.lua
+..\shared\DamageMeter.lua
 Core.lua
-Widgets.lua
+..\shared\Widgets.lua
 Data\Words.lua
 Data\Types.lua
-Data\Consumables.lua
+..\shared\Consumables.lua
 Data\Mobs.lua
 Kit.lua
 Recap.lua
@@ -26,5 +34,9 @@ Odds.lua
 Lessons.lua
 Dojo.lua
 Coach.lua
+..\shared\Window.lua
 UI.lua
+..\shared\MinimapButton.lua
 Minimap.lua
+..\shared\OptionsPage.lua
+Settings.lua

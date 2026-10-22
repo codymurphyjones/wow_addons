@@ -26,9 +26,7 @@ local function SetTracked(p, id, on)
     p:Refresh()
 end
 
-local function Short(n)
-    return BreakUpLargeNumbers and BreakUpLargeNumbers(n) or tostring(n)
-end
+local function Short(n) return ns.Format.Thousands(n) end
 
 SimplePanel.RegisterPlugin({
     id = "Currencies",

@@ -28,7 +28,6 @@ ns.Targets = T
 local DEFAULT_ARRIVE = 15
 local entries = {}     -- owner -> entry
 local questie          -- Questie's entry, or nil
-local callbacks = {}   -- owner -> fn(event, entry)
 local manager          -- { owner, name, restore = fn, pause = fn }: the addon that owns the arrow, or nil
 local request          -- the request entry, or nil (see the top of this file)
 local REQUEST_ARRIVE = 10
@@ -41,15 +40,8 @@ local lastKey
 
 T.current, T.point = nil, nil -- the resolved entry and the point the arrow aims at
 
-local function Fire(event, entry)
-    for owner, fn in pairs(callbacks) do
-        local ok, err = pcall(fn, event, entry)
-        if not ok then geterrorhandler()(("Waypoint callback from %s: %s"):format(owner, tostring(err))) end
-    end
-end
-
-function T:RegisterCallback(owner, fn) callbacks[owner] = fn end
-function T:UnregisterCallback(owner) callbacks[owner] = nil end
+-- Other addons' callbacks (Waypoint:RegisterCallback, the shared API.lua): fn(event, entry).
+local _, Fire = ns.NewAPI("Waypoint", 2)
 
 local function PointKey(p)
     return ("%s:%.4f:%.4f"):format(p.mapID or 0, p.x or 0, p.y or 0)
@@ -96,13 +88,13 @@ function T:SetEntry(owner, wp)
     return true
 end
 
--- byUser: you stopped it (from the arrow), so its addon hears "cleared".
+-- byUser: you stopped it (from the arrow), so its addon hears "CLEARED".
 function T:ClearEntry(owner, byUser)
     local e = entries[owner]
     if not e then return end
     entries[owner] = nil
     ns.char.entries[owner] = nil
-    if byUser then Fire("cleared", e) end
+    if byUser then Fire("CLEARED", e) end
     ns:Changed()
 end
 
@@ -134,7 +126,7 @@ function T:ClearRequest(byUser)
     if not e then return end
     request = nil
     ns.char.request = nil
-    if byUser then Fire("cleared", e) end
+    if byUser then Fire("CLEARED", e) end
     ns:Changed()
 end
 
@@ -336,12 +328,12 @@ local function Arrive(e, p)
         ns:Print(("Arrived at |cffffffff%s|r. Next: |cffffffff%s|r (%s)."):format(p.label or "the stop",
             nextP.label or "the next stop", ns.Nav:Describe(nextP)))
         ns.char.request = Saved(e)
-        Fire("arrived", e)
+        Fire("ARRIVED", e)
         ns:Changed()
     elseif e.request then
         ns:Print(("Arrived at |cffffffff%s|r."):format(p.label or e.title or "your destination"))
         if e.onArrive then pcall(e.onArrive, e) end
-        Fire("arrived", e)
+        Fire("ARRIVED", e)
         T:ClearRequest(false)
     elseif e.ordered then
         ns.Chain:Reached(p)
@@ -350,7 +342,7 @@ local function Arrive(e, p)
     elseif not e.arrived then
         e.arrived = true
         if e.onArrive then pcall(e.onArrive, e) end
-        Fire("arrived", e)
+        Fire("ARRIVED", e)
     end
 end
 
@@ -365,7 +357,7 @@ function T:Tick()
     if key ~= lastKey then
         lastKey = key
         if e and p and e.owner ~= "path" then Announce(e, p) end
-        Fire("changed", e)
+        Fire("CHANGED", e)
     end
     if ns.Flight then ns.Flight:Update(p) end
     if not (e and p and continent) then return end

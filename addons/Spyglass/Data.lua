@@ -63,74 +63,13 @@ D.EQUIP_GROUP = {
     INVTYPE_RELIC = "RANGED",
 }
 
--- GetItemStats keys -> StatLedger stat keys.
-D.STAT_ALIASES = {
-    ITEM_MOD_STRENGTH_SHORT = "STR",
-    ITEM_MOD_AGILITY_SHORT = "AGI",
-    ITEM_MOD_STAMINA_SHORT = "STA",
-    ITEM_MOD_INTELLECT_SHORT = "INT",
-    ITEM_MOD_SPIRIT_SHORT = "SPI",
-    ITEM_MOD_ATTACK_POWER_SHORT = "AP",
-    ITEM_MOD_ATTACK_POWER = "AP",
-    ITEM_MOD_RANGED_ATTACK_POWER_SHORT = "RAP",
-    ITEM_MOD_RANGED_ATTACK_POWER = "RAP",
-    ITEM_MOD_SPELL_POWER_SHORT = "SP",
-    ITEM_MOD_SPELL_POWER = "SP",
-    ITEM_MOD_SPELL_DAMAGE_DONE_SHORT = "SP",
-    ITEM_MOD_SPELL_DAMAGE_DONE = "SP",
-    ITEM_MOD_HEALING_DONE_SHORT = "HEAL",
-    ITEM_MOD_HEALING_DONE = "HEAL",
-    ITEM_MOD_SPELL_HEALING_DONE_SHORT = "HEAL",
-    ITEM_MOD_SPELL_HEALING_DONE = "HEAL",
-    ITEM_MOD_CRIT_RATING_SHORT = "CRIT",
-    ITEM_MOD_CRIT_MELEE_RATING_SHORT = "CRIT",
-    ITEM_MOD_CRIT_RANGED_RATING_SHORT = "CRIT",
-    ITEM_MOD_CRIT_SPELL_RATING_SHORT = "SPELLCRIT",
-    ITEM_MOD_HIT_RATING_SHORT = "HIT",
-    ITEM_MOD_HIT_MELEE_RATING_SHORT = "HIT",
-    ITEM_MOD_HIT_RANGED_RATING_SHORT = "HIT",
-    ITEM_MOD_HIT_SPELL_RATING_SHORT = "HIT",
-    ITEM_MOD_HASTE_RATING_SHORT = "HASTE",
-    ITEM_MOD_MANA_REGENERATION_SHORT = "MP5",
-    ITEM_MOD_MANA_REGENERATION = "MP5",
-    ITEM_MOD_POWER_REGEN0_SHORT = "MP5",
-    ITEM_MOD_DEFENSE_SKILL_RATING_SHORT = "DEF",
-    ITEM_MOD_DEFENSE_SKILL_RATING = "DEF",
-    ITEM_MOD_DODGE_RATING_SHORT = "DODGE",
-    ITEM_MOD_PARRY_RATING_SHORT = "PARRY",
-    ITEM_MOD_BLOCK_RATING_SHORT = "BLOCK",
-    ITEM_MOD_BLOCK_VALUE_SHORT = "BLOCKVALUE",
-    ITEM_MOD_BLOCK_VALUE = "BLOCKVALUE",
-    RESISTANCE0_NAME = "ARMOR",
-    ITEM_MOD_DAMAGE_PER_SECOND_SHORT = "DPS",
-}
+-- GetItemStats keys -> StatLedger stat keys: the shared GearEngine.lua's (addons/shared).
+D.STAT_ALIASES = ns.GearEngine.STAT_ALIASES
 
--- "Equip:" effects that GetItemStats may not report, matched against the
--- lower-cased line (enUS). The first pattern that matches a line wins, so
--- the more specific ones come first. A stat of "SCHOOL" takes the school
--- from the first capture and the amount from the second.
-D.EQUIP_PATTERNS = {
-    { "damage and healing done by magical spells and effects by up to (%d+)", { "SP", "HEAL" } },
-    { "healing done by spells and effects by up to (%d+)", { "HEAL" } },
-    { "healing done by up to (%d+)", { "HEAL" } },
-    { "damage done by (%a+) spells and effects by up to (%d+)", "SCHOOL" },
-    { "critical strike with spells by (%d+)", { "SPELLCRIT" } },
-    { "critical strike by (%d+)", { "CRIT" } },
-    { "chance to hit with spells by (%d+)", { "HIT" } },
-    { "chance to hit by (%d+)", { "HIT" } },
-    { "restores (%d+) mana per 5 sec", { "MP5" } },
-    { "(%d+) mana every 5 sec", { "MP5" } },
-    { "%+(%d+) ranged attack power", { "RAP" } },
-    { "%+(%d+) attack power", { "AP" } },
-    { "increased defense %+(%d+)", { "DEF" } },
-    { "chance to dodge an attack by (%d+)", { "DODGE" } },
-    { "chance to parry an attack by (%d+)", { "PARRY" } },
-    { "chance to block attacks with a shield by (%d+)", { "BLOCK" } },
-    { "block value of your shield by (%d+)", { "BLOCKVALUE" } },
-    { "attack speed by (%d+)", { "HASTE" } },
-}
+-- "Equip:" effects that GetItemStats may not report: the shared GearEngine.lua's.
+D.EQUIP_PATTERNS = ns.GearEngine.EQUIP_PATTERNS
 
-D.SCHOOLS = { fire = "FIRE", frost = "FROST", shadow = "SHADOW", arcane = "ARCANE", nature = "NATURE" }
+D.SCHOOLS = ns.GearEngine.SCHOOLS
 
 -- Effects that aren't stats but stand in for one (Effects.lua): matched
 -- against the lower-cased "Equip:" line, first match wins. The captures are
@@ -177,7 +116,7 @@ D.TALENT_BOOST_MAX = 2
 D.FORM_SPELLS = { "bear form", "dire bear form", "cat form", "travel form", "aquatic form", "moonkin form", "ghost wolf" }
 
 -- Used when StatLedger is not installed.
-D.FALLBACK_WEIGHTS = { STA = 0.6, STR = 0.5, AGI = 0.5, INT = 0.5, SPI = 0.3 }
+D.FALLBACK_WEIGHTS = ns.GearEngine.FALLBACK_WEIGHTS
 
 -- What each class can learn to wear and wield in Classic, by item subclass:
 -- armor (class 4): 1 cloth, 2 leather, 3 mail, 4 plate, 6 shield, 7 libram,

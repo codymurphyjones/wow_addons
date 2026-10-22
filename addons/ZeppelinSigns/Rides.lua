@@ -27,7 +27,6 @@ local dock      -- { spot, left }: the dock you stand at, or walked off at `left
 local last      -- { c, wx, wy, t }: where you were at the last check
 local carriedN = 0
 local ride      -- the ride you're on (Begin)
-local listeners = {}
 local bar       -- the on-screen timer (Bar)
 
 local function DB() return ZeppelinSignsDB end
@@ -51,10 +50,8 @@ local function OwnSpeed()
     return tonumber(v) or 0
 end
 
-local function Clock(secs)
-    secs = math.max(0, math.floor(secs + 0.5))
-    return ("%d:%02d"):format(secs / 60, secs % 60)
-end
+local CLOCK = { round = "round", hours = false }
+local function Clock(secs) return Z.Format.Clock(secs, CLOCK) end
 
 -- The dock sign you stand at (within its radius), or nil.
 local function DockAt(c, wx, wy)
@@ -102,12 +99,9 @@ local function Landing(sign)
     if s then return { c = s.continent, wx = s.wx, wy = s.wy, mapID = s.mapID, x = s.x, y = s.y, spot = s } end
 end
 
-local function Fire(event)
-    for _, fn in ipairs(listeners) do
-        local ok, err = pcall(fn, event)
-        if not ok then geterrorhandler()(err) end
-    end
-end
+-- For other addons (Waypoint): events "BOARD" (a ride starts), "ARRIVE" (it lands) and "CANCEL" (it
+-- turned out not to be one). Version 2: before it they were lower case.
+local API, Fire = Z.NewAPI("ZeppelinSignsAPI", 2)
 
 -- ---------------------------------------------------------------------------------------------
 -- A ride
@@ -126,7 +120,7 @@ local function Begin(spot, boarded)
     ride.shown = ride.expect - (now - boarded)
     DB().active = { key = s.key, boarded = time() - math.floor(now - boarded) }
     R:Refresh()
-    Fire("board")
+    Fire("BOARD")
 end
 
 -- A ride you finished: its time (an average that follows the last few trips) and where it landed.
@@ -148,7 +142,7 @@ local function End(arrived, at)
     DB().active = nil
     carriedN = 0
     R:Refresh()
-    Fire(arrived and "arrive" or "cancel")
+    Fire(arrived and "ARRIVE" or "CANCEL")
 end
 
 -- One check while riding: arrived, given up, or a better guess at the time left.
@@ -250,41 +244,29 @@ local function Face(size)
     return face or STANDARD_TEXT_FONT, size, "OUTLINE"
 end
 
+local GOLD, GREEN = { 1, 0.82, 0.3 }, { 0.35, 0.95, 0.55 }
+
+-- The timer (shared\Bar.lua): its title 22px above the bar, A left and B right under it, the time
+-- left between them.
 local function Bar()
     if bar then return bar end
-    local f = CreateFrame("Frame", nil, UIParent)
-    f:SetSize(320, 44)
-    f:SetPoint("TOP", UIParent, "TOP", 0, -150)
+    local f = Z.NewProgressBar(UIParent, 320, 8, { track = { 0, 0, 0, 0.55 }, fillAlpha = 0.9, minFill = 1,
+        title = true, titleOffset = 22, below = true })
+    f:SetPoint("TOP", UIParent, "TOP", 0, -172)
     f:SetFrameStrata("HIGH")
     f:EnableMouse(false)
-    f.title = f:CreateFontString(nil, "OVERLAY")
-    f.title:SetPoint("TOP")
-    f.track = f:CreateTexture(nil, "BACKGROUND")
-    f.track:SetColorTexture(0, 0, 0, 0.55)
-    f.track:SetPoint("TOPLEFT", 0, -22)
-    f.track:SetPoint("TOPRIGHT", 0, -22)
-    f.track:SetHeight(8)
-    f.fill = f:CreateTexture(nil, "ARTWORK")
-    f.fill:SetPoint("TOPLEFT", f.track)
-    f.fill:SetPoint("BOTTOMLEFT", f.track)
-    f.from = f:CreateFontString(nil, "OVERLAY")
-    f.from:SetPoint("TOPLEFT", f.track, "BOTTOMLEFT", 0, -3)
-    f.to = f:CreateFontString(nil, "OVERLAY")
-    f.to:SetPoint("TOPRIGHT", f.track, "BOTTOMRIGHT", 0, -3)
-    f.left = f:CreateFontString(nil, "OVERLAY")
-    f.left:SetPoint("TOP", f.track, "BOTTOM", 0, -3)
+    -- A and B stop short of the clock between them (long dock names are cut off, not run into it).
+    for _, fs in ipairs({ f.from, f.to }) do fs:SetWidth(125); fs:SetWordWrap(false) end
+    f.from:SetJustifyH("LEFT"); f.to:SetJustifyH("RIGHT")
     f:SetScript("OnUpdate", function(self)
         local title, from, to, elapsed, left = State()
         if not title then return R:Refresh() end
-        self.title:SetText(title)
         -- A: the timer is running from here. B: where it ends, gold once it's nearly there.
-        self.from:SetText("|cff59f28c>|r " .. from)
-        self.to:SetText(to)
-        if left <= ARRIVING then self.to:SetTextColor(1, 0.82, 0.3) else self.to:SetTextColor(1, 1, 1) end
-        self.left:SetText(left > 0 and Clock(left) or "Arriving")
-        local pct = math.min(1, math.max(0, elapsed / math.max(1, elapsed + left)))
-        self.fill:SetWidth(math.max(1, self.track:GetWidth() * pct))
-        if left <= ARRIVING then self.fill:SetColorTexture(1, 0.82, 0.3, 0.9) else self.fill:SetColorTexture(0.35, 0.95, 0.55, 0.9) end
+        self:SetTitle(title)
+        self:SetLabels("|cff59f28c>|r " .. from, left > 0 and Clock(left) or "Arriving", to)
+        local arriving = left <= ARRIVING
+        if arriving then self.to:SetTextColor(1, 0.82, 0.3) else self.to:SetTextColor(1, 1, 1) end
+        self:SetValue(elapsed / math.max(1, elapsed + left), arriving and GOLD or GREEN)
     end)
     f:Hide()
     bar = f
@@ -300,8 +282,8 @@ function R:Refresh()
     end
     local f = Bar()
     f.title:SetFont(Face(16))
-    for _, fs in ipairs({ f.from, f.to, f.left }) do fs:SetFont(Face(12)) end
-    f.title:SetTextColor(1, 1, 1); f.from:SetTextColor(0.8, 0.85, 0.9); f.left:SetTextColor(1, 1, 1)
+    for _, fs in ipairs({ f.from, f.to, f.mid }) do fs:SetFont(Face(12)) end
+    f.title:SetTextColor(1, 1, 1); f.from:SetTextColor(0.8, 0.85, 0.9); f.mid:SetTextColor(1, 1, 1)
     f:Show()
 end
 
@@ -323,7 +305,7 @@ function R:List()
             print(("  %s%s: %s (%d ride%s)"):format(s.place and (s.place .. " > ") or "", Z.Label(s), Clock(rec.secs), rec.n or 1, rec.n == 1 and "" or "s"))
         end
     end
-    if n == 0 then Z.Print("No rides timed yet. Take one: the timer starts as you're carried off the dock.") end
+    if n == 0 then Z:Print("No rides timed yet. Take one: the timer starts as you're carried off the dock.") end
 end
 
 function R:Init()
@@ -344,8 +326,6 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- For other addons
 -- ---------------------------------------------------------------------------------------------
-
-ZeppelinSignsAPI = ZeppelinSignsAPI or {}
 
 -- The ride you're on, or nil: { key, kind ("zeppelin" or "ship"), from, dest, fromKey (A's sign),
 -- toKey (B's sign, when it lands at one), landing = { mapID, x, y } (0-1) or nil, elapsed, left
@@ -368,7 +348,5 @@ function ZeppelinSignsAPI.RideTime(key)
     if rec and rec.secs then return rec.secs, rec.n or 1 end
 end
 
--- fn(event) when a ride starts ("board"), lands ("arrive") or turns out not to be one ("cancel").
-function ZeppelinSignsAPI.OnChange(fn)
-    if type(fn) == "function" then listeners[#listeners + 1] = fn end
-end
+-- The older hook: fn(event) on each of those events.
+Z.APIListener(API, "OnChange")

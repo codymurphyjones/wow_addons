@@ -8,7 +8,7 @@ local _, ns = ...
 -- meeting stones, innkeepers, riding instructors and supply vendors. Only places friendly to your
 -- faction. Other addons use it through the API: Quartermaster sends vendor reagents here
 -- (PromptVendors), and Waypoint owns the data.
--- The data is Classic's (WoW Forever and Classic Era); on other clients this stays off.
+-- The data is WoW Forever's world; Navigate is off only when Data/Places.lua didn't load.
 local Nv = {}
 ns.Navigate = Nv
 
@@ -16,8 +16,7 @@ local OWNER = "Navigate"
 local KNOWN_NEAR = 100 -- yards: a flight master this close to a flight point you know is that one
 
 function Nv:Available()
-    local build = select(4, GetBuildInfo())
-    return ns.Places ~= nil and ns.Places.npcs ~= nil and (build == 16001 or (build or 0) < 20000)
+    return ns.Places ~= nil and ns.Places.npcs ~= nil
 end
 
 local function MyFaction()

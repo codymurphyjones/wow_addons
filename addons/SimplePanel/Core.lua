@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.4"
+ns.VERSION = "0.1.5"
 ns.PREFIX = "|cff55d6beSimplePanel|r"
 -- Built from the folder name so the path survives renaming the folder.
 ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon"
@@ -9,7 +9,12 @@ ns.MEDIA = "Interface\\AddOns\\" .. addonName .. "\\Media\\"
 -- The public API other add-ons use (filled in by PluginKit.lua, Menu.lua, Chart.lua, Tooltip.lua).
 SimplePanel = SimplePanel or {}
 ns.API = SimplePanel
-SimplePanel.VERSION = ns.VERSION
+SimplePanel.VERSION = 1             -- the API's version (a number, as every suite API has)
+SimplePanel.RELEASE = ns.VERSION    -- the addon's release ("0.1.4")
+
+-- Events, saved variables, Print, Merge, Changed, AfterCombat and the blocked-action report: the
+-- shared Core.lua (addons/shared).
+ns.SAVED = { db = "SimplePanelDB", char = "SimplePanelCharDB" }
 
 ns.DEFAULTS = {
     options = {
@@ -40,7 +45,7 @@ ns.DEFAULTS = {
     launchers = { placement = {}, clicks = {}, order = {}, positions = {} },
     -- Account-wide series (Gold history across characters, etc.): plugin id -> series -> buffer
     series = {},
-    -- Every character on the account (Characters.lua): "Realm - Name" -> { copper, level, xp, rested, zone, seen, ... }
+    -- Every character on the account (Characters.lua): ns.CharKey() -> { name, realm, copper, level, xp, rested, zone, seen, ... }
     characters = {},
     -- Chart windows: plugin id -> { point, x, y, w, h, range }
     charts = {},
@@ -49,7 +54,7 @@ ns.DEFAULTS = {
     -- others are kept here until a character switches to them.
     profiles = {},
     activeProfile = "Default",
-    profileKeys = {},      -- "Realm - Name" -> profile name
+    profileKeys = {},      -- ns.CharKey() -> profile name
 }
 ns.CHAR_DEFAULTS = {
     window = { point = "CENTER", x = 0, y = 0 },
@@ -62,33 +67,17 @@ ns.CHAR_DEFAULTS = {
     professions = {},
 }
 
--- Saved arrays are never merged by index: that would scramble their order.
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then
-                dst[k] = {}
-                Merge(dst[k], v)
-            elseif v[1] == nil then
-                Merge(dst[k], v)
-            end
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
-    end
-    return dst
+-- This character's key in the account-wide stores (characters, profileKeys): shared Units.lua's
+-- CharKey (WoW Forever's "Given Family"), "?" while the name can't be read yet.
+-- Versions before 0.1.5 used "Realm - Name": MigrateKeys moves this character's entries at load
+-- (before Profiles.lua reads profileKeys) and again at login, once each (it skips a key in use).
+function ns.CharKey() return ns.Units.Me() end
+local function MigrateCharKeys()
+    ns.Units.MigrateKeys(ns.db.characters)
+    ns.Units.MigrateKeys(ns.db.profileKeys)
 end
-ns.Merge = Merge
-
-function ns:Print(msg, force)
-    if force or not self.db or self.db.options.chat then
-        DEFAULT_CHAT_FRAME:AddMessage(self.PREFIX .. ": " .. tostring(msg))
-    end
-end
-
-function ns.CharKey() return (GetRealmName() or "?") .. " - " .. (UnitName("player") or "?") end
-
-function ns.Trim(s) return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
+ns:OnLoad(MigrateCharKeys)
+ns:On("PLAYER_LOGIN", MigrateCharKeys)
 
 function ns.Clamp(v, lo, hi)
     v = tonumber(v) or lo
@@ -96,69 +85,12 @@ function ns.Clamp(v, lo, hi)
     return v
 end
 
--- Coalesce change notifications from many edits into one refresh next frame.
-local pending
-function ns:Changed()
-    if pending then return end
-    pending = true
-    C_Timer.After(0, function()
-        pending = false
-        if ns.Bar and ns.Bar.Layout then ns.Bar:Layout() end
-        if ns.Launchers and ns.Launchers.Refresh then ns.Launchers:Refresh() end
-        if ns.Config and ns.Config.Refresh then ns.Config:Refresh() end
-    end)
-end
-
-local frame = CreateFrame("Frame")
-ns.EventFrame = frame
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
-    end
-    table.insert(handlers[event], fn)
-end
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do fn(...) end
+-- What a change refreshes (ns:Changed coalesces many edits into one refresh next frame).
+ns:OnChanged(function()
+    if ns.Bar and ns.Bar.Layout then ns.Bar:Layout() end
+    if ns.Launchers and ns.Launchers.Refresh then ns.Launchers:Refresh() end
+    if ns.Config and ns.Config.Refresh then ns.Config:Refresh() end
 end)
-
-function ns:OnLoad(fn)
-    self.onLoad = self.onLoad or {}
-    table.insert(self.onLoad, fn)
-end
-
--- Work that touches other add-ons' frames waits for combat to end.
-local afterCombat = {}
-function ns:AfterCombat(key, fn)
-    if not InCombatLockdown() then return fn() end
-    afterCombat[key] = fn
-end
-ns:On("PLAYER_REGEN_ENABLED", function()
-    local list = afterCombat
-    afterCombat = {}
-    for _, fn in pairs(list) do fn() end
-end)
-
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    SimplePanelDB = Merge(SimplePanelDB or {}, ns.DEFAULTS)
-    SimplePanelCharDB = Merge(SimplePanelCharDB or {}, ns.CHAR_DEFAULTS)
-    ns.db, ns.char = SimplePanelDB, SimplePanelCharDB
-    for _, fn in ipairs(ns.onLoad or {}) do fn() end
-end)
-
--- The game names any call of ours it blocks; say which, once per function.
-local reportedBlocks = {}
-local function OnBlocked(kind, addon, func)
-    if addon ~= addonName then return end
-    local key = kind .. tostring(func)
-    if reportedBlocks[key] then return end
-    reportedBlocks[key] = true
-    ns:Print(("The game %s SimplePanel's call to %s."):format(kind, tostring(func)), true)
-end
-ns:On("ADDON_ACTION_BLOCKED", function(addon, func) OnBlocked("blocked", addon, func) end)
-ns:On("ADDON_ACTION_FORBIDDEN", function(addon, func) OnBlocked("forbade", addon, func) end)
 
 ns:On("PLAYER_LOGIN", function()
     ns:Print("v" .. ns.VERSION .. " loaded. Type |cffffffff/spanel|r for settings; right-click the bar for options.")
@@ -196,13 +128,13 @@ SlashCmdList.SIMPLEPANEL = function(msg)
     elseif cmd == "hide" then
         ns.Bar:SetShown(false)
     elseif cmd == "autohide" then
-        o.autoHide = not o.autoHide
-        ns.Bar:ApplySettings()
+        -- Through ns:ToggleOption, so Options > AddOns > SimplePanel shows it; its apply re-applies the bar.
+        ns:ToggleOption("db.options.autoHide")
         ns:Print("Auto-hide " .. (o.autoHide and "on." or "off."), true)
     elseif cmd == "edit" then
         ns.Bar:ToggleEditMode()
     elseif cmd == "lock" then
-        o.locked = not o.locked
+        ns:ToggleOption("db.options.locked")
         ns:Print("Plugins " .. (o.locked and "locked." or "unlocked (shift-drag to move)."), true)
     elseif cmd == "plugins" then
         for _, p in ipairs(ns.PluginKit:List()) do
@@ -243,6 +175,4 @@ SlashCmdList.SIMPLEPANEL = function(msg)
     end
 end
 
-function SimplePanel_OnCompartmentClick()
-    if ns.Config then ns.Config:Toggle() end
-end
+ns:Compartment(function() if ns.Config then ns.Config:Toggle() end end)

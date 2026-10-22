@@ -41,7 +41,7 @@ local function Story(f, hits, maxHp)
         lines[#lines + 1] = ("You dealt %d damage (%d a second) and took %d."):format(m.done.total,
             m.duration and m.duration > 0 and m.done.total / m.duration or 0, m.taken.total)
         if m.received then
-            local me = UnitName("player")
+            local me = C.Me()
             local got = m.received[me]
             if got and got > 0 then
                 local by = {}
@@ -95,7 +95,16 @@ local function Process()
             hits and hits.list and #hits.list or 0, ns.Odds.Percent(result.odds), ns.Odds.Percent(result.oddsAfter)))
         for _, l in ipairs(result.lessons) do ns:Debug(("  %s (+%s): %s"):format(l.title, ns.Odds.Percent(l.gain or 0), l.what)) end
     end
-    if ns.db.options.autoOpen then Coach:Show(d) end
+    if ns.db.options.autoOpen then
+        -- Group History's death popup is already explaining this death: don't open on top of it.
+        local gh = GroupHistoryAPI and GroupHistoryAPI.DeathPopupShown
+        local ok, shown = pcall(gh or function() return false end)
+        if ok and shown then
+            ns:Print("A lesson from this death is waiting: |cffffffff/miyagi last|r.")
+        else
+            Coach:Show(d)
+        end
+    end
     ns:Changed()
 end
 

@@ -31,7 +31,7 @@ local CLOSES = {
 }
 
 local last = nil -- [itemID] = count at the last rescan; nil until the first one
-local listeners = {}
+local API, Fire = ns.NewAPI("BandolierAPI", 1)
 
 local function Store()
     if not ns.db then return nil end
@@ -49,9 +49,7 @@ local function Prune(store)
     end
 end
 
-local function Notify()
-    for _, fn in ipairs(listeners) do pcall(fn) end
-end
+local function Notify() Fire("USAGE") end
 
 -- Lockboxes and clams are opened, not used up, and a fishing pole leaves the bags when equipped.
 local function Tracked(entry)
@@ -107,32 +105,30 @@ function U:Used(itemID, days)
     return n
 end
 
-local events = CreateFrame("Frame")
-for event in pairs(OPENS) do pcall(events.RegisterEvent, events, event) end
-events:RegisterEvent("PLAYER_LOGIN")
-events:SetScript("OnEvent", function(_, event)
-    if event == "PLAYER_LOGIN" then
-        local store = Store()
-        if store then Prune(store) end
-        return
-    end
-    local key = OPENS[event]
-    if CLOSES[event] then
-        -- Bag counts settle a moment after the window closes; keep skipping until the next rescan,
-        -- unless the window opened again meanwhile.
-        local token = {}
-        moving[key] = token
-        C_Timer.After(0.5, function() if moving[key] == token then moving[key] = nil end end)
-    else
-        moving[key] = true
-    end
+ns:On("PLAYER_LOGIN", function()
+    local store = Store()
+    if store then Prune(store) end
 end)
+
+for event, key in pairs(OPENS) do
+    ns:On(event, function()
+        if CLOSES[event] then
+            -- Bag counts settle a moment after the window closes; keep skipping until the next rescan,
+            -- unless the window opened again meanwhile.
+            local token = {}
+            moving[key] = token
+            C_Timer.After(0.5, function() if moving[key] == token then moving[key] = nil end end)
+        else
+            moving[key] = true
+        end
+    end)
+end
 
 ---------------------------------------------------------------------------
 -- Public API
 ---------------------------------------------------------------------------
 
-BandolierAPI = BandolierAPI or {}
+-- Event "USAGE" (no arguments) whenever a new use is recorded.
 
 -- Bandolier's kind of consumable for an item ("Healing", "Food", "Elixir", ...), or nil when
 -- Bandolier wouldn't use it. Needs the item's data to be loaded for anything not in its own tables.
@@ -163,7 +159,5 @@ end
 -- How many of an item you used in the last `days` days (default 7).
 function BandolierAPI.Used(itemID, days) return U:Used(itemID, days) end
 
--- fn() runs whenever a new use is recorded.
-function BandolierAPI.OnUsage(fn)
-    if type(fn) == "function" then listeners[#listeners + 1] = fn end
-end
+-- The older hook: fn() on each "USAGE".
+ns.APIListener(API, "OnUsage", "USAGE")

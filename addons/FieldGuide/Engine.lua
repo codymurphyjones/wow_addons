@@ -386,17 +386,8 @@ local function Remaining(section)
 end
 
 -- Yards from you to the middle of a zone, if it's on your continent.
-local function DistanceTo(zone)
-    local here = C_Map.GetBestMapForUnit("player")
-    local pos = here and C_Map.GetPlayerMapPosition(here, "player")
-    if not pos then return nil end
-    local c1, w1 = C_Map.GetWorldPosFromMapPos(here, pos)
-    local c2, w2 = C_Map.GetWorldPosFromMapPos(zone, CreateVector2D(0.5, 0.5))
-    if not (c1 and c2 and w1 and w2) or c1 ~= c2 then return nil end
-    local x1, y1 = w1:GetXY()
-    local x2, y2 = w2:GetXY()
-    return math.sqrt((x1 - x2) ^ 2 + (y1 - y2) ^ 2)
-end
+-- (shared WorldMap.lua)
+local function DistanceTo(zone) return ns.WorldMap.DistanceTo(zone, 0.5, 0.5) end
 
 local lastPick
 
@@ -760,7 +751,7 @@ function E:ResumeArrow()
 end
 
 local function OnWaypoint(event, entry)
-    if event == "cleared" and entry and entry.owner == "FieldGuide" then
+    if type(event) == "string" and event:upper() == "CLEARED" and entry and entry.owner == "FieldGuide" then
         stoppedKey = entry.key
         ns:Print("Arrow stopped for this step. It points again at the next one, or now with /fg arrow.")
     end
@@ -931,7 +922,7 @@ function E:ChooseGuide(arg)
         ns.char.guide, ns.char.section = g.key, nil
         ns:Print("Following " .. g.name .. ".")
     end
-    ns:Changed()
+    ns:OptionChanged("char.section") -- Options > AddOns > Field Guide shows the zone (and calls ns:Changed)
 end
 
 -- The settings' zone dropdown: a section id, or nil for automatic.
@@ -945,7 +936,7 @@ function E:SetSection(id)
     ns.char.section = chosen and chosen.id or nil
     ns:Print(chosen and ("Following " .. chosen.title .. ". Pick Automatic in the settings (or /fg section auto) to go back.")
         or "Following the next section worth doing.")
-    ns:Changed()
+    ns:OptionChanged("char.section")
 end
 
 function E:ChooseSection(arg)
@@ -964,7 +955,7 @@ function E:ChooseSection(arg)
         ns.char.section = s.id
         ns:Print("Following " .. s.title .. ".")
     end
-    ns:Changed()
+    ns:OptionChanged("char.section") -- /fg section: the page's zone dropdown follows
 end
 
 function E:PrintList()

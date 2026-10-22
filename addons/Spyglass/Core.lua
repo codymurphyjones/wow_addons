@@ -1,19 +1,25 @@
 local ADDON, ns = ...
 
+-- Events, saved variables and timers: the shared Core.lua (addons/shared). The journal's own
+-- SpyGlassJournalDB is set up in Journal\Journal.lua.
+ns.SAVED = { db = "SpyGlassDB" }
+
 -- SpyGlass's logo, shipped in the addon (Media\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\Spyglass\\Media\\Icon"
 
--- The logo as inline text markup, size x size pixels.
-function ns.IconMarkup(size)
-    return ("|T%s:%d:%d|t"):format(ns.ICON, size, size)
-end
+-- (ns.IconMarkup(size), the logo as inline text markup: the shared Core.lua.)
 
+-- Its own Print: the logo, and several values like print(). A trailing true is the shared Core's
+-- "print even with chat off" flag, not something to show.
 function ns:Print(...)
-    print(ns.IconMarkup(14) .. " |cff66bbffSpyGlass|r:", ...)
+    local n = select("#", ...)
+    if n > 1 and select(n, ...) == true then n = n - 1 end
+    print(ns.IconMarkup(14) .. " |cff66bbffSpyGlass|r:", unpack({ ... }, 1, n))
 end
 
 local GetItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
-local GetItemInfoInstant = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
+-- WoW Forever has only C_Item.GetItemInfoInstant, no global (see List.lua, Scoring.lua).
+local GetItemInfoInstant = C_Item.GetItemInfoInstant
 local RequestLoadItemDataByID = C_Item and C_Item.RequestLoadItemDataByID
 
 ---------------------------------------------------------------------------
@@ -290,7 +296,7 @@ function ns:NumEncrypted()
     return n
 end
 
--- Loads the saved list (from ADDON_LOADED); a new client build starts over.
+-- Loads the saved list (when the addon loads); a new client build starts over.
 function ns:LoadEncrypted(db)
     local build = GetBuildInfo and select(2, GetBuildInfo()) or "?"
     if type(db.encrypted) ~= "table" or db.encrypted.build ~= build or type(db.encrypted.ids) ~= "table" then
@@ -317,50 +323,9 @@ end
 ---------------------------------------------------------------------------
 
 -- { { left, right, leftR, leftG, leftB, rightR, rightG, rightB }, ... } for
--- an item's tooltip, or nil if the tooltip can't be read yet.
-local scanTip
-local function ColorOf(c)
-    if not c then return 1, 1, 1 end
-    if c.GetRGB then return c:GetRGB() end
-    return c.r or 1, c.g or 1, c.b or 1
-end
-
-function ns:TooltipLines(itemID)
-    if C_TooltipInfo and C_TooltipInfo.GetItemByID then
-        local ok, data = pcall(C_TooltipInfo.GetItemByID, itemID)
-        if not (ok and data and data.lines) then return nil end
-        if TooltipUtil and TooltipUtil.SurfaceArgs then pcall(TooltipUtil.SurfaceArgs, data) end
-        local lines = {}
-        for i, line in ipairs(data.lines) do
-            if TooltipUtil and TooltipUtil.SurfaceArgs and not line.leftText then pcall(TooltipUtil.SurfaceArgs, line) end
-            local lr, lg, lb = ColorOf(line.leftColor)
-            local rr, rg, rb = ColorOf(line.rightColor)
-            lines[i] = { line.leftText or "", line.rightText or "", lr, lg, lb, rr, rg, rb }
-        end
-        return lines
-    end
-    if not scanTip then
-        scanTip = CreateFrame("GameTooltip", "SpyGlassScanTip", nil, "GameTooltipTemplate")
-    end
-    scanTip:SetOwner(WorldFrame, "ANCHOR_NONE")
-    scanTip:ClearLines()
-    scanTip:SetItemByID(itemID)
-    local lines = {}
-    for i = 1, scanTip:NumLines() do
-        local left = _G["SpyGlassScanTipTextLeft" .. i]
-        local right = _G["SpyGlassScanTipTextRight" .. i]
-        local lr, lg, lb = left:GetTextColor()
-        local rr, rg, rb = right:GetTextColor()
-        lines[i] = { left:GetText() or "", right:IsShown() and right:GetText() or "", lr, lg, lb, rr, rg, rb }
-    end
-    scanTip:Hide()
-    if #lines == 0 then return nil end
-    return lines
-end
-
-function ns.IsRed(r, g, b)
-    return r and r > 0.9 and g < 0.3 and b < 0.3
-end
+-- an item's tooltip, or nil if the tooltip can't be read yet (shared Tooltip.lua;
+-- its ns.Tooltip.IsRed is the "can't use" red).
+function ns:TooltipLines(itemID) return ns.Tooltip.Lines("item", itemID) end
 
 ---------------------------------------------------------------------------
 -- Events
@@ -413,11 +378,9 @@ local function SpellsSignature()
 end
 
 local function SkillsSignature()
-    if not (GetNumSkillLines and GetSkillLineInfo) then return "" end
     local parts = {}
-    for i = 1, GetNumSkillLines() do
-        local name, isHeader = GetSkillLineInfo(i)
-        if name and not isHeader then parts[#parts + 1] = name end
+    for _, s in ipairs(ns.Player.SkillLines()) do
+        if not s.header then parts[#parts + 1] = s.name end
     end
     return table.concat(parts, ",")
 end
@@ -464,94 +427,97 @@ local function Changed(key, fn)
     return true
 end
 
-local events = CreateFrame("Frame")
-events:RegisterEvent("ADDON_LOADED")
-events:RegisterEvent("PLAYER_LOGIN")
-events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-pcall(events.RegisterEvent, events, "ITEM_DATA_LOAD_RESULT")
-events:RegisterEvent("PLAYER_LEVEL_UP")
-events:RegisterEvent("SKILL_LINES_CHANGED")
-events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
-pcall(events.RegisterEvent, events, "LEARNED_SPELL_IN_TAB")
-pcall(events.RegisterEvent, events, "SPELLS_CHANGED")
--- Talents change what item effects are worth (Effects.lua).
-pcall(events.RegisterEvent, events, "CHARACTER_POINTS_CHANGED")
--- Quest plugins show the next step of a chain; it moves on as you hand quests in.
-pcall(events.RegisterEvent, events, "QUEST_TURNED_IN")
-pcall(events.RegisterEvent, events, "QUEST_ACCEPTED")
-pcall(events.RegisterEvent, events, "QUEST_LOG_UPDATE")
+-- SpyGlassDB is set up by the shared Core.lua (ns.SAVED above); then this.
+ns:OnLoad(function()
+    -- Settings saved under the addon's old name (LootPriority) carry over. (Without a saved
+    -- SpyGlassDB the shared Core.lua has just made an empty one.)
+    if next(SpyGlassDB) == nil and type(LootPriorityDB) == "table" then SpyGlassDB = LootPriorityDB end
+    LootPriorityDB = nil
+    local db = SpyGlassDB
+    db.version = 1
+    db.tab, db.slot, db.showAll, db.pos = nil, nil, nil, nil -- the removed journal window
+    db.char = type(db.char) == "table" and db.char or {}
+    db.char.source = db.char.source or 3
+    db.char.slot = db.char.slot or "ALL"
+    db.char.showAll = nil -- the list always shows your own gear now
+    ns.db = db
+    ns:LoadEncrypted(db)
+end)
 
-events:SetScript("OnEvent", function(_, event, arg1, arg2)
-    if event == "ADDON_LOADED" then
-        if arg1 ~= ADDON then return end
-        -- Settings saved under the addon's old name (LootPriority) carry over.
-        if type(SpyGlassDB) ~= "table" and type(LootPriorityDB) == "table" then SpyGlassDB = LootPriorityDB end
-        LootPriorityDB = nil
-        SpyGlassDB = type(SpyGlassDB) == "table" and SpyGlassDB or {}
-        local db = SpyGlassDB
-        db.version = 1
-        db.tab, db.slot, db.showAll, db.pos = nil, nil, nil, nil -- the removed journal window
-        db.char = type(db.char) == "table" and db.char or {}
-        db.char.source = db.char.source or 3
-        db.char.slot = db.char.slot or "ALL"
-        db.char.showAll = nil -- the list always shows your own gear now
-        ns.db = db
-        ns:LoadEncrypted(db)
-    elseif event == "PLAYER_LOGIN" then
-        ns.Usability:Init()
-        ns.Scoring:Init()
-        Changed("quests", QuestLogSignature)
-        Changed("spells", SpellsSignature)
-        Changed("skills", SkillsSignature)
-        ns.Plugins:Scan()
-        ns.CharPanel:Init()
-        ns.Settings:Register()
-    elseif event == "PLAYER_EQUIPMENT_CHANGED" then
-        ns.Scoring:EquipmentChanged()
-        ns:RequestRefresh()
-    elseif event == "GET_ITEM_INFO_RECEIVED" or event == "ITEM_DATA_LOAD_RESULT" then
-        -- GET_ITEM_INFO_RECEIVED answers GetItemInfo; ITEM_DATA_LOAD_RESULT
-        -- answers C_Item.RequestLoadItemDataByID (what the queue uses).
-        if not pending[arg1] then return end
-        -- A failed answer is often only the server dropping a busy request:
-        -- the queue asks again, and gives up only after several tries.
-        if arg2 == false then return end
-        ns:ItemArrived(arg1, arg2)
-        ns:RequestRefresh()
-    elseif event == "PLAYER_LEVEL_UP" then
-        -- UnitLevel isn't updated yet when this fires.
-        ns.Usability:Reset(tonumber(arg1))
+ns:On("PLAYER_LOGIN", function()
+    ns.Usability:Init()
+    ns.Scoring:Init()
+    Changed("quests", QuestLogSignature)
+    Changed("spells", SpellsSignature)
+    Changed("skills", SkillsSignature)
+    ns.Plugins:Scan()
+    ns.CharPanel:Init()
+    ns.Settings:Register()
+end)
+
+-- GET_ITEM_INFO_RECEIVED answers GetItemInfo; ITEM_DATA_LOAD_RESULT
+-- answers C_Item.RequestLoadItemDataByID (what the queue uses).
+local function ItemAnswered(itemID, success)
+    if not pending[itemID] then return end
+    -- A failed answer is often only the server dropping a busy request:
+    -- the queue asks again, and gives up only after several tries.
+    if success == false then return end
+    ns:ItemArrived(itemID, success)
+    ns:RequestRefresh()
+end
+ns:On("GET_ITEM_INFO_RECEIVED", ItemAnswered)
+ns:On("ITEM_DATA_LOAD_RESULT", ItemAnswered)
+
+ns:On("PLAYER_LEVEL_UP", function(level)
+    -- UnitLevel isn't updated yet when this fires.
+    ns.Usability:Reset(tonumber(level))
+    ns.Plugins:InvalidateOrigins()
+    ns:RequestRefresh()
+end)
+
+ns:On("SKILL_LINES_CHANGED", function()
+    -- Fires on every weapon skill-up; only a new or lost skill matters.
+    if Changed("skills", SkillsSignature) then
+        ns.Usability:Reset()
         ns.Plugins:InvalidateOrigins()
         ns:RequestRefresh()
-    elseif event == "QUEST_TURNED_IN" or event == "QUEST_ACCEPTED" then
-        Changed("quests", QuestLogSignature)
-        ns.Plugins:InvalidateOrigins()
-        ns:RequestRefresh()
-    elseif event == "QUEST_LOG_UPDATE" then
-        if Changed("quests", QuestLogSignature) then
-            ns.Plugins:InvalidateOrigins()
-            ns:RequestRefresh()
-        end
-    elseif event == "LEARNED_SPELL_IN_TAB" or event == "SPELLS_CHANGED" then
-        if Changed("spells", SpellsSignature) then
-            ns.Usability:SpellsChanged()
-            ns.Effects:Reset()
-            ns.Scoring:Reset()
-            ns:RequestRefresh()
-        end
-    elseif event == "CHARACTER_POINTS_CHANGED" then
+    end
+end)
+
+ns:On("PLAYER_EQUIPMENT_CHANGED", function()
+    ns.Scoring:EquipmentChanged()
+    ns:RequestRefresh()
+end)
+
+local function SpellsChanged()
+    if Changed("spells", SpellsSignature) then
+        ns.Usability:SpellsChanged()
         ns.Effects:Reset()
         ns.Scoring:Reset()
         ns:RequestRefresh()
-    elseif event == "SKILL_LINES_CHANGED" then
-        -- Fires on every weapon skill-up; only a new or lost skill matters.
-        if Changed("skills", SkillsSignature) then
-            ns.Usability:Reset()
-            ns.Plugins:InvalidateOrigins()
-            ns:RequestRefresh()
-        end
-    else
-        ns.Usability:Reset()
+    end
+end
+ns:On("LEARNED_SPELL_IN_TAB", SpellsChanged)
+ns:On("SPELLS_CHANGED", SpellsChanged)
+
+-- Talents change what item effects are worth (Effects.lua).
+ns:On("CHARACTER_POINTS_CHANGED", function()
+    ns.Effects:Reset()
+    ns.Scoring:Reset()
+    ns:RequestRefresh()
+end)
+
+-- Quest plugins show the next step of a chain; it moves on as you hand quests in.
+local function QuestsChanged()
+    Changed("quests", QuestLogSignature)
+    ns.Plugins:InvalidateOrigins()
+    ns:RequestRefresh()
+end
+ns:On("QUEST_TURNED_IN", QuestsChanged)
+ns:On("QUEST_ACCEPTED", QuestsChanged)
+ns:On("QUEST_LOG_UPDATE", function()
+    if Changed("quests", QuestLogSignature) then
+        ns.Plugins:InvalidateOrigins()
         ns:RequestRefresh()
     end
 end)
@@ -605,9 +571,8 @@ SlashCmdList.SPYGLASS = function(msg)
     elseif msg == "collect" or msg:find("^collect ") then
         ns.Contribute:Command(msg:match("^collect%s+(%S+)") or "")
     elseif msg == "tab" then
-        ns.db.hideCharTab = not ns.db.hideCharTab
-        ns.CharPanel:ApplyTabSetting()
-        ns.Settings:Refresh()
+        -- Through ns:ToggleOption, so Options > AddOns > SpyGlass shows it; its apply shows or hides the tab.
+        ns:ToggleOption("db.hideCharTab")
         ns:Print(ns.db.hideCharTab and "Character window tab hidden." or "Character window tab shown.")
     elseif msg == "" then
         ns.CharPanel:Toggle()

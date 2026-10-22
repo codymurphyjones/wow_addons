@@ -11,30 +11,26 @@ Sources:
   * wago.tools DB2 exports: FactionTemplate (which factions are hostile) and
     SpellCastTimes (which spells have a cast time).
 
-Downloads are cached in tools/MrMiyagi/.cache; the dump already fetched by
-tools/Spyglass/fetch_pulls.py is reused when it is there.
+Downloads are cached in tools/MrMiyagi/.cache; the dump (and tables) already fetched by
+tools/Spyglass/fetch_pulls.py are reused when they are there.
 
     python tools/MrMiyagi/fetch_mobs.py
 """
-import csv
-import gzip
-import hashlib
-import io
 import os
 import re
-import subprocess
 import sys
-import time
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_shared"))
+import fetcher as fetching  # noqa: E402  (cached downloads, through webfetch.py)
+import luawrite  # noqa: E402
+import sqldump  # noqa: E402
+from sqldump import rows_of, sql_rows  # noqa: E402
 
 ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "MrMiyagi")  # tools/MrMiyagi/ builds addons/MrMiyagi/
 OUT = os.path.join(ADDON, "Data", "Mobs.lua")
 CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".cache")
 # Caches of sibling tools with the same file naming, read only.
 EXTRA_CACHES = [os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Spyglass", ".wowhead_cache")]
-CMANGOS = "https://raw.githubusercontent.com/cmangos/classic-db/master/Full_DB/ClassicDB_1_12_1_z2815.sql.gz"
-DUMP_NAME = "cmangos-classic-db.sql.gz"
-WAGO = "https://wago.tools/db2/%s/csv"
-UA = "Mozilla/5.0"
 MAX_LEVEL = 63
 
 TYPES = {1: "Beast", 2: "Dragonkin", 3: "Demon", 4: "Elemental", 5: "Giant", 6: "Undead",
@@ -55,118 +51,29 @@ FRIENDLY_TARGETS = {1, 5, 20, 21, 24, 27, 30, 31, 32, 33, 35, 37, 41, 42, 43, 44
 
 
 # ---------------------------------------------------------------------------
-# Downloads (cached; copied from tools/Spyglass/fetch_pulls.py)
+# Downloads (cached; tools/_shared/fetcher.py) and the SQL dump (tools/_shared/sqldump.py)
 # ---------------------------------------------------------------------------
 
-def download(url):
-    for attempt in range(5):
-        out = subprocess.run(["curl", "-sSL", "--max-time", "300", "-A", UA, "-w", "\n%{http_code}", url],
-                             capture_output=True)
-        body, _, code = out.stdout.rpartition(b"\n")
-        try:
-            code = int(code or 0)
-        except ValueError:
-            code = 0
-        if code == 200 and body.strip():
-            return body
-        print("  %s (HTTP %d); retrying in %ds" % (url, code, 4 ** attempt), flush=True)
-        time.sleep(4 ** attempt)
-    raise SystemExit("Download keeps failing: %s" % url)
+def Fetcher():
+    """This tool's cache, then Spyglass's (read only); 0.5 s rest after each download."""
+    return fetching.Fetcher(CACHE, extra_caches=EXTRA_CACHES, pace=0, rest=0.5, timeout=300, attempts=5,
+                            min_backoff=0.25, give_up_after=1, give_up="Download keeps failing: {url}",
+                            skip_empty=True, ok_only=True, flush=True)
 
 
-def cached(url, name=None):
-    name = name or hashlib.sha1(url.encode("utf-8")).hexdigest() + ".html"
-    for d in [CACHE] + EXTRA_CACHES:
-        p = os.path.join(d, name)
-        if os.path.exists(p) and os.path.getsize(p) > 0:
-            with open(p, "rb") as f:
-                return f.read()
-    os.makedirs(CACHE, exist_ok=True)
-    data = download(url)
-    time.sleep(0.5)
-    with open(os.path.join(CACHE, name), "wb") as f:
-        f.write(data)
-    return data
-
-
-def table(name):
-    return list(csv.DictReader(io.StringIO(cached(WAGO % name).decode("utf-8"))))
-
-
-# ---------------------------------------------------------------------------
-# SQL dump reading (copied from tools/Spyglass/fetch_pulls.py)
-# ---------------------------------------------------------------------------
-
-def sql_rows(text, tbl):
-    rows = []
-    for m in re.finditer(r"INSERT INTO `%s` VALUES " % tbl, text):
-        i, n = m.end(), len(text)
-        while i < n and text[i] == "(":
-            row, i = parse_tuple(text, i + 1)
-            rows.append(row)
-            if text[i] == ",":
-                i += 1
-            while text[i] in "\r\n ":
-                i += 1
-            if text[i] == ";":
-                break
-    return rows
-
-
-def parse_tuple(s, i):
-    vals, cur = [], []
-    while True:
-        c = s[i]
-        if c == "'":
-            j, buf = i + 1, []
-            while True:
-                if s[j] == "\\":
-                    buf.append(s[j + 1])
-                    j += 2
-                elif s[j] == "'" and s[j + 1] == "'":
-                    buf.append("'")
-                    j += 2
-                elif s[j] == "'":
-                    break
-                else:
-                    buf.append(s[j])
-                    j += 1
-            vals.append("".join(buf))
-            i = j + 1
-            cur = None
-        elif c in ",)":
-            if cur is not None:
-                tok = "".join(cur).strip()
-                vals.append(None if tok == "NULL" else (float(tok) if "." in tok or "e" in tok.lower() else int(tok)))
-            cur = []
-            i += 1
-            if c == ")":
-                return vals, i
-        else:
-            if cur is not None:
-                cur.append(c)
-            i += 1
-
-
-def columns(text, tbl):
-    m = re.search(r"CREATE TABLE `%s` \((.*?)\n\) ENGINE" % tbl, text, re.S)
-    return [ln.strip().split()[0].strip("`") for ln in m.group(1).split("\n") if ln.strip().startswith("`")]
-
-
-def rows_of(text, tbl):
-    cols = columns(text, tbl)
-    return [dict(zip(cols, r)) for r in sql_rows(text, tbl)]
+def table(fetcher, name):
+    return fetching.wago_table(fetcher, name)
 
 
 # ---------------------------------------------------------------------------
 
-def hostile_factions():
+def hostile_factions(fetcher):
     """Faction templates players can fight: hostile or neutral, i.e. not friendly to players
     and not aligned with the Alliance or the Horde (city guards and the like). Many
     hostile mobs (wolves: "Prey") are hostile only through their faction's default
     reputation, so friendliness is what is tested, not the enemy masks."""
     out = set()
-    for r in table("FactionTemplate"):
+    for r in table(fetcher, "FactionTemplate"):
         group, friend = int(r["FactionGroup"]), int(r["FriendGroup"])
         if group & 7 or friend & 7:
             continue
@@ -229,15 +136,15 @@ def spell_flags(s, cast_ms):
 
 
 def lua_str(s):
-    return '"' + s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ") + '"'
+    return luawrite.lua_str(s, lf="space", cr="keep")
 
 
 def main():
-    dump = cached(CMANGOS, DUMP_NAME)
-    text = gzip.decompress(dump).decode("utf-8", "replace")
+    fetcher = Fetcher()
+    text = sqldump.cmangos(fetcher)
     print("dump read")
-    hostile = hostile_factions()
-    cast_ms = {int(r["ID"]): int(r["Base"]) for r in table("SpellCastTimes")}
+    hostile = hostile_factions(fetcher)
+    cast_ms = {int(r["ID"]): int(r["Base"]) for r in table(fetcher, "SpellCastTimes")}
 
     templates = {t["Entry"]: t for t in rows_of(text, "creature_template")}
 

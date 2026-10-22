@@ -839,35 +839,23 @@ local function BuildReputation(page)
 end
 
 -- ---------------------------------------------------------------------------
--- Skills (C_SkillInfo on this client; the old skill list elsewhere)
+-- Skills (C_SkillInfo, else the old skill list)
 -- ---------------------------------------------------------------------------
 
 local HIDDEN_SKILL_CATEGORIES = { [7] = true } -- class skills, as the game hides them
 local DEFENSE_SKILL_ID = 95
 
+-- shared Player.lua's skill list (C_SkillInfo, else the old one; old = true on the old API),
+-- top-level lines only, class skills hidden, Defense with its gear bonus.
 local function SkillLines()
     local out = {}
-    local S = C_SkillInfo
-    if S and S.GetNumSkillLines and S.GetSkillLineInfo then
-        for i = 1, (Read(S.GetNumSkillLines) or 0) do
-            local s = Read(S.GetSkillLineInfo, i)
-            if s and (s.parentSkillLineID or 0) == 0 then
-                local hidden = s.isHeader and HIDDEN_SKILL_CATEGORIES[s.skillID] or (not s.isHeader and HIDDEN_SKILL_CATEGORIES[s.skillLineCategoryID])
-                if not hidden then
-                    local mod = s.modifier or 0
-                    if s.skillID == DEFENSE_SKILL_ID and UnitDefenseSkill then mod = select(2, Read(UnitDefenseSkill, "player")) or mod end
-                    out[#out + 1] = { index = i, name = s.name, header = s.isHeader, folded = s.isCollapsed,
-                        rank = s.rank, max = s.maxRank, mod = mod, description = s.description }
-                end
+    for _, s in ipairs(ns.Player.SkillLines()) do
+        local hidden = (s.header and HIDDEN_SKILL_CATEGORIES[s.skillID]) or (not s.header and HIDDEN_SKILL_CATEGORIES[s.category])
+        if (s.parent or 0) == 0 and not hidden then
+            if not s.old and s.skillID == DEFENSE_SKILL_ID and UnitDefenseSkill then
+                s.mod = select(2, Read(UnitDefenseSkill, "player")) or s.mod
             end
-        end
-    elseif GetNumSkillLines and GetSkillLineInfo then
-        for i = 1, GetNumSkillLines() do
-            local name, header, expanded, rank, _, mod, max, _, _, _, _, _, description = GetSkillLineInfo(i)
-            if name then
-                out[#out + 1] = { index = i, name = name, header = header, folded = not expanded, rank = rank,
-                    max = max, mod = mod, description = description, old = true }
-            end
+            out[#out + 1] = s
         end
     end
     return out
@@ -927,12 +915,8 @@ local function RankText(rank)
     return name or ("Rank " .. rank)
 end
 
-local function Duration(seconds)
-    local d, h, m = math.floor(seconds / 86400), math.floor(seconds % 86400 / 3600), math.floor(seconds % 3600 / 60)
-    if d > 0 then return ("%dd %dh"):format(d, h) end
-    if h > 0 then return ("%dh %dm"):format(h, m) end
-    return ("%dm"):format(m)
-end
+local DURATION = { pad = false }
+local function Duration(seconds) return ns.Format.Duration(seconds, DURATION) end
 
 local function BuildPvP(page)
     page.list = MakeList(page)
@@ -997,7 +981,7 @@ local function BuildCurrency(page)
                     rows[#rows + 1] = { kind = "fold", text = c.name, folded = not c.isHeaderExpanded, indent = depth,
                         onClick = function() pcall(C.ExpandCurrencyList, i, not c.isHeaderExpanded); CS:Dirty() end }
                 else
-                    local amount = BreakUpLargeNumbers and BreakUpLargeNumbers(c.quantity or 0) or tostring(c.quantity or 0)
+                    local amount = ns.Format.Thousands(c.quantity or 0)
                     if c.maxQuantity and c.maxQuantity > 0 then amount = amount .. " / " .. c.maxQuantity end
                     rows[#rows + 1] = { kind = "pair", icon = c.iconFileID, indent = depth + 12, label = c.name, value = amount,
                         tip = function(tt)
@@ -1331,10 +1315,9 @@ end
 
 local function Title()
     local name = (UnitPVPName and Read(UnitPVPName, "player")) or UnitName("player") or ""
-    local _, class = UnitClass("player")
-    local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+    local _, r, g, b, found = ns.Units.ClassColor(select(2, UnitClass("player")))
     sheet.name:SetText(name)
-    if c then sheet.name:SetTextColor(c.r, c.g, c.b) end
+    if found then sheet.name:SetTextColor(r, g, b) end
     local level = Read(UnitLevel, "player")
     local race = UnitRace("player")
     local className = UnitClass("player")

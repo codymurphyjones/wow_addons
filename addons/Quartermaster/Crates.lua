@@ -71,20 +71,13 @@ end
 
 -- How many the crate takes, from the first tooltip line (after the name) that names the filler
 -- and has a number in it.
-local scanner
 local function TooltipQty(itemID, names)
     if not itemID then return nil end
-    if not scanner then
-        scanner = CreateFrame("GameTooltip", "QuartermasterCrateTooltip", nil, "GameTooltipTemplate")
-    end
-    scanner:SetOwner(WorldFrame, "ANCHOR_NONE")
-    scanner:ClearLines()
-    local ok = pcall(scanner.SetHyperlink, scanner, "item:" .. itemID)
-    if not ok then return nil end
-    for i = 2, scanner:NumLines() do
-        local fs = _G["QuartermasterCrateTooltipTextLeft" .. i]
-        local text = fs and fs:GetText()
-        if text and text ~= "" then
+    local lines = ns.Tooltip.Lines("hyperlink", "item:" .. itemID)
+    if not lines then return nil end
+    for i = 2, #lines do
+        local text = lines[i][1]
+        if text ~= "" then
             local lower = text:lower()
             for n in pairs(names) do
                 if lower:find(n, 1, true) then

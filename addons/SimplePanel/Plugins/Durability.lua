@@ -10,17 +10,7 @@ local SLOTS = {
     { 17, "SECONDARYHANDSLOT", "Off Hand" }, { 18, "RANGEDSLOT", "Ranged" },
 }
 
-local scanTip
-local function RepairCost(slot)
-    if not scanTip then
-        scanTip = CreateFrame("GameTooltip", "SimplePanelScanTooltip", nil, "GameTooltipTemplate")
-    end
-    scanTip:SetOwner(WorldFrame, "ANCHOR_NONE")
-    scanTip:ClearLines()
-    local ok, _, _, cost = pcall(scanTip.SetInventoryItem, scanTip, "player", slot)
-    scanTip:Hide()
-    return ok and tonumber(cost) or 0
-end
+local function RepairCost(slot) return ns.Tooltip.RepairCost(slot) end
 
 local function Scan()
     local items, lowest, sum, n = {}, 100, 0, 0

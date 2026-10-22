@@ -1,9 +1,9 @@
-## Interface: 16001, 11509, 20506, 50504, 120100
+## Interface: 16001
 ## Title: Wally
 ## Notes: Smart junk seller. Learns what you habitually sell, protects possible gear upgrades, and manages junk / never-sell lists.
 ## Author: Dinoblankie + Claude
-## Version: 0.1.5
-## OptionalDeps: Auctionator, TapeMeasure, StatLedger
+## Version: 0.1.6
+## OptionalDeps: Auctionator, StatLedger
 ## SavedVariables: WallyDB
 ## SavedVariablesPerCharacter: WallyCharDB
 ## IconTexture: Interface\AddOns\Wally\Media\Wally
@@ -11,12 +11,21 @@
 ## AddonCompartmentFunc: Wally_OnCompartmentClick
 ## X-Curse-Project-ID: 1735051
 
-Fonts.lua
-Palette.lua
+..\shared\Fonts.lua
+..\shared\Palette.lua
+..\shared\Core.lua
+..\shared\API.lua
+..\shared\Units.lua
+..\shared\Format.lua
+..\shared\Items.lua
+..\shared\Player.lua
 Compat.lua
 Core.lua
+..\shared\AuctionPrice.lua
 Lists.lua
 Sessions.lua
+..\shared\Tooltip.lua
+..\shared\GearEngine.lua
 Gear.lua
 Value.lua
 JunkFilter.lua
@@ -29,8 +38,13 @@ Seller.lua
 Sort.lua
 Merchant.lua
 Tooltip.lua
+..\shared\Widgets.lua
 Widgets.lua
+..\shared\OptionsPage.lua
+..\shared\Window.lua
 UI.lua
+Bags.lua
 AuctionTab.lua
+..\shared\MinimapButton.lua
 Minimap.lua
 API.lua

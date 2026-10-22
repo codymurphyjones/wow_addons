@@ -3,45 +3,22 @@ local C = ns.Compat
 
 -- Group members running Group History send each other their own death recap (which each client
 -- can always read for itself) over private party addon messages, in case the damage meter didn't
--- give one for them. Nobody needs it installed; it only fills gaps. (Message framing and pacing as
--- in SpyGlass's Journal\Group.lua.)
+-- give one for them. Nobody needs it installed; it only fills gaps. The messages go through the
+-- shared GroupComm.lua (framing, pacing, the channel, dropping your own): never in a raid.
 local Sync = {}
 ns.Sync = Sync
 
-local PREFIX = "GHIS"
-local CHUNK = 230
-local SEND_EVERY = 0.25
 local FRESH = 120 -- seconds a received recap stays usable
 
-local outbox, pumping, nextID = {}, false, 0
-local partial = {}
 local received = {} -- short name -> { hits, maxHp, at = GetTime() }
 
-local function Channel()
-    if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) and not IsInGroup(LE_PARTY_CATEGORY_HOME) then return "INSTANCE_CHAT" end
-    if IsInGroup() and not IsInRaid() then return "PARTY" end
-end
-
-local function Pump()
-    local msg = table.remove(outbox, 1)
-    if not msg then pumping = false return end
-    local channel = Channel()
-    if channel then C.Call(C_ChatInfo.SendAddonMessage, PREFIX, msg, channel) end
-    C_Timer.After(SEND_EVERY, Pump)
-end
-
-local function Send(kind, payload)
-    if not Channel() then return end
-    nextID = nextID % 999 + 1
-    local n = math.max(1, math.ceil(#payload / CHUNK))
-    for i = 1, n do
-        outbox[#outbox + 1] = ("%s|%d|%d|%d|%s"):format(kind, nextID, i, n, payload:sub((i - 1) * CHUNK + 1, i * CHUNK))
-    end
-    if not pumping then pumping = true; Pump() end
-end
+-- Senders are keyed by their short name, as the deaths are. ns.Units.IsMe also knows your own
+-- messages on WoW Forever, where a sender comes back as "Given Family", "GivenFamily" or
+-- "Given Family-Server".
+local comm = ns.NewGroupComm("GHIS", { pace = 0.25, raids = false, normalize = C.Short, isMe = ns.Units.IsMe })
 
 -- Hits as text: spellId:amount:overkill:flags:source:spell per hit, ";" between hits.
-local function Clean(s) return (tostring(s or ""):gsub("[:;|]", "")) end
+local Clean = ns.GroupComm.Clean
 local function Encode(hits)
     local out = {}
     for _, h in ipairs(hits) do
@@ -70,7 +47,7 @@ local function Decode(text)
 end
 
 function Sync:ShareDeath(name, hits, maxHp)
-    Send("D", ("%s|%d|%s"):format(Clean(name), maxHp or 0, Encode(hits)))
+    comm:Send("D", ("%s|%d|%s"):format(Clean(name), maxHp or 0, Encode(hits)))
 end
 
 -- A member's recap sent by their own Group History, while it's fresh (for the death popup).
@@ -95,33 +72,11 @@ function Sync:FillFromPeers(f)
     end
 end
 
-local function Dispatch(kind, payload, sender)
-    if kind ~= "D" then return end
+comm:On("D", function(payload, sender)
     local name, maxHp, hits = payload:match("^([^|]*)|(%d*)|(.*)$")
-    if not name or name ~= sender then return end -- members only report their own deaths
+    -- Members only report their own deaths. The name is kept as they wrote it (the short name our
+    -- deaths use); ns.Units.Same also matches Forever's "GivenFamily" sender shape.
+    if not name or not (name == sender or ns.Units.Same(name, sender)) then return end
     received[name] = { hits = Decode(hits), maxHp = tonumber(maxHp), at = GetTime() }
     if ns.DeathPopup then ns.DeathPopup:Refresh() end
-end
-
-ns:On("CHAT_MSG_ADDON", function(prefix, msg, _, sender)
-    if prefix ~= PREFIX or type(msg) ~= "string" then return end
-    if C.Readable(msg) == nil or C.Readable(sender) == nil then return end
-    sender = C.Short(sender)
-    if sender == UnitName("player") then return end
-    local kind, id, i, n, body = msg:match("^([^|]+)|(%d+)|(%d+)|(%d+)|(.*)$")
-    if not kind then return end
-    i, n = tonumber(i), tonumber(n)
-    if n == 1 then return Dispatch(kind, body, sender) end
-    local key = sender .. ":" .. id
-    local p = partial[key]
-    if not p or p.n ~= n then p = { n = n, parts = {}, got = 0 }; partial[key] = p end
-    if not p.parts[i] then p.parts[i] = body; p.got = p.got + 1 end
-    if p.got == n then
-        partial[key] = nil
-        Dispatch(kind, table.concat(p.parts), sender)
-    end
-end)
-
-ns:On("PLAYER_LOGIN", function()
-    if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then C_ChatInfo.RegisterAddonMessagePrefix(PREFIX) end
 end)

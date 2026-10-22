@@ -22,8 +22,8 @@ ns.Questie = Q
 local MAX_POINTS = 150
 local ARRIVE = 30
 
+local K = ns.QuestieKit -- Questie from the outside (shared Questie.lua)
 local ready = false
-local mods = {}
 local skipped = {}       -- questId -> true: skipped from the arrow this session
 local current            -- { id, obj } of the pick
 local signature
@@ -132,40 +132,19 @@ local function TrackedAt(id)
     return h and h.at or 0
 end
 
-local function Mod(name)
-    -- No Questie (it's optional): no modules, and everything built on them stays off.
-    if not (type(QuestieLoader) == "table" and type(QuestieLoader.ImportModule) == "function") then return nil end
-    if mods[name] == nil then
-        local ok, m = pcall(QuestieLoader.ImportModule, QuestieLoader, name)
-        mods[name] = ok and m or false
-    end
-    return mods[name] or nil
-end
+-- A Questie module (cached). No Questie (it's optional): no modules, and everything built on
+-- them stays off.
+local Mod = K.Mod
 
 local function Available()
-    return ready and Questie and QuestieLoader and Questie.db and Questie.db.char and true or false
+    return ready and K.Loaded() and K.CharDB() ~= nil
 end
 
 -- Tracked quests: questId -> Questie's quest object.
-local function Tracked()
-    local out = {}
-    local QP, QT = Mod("QuestiePlayer"), Mod("QuestieTracker")
-    if not (QP and QT and type(QP.currentQuestlog) == "table" and QT.IsTrackedByQuestie) then return out end
-    for id, quest in pairs(QP.currentQuestlog) do
-        if type(quest) == "table" and C.Call(QT.IsTrackedByQuestie, id) then out[id] = quest end
-    end
-    return out
-end
+local Tracked = K.Tracked
 
 -- Questie's focus: questId, objective index (or nil).
-local function Focus()
-    local f = Questie and Questie.db and Questie.db.char and Questie.db.char.TrackerFocus
-    if type(f) == "number" then return f end
-    if type(f) == "string" then
-        local id, obj = f:match("^(%d+)%s+(%d+)$")
-        return tonumber(id), tonumber(obj)
-    end
-end
+local Focus = K.Focus
 
 -- Whether Questie is loaded and ready (the quest target and quest tracking need it).
 function Q:Available() return Available() end
@@ -345,7 +324,7 @@ function Q:Untrack(owner, id)
     pendingUntrack[id] = GetTime()
     local QT = Mod("QuestieTracker")
     if QT and QT.UntrackQuestId then
-        C.Call(QT.UntrackQuestId, QT, id)
+        K.Untrack(id)
     elseif C_QuestLog and C_QuestLog.RemoveQuestWatch then
         C.Call(C_QuestLog.RemoveQuestWatch, id)
     end
@@ -394,20 +373,16 @@ end
 
 local function Start()
     ready = true
-    local QT = Mod("QuestieTracker")
-    if QT and QT.Update then pcall(hooksecurefunc, QT, "Update", CheckTracking) end
-    if QT and QT.UntrackQuestId then pcall(hooksecurefunc, QT, "UntrackQuestId", function(_, id) NoteUntrack(id) end) end
+    K.Hook("QuestieTracker", "Update", CheckTracking)
+    K.Hook("QuestieTracker", "UntrackQuestId", function(_, id) NoteUntrack(id) end)
     if Questie and Questie.API and Questie.API.RegisterForQuestUpdates then pcall(Questie.API.RegisterForQuestUpdates, OnQuestUpdate) end
     Q:Select()
 end
 
-ns:On("PLAYER_LOGIN", function()
-    if not (Questie and Questie.API and Questie.API.RegisterOnReady and QuestieLoader) then return end
-    pcall(Questie.API.RegisterOnReady, Start)
-end)
+ns:On("PLAYER_LOGIN", function() K.OnReady(Start) end)
 ns:On("QUEST_WATCH_LIST_CHANGED", CheckTracking)
 ns:On("QUEST_ACCEPTED", function(a, b)
-    local id = b or a -- (questLogIndex, questID) on Classic, (questID) on newer clients
+    local id = b or a -- (questLogIndex, questID) or (questID): the quest ID is the last value
     if type(id) == "number" then accepted[id] = GetTime() end
 end)
 

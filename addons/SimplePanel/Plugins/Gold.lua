@@ -7,7 +7,7 @@ local Chars = ns.Characters
 local sessionStart
 
 local function Save() Chars:Refresh() end
-local function ClassName(key, class) return Chars.ClassName(key, { class = class }) end
+local function ClassName(key, info) return Chars.ClassName(key, info) end
 
 local function GoldFormat(v) return ("%sg"):format(SimplePanel.Chart.Format(v)) end
 
@@ -82,11 +82,11 @@ SimplePanel.RegisterPlugin({
         local list, total = Characters(p)
         if #list > 1 then
             local scope = p:Get("scope")
-            tt:AddHeader(SCOPE_TITLE[scope]:format(GetRealmName(), UnitFactionGroup("player") or ""))
+            tt:AddHeader(SCOPE_TITLE[scope]:format(ns.Units.RealmLabel(), UnitFactionGroup("player") or ""))
             for i, e in ipairs(list) do
                 if i > 12 then break end
-                local name = ClassName(e.key, e.info.class)
-                if scope == "all" then name = name .. " |cff8fa3b3" .. (e.key:match("^(.-) %- ") or "") .. "|r" end
+                local name = ClassName(e.key, e.info)
+                if scope == "all" then name = name .. " |cff8fa3b3" .. Chars.Realm(e.key, e.info) .. "|r" end
                 tt:AddDouble(name, C.Money(e.info.copper or 0), T.text, T.text)
             end
             tt:AddDivider()

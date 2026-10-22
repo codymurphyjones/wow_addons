@@ -1,18 +1,15 @@
 local _, ns = ...
-local C = ns.Compat
+local WM = ns.WorldMap
 
 -- One dot on the minimap for the point the arrow aims at, on the rim when it's out of range.
--- Distance in yards is turned into minimap pixels with HereBeDragons' zoom tables (from
--- WealthPlanner's MinimapPins.lua).
+-- Distance in yards is turned into minimap pixels with HereBeDragons' zoom tables (the shared
+-- WorldMap.lua's minimap view).
 local MP = {}
 ns.MinimapPin = MP
 
 local SIZE = 14
 local UPDATE = 0.1
-
--- Minimap diameter in yards at each zoom level.
-local OUTDOOR = { [0] = 466 + 2 / 3, 400, 333 + 1 / 3, 266 + 2 / 3, 200, 133 + 1 / 3 }
-local INDOOR = { [0] = 300, 240, 180, 120, 80, 50 }
+local VIEW = { square = false }
 
 local pin
 
@@ -29,40 +26,24 @@ local function Build()
     pin:Hide()
 end
 
-local function Radius()
-    local zoom = Minimap:GetZoom() or 0
-    local t = (IsIndoors and IsIndoors()) and INDOOR or OUTDOOR
-    return (t[zoom] or t[0]) / 2
-end
-
 local function Update()
     if not Minimap then return end
     if not pin then Build() end
     if ns:InBattleground() then pin:Hide() return end
     local p = ns.Targets.point
     if p and ns.Flight then p = ns.Flight:Aim(p) end
-    local continent, n, w = ns.Nav:Player()
+    -- The minimap now; round, as the pin always was (a square minimap still clamps to a circle).
+    local v = WM.MinimapView(VIEW)
+    local continent = v.continent
     local pc, pn, pw
     if p and continent then pc, pn, pw = ns.Nav:World(p) end
     if not (pc and pc == continent) then
         pin:Hide()
         return
     end
-    local x, y = w - pw, n - pn -- yards east, yards south
-    local rotate = GetCVar and GetCVar("rotateMinimap") == "1"
-    if rotate then
-        local facing = GetPlayerFacing and C.Num(GetPlayerFacing())
-        if not facing then pin:Hide() return end
-        local sin, cos = math.sin(facing), math.cos(facing)
-        x, y = x * cos - y * sin, x * sin + y * cos
-    end
-    local radius, half = Radius(), Minimap:GetWidth() / 2
-    local len = math.sqrt(x * x + y * y)
-    local px, py = x / radius * half, -y / radius * half
-    local onRim = len > radius
-    if onRim and len > 0 then
-        px, py = x / len * (half - 4), -y / len * (half - 4)
-    end
+    if v.rotate and not v.known then pin:Hide() return end -- it turns with you, but which way you face is hidden
+    local px, py, inside = v:PlaceWorld(pc, pn, pw, 4) -- out of range: on the rim, 4 pixels in
+    local onRim = not inside
     local col = ns:ColorOf(ns.Targets.current)
     pin.glow:SetVertexColor(col[1], col[2], col[3], 0.7); pin.dot:SetVertexColor(col[1], col[2], col[3])
     pin.glow:SetShown(not onRim)

@@ -187,9 +187,9 @@ end
 | `Waypoint:Clear(owner)` | Remove your target |
 | `Waypoint:Get(owner)` | Your target, or nil |
 | `Waypoint:GetCurrent()` | The entry the arrow follows (`entry.owner` is an addon, `"path"` or `"Questie"`) and its point |
-| `Waypoint:RegisterCallback(owner, fn)` | `fn(event, entry)`: `"changed"`, `"arrived"`, or `"cleared"` (the player stopped a target from the arrow) |
+| `Waypoint:RegisterCallback(owner, fn)` | `fn(event, entry)`: `"CHANGED"`, `"ARRIVED"`, or `"CLEARED"` (the player stopped a target from the arrow). Before `VERSION` 2 the names were lower case: compare with `event:upper()` to work with both |
 | `Waypoint:UnregisterCallback(owner)` | |
 
 Targets are saved without their functions. After a reload, `Get` still returns yours with its key and fields. Call `Set` again to put `onClick` back.
 
-List Waypoint in `## OptionalDeps` so it loads first.
+List Waypoint in `## OptionalDeps` so it loads first. `Waypoint.VERSION` is 2 (`API_VERSION`, its older name, still works): check `Waypoint.VERSION >= n` before using a newer function.

@@ -101,7 +101,7 @@ Every list can hold all 26 stats: Strength, Agility, Stamina, Intellect, Spirit,
 StatLedger sets a global `StatLedger` table. Add `## OptionalDeps: StatLedger` to your TOC so it loads first, then:
 
 ```lua
-if StatLedger and StatLedger.API_VERSION >= 1 then
+if StatLedger and StatLedger.VERSION and StatLedger.VERSION >= 1 then
     local stats   = StatLedger:GetPriority()  -- { "SP", "FIRE", "SPELLCRIT", ... } best first
     local weights = StatLedger:GetWeights()   -- { SP = 1.0, FIRE = 0.87, ... } 1st = 1.0 down to 0.1
 
@@ -110,6 +110,8 @@ if StatLedger and StatLedger.API_VERSION >= 1 then
     end)
 end
 ```
+
+`VERSION` is the API's version (a number); `API_VERSION`, its older name, still works.
 
 `class` is a class token (`"MAGE"`) and `spec` a talent tab (1-3). Both default to the player's when left out. Getters return copies, so you can change what you get.
 
@@ -123,7 +125,7 @@ end
 | `SetPriority`, `SetSlot`, `InsertStat`, `RemoveStat`, `MoveStat`, `ResetPriority` | Edit a spec's list |
 | `GetRemovedStats(class, spec)` | Stats not in the list |
 | `GetStats()`, `GetStatLabel(stat)`, `GetClasses()`, `GetSpecs(class)` | Metadata for your own UI |
-| `RegisterCallback(owner, fn)`, `UnregisterCallback(owner)` | Change notifications |
+| `RegisterCallback(owner, fn)`, `UnregisterCallback(owner)` | Change notifications: `fn(event, class, spec)`, one callback per owner, run in the order registered |
 
 Stat keys: `STR AGI STA INT SPI AP RAP SP HEAL FIRE FROST SHADOW ARCANE NATURE CRIT SPELLCRIT HIT HASTE MP5 ARMOR DEF DODGE PARRY BLOCK BLOCKVALUE DPS`. Ignore any your addon doesn't score.
 

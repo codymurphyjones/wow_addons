@@ -46,82 +46,12 @@ local PATTERNS = {
     { "MP5", { "mana every 5", "mana per 5", "mana every five", "mana regeneration" } },
 }
 
--- Talent trees in the game's tab order, with each spec's default priority.
--- [class] = { default tab before talents, { name, { stats } } x3 }
-T.SPECS = {
-    WARRIOR = { 1,
-        { "Arms", { "STR", "AP", "CRIT", "AGI", "STA" } },
-        { "Fury", { "STR", "AP", "CRIT", "AGI", "HIT" } },
-        { "Protection", { "STA", "ARMOR", "STR", "AGI", "AP" } } },
-    ROGUE = { 2,
-        { "Assassination", { "AGI", "AP", "CRIT", "STR", "HIT" } },
-        { "Combat", { "AGI", "AP", "CRIT", "STR", "HIT" } },
-        { "Subtlety", { "AGI", "AP", "CRIT", "STR", "STA" } } },
-    HUNTER = { 1,
-        { "Beast Mastery", { "AGI", "AP", "CRIT", "HIT", "INT" } },
-        { "Marksmanship", { "AGI", "AP", "CRIT", "HIT", "INT" } },
-        { "Survival", { "AGI", "AP", "CRIT", "STA", "INT" } } },
-    MAGE = { 3,
-        { "Arcane", { "SP", "ARCANE", "INT", "SPI", "MP5" } },
-        { "Fire", { "SP", "FIRE", "SPELLCRIT", "INT", "MP5" } },
-        { "Frost", { "SP", "FROST", "SPELLCRIT", "INT", "MP5" } } },
-    WARLOCK = { 1,
-        { "Affliction", { "SP", "SHADOW", "STA", "INT", "SPI" } },
-        { "Demonology", { "SP", "SHADOW", "STA", "INT", "SPI" } },
-        { "Destruction", { "SP", "SHADOW", "SPELLCRIT", "INT", "STA" } } },
-    PRIEST = { 2,
-        { "Discipline", { "HEAL", "INT", "SPI", "MP5", "STA" } },
-        { "Holy", { "HEAL", "INT", "SPI", "MP5", "STA" } },
-        { "Shadow", { "SP", "SHADOW", "INT", "SPI", "STA" } } },
-    PALADIN = { 3,
-        { "Holy", { "HEAL", "INT", "MP5", "SPELLCRIT", "STA" } },
-        { "Protection", { "STA", "ARMOR", "SP", "STR", "AGI" } },
-        { "Retribution", { "STR", "AP", "CRIT", "AGI", "INT" } } },
-    DRUID = { 2,
-        { "Balance", { "SP", "ARCANE", "NATURE", "INT", "MP5" } },
-        { "Feral", { "AGI", "STR", "AP", "STA", "ARMOR" } },
-        { "Restoration", { "HEAL", "INT", "SPI", "MP5", "STA" } } },
-    SHAMAN = { 2,
-        { "Elemental", { "SP", "NATURE", "SPELLCRIT", "INT", "MP5" } },
-        { "Enhancement", { "STR", "AP", "AGI", "CRIT", "INT" } },
-        { "Restoration", { "HEAL", "INT", "MP5", "SPI", "STA" } } },
-}
-
-T.CLASS_NAMES = {
-    WARRIOR = "Warrior", ROGUE = "Rogue", HUNTER = "Hunter", MAGE = "Mage", WARLOCK = "Warlock",
-    PRIEST = "Priest", PALADIN = "Paladin", DRUID = "Druid", SHAMAN = "Shaman",
-}
-T.CLASS_ORDER = { "WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE", "WARLOCK", "DRUID" }
+-- Classes, specs and their default priorities are StatLedger's (Bandolier needs it): a preset is a
+-- spec's default list, cut to the stats Bandolier knows and to T.SLOTS.
+local function Ledger() return StatLedger and StatLedger.GetDefaultPriority and StatLedger or nil end
 
 T.SLOTS = 5
 local WEIGHTS = { 10, 6, 4, 2, 1 } -- 1st stat counts most
-
----------------------------------------------------------------------------
--- Spec detection
----------------------------------------------------------------------------
-
--- Points spent in a talent tab. The return values of GetTalentTabInfo
--- differ between clients: (name, icon, points, ...) or (id, name, desc,
--- icon, points, ...).
-local function TabPoints(tab)
-    if not GetTalentTabInfo then return 0 end
-    local a, _, c, _, e = GetTalentTabInfo(tab)
-    if type(a) == "string" then return tonumber(c) or 0 end
-    return tonumber(e) or 0
-end
-
--- The talent tab with the most points, or the class's default before talents.
-function T:DetectedTab()
-    local _, class = UnitClass("player")
-    local specs = self.SPECS[class]
-    if not specs then return end
-    local best, bestPoints = specs[1], 0
-    for tab = 1, 3 do
-        local points = TabPoints(tab)
-        if points > bestPoints then best, bestPoints = tab, points end
-    end
-    return best
-end
 
 ---------------------------------------------------------------------------
 -- Presets and the current priority
@@ -131,46 +61,48 @@ end
 function T.PresetLabel(id)
     if id == "auto" then return "Automatic (your class and spec)" end
     local class, tab = id:match("^(%u+):(%d)$")
-    local specs = class and T.SPECS[class]
-    local spec = specs and specs[tonumber(tab) + 1]
+    local L = Ledger()
+    local spec = L and class and L:GetSpecName(class, tonumber(tab))
     if not spec then return id end
-    return T.CLASS_NAMES[class] .. ": " .. spec[1]
+    return L:GetClassName(class) .. ": " .. spec
 end
 
 -- Every preset id, Automatic first, then class by class.
 function T.PresetIds()
     local ids = { "auto" }
-    for _, class in ipairs(T.CLASS_ORDER) do
+    local L = Ledger()
+    for _, class in ipairs(L and L:GetClasses() or {}) do
         for tab = 1, 3 do ids[#ids + 1] = class .. ":" .. tab end
     end
     return ids
 end
 
--- The stats StatLedger (a separate, optional addon) has for your spec,
--- trimmed to the stats Bandolier knows and to T.SLOTS. nil without it.
-function T:SharedStats()
-    if not (StatLedger and StatLedger.GetPriority) then return end
-    local list = {}
-    for _, stat in ipairs(StatLedger:GetPriority()) do
-        if T.LABELS[stat] and #list < self.SLOTS then list[#list + 1] = stat end
+-- A StatLedger list trimmed to the stats Bandolier knows and to T.SLOTS.
+local function Trim(list)
+    local out = {}
+    for _, stat in ipairs(list or {}) do
+        if T.LABELS[stat] and #out < T.SLOTS then out[#out + 1] = stat end
     end
-    return list
+    return out
 end
 
--- The stats of a preset ("auto" resolves to the detected class and spec,
--- or to StatLedger when it is installed).
+-- The stats StatLedger has for your spec (your own order if you changed it there), trimmed.
+-- nil without it.
+function T:SharedStats()
+    if not (StatLedger and StatLedger.GetPriority) then return end
+    return Trim(StatLedger:GetPriority())
+end
+
+-- The stats of a preset: "auto" is StatLedger's list for your class and spec; "CLASS:tab" that
+-- spec's default list.
 function T:PresetStats(id)
     if id == "auto" then
-        local shared = self:SharedStats()
-        if shared then return shared end
-        local _, class = UnitClass("player")
-        local tab = self:DetectedTab()
-        if not tab then return { "STA", "STR", "AGI", "INT", "SPI" } end
-        id = class .. ":" .. tab
+        return self:SharedStats() or { "STA", "STR", "AGI", "INT", "SPI" }
     end
     local class, tab = id:match("^(%u+):(%d)$")
-    local spec = class and self.SPECS[class] and self.SPECS[class][tonumber(tab) + 1]
-    return spec and spec[2] or {}
+    local L = Ledger()
+    if not (L and class) then return {} end
+    return Trim(L:GetDefaultPriority(class, tonumber(tab)))
 end
 
 function T:Preset()
@@ -186,6 +118,8 @@ function T:SetPreset(id)
     ns.db.statPreset = id
     ns.db.statCustom = nil
     ns:RequestRefresh()
+    -- /bandolier stats reset too: Options > AddOns > Bandolier shows the new priority.
+    if ns.OptionChanged then ns:OptionChanged("db.statPreset") end
 end
 
 -- Changing one slot turns the current priority into your own custom one.
@@ -207,13 +141,7 @@ function T:Describe()
     for i, stat in ipairs(self:Priority()) do names[i] = T.LABELS[stat] or stat end
     local source = ns.db.statCustom and "custom" or T.PresetLabel(self:Preset())
     if self:Preset() == "auto" and not ns.db.statCustom then
-        local _, class = UnitClass("player")
-        local tab = self:DetectedTab()
-        if self:SharedStats() then
-            source = source .. " -> StatLedger"
-        elseif tab then
-            source = source .. " -> " .. T.PresetLabel(class .. ":" .. tab)
-        end
+        if self:SharedStats() then source = source .. " -> StatLedger" end
     end
     return table.concat(names, " > "), source
 end

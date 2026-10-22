@@ -5,13 +5,7 @@ local _, ns = ...
 local T = SimplePanel.Theme
 local Chars = ns.Characters
 
-local function Duration(secs)
-    if not secs then return "?" end
-    local d, h, m = math.floor(secs / 86400), math.floor(secs / 3600) % 24, math.floor(secs / 60) % 60
-    if d > 0 then return ("%dd %dh"):format(d, h) end
-    if h > 0 then return ("%dh %02dm"):format(h, m) end
-    return ("%dm"):format(m)
-end
+local function Duration(secs) return ns.Format.Duration(secs) end
 
 SimplePanel.RegisterPlugin({
     id = "Played",

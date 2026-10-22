@@ -33,7 +33,7 @@ local function Detect()
     end
     if UnitHasEffectivelyTankAura then
         local ok, tank = pcall(UnitHasEffectivelyTankAura, "player")
-        if ok and C.Readable(tank) and tank == true then return "tank" end
+        if ok and C.AllReadable(tank) and tank == true then return "tank" end
     end
     if PLAYER_CLASS == "WARRIOR" then
         return FormID() == DEFENSIVE_STANCE and "tank" or "dps"

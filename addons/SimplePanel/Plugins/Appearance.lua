@@ -5,29 +5,27 @@ local T = SimplePanel.Theme
 local W = ns.Widgets
 
 local function Opt() return ns.db.options end
-local function Pct(v) return ("%d%%"):format(v * 100 + 0.5) end
+local function Pct(v) return ns.Format.Pct(v) end
 
-local function Apply(p)
-    W.ApplyDesign()
-    W.RepaintPanels()
-    if p then p:Refresh() end
-end
+-- Through ns:SetOption, so Options > AddOns > SimplePanel shows the change; the options' apply there
+-- (Config.lua) puts the new design on (W.ApplyDesign, W.RepaintPanels) and refreshes this plugin.
+local function Setter(key) return function(v) ns:SetOption("db.options." .. key, v) end end
 
-local function AddEntries(p, m)
+local function AddEntries(_, m)
     local o = Opt()
     m:Header("Color scheme")
     for _, s in ipairs(W.SCHEMES) do
         m:Radio({ text = s.name, value = s.id, swatch = W.SchemeAccent(s),
-            get = function() return o.scheme end, set = function(v) o.scheme = v; Apply(p) end })
+            get = function() return o.scheme end, set = Setter("scheme") })
     end
     m:Checkbox({ text = "Accent in my class color", get = function() return o.classAccent end,
-        set = function(v) o.classAccent = v; Apply(p) end,
+        set = Setter("classAccent"),
         tooltip = "Uses your class color for highlights, titles and charts instead of the scheme's accent." })
     m:Divider()
     m:Slider({ text = "Window opacity", min = 0.5, max = 1, step = 0.05, format = Pct, get = function() return o.panelAlpha end,
-        set = function(v) o.panelAlpha = v; Apply(p) end })
+        set = Setter("panelAlpha") })
     m:Slider({ text = "Text size", min = 0.8, max = 1.3, step = 0.05, format = Pct, get = function() return o.textScale end,
-        set = function(v) o.textScale = v; Apply(p) end })
+        set = Setter("textScale") })
     m:Divider()
     m:Button({ text = "Reload UI", fn = function() ReloadUI() end,
         tooltip = "The bar and window backgrounds change at once; buttons and rows that are already built take new colors after a reload." })

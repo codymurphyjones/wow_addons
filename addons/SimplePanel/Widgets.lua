@@ -139,9 +139,8 @@ function W.ApplyDesign()
         T.hex.muted, T.hex.green, T.hex.yellow, T.hex.red = W.Hex(MUTED), W.Hex(T.green), W.Hex(T.yellow), W.Hex(T.red)
     end
     if o.classAccent then
-        local _, class = UnitClass("player")
-        local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
-        if c then ACCENT[1], ACCENT[2], ACCENT[3] = c.r, c.g, c.b end
+        local _, r, g, b, found = ns.Units.ClassColor(select(2, UnitClass("player")))
+        if found then ACCENT[1], ACCENT[2], ACCENT[3] = r, g, b end
     end
     T.hex.accent = W.Hex(ACCENT)
     ns.PREFIX = T.hex.accent .. "SimplePanel|r"
@@ -269,15 +268,10 @@ function W.MakeSlider(parent, width, minV, maxV, step, onChange)
     return s
 end
 
--- A section heading with a thin rule under it.
-function W.Section(p, text, x, y, width)
-    Label(p, text, "SimplePanelFontTitle", x, y)
-    local rule = p:CreateTexture(nil, "ARTWORK")
-    rule:SetColorTexture(T.border[1], T.border[2], T.border[3], 1); rule:SetHeight(1)
-    rule:SetPoint("TOPLEFT", x, y - 17)
-    if width then rule:SetWidth(width) else rule:SetPoint("TOPRIGHT", 0, y - 17) end
-    return rule
-end
+-- W.Section(p, text, x, y, width), a heading with a thin rule under it, is shared\Window.lua's:
+-- in SimplePanel's title font, the rule in the theme's border colour.
+W.style = W.style or {}
+W.style.sectionFont, W.style.sectionRule = "SimplePanelFontTitle", T.border
 
 -- Square icon cropped like Wally's tab icons. Accepts a file ID, a path or an atlas ("atlas:name").
 function W.SetIcon(tex, icon)

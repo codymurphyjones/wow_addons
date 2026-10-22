@@ -9,18 +9,11 @@ local COLOR = {
     learn = { 0.85, 0.75, 0.4 },
 }
 
-local function AddLines(tooltip)
-    if not ns.db or not ns.db.options.tooltip or tooltip.wallyDone then return end
-    local _, link = tooltip:GetItem()
-    if not link then return end
-    tooltip.wallyDone = true
+-- Returns false (try again on the next update) while the saved data isn't loaded or the line is off.
+local function AddLines(tooltip, link)
+    if not ns.db or not ns.db.options.tooltip then return false end
     -- The tooltip doesn't say which bag slot it shows, so read "Soulbound" off its own lines.
-    local bound = false
-    local prefix = tooltip:GetName()
-    for i = 2, math.min(6, tooltip:NumLines()) do
-        local fs = prefix and _G[prefix .. "TextLeft" .. i]
-        if fs and fs:GetText() == ITEM_SOULBOUND then bound = true; break end
-    end
+    local bound = ns.Tooltip.Soulbound(tooltip)
     local isJunk, reason, verdict = ns.JunkFilter:Evaluate(link, { bound = bound })
     if isJunk then
         local c = COLOR.junk
@@ -51,18 +44,4 @@ local function AddLines(tooltip)
     tooltip:Show()
 end
 
-local function Clear(tooltip) tooltip.wallyDone = nil end
-
-if TooltipDataProcessor and Enum and Enum.TooltipDataType then
-    TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip)
-        if tooltip == GameTooltip or tooltip == ItemRefTooltip then AddLines(tooltip) end
-    end)
-else
-    for _, tt in ipairs({ GameTooltip, ItemRefTooltip }) do
-        tt:HookScript("OnTooltipSetItem", AddLines)
-    end
-end
-for _, tt in ipairs({ GameTooltip, ItemRefTooltip }) do
-    tt:HookScript("OnHide", Clear)
-    if tt:HasScript("OnTooltipCleared") then tt:HookScript("OnTooltipCleared", Clear) end
-end
+ns.Tooltip.HookItem(AddLines)

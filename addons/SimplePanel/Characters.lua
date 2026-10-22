@@ -2,7 +2,8 @@ local _, ns = ...
 
 -- Every character on the account, kept up to date while you play: gold, level, XP, rested XP,
 -- where they are and when they were last seen. Gold and Alts read it; Mail adds each character's
--- inbox. Account-wide (ns.db.characters), keyed "Realm - Name", outside profiles.
+-- inbox. Account-wide (ns.db.characters), keyed ns.CharKey(), outside profiles. Each entry keeps
+-- its own name and realm; entries of alts not logged in since 0.1.5 are still keyed "Realm - Name".
 local Chars = {}
 ns.Characters = Chars
 
@@ -17,15 +18,23 @@ Chars.SCOPES = {
 local function DB() return ns.db.characters end
 
 function Chars:Me() return DB()[ns.CharKey()] end
-function Chars.Name(key) return key:match(" %- (.+)$") or key end
-function Chars.Realm(key) return key:match("^(.-) %- ") or "" end
+-- info defaults to the entry saved under key; an old "Realm - Name" key is read when it has none.
+-- Characters are keyed by their "Given Family"; entries saved before kept only the given name in
+-- info.name, so a key that starts with it wins.
+function Chars.Name(key, info)
+    info = info or DB()[key]
+    local name = info and info.name
+    if name and not name:find(" ", 1, true) and key:sub(1, #name + 1) == name .. " " then return key end
+    return name or key:match(" %- (.+)$") or key
+end
+function Chars.Realm(key, info)
+    info = info or DB()[key]
+    return (info and info.realm) or key:match("^(.-) %- ") or ""
+end
 
 -- The name in its class color.
 function Chars.ClassName(key, info)
-    local name = Chars.Name(key)
-    local c = info and info.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[info.class]
-    if c then return ("|cff%02x%02x%02x%s|r"):format(c.r * 255, c.g * 255, c.b * 255, name) end
-    return name
+    return ns.Units.Colored(Chars.Name(key, info), info and info.class, { plain = true })
 end
 
 -- Writes everything we can read about the character you're playing.
@@ -35,6 +44,8 @@ function Chars:Refresh()
     local info = DB()[key] or {}
     DB()[key] = info
     local _, class = UnitClass("player")
+    info.name = ns.Units.CharKey() or info.name
+    info.realm = ns.Units.RealmLabel()
     info.class, info.faction = class, UnitFactionGroup("player")
     info.copper = GetMoney()
     info.level = UnitLevel("player")
@@ -50,10 +61,10 @@ end
 
 -- { key, info } for the characters in a scope, unsorted.
 function Chars:All(scope)
-    local realm, faction, me = GetRealmName(), UnitFactionGroup("player"), ns.CharKey()
+    local realm, faction, me = ns.Units.RealmLabel(), UnitFactionGroup("player"), ns.CharKey()
     local out = {}
     for key, info in pairs(DB()) do
-        local same = Chars.Realm(key) == realm
+        local same = Chars.Realm(key, info) == realm
         local ok = scope == "all" or key == me
             or (scope == "realm" and same)
             or (scope == "faction" and same and info.faction == faction)
@@ -80,14 +91,8 @@ function Chars:Rested(key, info)
 end
 
 -- "now", "5m", "3h", "2d"
-function Chars.Ago(t)
-    if not t then return "?" end
-    local s = math.max(0, time() - t)
-    if s < 120 then return "now" end
-    if s < 3600 then return math.floor(s / 60) .. "m" end
-    if s < 86400 then return math.floor(s / 3600) .. "h" end
-    return math.floor(s / 86400) .. "d"
-end
+local AGO = { justNow = 120, suffix = "", missing = "?" }
+function Chars.Ago(t) return ns.Format.Ago(t, AGO) end
 
 ns:OnLoad(function()
     -- Older versions kept only gold, in ns.db.gold.

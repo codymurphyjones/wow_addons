@@ -4,12 +4,10 @@ ns.VERSION = "0.1.0"
 -- Waypoint's logo, shipped in the addon (Media\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\Waypoint\\Media\\Icon"
 
--- The logo as inline text markup, size x size pixels.
-function ns.IconMarkup(size)
-    return ("|T%s:%d:%d|t"):format(ns.ICON, size, size)
-end
-
 ns.PREFIX = ns.IconMarkup(14) .. " |cffffc94dWaypoint|r"
+
+-- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
+ns.SAVED = { db = "WaypointDB", char = "WaypointCharDB" }
 
 ns.DEFAULTS = {
     dockAlign = "CENTER", -- windows docked under the arrow (Field Guide): "LEFT", "CENTER" or "RIGHT"
@@ -65,22 +63,6 @@ ns.CHAR_DEFAULTS = {
     untracked = {},   -- [questID] = true: you untracked it yourself; no addon tracks it again while it's in your log
 }
 
-local function Merge(dst, src)
-    for k, v in pairs(src) do
-        if type(v) == "table" then
-            if type(dst[k]) ~= "table" then dst[k] = {} end
-            Merge(dst[k], v)
-        elseif dst[k] == nil then
-            dst[k] = v
-        end
-    end
-    return dst
-end
-
-function ns:Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage(self.PREFIX .. ": " .. tostring(msg))
-end
-
 -- The next number in the newest-wins order.
 -- The arrow's colors. A target picks one with color = "gold" | "green" | "purple": gold for
 -- waypoints you put down yourself (and anything that doesn't say), green for a leveling guide's
@@ -110,71 +92,35 @@ function ns:NextSeq()
     return self.char.seq
 end
 
--- Targets or the path changed: redraw once, next frame.
-local pending
-function ns:Changed()
-    if pending then return end
-    pending = true
-    C_Timer.After(0, function()
-        pending = false
-        if ns.Targets then ns.Targets:Tick() end
-        if ns.MapPins then ns.MapPins:Refresh() end
-        if ns.Arrow then ns.Arrow:Refresh() end
-        if ns.MinimapButton then ns.MinimapButton:Refresh() end
-        if ns.TownPins then ns.TownPins:Refresh() end
-        if ns.TransportPins then ns.TransportPins:Refresh() end
-    end)
-end
+-- Targets or the path changed: redraw (once, next frame: ns:Changed).
+ns:OnChanged(function()
+    if ns.Targets then ns.Targets:Tick() end
+    if ns.MapPins then ns.MapPins:Refresh() end
+    if ns.Arrow then ns.Arrow:Refresh() end
+    if ns.MinimapButton then ns.MinimapButton:Refresh() end
+    if ns.TownPins then ns.TownPins:Refresh() end
+    if ns.TransportPins then ns.TransportPins:Refresh() end
+end)
 
 -- The frame level Waypoint's world map layers count up from (+2000 the path's lines, +2050 the
 -- planned trip, town badges up to +2090, +2100 the path's pins): the canvas's, lifted over
 -- OpenMap's stitched art when it reaches them (it sits above the map's own layers, and anything
 -- under its top is hidden by it).
-function ns:MapBase(canvas)
-    local base = canvas:GetFrameLevel()
-    local top = OpenMapAPI and OpenMapAPI.ArtTopLevel and OpenMapAPI.ArtTopLevel()
-    if type(top) == "number" and top >= base + 2000 then base = top + 1 - 2000 end
-    return base
-end
-
-local frame = CreateFrame("Frame")
-local handlers = {}
-function ns:On(event, fn)
-    if not handlers[event] then
-        handlers[event] = {}
-        pcall(frame.RegisterEvent, frame, event)
-    end
-    table.insert(handlers[event], fn)
-end
-frame:SetScript("OnEvent", function(_, event, ...)
-    for _, fn in ipairs(handlers[event] or {}) do fn(...) end
-end)
-
-function ns:OnLoad(fn)
-    self.onLoad = self.onLoad or {}
-    table.insert(self.onLoad, fn)
-end
-
-ns:On("ADDON_LOADED", function(name)
-    if name ~= addonName then return end
-    WaypointDB = Merge(type(WaypointDB) == "table" and WaypointDB or {}, ns.DEFAULTS)
-    WaypointCharDB = Merge(type(WaypointCharDB) == "table" and WaypointCharDB or {}, ns.CHAR_DEFAULTS)
-    ns.db, ns.char = WaypointDB, WaypointCharDB
-    for _, fn in ipairs(ns.onLoad or {}) do fn() end
-end)
+-- (The shared WorldMap.lua's MapBase.)
+function ns:MapBase(canvas) return ns.WorldMap.MapBase(canvas) end
 
 ns:On("PLAYER_LOGIN", function()
     ns:Print("v" .. ns.VERSION .. " loaded. Ctrl+click the world map to add waypoints, |cffffffff/way help|r for more.")
 end)
 
+-- Slash toggles change the same options as Options > AddOns > Waypoint (ns:SetOption), so the page shows them.
 local function OnOff(key, label, arg)
     if arg == "on" or arg == "off" then
-        ns.db[key] = arg == "on"
+        ns:SetOption("db." .. key, arg == "on")
     else
-        ns.db[key] = not ns.db[key]
+        ns:ToggleOption("db." .. key)
     end
     ns:Print(label .. (ns.db[key] and " on." or " off."))
-    ns:Changed()
 end
 
 local function Help()
@@ -223,14 +169,14 @@ SlashCmdList.WAYPOINT = function(msg)
         if not (ns.Questie and ns.Questie:Available()) then
             ns:Print("Questie isn't loaded, so there are no quests to point at (everything else works without it).")
         end
-        if ns.Questie then ns.Questie:Select() end
     elseif cmd == "share" then
         OnOff("share", "Sharing with your group", arg)
     elseif cmd == "autofly" then
         OnOff("autoFly", "Taking the planned flight by itself", arg)
     elseif cmd == "transports" then
         OnOff("transports", "Boats, zeppelins, hearthstone and teleports", arg)
-        ns.db.useHearth, ns.db.useTeleports = ns.db.transports, ns.db.transports
+        ns:SetOption("db.useHearth", ns.db.transports)
+        ns:SetOption("db.useTeleports", ns.db.transports)
     elseif cmd == "blocked" or cmd == "block" then
         ns.Route:BlockAhead()
     elseif cmd == "unblock" then
@@ -248,15 +194,13 @@ SlashCmdList.WAYPOINT = function(msg)
     elseif cmd == "confirm" then
         OnOff("confirm", "Asking before adding a waypoint", arg)
     elseif cmd == "arrow" then
-        ns.db.arrowHidden = not ns.db.arrowHidden
+        ns:ToggleOption("db.arrowHidden")
         ns:Print(ns.db.arrowHidden and "Arrow hidden. /way arrow shows it again." or "Arrow shown.")
-        ns:Changed()
     elseif cmd == "lock" then
-        ns.db.locked = not ns.db.locked
+        ns:ToggleOption("db.locked")
         ns:Print(ns.db.locked and "Arrow locked." or "Arrow unlocked: drag it to move it.")
     elseif cmd == "minimap" then
-        ns.char.minimap.hide = not ns.char.minimap.hide
-        ns.MinimapButton:Refresh()
+        ns:ToggleOption("char.minimap.hide")
         ns:Print(ns.char.minimap.hide and "Minimap button hidden. /way minimap shows it again." or "Minimap button shown.")
     elseif cmd == "help" then
         Help()
@@ -265,8 +209,4 @@ SlashCmdList.WAYPOINT = function(msg)
     end
 end
 
-function Waypoint_OnCompartmentClick()
-    if not ns.db then return end
-    ns.db.arrowHidden = not ns.db.arrowHidden
-    ns:Changed()
-end
+ns:Compartment(function() ns:ToggleOption("db.arrowHidden") end)

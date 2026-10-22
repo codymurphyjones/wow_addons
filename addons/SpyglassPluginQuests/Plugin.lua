@@ -203,18 +203,15 @@ local function CheckArrival(event)
     Window:QuestProgress()
 end
 
-local events = CreateFrame("Frame")
-for _, event in ipairs({ "QUEST_TURNED_IN", "QUEST_ACCEPTED", "GOSSIP_SHOW", "QUEST_GREETING", "QUEST_DETAIL" }) do
-    pcall(events.RegisterEvent, events, event)
-end
-events:SetScript("OnEvent", function(_, event)
-    if event == "QUEST_TURNED_IN" or event == "QUEST_ACCEPTED" then
+for _, event in ipairs({ "QUEST_TURNED_IN", "QUEST_ACCEPTED" }) do
+    ns:On(event, function()
         -- The quest log updates a moment after.
         C_Timer.After(0.5, function() Window:QuestProgress() end)
-    else
-        CheckArrival(event)
-    end
-end)
+    end)
+end
+for _, event in ipairs({ "GOSSIP_SHOW", "QUEST_GREETING", "QUEST_DETAIL" }) do
+    ns:On(event, function() CheckArrival(event) end)
+end
 
 -- Find every gear reward, then every other known item (both spread over
 -- frames; see Quests.lua and Sources.lua), then register.

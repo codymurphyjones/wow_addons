@@ -83,10 +83,7 @@ local POISONS = 2842 -- Rogue: the Poisons skill; a poison shows only while you 
 
 local last = {}
 
-local function Count(item)
-    local fn = (C_Item and C_Item.GetItemCount) or GetItemCount
-    return fn and (fn(item) or 0) or 0
-end
+local function Count(item) return ns.Items.ItemCount(item) end
 
 local function Relevant(r)
     local spells = r[3]

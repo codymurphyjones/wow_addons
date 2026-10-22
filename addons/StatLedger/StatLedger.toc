@@ -2,13 +2,16 @@
 ## Title: StatLedger
 ## Notes: One place to set your stat priority for each class and spec. Other addons read it from here. /statledger
 ## Author: Dinoblankie + Claude
-## Version: 1.0.3
+## Version: 1.0.4
 ## SavedVariables: StatLedgerDB
 ## IconTexture: Interface\AddOns\StatLedger\Media\Icon
 ## Category: Equipment
 ## X-Curse-Project-ID: 1735014
 
-Fonts.lua
+..\shared\Fonts.lua
+..\shared\Core.lua
+..\shared\API.lua
+..\shared\Player.lua
 Data.lua
 Core.lua
 Convert.lua

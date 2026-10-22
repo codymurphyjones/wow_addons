@@ -170,9 +170,7 @@ function API:Budget(stat, amount) return Cv:Budget(stat, amount) end
 function API:IsPercent(stat, amount) return Cv:IsPercent(stat, amount) end
 
 -- Levelling changes the crit ratios: callbacks get "VALUES_CHANGED".
-local events = CreateFrame("Frame")
-events:RegisterEvent("PLAYER_LEVEL_UP")
-events:SetScript("OnEvent", function()
+ns:On("PLAYER_LEVEL_UP", function()
     Cv:Reset()
     ns.Fire("VALUES_CHANGED")
 end)

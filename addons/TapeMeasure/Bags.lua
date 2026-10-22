@@ -179,6 +179,7 @@ function Bags:Refresh()
         end
     end
     Visit(ContainerFrameCombinedBags)
+    Visit(_G.WallyBagFrame) -- Wally's bag window, when it's in use
     for i = 1, (NUM_CONTAINER_FRAMES or 13) do Visit(_G["ContainerFrame" .. i]) end
     self.visibleOverlays = 0
     for _, overlay in pairs(self.overlays) do

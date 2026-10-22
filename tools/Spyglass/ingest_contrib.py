@@ -18,24 +18,22 @@ and groups them:
     python tools/Spyglass/ingest_contrib.py --min 1 path/to/Spyglass.lua
 """
 import argparse
-import glob
 import json
 import os
 import sys
 
 from lupa import lua51
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_shared"))
+import savedvars  # noqa: E402
+
 ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "Spyglass")  # tools/Spyglass/ builds addons/Spyglass/
-WTF = os.environ.get("WOW_WTF") or r"Z:\Games\World of Warcraft\_classic_beta_\WTF"  # the game's saved variables (read only)
 OUT = os.path.join(ADDON, "Data", "contributed.json")
 
 
 def collected(path):
     """{ fact: reporters } from a saved-variables file."""
-    lua = lua51.LuaRuntime()
-    with open(path, encoding="utf-8", errors="replace") as f:
-        lua.execute(f.read())
-    db = lua.globals().SpyGlassDB
+    db = savedvars.load(path, "SpyGlassDB", lua=lua51.LuaRuntime(), errors="replace")
     out = {}
     if db is None:
         return out
@@ -58,7 +56,7 @@ def main(argv):
     ap.add_argument("paths", nargs="*")
     ap.add_argument("--min", type=int, default=2, help="different players needed (default 2)")
     args = ap.parse_args(argv)
-    paths = args.paths or glob.glob(os.path.join(WTF, "Account", "*", "SavedVariables", "Spyglass.lua"))
+    paths = args.paths or savedvars.files("Spyglass")
 
     facts = {}
     for path in paths:

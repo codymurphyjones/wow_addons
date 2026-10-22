@@ -6,9 +6,7 @@ local C = ns.Compat
 local UI = {}
 ns.UI = UI
 
-local frame
-local pages, tabs = {}, {}
-local activeTab = "junk"
+local win -- the window (shared\Window.lua), made under "Window" below
 local RULE_ICON = "Interface\\Icons\\INV_Misc_Note_01"
 
 -- Widgets live in Widgets.lua (shared with the auction house tab).
@@ -22,12 +20,7 @@ local Confirm, AddCursorItem, NewRow, LayoutRow, CreateRowList = W.Confirm, W.Ad
 -- Pages
 -- ---------------------------------------------------------------------------
 
-local function NewPage(name)
-    local p = CreateFrame("Frame", nil, frame)
-    p:SetPoint("TOPLEFT", 196, -76); p:SetPoint("BOTTOMRIGHT", -18, 18)
-    p:Hide(); pages[name] = p
-    return p
-end
+local function NewPage(name) return win:NewPage(name) end
 
 local SOURCES = { "all", "manual", "learned", "import" }
 local SOURCE_LABEL = { all = "All sources", manual = "Added by you", learned = "Learned", import = "Imported" }
@@ -468,73 +461,27 @@ local function SalesToReach(threshold)
     return n
 end
 
--- Builds the settings into any parent; it lives in the game's Options > AddOns > Wally panel.
-local function BuildSettings(p)
-    Label(p, "Wally", "WallyGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    local history = MakeButton(p, "History", 110, 26); history:SetPoint("TOPRIGHT", 0, 4)
-    history:SetScript("OnClick", function() UI:ShowSettingsView("history") end)
-    Hint(history, "Sale History", "Everything Wally has sold, grouped by login session.")
-    local sorting = MakeButton(p, "Bag Sorting", 110, 26); sorting:SetPoint("RIGHT", history, "LEFT", -8, 0)
-    sorting:SetScript("OnClick", function() UI:ShowSettingsView("sorting") end)
-    Hint(sorting, "Bag Sorting", "How the Sort buttons arrange your bags and bank.")
-    if ns:AuctionsEnabled() then
-        local auctions = MakeButton(p, "Auctions", 110, 26); auctions:SetPoint("RIGHT", sorting, "LEFT", -8, 0)
-        auctions:SetScript("OnClick", function() UI:ShowSettingsView("auctions") end)
-        Hint(auctions, "Auctions", "Learning from your auctions, undercut and default duration.")
-    end
-    p.checks = {}
-    for i, d in ipairs(OPTION_DEFS) do
-        local y = -34 - (i - 1) * 44
-        local b = MakeCheckbox(p, d[2]); b:SetPoint("TOPLEFT", -4, y)
-        b:SetScript("OnClick", function(self) ns.db.options[d[1]] = self:GetChecked() and true or false; ns:Changed() end)
-        Muted(Label(p, d[3], "WallyGameFontHighlightSmall", 27, y - 25, 270))
-        p.checks[d[1]] = b
-    end
-    local mini = MakeCheckbox(p, "Minimap button"); mini:SetPoint("TOPLEFT", -4, -34 - #OPTION_DEFS * 44)
-    mini:SetScript("OnClick", function(self)
-        ns.char.minimap.hide = not self:GetChecked()
-        if ns.MinimapButton then ns.MinimapButton:Refresh() end
-    end)
-    p.mini = mini
+-- Lists subpage: import / export, the junk manager, forgetting what Wally learned, and clearing
+-- the sale history (Options > AddOns > Wally > Lists).
+local function BuildListTools(p)
+    Label(p, "Lists", "WallyGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
 
-    local col = 310
-    Label(p, "Ask after this habit score", "WallyGameFontHighlight", col, -38)
-    local ok, slider = pcall(CreateFrame, "Slider", "WallyThresholdSlider", p, "OptionsSliderTemplate")
-    if not ok then
-        slider = CreateFrame("Slider", "WallyThresholdSliderPlain", p, "BackdropTemplate")
-        slider:SetOrientation("HORIZONTAL"); slider:SetHeight(16); SetBackdrop(slider)
-        slider:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
-    end
-    slider:SetPoint("TOPLEFT", col + 4, -66); slider:SetWidth(250)
-    slider:SetMinMaxValues(0.2, 0.95); slider:SetValueStep(0.05)
-    if slider.SetObeyStepOnDrag then slider:SetObeyStepOnDrag(true) end
-    local low, high = _G["WallyThresholdSliderLow"], _G["WallyThresholdSliderHigh"]
-    if low then low:SetText("20%") end
-    if high then high:SetText("95%") end
-    p.sliderText = Muted(Label(p, "", "WallyGameFontHighlightSmall", col, -96, 270))
-    slider:SetScript("OnValueChanged", function(_, value)
-        value = math.floor(value * 20 + 0.5) / 20
-        if ns.db.options.threshold ~= value then ns.db.options.threshold = value; ns:Changed() end
-        p.sliderText:SetText(("%d%%: about %d sales of a single item, or fewer for full stacks."):format(value * 100, SalesToReach(value)))
-    end)
-    p.slider = slider
-
-    Label(p, "Import / export lists", "WallyGameFontHighlight", col, -138)
-    Muted(Label(p, "One per line. J: junk, N: never sell, J*: / N*: rules.", "WallyGameFontHighlightSmall", col, -158, 270))
+    Label(p, "Import / export lists", "WallyGameFontHighlight", 0, -38)
+    Muted(Label(p, "One per line. J: junk, N: never sell, J*: / N*: rules.", "WallyGameFontHighlightSmall", 0, -58, 400))
     local box = CreateFrame("Frame", nil, p, "BackdropTemplate")
-    box:SetPoint("TOPLEFT", col, -178); box:SetSize(276, 150)
+    box:SetPoint("TOPLEFT", 0, -78); box:SetSize(400, 200)
     SetBackdrop(box); box:SetBackdropColor(PAL.field[1], PAL.field[2], PAL.field[3], 1)
     local scroll = CreateFrame("ScrollFrame", nil, box, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 6, -6); scroll:SetPoint("BOTTOMRIGHT", -26, 6)
     local edit = CreateFrame("EditBox", nil, scroll)
     edit:SetMultiLine(true); edit:SetAutoFocus(false); edit:SetFontObject("WallyGameFontHighlightSmall")
-    edit:SetWidth(240); edit:SetHeight(140)
+    edit:SetWidth(364); edit:SetHeight(190)
     edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     scroll:SetScrollChild(edit)
     box:EnableMouse(true); box:SetScript("OnMouseDown", function() edit:SetFocus() end)
     p.io = edit
 
-    local export = MakeButton(p, "Export", 86, 26); export:SetPoint("TOPLEFT", col, -336)
+    local export = MakeButton(p, "Export", 86, 26); export:SetPoint("TOPLEFT", 0, -286)
     export:SetScript("OnClick", function() edit:SetText(ns.Lists:Export()); edit:SetFocus(); edit:HighlightText() end)
     Hint(export, "Export", "Fills the box with your lists and rules. Press Ctrl+C to copy.")
     local import = MakeButton(p, "Import", 86, 26); import:SetPoint("LEFT", export, "RIGHT", 8, 0)
@@ -543,25 +490,20 @@ local function BuildSettings(p)
     local clearBox = MakeButton(p, "Clear", 86, 26); clearBox:SetPoint("LEFT", import, "RIGHT", 8, 0)
     clearBox:SetScript("OnClick", function() edit:SetText("") end)
 
-    local open = MakeButton(p, "Open junk manager", 140, 26); open:SetPoint("TOPLEFT", col, -380)
+    local open = MakeButton(p, "Open junk manager", 140, 26); open:SetPoint("TOPLEFT", 0, -330)
     open:SetScript("OnClick", function() UI:Show() end)
     Hint(open, "Junk manager", "Junk List, Never Sell, Learning, In Bags and History. Also /wally.")
     local forget = MakeButton(p, "Forget learning", 120, 26); forget:SetPoint("LEFT", open, "RIGHT", 8, 0)
     forget:SetScript("OnClick", function() Confirm("Forget all selling habits Wally has learned?\n(Your lists are kept.)", function() ns.Learning:ResetAll() end) end)
-
-    p.Refresh = function()
-        for key, b in pairs(p.checks) do b:SetChecked(ns.db.options[key]) end
-        p.mini:SetChecked(not ns.char.minimap.hide)
-        slider:SetValue(ns.db.options.threshold)
-        p.sliderText:SetText(("%d%%: about %d sales of a single item, or fewer for full stacks."):format(ns.db.options.threshold * 100, SalesToReach(ns.db.options.threshold)))
-    end
+    local history = MakeButton(p, "Clear sale history", 130, 26); history:SetPoint("LEFT", forget, "RIGHT", 8, 0)
+    history:SetScript("OnClick", function() Confirm("Delete Wally's entire sale history?", function() ns.Sessions:Clear() end) end)
+    Hint(history, "Clear sale history", "Deletes every session on the Sale History page. Your lists are kept.")
+    p.Refresh = function() end
 end
 
 -- Sale History: Wally's own sales, one entry per login session, inside the settings panel.
 local function BuildSaleHistory(p)
     Label(p, "Sale History", "WallyGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    local back = MakeButton(p, "Back to settings", 120, 26); back:SetPoint("TOPRIGHT", 0, 4)
-    back:SetScript("OnClick", function() UI:ShowSettingsView("settings") end)
     p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24, 560))
 
     Label(p, "Keep last", "WallyGameFontHighlightSmall", 0, -54)
@@ -651,6 +593,8 @@ local SORT_OPTIONS = {
     { "bagButton", "Sort button on bags and bank", "Adds a sort button to the bag and bank windows." },
     { "afterSell", "Sort after Wally sells junk", "Closes the gaps that selling leaves." },
     { "onMerchantClose", "Sort when you close a merchant", "Tidies up every time you leave a vendor." },
+    { "onBagsClose", "Sort when you close your bags", "Ctrl-right-click an item in your bags to anchor it in place." },
+    { "onMailClose", "Sort when you close the mailbox", "Tidies up after taking your mail." },
 }
 local PIN_TOP = -710
 
@@ -686,7 +630,8 @@ local function PinCursorItem()
     return true
 end
 
--- Auction settings: learning, undercut and default duration. Posting happens on the auction house tab.
+-- Auction settings. The checkboxes, duration and stale days are on the main list; this subpage
+-- (Options > AddOns > Wally > Auctions) edits the undercut amount, which can be any copper amount.
 local AUCTION_OPTION_DEFS = {
     { "learn", "Learn from my auctions", "Watch what you post by hand and cancel." },
     { "autoAccept", "Add learned items silently", "Skip the question and add straight to the Auction List." },
@@ -698,67 +643,35 @@ for i, h in ipairs(ns.Compat.AUCTION_HOURS) do DURATIONS[i] = h .. " hours" end
 
 local function BuildAuctionSettings(p)
     Label(p, "Auctions", "WallyGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    local back = MakeButton(p, "Back to settings", 120, 26); back:SetPoint("TOPRIGHT", 0, 4)
-    back:SetScript("OnClick", function() UI:ShowSettingsView("settings") end)
     p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24, 560))
 
-    p.checks = {}
-    for i, d in ipairs(AUCTION_OPTION_DEFS) do
-        local y = -64 - (i - 1) * 44
-        local b = MakeCheckbox(p, d[2]); b:SetPoint("TOPLEFT", -4, y)
-        b:SetScript("OnClick", function(self) ns.db.options.auction[d[1]] = self:GetChecked() and true or false; ns:Changed() end)
-        Muted(Label(p, d[3], "WallyGameFontHighlightSmall", 27, y - 25, 270))
-        p.checks[d[1]] = b
-    end
-
-    local col = 310
-    p.undercutOn = MakeCheckbox(p, "Undercut Auctionator's price"); p.undercutOn:SetPoint("TOPLEFT", col - 4, -60)
+    p.undercutOn = MakeCheckbox(p, "Undercut Auctionator's price"); p.undercutOn:SetPoint("TOPLEFT", -4, -60)
     p.undercutOn.label:SetFontObject("WallyGameFontHighlight")
     p.undercutOn:SetScript("OnClick", function(self) ns.Value:SetUndercutOn(self:GetChecked()) end)
-    Muted(Label(p, "Off: price match, 1 below Auctionator. Prices round down to whole silver, never under vendor price.", "WallyGameFontHighlightSmall", col, -84, 270))
-    p.undercut = MakeEditBox(p, 70, ""); p.undercut:SetPoint("TOPLEFT", col, -116)
+    Muted(Label(p, "Off: price match, 1 below Auctionator. Prices round down to whole silver, never under vendor price.", "WallyGameFontHighlightSmall", 0, -84, 400))
+    p.undercut = MakeEditBox(p, 70, ""); p.undercut:SetPoint("TOPLEFT", 0, -116)
     p.undercut:SetScript("OnEnterPressed", function(self)
         local n = tonumber(self:GetText())
         if n then ns.Value:SetUndercut(n, ns.db.options.auction.undercutMode) end
         self:ClearFocus()
     end)
+    Hint(p.undercut, "Undercut amount", "Percent (up to 90) or copper, by the button beside it. Press Enter to save.")
     p.mode = MakeButton(p, "", 90, 26); p.mode:SetPoint("LEFT", p.undercut, "RIGHT", 6, 0)
     p.mode:SetScript("OnClick", function()
         local o = ns.db.options.auction
         ns.Value:SetUndercut(o.undercut, o.undercutMode == "percent" and "copper" or "percent")
     end)
 
-    Label(p, "Default duration", "WallyGameFontHighlight", col, -160)
-    Muted(Label(p, "Until you post an item by hand; then Wally uses the duration you chose.", "WallyGameFontHighlightSmall", col, -178, 270))
-    p.duration = MakeButton(p, "", 100, 26); p.duration:SetPoint("TOPLEFT", col, -210)
-    p.duration:SetScript("OnClick", function()
-        local o = ns.db.options.auction
-        o.duration = (o.duration or 2) % 3 + 1
-        ns:Changed()
-    end)
-
-    Label(p, "Stale price after", "WallyGameFontHighlight", col, -254)
-    p.stale = MakeEditBox(p, 50, ""); p.stale:SetPoint("TOPLEFT", col, -276)
-    p.stale:SetScript("OnEnterPressed", function(self)
-        local n = tonumber(self:GetText())
-        if n then ns.db.options.auction.staleDays = math.max(0, math.floor(n)); ns:Changed() end
-        self:ClearFocus()
-    end)
-    Muted(Label(p, "days (shown in yellow)", "WallyGameFontHighlightSmall", col + 58, -283))
-
-    local manage = MakeButton(p, "Auction lists", 120, 26); manage:SetPoint("TOPLEFT", 0, -254)
+    local manage = MakeButton(p, "Auction lists", 120, 26); manage:SetPoint("TOPLEFT", 0, -160)
     manage:SetScript("OnClick", function() UI:Show("auction") end)
     Hint(manage, "Auction lists", "Auction List, Never Auction and what Wally learned. Also /wally auction.")
 
     p.Refresh = function()
         local o = ns.db.options.auction
-        for key, b in pairs(p.checks) do b:SetChecked(o[key]) end
         p.undercutOn:SetChecked(o.undercutOn)
         p.undercut:SetShown(o.undercutOn); p.mode:SetShown(o.undercutOn)
         if not p.undercut:HasFocus() then p.undercut:SetText(tostring(o.undercut or 0)) end
         p.mode.text:SetText(o.undercutMode == "copper" and "copper" or "percent")
-        p.duration.text:SetText(DURATIONS[o.duration] or DURATIONS[2])
-        if not p.stale:HasFocus() then p.stale:SetText(tostring(o.staleDays or 3)) end
         p.summary:SetText(("Wally learns what you post at the auction house and posts it for you from its own tab there, one click per item, at Auctionator's price minus %s."):format(ns.Value:DescribeUndercut()))
     end
 end
@@ -766,8 +679,6 @@ end
 local function BuildSortSettings(p)
     local S = ns.Sorter
     Label(p, "Bag Sorting", "WallyGameFontNormalLarge", 0, 0):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    local back = MakeButton(p, "Back to settings", 120, 26); back:SetPoint("TOPRIGHT", 0, 4)
-    back:SetScript("OnClick", function() UI:ShowSettingsView("settings") end)
     p.summary = Muted(Label(p, "", "WallyGameFontHighlightSmall", 0, -24))
     p.summary:SetPoint("RIGHT", 0, 0)
     local sortBags = MakeButton(p, "Sort bags now", 120, 26); sortBags:SetPoint("TOPLEFT", 0, -58)
@@ -975,61 +886,93 @@ local function BuildSortSettings(p)
     end
 end
 
-local settingsPanel, settingsCategory
-local settingsViews, settingsView = {}, "settings"
+-- ---------------------------------------------------------------------------
+-- Options > AddOns > Wally, built with the shared OptionsPage.lua (addons/shared): the standard
+-- list, plus subpages for what a list can't hold (Bag Sorting, Lists, Sale History, Auctions).
+-- The window's Settings tab, the auction house tab and /wally change the same options
+-- (ns:SetOption), so every UI shows the same value.
+-- ---------------------------------------------------------------------------
 
--- Views are built on first use, whichever path (panel shown, button, slash command) gets there first.
-local function EnsureViewsBuilt()
-    for _, v in pairs(settingsViews) do
-        if v.build then
-            local build = v.build
-            v.build = nil
+local SUBPAGES = { history = "Sale History", sorting = "Bag Sorting", auctions = "Auctions", lists = "Lists" }
+local views = {} -- subpage name -> its view (the existing builders' frames)
+
+-- A subpage that hosts one of the builders above: build(view) once, view.Refresh() each time.
+local function Hosted(name, build)
+    return {
+        name = name,
+        build = function(f)
+            local v = CreateFrame("Frame", nil, f)
+            v:SetPoint("TOPLEFT", 16, -16); v:SetPoint("BOTTOMRIGHT", -16, 16)
+            views[name] = v
             build(v)
+        end,
+        refresh = function() local v = views[name]; if v and v.Refresh then v.Refresh() end end,
+    }
+end
+
+UI.page = ns.NewOptionsPage({ name = "Wally", icon = true, build = function(p)
+    p:Header("Wally")
+    for _, d in ipairs(OPTION_DEFS) do
+        p:Check({ path = "db.options." .. d[1], label = d[2], tooltip = d[3] })
+        if d[1] == "autoRepair" then
+            p:Check({ path = "db.options.guildRepair", label = "Repair with guild funds",
+                tooltip = "When your guild lets you, repairs are paid from the guild bank first." })
         end
     end
-end
+    p:Check({ path = "db.options.bags.window", label = "Wally's bag window",
+        tooltip = "Your backpack, bags and reagent bag in one window in Wally's style, in place of the game's bag windows. Bank bags stay the game's.",
+        apply = function() ns.BagWindow:Apply() end })
+    p:Slider({ path = "db.options.bags.columns", label = "Bag window columns", min = 8, max = 20, step = 1,
+        format = function(v) return ("%d slots wide"):format(v) end,
+        apply = function() ns.BagWindow:Relayout() end })
+    p:Check({ path = "char.minimap.hide", invert = true, label = "Minimap button", tooltip = "Wally's minimap button (/wally minimap).",
+        apply = function() if ns.MinimapButton then ns.MinimapButton:Refresh() end end })
+    p:Slider({ path = "db.options.threshold", label = "Ask after this habit score", min = 0.2, max = 0.95, step = 0.05, scale = 100,
+        set = function(v) ns:SetOption("db.options.threshold", math.floor(v * 20 + 0.5) / 20) end,
+        format = function(v) return ("%d%%: about %d sales"):format(v, SalesToReach(v / 100)) end,
+        tooltip = "Wally asks to add an item to the Junk List once your habit of selling it reaches this score: about that many sales of a single item, or fewer for full stacks." })
+    p:Slider({ path = "db.options.keepSessions", label = "Sale history: keep last", min = ns.Sessions.KEEP_MIN, max = ns.Sessions.KEEP_MAX,
+        step = ns.Sessions.KEEP_STEP, format = function(v) return ("%d sessions"):format(v) end,
+        apply = function() ns.Sessions:Trim() end,
+        tooltip = "Login sessions kept on the Sale History page. The oldest sessions are deleted right away." })
+    p:Button({ label = "Sale History", text = "Open", fn = function() UI.page:Open(SUBPAGES.history) end,
+        tooltip = "Everything Wally has sold, grouped by login session (/wally history)." })
 
-function UI:ShowSettingsView(view)
-    settingsView = view or "settings"
-    EnsureViewsBuilt()
-    for name, v in pairs(settingsViews) do v:SetShown(name == settingsView) end
-    local v = settingsViews[settingsView]
-    if v and v.Refresh and v:IsVisible() then v.Refresh() end
-end
-
-local function CreateSettingsPanel()
-    settingsPanel = CreateFrame("Frame", "WallySettingsPanel")
-    settingsPanel.name = "Wally"
-    for name, build in pairs({ settings = BuildSettings, history = BuildSaleHistory, sorting = BuildSortSettings, auctions = BuildAuctionSettings }) do
-        local v = CreateFrame("Frame", nil, settingsPanel)
-        v:SetPoint("TOPLEFT", 16, -16); v:SetPoint("BOTTOMRIGHT", -16, 16)
-        v.build = build; v:Hide()
-        settingsViews[name] = v
+    if ns:AuctionsEnabled() then
+        p:Header("Auctions")
+        for _, d in ipairs(AUCTION_OPTION_DEFS) do
+            p:Check({ path = "db.options.auction." .. d[1], label = d[2], tooltip = d[3] })
+        end
+        p:Check({ path = "db.options.auction.undercutOn", label = "Undercut Auctionator's price",
+            tooltip = "Off: price match, 1 below Auctionator. Prices round down to whole silver, never under vendor price. "
+                .. "Set the amount on the Auctions page under this one, or on Wally's auction house tab." })
+        p:Dropdown({ path = "db.options.auction.undercutMode", label = "Undercut by",
+            choices = { { "percent", "Percent" }, { "copper", "Copper" } },
+            tooltip = "Undercut Auctionator's price by a percentage, or by a fixed amount of copper.",
+            apply = function(mode)
+                local o = ns.db.options.auction
+                if mode == "percent" and (tonumber(o.undercut) or 0) > 90 then o.undercut = 90 end
+            end })
+        p:Button({ label = "Undercut amount", text = "Edit", fn = function() UI.page:Open(SUBPAGES.auctions) end,
+            tooltip = "The amount to undercut by, in percent or copper (/wally auction undercut <number>[%])." })
+        p:Dropdown({ path = "db.options.auction.duration", label = "Default duration",
+            choices = { { 1, DURATIONS[1] }, { 2, DURATIONS[2] }, { 3, DURATIONS[3] } },
+            tooltip = "Until you post an item by hand; then Wally uses the duration you chose." })
+        p:Slider({ path = "db.options.auction.staleDays", label = "Stale price after", min = 0, max = 30, step = 1,
+            format = function(v) return ("%d days"):format(v) end,
+            tooltip = "Auctionator prices older than this many days are shown in yellow." })
     end
-    -- A new parentless frame counts as shown, so OnShow would never fire. Start hidden.
-    settingsPanel:Hide()
-    settingsPanel:SetScript("OnShow", function() UI:ShowSettingsView(settingsView) end)
-    -- Opening the panel from the AddOns list always starts on the settings themselves.
-    settingsPanel:SetScript("OnHide", function() settingsView = "settings" end)
-    if Settings and Settings.RegisterCanvasLayoutCategory then
-        settingsCategory = Settings.RegisterCanvasLayoutCategory(settingsPanel, "Wally")
-        Settings.RegisterAddOnCategory(settingsCategory)
-    elseif InterfaceOptions_AddCategory then
-        InterfaceOptions_AddCategory(settingsPanel)
-    end
-end
-ns:OnLoad(CreateSettingsPanel)
 
+    p:Subpage(Hosted(SUBPAGES.sorting, BuildSortSettings))
+    p:Subpage(Hosted(SUBPAGES.lists, BuildListTools))
+    p:Subpage(Hosted(SUBPAGES.history, BuildSaleHistory))
+    if ns:AuctionsEnabled() then p:Subpage(Hosted(SUBPAGES.auctions, BuildAuctionSettings)) end
+end })
+
+-- Opens Options > AddOns > Wally, or one of its subpages: "history", "sorting", "auctions", "lists".
 function UI:OpenSettings(view)
-    if frame then frame:Hide() end
-    settingsView = view or "settings"
-    if settingsPanel and settingsPanel:IsVisible() then return self:ShowSettingsView(settingsView) end
-    if Settings and Settings.OpenToCategory and settingsCategory then
-        Settings.OpenToCategory(settingsCategory:GetID())
-    elseif InterfaceOptionsFrame_OpenToCategory then
-        -- Called twice: the old options frame ignores the first call when it isn't open yet.
-        InterfaceOptionsFrame_OpenToCategory(settingsPanel); InterfaceOptionsFrame_OpenToCategory(settingsPanel)
-    end
+    win:Hide()
+    return self.page:Open(SUBPAGES[view or ""])
 end
 
 -- ---------------------------------------------------------------------------
@@ -1042,141 +985,70 @@ local TABS = {
     { "learning", "Learning", "INV_Misc_Book_09" },
     { "bags", "In Bags", "INV_Misc_Bag_08" },
     { "history", "History", "INV_Misc_PocketWatch_01" },
-    { "auction", "Auctions", "INV_Misc_Coin_01", auction = true },
-    { "settings", "Settings", "INV_Misc_Gear_01" },
+    { "auction", "Auctions", "INV_Misc_Coin_01", when = function() return ns:AuctionsEnabled() end },
+    { "settings", "Settings", "INV_Misc_Gear_01", onClick = function() UI:OpenSettings() end,
+        hint = { "Settings", "Opens Options > AddOns > Wally." } },
 }
 
--- Tabs added by plugins (API.lua): { key, label, icon, build = builder(page) }, shown before Settings.
-local pluginTabs = {}
-function UI:AddPluginTab(key, label, icon, builder)
-    if frame then return false end -- the window is already built; the tab shows after /reload
-    pluginTabs[#pluginTabs + 1] = { key, label, icon, build = builder }
-    return true
-end
-
-local function ShowTab(name)
-    activeTab = name
-    for key, p in pairs(pages) do p:SetShown(key == name) end
-    for key, b in pairs(tabs) do
-        b.selected:SetShown(key == name)
-        b:SetBackdropColor(key == name and 0.09 or 0.075, key == name and 0.15 or 0.105, key == name and 0.17 or 0.13, 1)
-    end
-end
-
-local function CreateMainFrame()
-    if frame then return end
-    frame = CreateFrame("Frame", "WallyWindow", UIParent, "BackdropTemplate")
-    frame:SetSize(800, 560); frame:SetFrameStrata("DIALOG"); frame:SetToplevel(true)
-    frame:SetClampedToScreen(true); frame:SetMovable(true); frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton"); SetBackdrop(frame, 0.985)
-    local w = ns.char.window
-    frame:SetPoint(w.point or "CENTER", UIParent, w.point or "CENTER", w.x or 0, w.y or 0)
-    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local point, _, _, x, y = self:GetPoint()
-        ns.char.window = { point = point, x = x, y = y }
-    end)
-    frame:SetScript("OnShow", function() UI:Refresh() end)
-    tinsert(UISpecialFrames, "WallyWindow")
-
-    local logo = frame:CreateTexture(nil, "ARTWORK"); logo:SetSize(38, 38)
-    logo:SetPoint("TOPLEFT", 20, -17); logo:SetTexture(ns.ICON)
-    Label(frame, "Wally", "WallyGameFontNormalLarge", 70, -20):SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    Muted(Label(frame, "Learns your junk so you don't have to", "WallyGameFontHighlightSmall", 70, -42))
-    local close = MakeButton(frame, "X", 28, 26); close:SetPoint("TOPRIGHT", -18, -18)
-    close:SetScript("OnClick", function() frame:Hide() end)
-
-    local side = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-    side:SetPoint("TOPLEFT", 14, -74); side:SetPoint("BOTTOMLEFT", 14, 14); side:SetWidth(165)
-    SetBackdrop(side); side:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 1)
-    local shown = {}
-    for _, d in ipairs(TABS) do
-        if d[1] == "settings" then
-            for _, t in ipairs(pluginTabs) do shown[#shown + 1] = t end
-        end
-        if not d.auction or ns:AuctionsEnabled() then shown[#shown + 1] = d end
-    end
-    for i, d in ipairs(shown) do
-        local b = MakeButton(side, d[2], 147, 40); b:SetPoint("TOPLEFT", 9, -12 - (i - 1) * 46)
-        b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 40, 0)
-        local icon = b:CreateTexture(nil, "ARTWORK"); icon:SetSize(23, 23); icon:SetPoint("LEFT", 9, 0)
-        -- Plugin tabs may bring their own texture path instead of an icon name.
-        if d[3]:find("[\\/]") then
-            icon:SetTexture(d[3])
-        else
-            icon:SetTexture("Interface\\Icons\\" .. d[3]); icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        end
-        b.selected = b:CreateTexture(nil, "OVERLAY"); b.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
-        b.selected:SetPoint("TOPLEFT"); b.selected:SetPoint("BOTTOMLEFT"); b.selected:SetWidth(3)
-        b:SetScript("OnLeave", function(self) if activeTab ~= d[1] then self:SetBackdropColor(PAL.button[1], PAL.button[2], PAL.button[3], 1) end end)
-        if d[1] == "settings" then
-            b:SetScript("OnClick", function() UI:OpenSettings() end)
-            Hint(b, "Settings", "Opens Options > AddOns > Wally.")
-        else
-            b:SetScript("OnClick", function() ShowTab(d[1]); UI:Refresh() end)
-        end
-        tabs[d[1]] = b
-    end
+win = ns.NewWindow({
+    name = "WallyWindow", title = "Wally", subtitle = "Learns your junk so you don't have to",
+    tabs = TABS, active = "junk", pluginsBefore = "settings",
+    refresh = function() UI:Refresh() end,
     -- With plugin tabs there's no room left for the tips.
-    if #pluginTabs == 0 then
-        Muted(Label(side, "Drag items onto a list\nto add them.\n\nShift-click links into\nthe add box.\n\nAt a merchant, drop items\non the Wally button.", "WallyGameFontHighlightSmall", 12, -14 - #shown * 46, 145))
-    end
-    Label(side, "v" .. ns.VERSION, "WallyGameFontHighlightSmall", 12, -450, 145):SetTextColor(0.38, 0.50, 0.57)
+    sideNote = function(w)
+        if #w.plugins == 0 then
+            return "Drag items onto a list\nto add them.\n\nShift-click links into\nthe add box.\n\nAt a merchant, drop items\non the Wally button."
+        end
+    end,
+    build = function()
+        CreateListPage("junk", "inclusions")
+        CreateListPage("never", "exclusions")
+        CreateLearningPage(); CreateBagsPage(); CreateHistoryPage()
+        if ns:AuctionsEnabled() then CreateAuctionPage() end
+    end,
+})
+UI.window = win
 
-    CreateListPage("junk", "inclusions")
-    CreateListPage("never", "exclusions")
-    CreateLearningPage(); CreateBagsPage(); CreateHistoryPage()
-    if ns:AuctionsEnabled() then CreateAuctionPage() end
-    for _, t in ipairs(pluginTabs) do
-        local ok, err = pcall(t.build, NewPage(t[1]))
-        if not ok then ns:Print("A plugin's tab failed to build: " .. tostring(err), true) end
-    end
-    ShowTab(activeTab); frame:Hide()
+-- Tabs added by plugins (API.lua): builder(page), shown before Settings. Texture paths work as icons.
+function UI:AddPluginTab(key, label, icon, builder)
+    return win:AddTab({ key, label, icon, build = builder }) -- false once the window is built: shows after /reload
 end
 
-function UI:RefreshPage(name)
-    local p = pages[name]
-    if p and p.Refresh and frame and frame:IsShown() then p.Refresh() end
-end
+function UI:RefreshPage(name) win:RefreshPage(name) end
 
 function UI:Refresh()
     if not ns.db then return end
-    local v = settingsViews[settingsView]
-    if v and v.Refresh and v:IsVisible() then v.Refresh() end
-    if not frame or not frame:IsShown() then return end
-    self:RefreshPage(activeTab)
+    if self.page then self.page:Refresh() end
+    win:Refresh()
 end
 
 function UI:Toggle()
     if not ns.db then return end
-    CreateMainFrame()
-    frame:SetShown(not frame:IsShown())
+    win:Toggle()
 end
 
 function UI:Show(tab)
     if not ns.db then return end
-    CreateMainFrame()
-    if tab and pages[tab] then ShowTab(tab) end
-    frame:Show(); self:Refresh()
+    win:Build()
+    win:Show(tab and win.pages[tab] and tab or nil)
 end
 
-function UI:ActiveTab() return frame and frame:IsShown() and activeTab or nil end
+function UI:ActiveTab() return win:IsShown() and win.active or nil end
 
 -- Shift-clicking an item while an add box has focus inserts its link there.
 local function InsertLink(link)
     if not link then return end
-    local pinBox = settingsViews.sorting and settingsViews.sorting.pinBox
+    local pinBox = views[SUBPAGES.sorting] and views[SUBPAGES.sorting].pinBox
     if pinBox and pinBox:HasFocus() then pinBox:SetText(link); return true end
-    if not frame or not frame:IsShown() then return end
+    if not win:IsShown() then return end
     for _, name in ipairs({ "junk", "never", "auction" }) do
-        local box = pages[name] and pages[name].addBox
+        local box = win.pages[name] and win.pages[name].addBox
         if box and box:HasFocus() then box:SetText(link); return true end
     end
 end
 if ChatEdit_InsertLink then hooksecurefunc("ChatEdit_InsertLink", InsertLink) end
 
-ns:On("BAG_UPDATE_DELAYED", function() if activeTab == "bags" or activeTab == "learning" then UI:Refresh() end end)
+ns:On("BAG_UPDATE_DELAYED", function() if win.active == "bags" or win.active == "learning" then UI:Refresh() end end)
 ns:On("MERCHANT_SHOW", function() UI:Refresh() end)
 ns:On("MERCHANT_CLOSED", function() UI:Refresh() end)
 ns:On("BANKFRAME_OPENED", function() UI:Refresh() end)

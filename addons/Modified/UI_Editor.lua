@@ -456,9 +456,8 @@ function E:Create(parent)
         .. "Dragging a spell from the spellbook also keeps its rank while this is on. "
         .. "Rows without a fixed rank always cast your highest rank.",
         function(checked)
-            ns.db.showAllRanks = checked
-            ns.SpellPicker:Hide()
-            if checked then ns.SpellPicker:PrepareRanks() end
+            -- The same option as Options > AddOns > Modified; its apply resets the spell picker.
+            ns:SetOption("db.showAllRanks", checked)
         end)
     c.showRanks:SetPoint("BOTTOMLEFT", -4, 26)
 

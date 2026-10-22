@@ -27,10 +27,8 @@ local function IsIndirect(reason)
     return false
 end
 
-local function Clock(secs)
-    if not secs then return "?:??" end
-    return ("%d:%02d"):format(secs / 60, secs % 60)
-end
+local CLOCK = { hours = false, missing = "?:??" }
+local function Clock(secs) return ns.Format.Clock(secs, CLOCK) end
 
 -- ---------------------------------------------------------------------------
 -- What we know so far
@@ -244,14 +242,29 @@ end
 local function RefreshTabs()
     local keys = { { "overview", "What happened" } }
     for _, m in ipairs(Members()) do keys[#keys + 1] = { m[1], m[1], m[2] } end
+    -- Each tab as wide as its label. Full names ("Given Family") can make the row wider than the
+    -- window: then the member tabs share what "What happened" leaves, and a name that doesn't fit
+    -- is cut short (the whole name is on the member's page).
+    local widths, total = {}, 0
+    for i, k in ipairs(keys) do
+        local b = Tab(i)
+        local dead = k[1] == "overview" or DeathOf(k[1]) ~= nil
+        b.text:SetWidth(0); b.text:SetWordWrap(false)
+        b.text:SetText(k[1] == "overview" and k[2] or ((dead and (SKULL .. " ") or "") .. C.Colored(k[2], k[3])))
+        local w = b.text.GetUnboundedStringWidth and b.text:GetUnboundedStringWidth() or b.text:GetStringWidth()
+        widths[i] = math.max(70, math.ceil(w) + 18)
+        total = total + widths[i]
+    end
+    local room = WIDTH - 24 - 4 * (#keys - 1) -- 12px in from each side, 4px between tabs
+    local cap = (total > room and #keys > 1) and math.max(40, math.floor((room - widths[1]) / (#keys - 1))) or nil
     local x = 12
     for i, k in ipairs(keys) do
         local b = Tab(i)
         b.key = k[1]
         local dead = k[1] == "overview" or DeathOf(k[1]) ~= nil
-        local label = k[1] == "overview" and k[2] or ((dead and (SKULL .. " ") or "") .. C.Colored(k[2], k[3]))
-        b.text:SetText(label)
-        b:SetWidth(math.max(70, b.text:GetStringWidth() + 18))
+        local width = (cap and i > 1) and math.min(widths[i], cap) or widths[i]
+        b:SetWidth(width)
+        if width < widths[i] then b.text:SetWidth(width - 10) end
         b:ClearAllPoints(); b:SetPoint("TOPLEFT", x, -36)
         x = x + b:GetWidth() + 4
         b:SetEnabled(dead)
@@ -262,11 +275,20 @@ local function RefreshTabs()
     for i = #keys + 1, #frame.tabs do frame.tabs[i]:Hide() end
 end
 
+-- The hit list starts under the member's text (at -130 or lower), however many lines the blame
+-- and the healing take.
+local function PlaceList(page)
+    local top = math.min(-130, -math.ceil(page.text:GetStringHeight() or 0) - 12)
+    page.list.scroll:SetPoint("TOPLEFT", 0, top)
+    page.list.empty:SetPoint("TOPLEFT", 0, top - 60)
+end
+
 local function RefreshMember(name)
     local d = DeathOf(name)
     local page = frame.page
     if not d then
         page.text:SetText(name .. " is still alive.")
+        PlaceList(page)
         return page.list:Set({}, "")
     end
     local L = {}
@@ -298,6 +320,7 @@ local function RefreshMember(name)
     end
     if d.synced then L[#L + 1] = "|cffaaaaaaHits sent by their own Group History.|r" end
     page.text:SetText(table.concat(L, "\n"))
+    PlaceList(page)
     local items = {}
     for i = #(d.hits or {}), 1, -1 do
         local h = d.hits[i]
@@ -354,3 +377,8 @@ function P:Reopen()
     self:Refresh()
     return true
 end
+
+function P:IsShown() return frame and frame:IsShown() or false end
+
+-- For other addons (Mr. Miyagi holds its coach window while this is up).
+GroupHistoryAPI.DeathPopupShown = function() return P:IsShown() end

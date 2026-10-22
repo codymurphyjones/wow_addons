@@ -35,7 +35,8 @@ local function ItemName(id)
     return W.QualityName(name, quality)
 end
 
--- A number box with a label in front and a unit after; saves to options[key] on Enter or focus loss.
+-- A number box with a label in front and a unit after; saves to options[key] on Enter or focus loss,
+-- through ns:SetOption (Options > AddOns > Wealth Planner shows it; its apply re-records the target).
 local function Setting(parent, y, title, key, unit, hint, min, max)
     Label(parent, title, "WealthPlannerGameFontHighlightSmall", 0, y, 130)
     local box = W.MakeNumberBox(parent, 50)
@@ -44,9 +45,7 @@ local function Setting(parent, y, title, key, unit, hint, min, max)
     local function Save(self)
         local v = self:GetValue()
         if v then
-            ns.db.options[key] = math.max(min, math.min(max, math.floor(v + 0.5)))
-            ns.Invest:Record()
-            ns:Changed()
+            ns:SetOption("db.options." .. key, math.max(min, math.min(max, math.floor(v + 0.5))))
         end
         self:SetValue(ns.db.options[key])
     end

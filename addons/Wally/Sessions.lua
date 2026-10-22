@@ -9,11 +9,19 @@ Sessions.KEEP_MIN, Sessions.KEEP_MAX, Sessions.KEEP_STEP = 5, 100, 5
 
 local current -- this login's session table, created on the first sale
 
-local function CharKey()
-    local name = UnitName("player") or "?"
-    local realm = GetNormalizedRealmName and GetNormalizedRealmName() or GetRealmName() or ""
-    return realm ~= "" and (name .. "-" .. realm) or name
-end
+local function CharKey() return ns.Units.Me() end
+
+-- Sessions saved before the shared character key name this character the old way ("Name-Realm",
+-- on WoW Forever "Given-ClassicBetaPvP"): rename them to the current key.
+ns:On("PLAYER_LOGIN", function()
+    local key = ns.Units.CharKey()
+    if not (key and ns.db and ns.db.sessions) then return end
+    local old = {}
+    for _, k in ipairs(ns.Units.OldCharKeys()) do old[k] = true end
+    for _, s in ipairs(ns.db.sessions) do
+        if s.char and old[s.char] then s.char = key end
+    end
+end)
 
 function Sessions:Trim()
     local keep = ns.db.options.keepSessions
@@ -58,9 +66,9 @@ end
 
 function Sessions:SetKeep(n)
     n = math.max(self.KEEP_MIN, math.min(self.KEEP_MAX, n))
-    ns.db.options.keepSessions = n
+    -- Through ns:SetOption, so Options > AddOns > Wally shows it; its apply trims the old sessions too.
+    ns:SetOption("db.options.keepSessions", n)
     self:Trim()
-    ns:Changed()
 end
 
 -- Totals across every kept session.

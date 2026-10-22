@@ -1,4 +1,4 @@
-## Interface: 16001, 11509, 20506, 50504, 120100
+## Interface: 16001
 ## Title: Waypoint
 ## Notes: A navigation arrow. Follows your Questie quests, takes targets from other addons, and lets your group build shared waypoint paths on the world map (Ctrl+click). /way
 ## Author: Dinoblankie + Claude
@@ -10,7 +10,15 @@
 ## Category: Map & Minimap
 ## AddonCompartmentFunc: Waypoint_OnCompartmentClick
 
-Fonts.lua
+..\shared\Fonts.lua
+..\shared\Core.lua
+..\shared\API.lua
+..\shared\Units.lua
+..\shared\Format.lua
+..\shared\Items.lua
+..\shared\WorldMap.lua
+..\shared\GroupComm.lua
+..\shared\Questie.lua
 Compat.lua
 Core.lua
 Nav.lua
@@ -27,6 +35,7 @@ Questie.lua
 Arrow.lua
 MapPins.lua
 MinimapPin.lua
+..\shared\MinimapButton.lua
 Minimap.lua
 Data\Places.lua
 Navigate.lua
@@ -35,4 +44,5 @@ Towns.lua
 TransportPins.lua
 API.lua
 WayLine.lua
+..\shared\OptionsPage.lua
 Settings.lua

@@ -2,14 +2,14 @@ local _, ns = ...
 local C, M = ns.Compat, ns.Media
 
 -- A quest marker on mobs you still need for a quest, read from the unit tooltip (unfinished
--- "3/8" or "40%" objective lines, which Retail shows and quest addons add on Classic).
+-- "3/8" or "40%" objective lines, which the game or a quest addon adds).
 local Quest = { name = "Quest" }
 local cache = {} -- guid -> true/false
 
 local OBJECTIVE = Enum and Enum.TooltipDataLineType and Enum.TooltipDataLineType.QuestObjective
 
 local function Unfinished(text)
-    if type(text) ~= "string" or not C.Readable(text) then return false end
+    if type(text) ~= "string" or not C.AllReadable(text) then return false end
     local cur, max = text:match("(%d+)%s*/%s*(%d+)")
     if cur then return tonumber(cur) < tonumber(max) end
     local pct = text:match("(%d+)%%")

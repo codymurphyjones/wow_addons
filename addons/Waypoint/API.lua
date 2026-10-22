@@ -23,8 +23,9 @@ local _, ns = ...
 -- the group's waypoint path) is the one the arrow follows; with none, it follows Questie quests.
 -- Targets are saved without their functions: after a reload, Get still returns yours (key and all),
 -- so call Set again to put onClick and onArrive back.
-local API = { API_VERSION = 1 }
-Waypoint = API
+-- Version 2: event names are upper case, and the shared registry (API.lua) runs the callbacks.
+local API = ns.NewAPI("Waypoint", 2)
+API.API_VERSION = API.VERSION -- the field's older name
 
 function API:Set(owner, wp)
     return ns.Targets:SetEntry(owner, wp)
@@ -130,13 +131,7 @@ function API:GetCurrent()
     return ns.Targets.current, ns.Targets.point
 end
 
--- fn(event, entry): "changed" (the arrow follows something else; entry may be nil),
--- "arrived" (you reached a single-place target) and "cleared" (you stopped a target from the
--- arrow: entry.owner says whose).
-function API:RegisterCallback(owner, fn)
-    ns.Targets:RegisterCallback(owner, fn)
-end
-
-function API:UnregisterCallback(owner)
-    ns.Targets:UnregisterCallback(owner)
-end
+-- Waypoint:RegisterCallback(owner, fn) (the shared API.lua): fn(event, entry): "CHANGED" (the arrow
+-- follows something else; entry may be nil), "ARRIVED" (you reached a single-place target) and
+-- "CLEARED" (you stopped a target from the arrow: entry.owner says whose). Before version 2 they
+-- were lower case: compare with event:upper() to work with both.

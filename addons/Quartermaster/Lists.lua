@@ -269,7 +269,7 @@ end
 
 -- For other addons (Wealth Planner's Invest tab). items = { { id, qty, maxUnit } }; maxUnit, when
 -- given, is the most the Cart pays per unit for that item (instead of market price plus tolerance).
-QuartermasterAPI = QuartermasterAPI or {}
+ns.NewAPI("QuartermasterAPI", 1)
 
 -- Puts items on a list (adding to an item already on it), makes it the Cart's list and opens the
 -- Cart tab when the auction house is open, so you can review it before buying anything.

@@ -62,17 +62,8 @@ end
 
 -- You: continent, north, west; nil inside instances or when the map can't place you.
 function Nav:Player()
-    if not (C_Map and C_Map.GetBestMapForUnit) then return nil end
-    local map = C_Map.GetBestMapForUnit("player")
-    if not map then return nil end
-    local ok, pos = pcall(C_Map.GetPlayerMapPosition, map, "player")
-    if not (ok and pos) then return nil end
-    local x, y = pos:GetXY()
-    if not x or (x == 0 and y == 0) then return nil end
-    local ok2, continent, world = pcall(C_Map.GetWorldPosFromMapPos, map, pos)
-    if not (ok2 and continent and world) then return nil end
-    local n, w = world:GetXY()
-    return continent, n, w
+    local c, n, w = ns.WorldMap.Player()
+    return c, n, w
 end
 
 -- The tracked job's spots as { { continent, north, west, kind, id, index, mapX, mapY } }.
@@ -81,20 +72,17 @@ function Nav:Spots()
     if not job then return {} end
     if spotsKey == job.key and spots then return spots end
     spots, spotsKey = {}, job.key
+    local WM = ns.WorldMap
     for _, pt in ipairs(ns.Jobs:Pins(job, job.zone)) do
-        local ok, continent, world = pcall(C_Map.GetWorldPosFromMapPos, job.zone, CreateVector2D(pt[1] / 100, pt[2] / 100))
-        if ok and continent and world then
-            local n, w = world:GetXY()
+        local continent, n, w = WM.World(job.zone, pt[1] / 100, pt[2] / 100)
+        if continent then
             spots[#spots + 1] = { continent, n, w, kind = pt.kind, id = pt.id, index = pt.index, mapX = pt[1], mapY = pt[2] }
         end
     end
     -- Fishing jobs have no spots: aim for the middle of the zone.
     if #spots == 0 then
-        local ok, continent, world = pcall(C_Map.GetWorldPosFromMapPos, job.zone, CreateVector2D(0.5, 0.5))
-        if ok and continent and world then
-            local n, w = world:GetXY()
-            spots[1] = { continent, n, w, mapX = 50, mapY = 50 }
-        end
+        local continent, n, w = WM.World(job.zone, 0.5, 0.5)
+        if continent then spots[1] = { continent, n, w, mapX = 50, mapY = 50 } end
     end
     return spots
 end
@@ -121,7 +109,7 @@ ns:On("ZONE_CHANGED_NEW_AREA", function() Nav:Invalidate() end)
 ns:On("PLAYER_LOGIN", function()
     if not Nav:HasArrow() then return end
     Waypoint:RegisterCallback("WealthPlanner", function(event, e)
-        if event ~= "cleared" or not (e and e.owner == "WealthPlanner") then return end
+        if type(event) ~= "string" or event:upper() ~= "CLEARED" or not (e and e.owner == "WealthPlanner") then return end
         dismissed = e.key
         if ns.char.trackedJob == e.key then ns.char.trackedJob = nil end
         ns:Changed()

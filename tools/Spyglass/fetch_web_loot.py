@@ -10,10 +10,11 @@ import datetime
 import html.parser
 import json
 import os
-import subprocess
 import sys
 import time
-import urllib.request
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_shared"))
+import fetcher as fetching  # noqa: E402  (downloads through webfetch.py)
 
 ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "Spyglass")  # tools/Spyglass/ builds addons/Spyglass/
 OUT = os.path.join(ADDON, "Data", "web_loot.json")
@@ -80,20 +81,15 @@ class LootPage(html.parser.HTMLParser):
         self.capture = None
 
 
-UA = "Mozilla/5.0 (SpyGlass addon data tool)"
+# Nothing cached: each run reads the pages fresh (main paces them 2 s apart).
+WEB = fetching.Fetcher(None, pace=0, timeout=30, attempts=1, ok_only=True, give_up_after=float("inf"))
 
 
 def fetch(url):
-    # curl first: it uses the system's certificate store, which some Python
-    # installs' bundled store lags behind.
-    try:
-        out = subprocess.run(["curl", "-sSfL", "--max-time", "30", "-A", UA, url],
-                             capture_output=True, check=True)
-        return out.stdout.decode("utf-8", "replace")
-    except (OSError, subprocess.CalledProcessError):
-        req = urllib.request.Request(url, headers={"User-Agent": UA})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            return resp.read().decode("utf-8", "replace")
+    text = WEB.get(url)
+    if text is None:
+        raise OSError("download failed")
+    return text
 
 
 def main():

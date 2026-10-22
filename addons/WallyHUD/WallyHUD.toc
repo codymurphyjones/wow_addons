@@ -1,4 +1,4 @@
-## Interface: 16001, 11509, 20506, 50504, 120100
+## Interface: 16001
 ## Title: WallyHUD
 ## Notes: One look for the suite: shared design tokens, a quieter HUD, density presets, and Blizzard's Issue Reporter out of the play field. /whud
 ## Author: Dinoblankie + Claude
@@ -8,6 +8,8 @@
 ## SavedVariablesPerCharacter: WallyHUDCharDB
 ## Category: User Interface
 
+..\shared\Core.lua
+..\shared\Questie.lua
 Tokens.lua
 Core.lua
 Palettes.lua
@@ -17,4 +19,5 @@ Reporter.lua
 Density.lua
 RightColumn.lua
 Questie.lua
+..\shared\OptionsPage.lua
 Settings.lua

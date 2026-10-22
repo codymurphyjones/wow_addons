@@ -15,9 +15,9 @@ local function Settings()
     return l and l.settings
 end
 
--- Your Away and Busy flags. Clients with Midnight's restrictions (WoW Forever, Retail) can hand these
--- back as hidden "secret" values, and any test on one is an error. Then we keep showing the last
--- value we could read and say it may be out of date.
+-- Your Away and Busy flags. WoW Forever (the 12.x engine's restrictions) can hand these back as
+-- hidden "secret" values, and any test on one is an error. Then we keep showing the last value we
+-- could read and say it may be out of date.
 local away = { afk = false, dnd = false, stale = false }
 local STALE_REASON = "The game is hiding your Away/Busy status from addons right now (it does this in combat and in some instances), so this is the last status SimplePanel could read."
 
@@ -43,7 +43,10 @@ local function Say(msg)
     if s and s.announce then ns:Print(msg, true) end
 end
 
-local function Short(name) return name and name:match("^[^%-]+") end
+-- Names are WoW Forever's realmless "Given Family", and arrive as "Given Family", "GivenFamily"
+-- or "Given Family-Server": every comparison goes through Compat.SamePlayer, which takes them all.
+local C = ns.Compat
+local Same = C.SamePlayer
 
 -- ---------------------------------------------------------------------------
 -- Who counts as someone you know: friends, Battle.net friends, guild, group
@@ -64,7 +67,7 @@ local function IsFriend(name, guid)
         elseif GetFriendInfo then
             friend = GetFriendInfo(i)
         end
-        if friend and Short(friend) == Short(name) then return true end
+        if friend and Same(friend, name) then return true end
     end
     if guid and C_BattleNet and C_BattleNet.GetGameAccountInfoByGUID then
         local ok, info = pcall(C_BattleNet.GetGameAccountInfoByGUID, guid)
@@ -81,7 +84,7 @@ local function IsGuildmate(name, guid)
     if not (IsInGuild and IsInGuild() and GetNumGuildMembers) then return false end
     for i = 1, GetNumGuildMembers() or 0 do
         local member = GetGuildRosterInfo(i)
-        if member and Short(member) == Short(name) then return true end
+        if member and Same(member, name) then return true end
     end
     return false
 end
@@ -89,16 +92,24 @@ end
 -- What the Group History addon knows of a player (GroupHistoryAPI.Get), or nil.
 local function History(name, guid)
     if not (name and GroupHistoryAPI and GroupHistoryAPI.Get) then return nil end
-    local ok, info = pcall(GroupHistoryAPI.Get, name, guid)
+    local ok, info = pcall(GroupHistoryAPI.Get, C.FullName(name, guid), guid)
     return ok and info or nil
 end
 
 local function HasHistory() return GroupHistoryAPI ~= nil and GroupHistoryAPI.Get ~= nil end
 
+-- Whether name is in your group: each member's "Given Family" against it.
+local function InMyGroup(name)
+    for _, unit in ipairs(ns.Units.GroupUnits()) do
+        if Same(ns.Units.UnitFull(unit), name) then return true end
+    end
+    return false
+end
+
 -- Past groupmates you gave a thumbs up in Group History count too, while that switch is on.
 local function IsKnown(name, guid)
     if not name then return false end
-    if UnitInParty and (UnitInParty(Short(name)) or UnitInRaid(Short(name))) then return true end
+    if InMyGroup(name) then return true end
     if IsFriend(name, guid) or IsGuildmate(name, guid) then return true end
     local s = Settings()
     local h = s and s.knownFromHistory and History(name, guid)
@@ -121,7 +132,7 @@ local function Call(fn, ...)
     return unpack(r, 2, table.maxn(r))
 end
 
-local function SameName(a, b) return type(a) == "string" and Readable(a) and Short(a) == Short(b) end
+local function SameName(a, b) return type(a) == "string" and Readable(a) and Same(a, b) end
 
 -- Whether you're listed in the Looking for Group tool yourself.
 local function IsListed()
@@ -309,7 +320,7 @@ ns:On("DUEL_REQUESTED", function(name)
     if not (s and s.declineDuels) then return end
     CancelDuel()
     HidePopup("DUEL_REQUESTED")
-    Say("declined a duel from " .. tostring(name) .. ".")
+    Say("declined a duel from " .. tostring(C.PlayerName(name)) .. ".")
 end)
 
 -- A stranger's invite while you're listed: it gets through if they're listed too. When the last
@@ -349,6 +360,8 @@ ns:On("PARTY_INVITE_REQUEST", function(name, ...)
     local s = Settings()
     if not s then return end
     local guid = select(6, ...)
+    -- The inviter's "Given Family" (from the GUID when the event gives only the given name).
+    name = C.FullName(name, guid) or name
     if s.declineRatedDown then
         local h = History(name, guid)
         if h and (h.rating or 0) < 0 then
@@ -377,7 +390,7 @@ ns:On("GUILD_INVITE_REQUEST", function(inviter, guild)
     if ClientGuildSwitch() or not (s and s.declineGuild) then return end
     DeclineGuild()
     HidePopup("GUILD_INVITE")
-    Say("declined an invite to " .. tostring(guild or "a guild") .. " from " .. tostring(inviter) .. ".")
+    Say("declined an invite to " .. tostring(guild or "a guild") .. " from " .. tostring(C.PlayerName(inviter)) .. ".")
 end)
 
 local function WhisperFilter(_, _, _, author, _, _, _, flags, _, _, _, _, _, guid)

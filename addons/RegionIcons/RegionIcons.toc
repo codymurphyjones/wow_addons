@@ -1,0 +1,20 @@
+## Interface: 16001
+## Title: OpenMaps: Region Icons
+## Notes: Every addon's map icons for the zones touching the one you look at: Questie, TomTom, gatherers, RareScanner, Blizzard's flight points and more, on OpenMap's stitched map, Blizzard's world map and the minimap near a zone border. /regionicons
+## Author: Dinoblankie + Claude
+## Version: 0.1.0
+## OptionalDeps: OpenMap, RareScanner, Questie, TomTom, GatherMate2, HandyNotes
+## SavedVariables: RegionIconsDB
+## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
+## Category: Map & Minimap
+
+..\shared\Core.lua
+..\shared\WorldMap.lua
+Zones.lua
+Canvas.lua
+Pins.lua
+RareScanner.lua
+RareScannerMinimap.lua
+Core.lua
+..\shared\OptionsPage.lua
+Settings.lua

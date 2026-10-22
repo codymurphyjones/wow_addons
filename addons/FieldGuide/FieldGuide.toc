@@ -9,8 +9,13 @@
 ## IconTexture: Interface\AddOns\FieldGuide\Media\Icon
 ## Category: Quests
 ## AddonCompartmentFunc: FieldGuide_OnCompartmentClick
+## X-Curse-Project-ID: 1759231
 
-Fonts.lua
+..\shared\Fonts.lua
+..\shared\Core.lua
+..\shared\WorldMap.lua
+..\shared\Questie.lua
+..\shared\Instances.lua
 Core.lua
 Guides\Data.lua
 Guides\Alliance.lua
@@ -20,5 +25,7 @@ Progress.lua
 Engine.lua
 Instance.lua
 UI.lua
+..\shared\MinimapButton.lua
 Minimap.lua
+..\shared\OptionsPage.lua
 Settings.lua

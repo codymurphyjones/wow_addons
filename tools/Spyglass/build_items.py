@@ -19,16 +19,18 @@ Wowhead says they come from goes to SpyglassPluginQuests/Data/SourcesWowhead.lua
 Quests come from Data/wowhead_quests.json (tools/Spyglass/fetch_wowhead_quests.py) and
 go to SpyglassPluginQuests/Data/QuestDB.lua.
 """
-import glob
 import json
 import os
 import re
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_shared"))
+import luawrite  # noqa: E402
+import savedvars  # noqa: E402
+
 ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "Spyglass")  # tools/Spyglass/ builds addons/Spyglass/
 DATA = os.path.join(ADDON, "Data")
 QUEST_DATA = os.path.join(ADDON, "..", "SpyglassPluginQuests", "Data")
-WTF = os.environ.get("WOW_WTF") or r"Z:\Games\World of Warcraft\_classic_beta_\WTF"  # the game's saved variables (read only)
 
 TOKEN = re.compile(r"""
     \s+ | --[^\n]* |
@@ -174,26 +176,11 @@ def merge(old, db):
 
 
 def lua_str(s):
-    s = s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "")
-    return '"' + s + '"'
+    return luawrite.lua_str(s)  # newlines escaped, CRs dropped
 
 
 def lua_val(v):
-    if isinstance(v, bool):
-        return "true" if v else "false"
-    if isinstance(v, (int, float)):
-        return repr(v)
-    if isinstance(v, str):
-        return lua_str(v)
-    if isinstance(v, list):
-        return "{ " + ", ".join(lua_val(x) for x in v) + " }"
-    if isinstance(v, dict):
-        parts = []
-        for k in sorted(v):
-            key = k if re.match(r"^[A-Za-z_]\w*$", k) else "[" + lua_str(k) + "]"
-            parts.append("%s = %s" % (key, lua_val(v[k])))
-        return "{ " + ", ".join(parts) + " }"
-    raise TypeError(v)
+    return luawrite.lua_val(v, precision=None)  # floats as repr()
 
 
 ITEM_FIELDS = [  # harvest key -> Data\Items.lua key
@@ -500,7 +487,7 @@ INSTANCE_CATEGORIES = {2, 3}  # Wowhead's quest categories: dungeons, raids
 
 
 def lua_list(values):
-    return "{ " + ", ".join(lua_val(v) for v in values) + " }"
+    return luawrite.lua_list(values, precision=None)
 
 
 def lua_spawns(spawns):
@@ -634,7 +621,7 @@ def write_quest_db(path):
 def main(argv):
     use_wowhead = "--no-wowhead" not in argv
     argv = [a for a in argv if a != "--no-wowhead"]
-    paths = argv or glob.glob(os.path.join(WTF, "Account", "*", "SavedVariables", "Spyglass.lua"))
+    paths = argv or savedvars.files("Spyglass")
     snap_path = os.path.join(DATA, "harvest.json")
     snap = load_json(snap_path)
     used = 0

@@ -8,30 +8,18 @@ Writes into addons/WallyChat/Media:
   Icon.tga                                                                     128x128, the addon list
 Each is drawn at 4x and scaled down, for smooth edges.
 """
-import os
+import os, sys
 
-from PIL import Image, ImageDraw
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_shared"))
+import iconkit as ik
+from iconkit import canvas, s
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(os.path.dirname(os.path.dirname(HERE)), "addons", "WallyChat", "Media")
-SS = 4
 WHITE = (255, 255, 255, 255)
-ACCENT = (64, 196, 205, 255)
-DARK = (16, 19, 25, 255)
-
-
-def canvas(size):
-    img = Image.new("RGBA", (size * SS, size * SS), (0, 0, 0, 0))
-    return img, ImageDraw.Draw(img)
+ACCENT, DARK = ik.WALLY_ACCENT, ik.WALLY_DARK
 
 
 def save(img, name, size):
-    img.resize((size, size), Image.LANCZOS).save(os.path.join(OUT, name))
-
-
-def s(v):
-    """64-unit design coordinates to the supersampled canvas."""
-    return v * SS
+    ik.save(img, OUT, ((name, size),))
 
 
 def friends():
@@ -82,7 +70,7 @@ def bottom():
 
 def logo():
     img, d = canvas(128)
-    d.rounded_rectangle([s(6), s(6), s(122), s(122)], radius=s(24), fill=DARK, outline=ACCENT, width=s(4))
+    ik.wally_badge(d)
     d.rounded_rectangle([s(26), s(32), s(102), s(82)], radius=s(14), fill=ACCENT)
     d.polygon([(s(40), s(80)), (s(60), s(80)), (s(36), s(100))], fill=ACCENT)
     for x in (46, 64, 82):
@@ -91,7 +79,7 @@ def logo():
 
 
 if __name__ == "__main__":
-    os.makedirs(OUT, exist_ok=True)
+    OUT = ik.out_dir("WallyChat", use_argv=False)
     friends()
     channels()
     menu()

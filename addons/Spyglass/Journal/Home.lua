@@ -327,9 +327,9 @@ function Home:Build(parent)
     local extendLabel = page.extend:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     extendLabel:SetPoint("LEFT", page.extend, "RIGHT", 2, 1)
     extendLabel:SetText("Extend Upgrade Search")
+    -- Through ns:SetOption, so Options > AddOns > SpyGlass shows it; the option's apply redraws the journal.
     page.extend:SetScript("OnClick", function(self)
-        J.db.extendUpgrades = self:GetChecked() and true or false
-        J:Refresh()
+        ns:SetOption("jdb.extendUpgrades", self:GetChecked() and true or false)
     end)
     page.extend:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")

@@ -7,6 +7,7 @@ local C = ns.Compat
 -- Saved per character: chain = { { id, by, mapID, x, y, title } }, chainStarter, chainT, reached.
 local Chain = {}
 ns.Chain = Chain
+local U = ns.Units
 
 local UNDO_MAX = 10
 local undo = {} -- { kind = "add", id } | { kind = "remove", point, after } | { kind = "wipe" | "replace", old, starter, id }
@@ -47,14 +48,39 @@ function Chain:Entry()
     entry.points = points
     entry.t = ns.char.chainT or 0
     entry.title = first.title or ("Waypoint" .. (#points > 1 and (" (1 of %d)"):format(#points) or ""))
-    entry.subtitle = first.by ~= C.Me() and ("by " .. C.Short(first.by)) or nil
+    entry.subtitle = not U.Same(first.by, U.Me()) and ("by " .. C.Short(first.by)) or nil
     return entry
 end
 
 function Chain:Count() return #Points() end
 function Chain:Points() return Points() end
 function Chain:Starter() return ns.char.chainStarter end
-function Chain:IsMine() return not ns.char.chainStarter or ns.char.chainStarter == C.Me() end
+function Chain:IsMine() return not ns.char.chainStarter or U.Same(ns.char.chainStarter, U.Me()) end
+
+-- At login: names saved by earlier versions in the shape they have now. Yours (written as
+-- "Given-ClassicBetaPvP" before) become your key ("Given Family"), other players' Units.KeyOf's.
+-- Point IDs stay as they are: the group knows them by those.
+local function NewKey(name)
+    if type(name) ~= "string" then return name end
+    for _, old in ipairs(U.OldCharKeys()) do
+        if name == old then return U.CharKey() or name end
+    end
+    return U.KeyOf(name) or name
+end
+
+function Chain:MigrateNames()
+    local char = ns.char
+    if not (char and U.CharKey()) then return 0 end
+    local moved = 0
+    local function Fix(t, k)
+        local new = NewKey(t[k])
+        if new ~= t[k] then t[k], moved = new, moved + 1 end
+    end
+    Fix(char, "chainStarter")
+    for _, p in ipairs(char.chain or {}) do Fix(p, "by") end
+    return moved
+end
+ns:On("PLAYER_LOGIN", function() Chain:MigrateNames() end)
 
 ---------------------------------------------------------------------------
 -- Changes to your copy (no undo, nothing sent)

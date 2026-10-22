@@ -16,7 +16,9 @@ import zlib
 
 import numpy as np
 
-DEFAULT_WOW = r"Z:\Games\World of Warcraft"
+import paths  # tools/_shared
+
+DEFAULT_WOW = paths.DEFAULT_WOW
 DEFAULT_PRODUCT = "wow_classic_beta"  # WoW Forever
 
 

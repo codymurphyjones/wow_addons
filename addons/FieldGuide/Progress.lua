@@ -17,11 +17,9 @@ P.RACES = {
 local completed = {} -- questId -> true, refreshed on quest events
 local doable = {}    -- questId -> Questie's verdict, until quests change
 
-local function Call(fn, ...)
-    if type(fn) ~= "function" then return nil end
-    local ok, a, b = pcall(fn, ...)
-    if ok then return a, b end
-end
+-- Questie from the outside: shared Questie.lua (guarded; answers nil / false without Questie).
+local K = ns.QuestieKit
+local Call = K.Call
 
 function P:Race()
     local _, _, id = UnitRace("player")
@@ -41,35 +39,18 @@ end
 function P:Refresh()
     wipe(completed)
     wipe(doable)
-    local ids = C_QuestLog and Call(C_QuestLog.GetAllCompletedQuestIDs)
-    if type(ids) == "table" then
-        for _, id in ipairs(ids) do completed[id] = true end
-    end
-    local questie = Questie and Questie.db and Questie.db.char and Questie.db.char.complete
-    if type(questie) == "table" then
-        for id, done in pairs(questie) do
-            if done then completed[id] = true end
-        end
-    end
+    K.CompletedIDs(completed)
 end
 
 -- Finished for sure: the game's record, or Questie's (read live: it updates as you play).
 local function Flagged(id)
     if completed[id] or (ns.char and ns.char.doneByHand and ns.char.doneByHand[id]) then return true end
-    local questie = Questie and Questie.db and Questie.db.char and Questie.db.char.complete
-    local flagged = type(questie) == "table" and questie[id]
-        or C_QuestLog and Call(C_QuestLog.IsQuestFlaggedCompleted, id)
-        or (not (C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted)) and Call(IsQuestFlaggedCompleted, id)
+    local flagged = K.IsDone(id) -- Questie's record, else the game's
     if flagged then completed[id] = true end
-    return flagged and true or false
+    return flagged
 end
 
-local QDB
-local function Questie_(id, field)
-    QDB = QDB or (QuestieLoader and Call(QuestieLoader.ImportModule, QuestieLoader, "QuestieDB"))
-    if not (QDB and QDB.QueryQuestSingle) then return nil end
-    return Call(QDB.QueryQuestSingle, id, field)
-end
+local Questie_ = K.Query
 
 -- Later quests that need each quest first (from the guides' data), built once.
 local needs
@@ -168,20 +149,14 @@ function P:Doable(id)
 end
 
 function P:AskQuestie(id)
-    local QDB = QuestieLoader and Call(QuestieLoader.ImportModule, QuestieLoader, "QuestieDB")
-    if not (QDB and QDB.IsDoable) then return true end
-    local ok, doable = pcall(QDB.IsDoable, id)
-    if not ok then return true end
-    return doable and true or false
+    return K.IsDoable(id, true) -- true when Questie can't tell
 end
 
 -- Puts the quest you're on at the top of Questie's tracker (its "focus").
 function P:FocusQuestie(id)
-    if not (ns.db.focusQuestie and Questie and Questie.db and Questie.db.char) then return end
-    if not self:InLog(id) or Questie.db.char.TrackerFocus == id then return end
-    Questie.db.char.TrackerFocus = id
-    local QT = QuestieLoader and Call(QuestieLoader.ImportModule, QuestieLoader, "QuestieTracker")
-    if QT and QT.Update then pcall(QT.Update, QT) end
+    if not (ns.db.focusQuestie and K.CharDB()) then return end
+    if not self:InLog(id) then return end
+    K.SetFocus(id) -- writes the focus (unless it's already this quest) and redraws the tracker
 end
 
 ns:On("PLAYER_LOGIN", function() P:Refresh(); ns:Changed() end)

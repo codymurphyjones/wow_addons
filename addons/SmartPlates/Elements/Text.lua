@@ -4,12 +4,8 @@ local C, M = ns.Compat, ns.Media
 -- Name, level, health text and the threat percentage.
 local Text = { name = "Text" }
 
-local function Short(n)
-    if n >= 1e6 then return ("%.1fm"):format(n / 1e6) end
-    if n >= 1e4 then return ("%.0fk"):format(n / 1e3) end
-    if n >= 1e3 then return ("%.1fk"):format(n / 1e3) end
-    return tostring(math.floor(n))
-end
+local SHORT = { tiers = ns.Format.TIERS_PLATES, abs = false }
+local function Short(n) return ns.Format.Short(n, SHORT) end
 
 function Text:Create(f)
     local layer = CreateFrame("Frame", nil, f)
@@ -211,16 +207,18 @@ function Text:UpdateMobTarget(f)
     if not ns.db.general.mobTarget or u.style ~= "normal" or u.isPlayer or u.reaction == "FRIENDLY" then return fs:Hide() end
     local target = u.unitid .. "target"
     local okE, exists = pcall(UnitExists, target)
-    if not okE or not C.Readable(exists) or not exists then return fs:Hide() end
+    if not okE or not C.AllReadable(exists) or not exists then return fs:Hide() end
     local okG, tGuid = pcall(UnitGUID, target)
     local isMe = C.UnitIsUnit(target, "player")
-        or (okG and C.Readable(tGuid) and tGuid ~= nil and tGuid == UnitGUID("player"))
+        or (okG and C.AllReadable(tGuid) and tGuid ~= nil and tGuid == UnitGUID("player"))
     if isMe then
         fs:SetText("YOU")
         fs:SetTextColor(1, 0.35, 0.3)
         return fs:Show()
     end
     local okN, name = pcall(UnitName, target)
+    -- A player's full "Given Family" (WoW Forever) when it can be read; else what UnitName gave.
+    name = ns.Units.UnitFull(target) or name
     if not okN or not pcall(fs.SetText, fs, name) then return fs:Hide() end
     local _, class = C.Identity(target)
     if class then fs:SetTextColor(C.ClassColor(class)) else fs:SetTextColor(0.85, 0.9, 0.95) end

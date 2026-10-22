@@ -6,15 +6,15 @@ reagent vendor has them for a few silver. The vendors' exact prices are learned 
 merchant window you open; until then the addon estimates them from the item's sell price.
 Writes Data/VendorItems.lua.
 
-questiedb.py is copied from FieldGuide/Tools (copied, not imported: the addons stay apart).
+QuestieDB is read with tools/_shared/questiedb.py.
 
     python tools/WealthPlanner/build_vendor_items.py
 """
 import os
 
 import sys
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # sibling modules, also under python -I
-from questiedb import QuestieDB, lua_list
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_shared"))  # also under python -I
+from questiedb import QuestieDB, lua_list  # noqa: E402
 
 ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "addons", "WealthPlanner")  # tools/WealthPlanner/ builds addons/WealthPlanner/
 OUT = os.path.join(ADDON, "Data", "VendorItems.lua")

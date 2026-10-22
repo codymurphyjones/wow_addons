@@ -24,13 +24,20 @@ local KINDS = {
 local ICON = {}
 for _, k in ipairs(KINDS) do ICON[k[1]] = k[3] end
 
-local function CharKey()
-    return (UnitName("player") or "?") .. "-" .. (GetRealmName() or "?")
+-- This character's key (shared Units.lua: "Given Family").
+local CharKey = ns.Units.Me
+
+-- Every character's scrapbook; this character's older "Name-Realm" entry moves to its key once.
+local function Books()
+    local db = ns.J.db
+    db.scrapbook = type(db.scrapbook) == "table" and db.scrapbook or {}
+    ns.Units.MigrateKeys(db.scrapbook)
+    return db.scrapbook
 end
 
 local function Book(key)
     local db = ns.J.db
-    db.scrapbook = type(db.scrapbook) == "table" and db.scrapbook or {}
+    Books()
     key = key or CharKey()
     local b = db.scrapbook[key]
     if not b then
@@ -82,22 +89,15 @@ local function ItemString(link)
     return str and (str:gsub("[:0]+$", "")) or nil
 end
 
+-- { { tab name, points } ... } (shared Player.lua), nil without the talent tab API.
 local function Talents()
-    if not (GetNumTalentTabs and GetTalentTabInfo) then return nil end
-    local out = {}
-    for i = 1, GetNumTalentTabs() or 0 do
-        local r = { GetTalentTabInfo(i) }
-        -- Older clients: name, icon, points; newer: id, name, description, icon, points.
-        local name, points
-        if type(r[1]) == "number" then name, points = r[2], r[5] else name, points = r[1], r[3] end
-        out[#out + 1] = { Str(name) or ("Tree " .. i), Num(points) or 0 }
-    end
-    return out
+    return (GetNumTalentTabs and GetTalentTabInfo) and ns.Player.Talents() or nil
 end
 
 local function Unit(unit)
     if not UnitExists(unit) then return nil end
-    local name = Str(GetUnitName and GetUnitName(unit, true) or UnitName(unit))
+    -- A player by their full "Given Family" key, a creature by its name.
+    local name = Str(ns.Units.UnitFull(unit))
     if not name then return nil end
     local u = { name = name, level = Num(UnitLevel(unit)), hp = Pct(UnitHealth(unit), UnitHealthMax(unit)) }
     if UnitIsPlayer(unit) then
@@ -117,12 +117,10 @@ end
 local function Group()
     local n = GetNumGroupMembers and GetNumGroupMembers() or 0
     if n == 0 then return nil end
-    local units = {}
-    if IsInRaid() then for i = 1, n do units[#units + 1] = "raid" .. i end
-    else for i = 1, n - 1 do units[#units + 1] = "party" .. i end end
+    -- Everyone but you (the heading adds you), by full "Given Family" name: given names repeat.
     local out = {}
-    for _, unit in ipairs(units) do
-        local name = Str(UnitName(unit))
+    for _, unit in ipairs(ns.Units.GroupUnits()) do
+        local name = Str(ns.Units.UnitFull(unit))
         if name then
             out[#out + 1] = { name, select(2, UnitClass(unit)), Num(UnitLevel(unit)), UnitIsGroupLeader(unit) and 1 or nil }
         end
@@ -243,7 +241,7 @@ local STREAK_WINDOW, STREAK_MIN = 60, 3 -- this many honorable kills inside the 
 local ATTACKER_WINDOW = 15              -- an enemy player on you this recently counts as your killer
 local OUTLEVEL = 3                      -- kills this many levels above you get a screenshot
 
-local seen = {}       -- enemy player name -> { level, class, guild }
+local seen = {}       -- enemy player, compact name -> { level, class, guild, given }
 local lastAttacker    -- { name, t }
 local streak = {}     -- GetTime() of recent honorable kills
 local bgDone = false  -- this battleground's result is recorded
@@ -270,25 +268,51 @@ local function InBattleground()
     return kind == "pvp" or kind == "arena"
 end
 
+-- Enemy players seen are kept by compact name, so the name a chat message gives ("Given Family",
+-- "GivenFamily", "Given Family-Server") finds them. A message that gives only the given name finds
+-- the one seen player of that given name (none when two share it).
+local function SeenKey(name) return ns.Units.Compact(name) end
+
+local function Seen(name)
+    local key = SeenKey(name)
+    if not key then return nil end
+    if seen[key] then return seen[key] end
+    if type(name) ~= "string" or name:find("[%s%-]") then return nil end
+    local found, given = nil, name:lower()
+    for _, p in pairs(seen) do
+        if p.given == given then
+            if found then return nil end
+            found = p
+        end
+    end
+    return found
+end
+
+-- Is the name a chat message gives you? Your full name in any shape, or your given name alone
+-- (some messages may give only that): the shared Units.lua IsMeLoose.
+local IsMeInText = ns.Units.IsMeLoose
+
 -- Remembers enemy players you see, and notices the ones attacking you.
 local function Watch(unit)
     if not (UnitExists(unit) and UnitIsPlayer(unit)) then return end
     local ok, enemy = pcall(UnitCanAttack, "player", unit)
     if not ok or Secret(enemy) or not enemy then return end
-    local name = GetUnitName and GetUnitName(unit, true) or UnitName(unit)
-    if not name or Secret(name) then return end
+    local name = ns.Units.UnitKey(unit)
+    local key = SeenKey(name)
+    if not key then return end
     local level, class = UnitLevel(unit), UnitClass(unit)
     local guild = GetGuildInfo(unit)
-    seen[name] = {
+    local given = name:match("^(%S+)")
+    seen[key] = {
         level = not Secret(level) and level or nil, class = not Secret(class) and class or nil,
-        guild = not Secret(guild) and guild or nil,
+        guild = not Secret(guild) and guild or nil, given = given and given:lower(),
     }
     local ok2, onMe = pcall(UnitIsUnit, unit .. "target", "player")
     if ok2 and not Secret(onMe) and onMe then lastAttacker = { name = name, t = GetTime() } end
 end
 
 local function Describe(name)
-    local p = seen[name]
+    local p = Seen(name)
     if not p then return nil end
     local parts = {}
     if p.level then parts[#parts + 1] = p.level > 0 and ("Level " .. p.level) or "Level ??" end
@@ -341,7 +365,7 @@ local function OnHonorKill(msg)
     if InBattleground() then return end -- battleground kills count toward milestones only
     local pvp = PvPBook()
     local who = Describe(name)
-    local p = seen[name]
+    local p = Seen(name)
     local outlevel = p and p.level and (p.level < 0 or p.level >= (UnitLevel("player") or 0) + OUTLEVEL)
     local first = not pvp.firstWorldKill
     if first then pvp.firstWorldKill = time() end
@@ -351,7 +375,6 @@ local function OnHonorKill(msg)
 end
 
 local function OnSystem(msg)
-    local me = UnitName("player")
     local winner, loser = DUEL_WON and msg:match(DUEL_WON)
     local fled = false
     if not winner and DUEL_FLED then
@@ -360,12 +383,12 @@ local function OnSystem(msg)
     end
     if not winner then return end
     local pvp = PvPBook()
-    if winner == me then
+    if IsMeInText(winner) then
         pvp.duelWins = (pvp.duelWins or 0) + 1
         local first = pvp.duelWins == 1
         S:Add("pvp", (first and "First duel won: " or "Won a duel against ") .. loser,
             fled and "They ran." or Describe(loser), first)
-    elseif loser == me then
+    elseif IsMeInText(loser) then
         S:Add("pvp", "Lost a duel to " .. winner, fled and "You ran." or Describe(winner), false)
     end
 end
@@ -408,8 +431,8 @@ local function Killer()
     if UnitExists("target") and UnitIsPlayer("target") then
         local ok, enemy = pcall(UnitCanAttack, "player", "target")
         if ok and not Secret(enemy) and enemy and InCombatLockdown() then
-            local name = UnitName("target")
-            if name and not Secret(name) then return name end
+            local name = ns.Units.UnitFull("target")
+            if name then return name end
         end
     end
 end
@@ -574,21 +597,15 @@ local SLOT_NAMES = {
     "Ring", "Ring", "Trinket", "Trinket", "Back", "Main hand", "Off hand", "Ranged", "Tabard",
 }
 
-local function Played(secs)
-    if not secs then return nil end
-    local d, h, m = math.floor(secs / 86400), math.floor(secs % 86400 / 3600), math.floor(secs % 3600 / 60)
-    return d > 0 and ("%dd %dh %dm"):format(d, h, m) or ("%dh %dm"):format(h, m)
-end
+-- Text from the shared Format.lua and Units.lua.
+local PLAYED = { dayMinutes = true, alwaysHours = true, pad = false, missing = false }
+local function Played(secs) return ns.Format.Duration(secs, PLAYED) end
 
-local function ClassName(file, name)
-    local c = file and RAID_CLASS_COLORS and RAID_CLASS_COLORS[file]
-    return c and ("|c%s%s|r"):format(c.colorStr or "ffffffff", name) or name
-end
+local PLAIN = { plain = true }
+local function ClassName(file, name) return ns.Units.Colored(name, file, PLAIN) end
 
-local function Money(c)
-    if not c then return "?" end
-    return GetCoinTextureString and GetCoinTextureString(c) or GetMoneyString(c)
-end
+local MONEY = { missing = "?" }
+local function Money(c) return ns.Format.Money(c, MONEY) end
 
 -- The memory card's text, section by section.
 local function CardText(e)
@@ -727,11 +744,14 @@ function S:Build(parent)
         page.char = k; S:Refresh(true)
     end)
     page.charDrop:SetPoint("RIGHT", page.kindDrop, "LEFT", -8, 0)
+    -- The heading names the character by "Given Family": stop it short of the drop-downs.
+    page.heading:SetPoint("RIGHT", page.charDrop, "LEFT", -8, 0)
+    page.heading:SetJustifyH("LEFT"); page.heading:SetWordWrap(false)
     page.shots = CreateFrame("CheckButton", nil, page, "UICheckButtonTemplate")
     page.shots:SetSize(24, 24); page.shots:SetPoint("TOPRIGHT", -150, -34)
     page.shots.label = page.shots:CreateFontString(nil, "OVERLAY", "SpyglassGameFontHighlightSmall")
     page.shots.label:SetPoint("LEFT", page.shots, "RIGHT", 2, 0); page.shots.label:SetText("Take screenshots")
-    page.shots:SetScript("OnClick", function(self) ns.J.db.scrapShots = self:GetChecked() and true or false end)
+    page.shots:SetScript("OnClick", function(self) ns:SetOption("jdb.scrapShots", self:GetChecked() and true or false) end)
 
     page.list = ns.J.MakeList(page, 44, InitRow)
     page.list:SetPoint("TOPLEFT", 4, -64); page.list:SetPoint("BOTTOMRIGHT", -24, 4)
@@ -796,7 +816,7 @@ function S:Refresh(toTop)
     if not (page and page:IsVisible()) then return end
     local db = ns.J.db
     wipe(page.chars)
-    for key in pairs(db.scrapbook or {}) do page.chars[#page.chars + 1] = { key, Ambiguate(key, "short") } end
+    for key in pairs(Books()) do page.chars[#page.chars + 1] = { key, ns.Units.Display(key) } end
     table.sort(page.chars, function(a, b) return a[2] < b[2] end)
     if page.charDrop.GenerateMenu then pcall(page.charDrop.GenerateMenu, page.charDrop) end
     if page.charDrop.Update then page.charDrop:Update() end
@@ -806,7 +826,7 @@ function S:Refresh(toTop)
     if toTop and page.card then page.card:Hide(); page.list:Show() end
     local list, book = Visible()
     local who = page.char or CharKey()
-    page.heading:SetText(Ambiguate(who, "short") .. "'s Scrapbook")
+    page.heading:SetText(ns.Units.Display(who) .. "'s Scrapbook")
     local zones, bosses = 0, 0
     for _ in pairs(book.zones or {}) do zones = zones + 1 end
     for _ in pairs(book.bosses or {}) do bosses = bosses + 1 end

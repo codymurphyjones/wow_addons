@@ -17,8 +17,8 @@ end
 
 function GH.Available() return API("Get") ~= nil end
 
--- What Group History knows of a player (GroupHistoryAPI.Get), or nil. name is "Bob" or
--- "Bob-Realm"; guid, when given, supplies the realm.
+-- What Group History knows of a player (GroupHistoryAPI.Get), or nil. name is the player's
+-- "Given Family" (any shape the game gives); guid, when given, fills in a family name it lacks.
 function GH.Get(name, guid)
     local get = API("Get")
     if not (get and (name or guid)) then return nil end
@@ -53,7 +53,7 @@ function GH.Note(info, max)
 end
 
 local function IsMe(name)
-    return name and ns.Compat.PlayerName(name) == UnitName("player")
+    return name ~= nil and ns.Compat.IsMe(name)
 end
 
 -- A "Group History" submenu for a person: their history, thumbs up or down, your note.

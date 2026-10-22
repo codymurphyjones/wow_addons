@@ -10,13 +10,11 @@ ns.Upgrades = Up
 
 local GetAddOnMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 
--- Same margin as the gear list's green "+x" (List:UpgradeText).
-local MIN_DELTA = 0.05
 -- "Extend Upgrade Search" (the journal's home page) looks this many levels
 -- above yours, for both the instances and the items' required level.
 local EXTEND = 3
 -- Bumped when the saved candidates change shape, so old saves are redone.
-local FORMAT = 2
+local FORMAT = 3 -- 3: scored by the shared GearEngine.lua
 
 local store -- SpyGlassDB.upgrades[character] = { sig, inst = { [key] = entry (see Derive) } }
 local checkSig = true
@@ -73,7 +71,9 @@ local function Store()
     if not ns.db then return nil end
     if not store then
         ns.db.upgrades = type(ns.db.upgrades) == "table" and ns.db.upgrades or {}
-        local who = UnitName("player") .. "-" .. (GetRealmName() or "?")
+        -- Per character (shared Units.lua key; an older "Name-Realm" entry moves to it once).
+        ns.Units.MigrateKeys(ns.db.upgrades)
+        local who = ns.Units.Me()
         local saved = ns.db.upgrades[who]
         if type(saved) ~= "table" or type(saved.inst) ~= "table" then
             saved = { inst = {} }
@@ -163,8 +163,7 @@ function Up:Count(inst)
     for _, c in ipairs(Candidates(inst)) do
         local itemID, group, score, req = c[1], c[2], c[3], c[4]
         if req <= maxLevel and not (group == "OFFHAND" and twoHanded) and not ns.Scoring:IsWorn(itemID) then
-            local worn, empty = ns.Scoring:EquippedScore(group)
-            if empty or score - worn > MIN_DELTA then
+            if ns.Scoring:Beats(itemID, score) then
                 n = n + 1
                 groups[group] = (groups[group] or 0) + 1
             end
@@ -188,9 +187,8 @@ function Up:CountItems(itemIDs)
             local group = D.EQUIP_GROUP[info.equipLoc]
             if group and not (group == "OFFHAND" and twoHanded) then
                 local score = ns.Scoring:Score(itemID)
-                if score > 0 or ns.Usability:IsClassSpecific(itemID) then
-                    local worn, empty = ns.Scoring:EquippedScore(group)
-                    if empty or score - worn > MIN_DELTA then n = n + 1 end
+                if (score > 0 or ns.Usability:IsClassSpecific(itemID)) and ns.Scoring:Beats(itemID, score, info.equipLoc) then
+                    n = n + 1
                 end
             end
         end

@@ -13,17 +13,10 @@ local function Elapsed() return math.max(1, time() - start) end
 local function Hours() return math.max(Elapsed(), 60) / 3600 end
 local function Gold() return GetMoney() - (startMoney or GetMoney()) end
 
-local function Duration(secs)
-    local h, m = math.floor(secs / 3600), math.floor(secs / 60) % 60
-    if h > 0 then return ("%dh %02dm"):format(h, m) end
-    return ("%dm"):format(m)
-end
+local DURATION = { days = false }
+local function Duration(secs) return ns.Format.Duration(secs, DURATION) end
 
-local function Short(v)
-    if math.abs(v) >= 1e6 then return ("%.1fm"):format(v / 1e6) end
-    if math.abs(v) >= 1e4 then return ("%.1fk"):format(v / 1e3) end
-    return tostring(math.floor(v))
-end
+local function Short(v) return ns.Format.Short(v) end
 
 local function TrackXP()
     local xp, max = UnitXP("player"), UnitXPMax("player")
@@ -33,6 +26,15 @@ local function TrackXP()
     end
     lastXP, lastMax = xp, max
 end
+
+-- Kills: WoW Forever gives addons no combat log, so a kill is counted from its experience message
+-- ("Kobold Vermin dies, you gain 45 experience.", with or without a group bonus). Kills that give no
+-- experience (grey mobs, players) aren't counted.
+local KILL_XP = (function()
+    local s = COMBATLOG_XPGAIN_FIRSTPERSON or "%s dies, you gain %d experience."
+    s = s:gsub("%.$", ""):gsub("([%(%)%.%[%]%*%+%-%?%^%$])", "%%%1")
+    return "^" .. s:gsub("%%s", ".+"):gsub("%%d", "%%d+")
+end)()
 
 local function MoneyText(copper)
     return (copper < 0 and "-" or "+") .. C.ShortMoney(math.abs(copper)):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
@@ -56,10 +58,8 @@ SimplePanel.RegisterPlugin({
         TrackXP()
         p:On("PLAYER_XP_UPDATE", TrackXP)
         p:On("PLAYER_DEAD", function() deaths = deaths + 1; p:Refresh() end)
-        p:On("COMBAT_LOG_EVENT_UNFILTERED", function()
-            if not CombatLogGetCurrentEventInfo then return end
-            local _, sub, _, source = CombatLogGetCurrentEventInfo()
-            if sub == "PARTY_KILL" and source == UnitGUID("player") then kills = kills + 1 end
+        p:On("CHAT_MSG_COMBAT_XP_GAIN", function(_, _, msg)
+            if type(msg) == "string" and msg:find(KILL_XP) then kills = kills + 1 end
         end)
         p:Every(60, function()
             p:Record("gold", Gold() / 10000)

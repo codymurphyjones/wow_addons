@@ -28,12 +28,17 @@ BINDING_NAME_SADDLEBAGS_NEXT = "Next tab"
 BINDING_NAME_SADDLEBAGS_NEXTSADDLE = "Switch Saddle (for these keys)"
 for i = 1, 5 do _G["BINDING_NAME_SADDLEBAGS_TAB" .. i] = "Show tab " .. i end
 
+-- Events, saved variables and change notifications: the shared Core.lua (addons/shared). Saddles
+-- get their own defaults (saddleDefaults) as they're set up below.
+TS.SAVED = { db = "SaddleBagsDB" }
+
 local defaults = {
 	locked = false,
 	requireEditMode = true,
 	released = {}, -- [name] = where a detached frame belongs (see FixOrphans)
 	nextId = 1,
 }
+TS.DEFAULTS = defaults
 
 local saddleDefaults = {
 	point = { "CENTER", "CENTER", 0, 0 },
@@ -43,8 +48,12 @@ local saddleDefaults = {
 	tabs = {},
 }
 
+-- Its own Print: the icon, and several values like print(). A trailing true is the shared Core's
+-- "print even with chat off" flag, not something to show.
 function TS:Print(...)
-	print("|T" .. self.ICON .. ":0|t |cff33ff99SaddleBags|r:", ...)
+	local n = select("#", ...)
+	if n > 1 and select(n, ...) == true then n = n - 1 end
+	print("|T" .. self.ICON .. ":0|t |cff33ff99SaddleBags|r:", unpack({ ... }, 1, n))
 end
 
 local function FillDefaults(t, from)
@@ -53,10 +62,11 @@ local function FillDefaults(t, from)
 	end
 end
 
+-- After the shared Core.lua has set up SaddleBagsDB (TS.SAVED) with the defaults above.
 local function InitDB()
-	SaddleBagsDB = SaddleBagsDB or {}
-	local db = SaddleBagsDB
-	if not db.saddles then
+	local db = TS.db
+	TS:Migrate("saddles", function()
+		if db.saddles then return end -- already version 2 (the flag it always had)
 		-- Version 1 (TabSystem) kept one panel's settings at the top level.
 		db.saddles = {}
 		if db.tabs then
@@ -67,9 +77,9 @@ local function InitDB()
 			db.nextId = 2
 		end
 		db.point, db.rightToLeft, db.activeTab, db.tabCount, db.tabs = nil, nil, nil, nil, nil
-	end
+	end)
+	db.saddles = db.saddles or {}
 	db.version = 2
-	FillDefaults(db, defaults)
 	if #db.saddles == 0 then
 		db.saddles[1] = { id = db.nextId, name = "Saddle 1" }
 	end
@@ -77,7 +87,6 @@ local function InitDB()
 		FillDefaults(sd, saddleDefaults)
 		db.nextId = math.max(db.nextId, sd.id + 1)
 	end
-	TS.db = db
 	for _, sd in ipairs(db.saddles) do TS:EnsureTabs(sd) end
 end
 
@@ -644,12 +653,13 @@ function TS:UpdateEditState()
 	if self.RefreshOptions then self:RefreshOptions() end
 end
 
-function TS:Changed()
-	if self.RefreshOptions then self:RefreshOptions() end
-	if self.ready then
-		for saddle in self:EachSaddle() do saddle:UpdateEditState() end
+-- What TS:Changed() refreshes (the shared Core.lua: once, on the next frame).
+TS:OnChanged(function()
+	if TS.RefreshOptions then TS:RefreshOptions() end
+	if TS.ready then
+		for saddle in TS:EachSaddle() do saddle:UpdateEditState() end
 	end
-end
+end)
 
 -- Static popups ------------------------------------------------------------
 
@@ -751,59 +761,60 @@ end
 
 -- Events -------------------------------------------------------------------
 
-local events = CreateFrame("Frame")
-events:RegisterEvent("ADDON_LOADED")
-events:RegisterEvent("PLAYER_LOGIN")
-events:RegisterEvent("PLAYER_REGEN_ENABLED")
--- Fires once Edit Mode has positioned and sized its frames (only in clients
--- that have Edit Mode, so register it defensively).
-pcall(events.RegisterEvent, events, "EDIT_MODE_LAYOUTS_UPDATED")
-events:SetScript("OnEvent", function(_, event, arg1)
-	if event == "EDIT_MODE_LAYOUTS_UPDATED" then
-		TS:RestoreAll()
-		-- After Edit Mode has finished applying the layout.
-		C_Timer.After(0, function() TS:FixOrphans() end)
-	elseif event == "ADDON_LOADED" then
-		if arg1 == addonName then
-			InitDB()
-			-- Created as early as possible: Edit Mode may have saved a frame's
-			-- position relative to one of our tab frames ("SaddleBags1Content1")
-			-- and applies layouts before PLAYER_LOGIN.
-			for _, sd in ipairs(TS.db.saddles) do TS:CreateSaddle(sd) end
-			TS.ready = true
-			TS:RestoreAll()
-		else
-			TS:RestoreAll()
+-- Fires once Edit Mode has positioned and sized its frames (ns:On registers it
+-- defensively).
+TS:On("EDIT_MODE_LAYOUTS_UPDATED", function()
+	TS:RestoreAll()
+	-- After Edit Mode has finished applying the layout.
+	C_Timer.After(0, function() TS:FixOrphans() end)
+end)
+
+TS:OnLoad(function()
+	InitDB()
+	-- Created as early as possible: Edit Mode may have saved a frame's
+	-- position relative to one of our tab frames ("SaddleBags1Content1")
+	-- and applies layouts before PLAYER_LOGIN.
+	for _, sd in ipairs(TS.db.saddles) do TS:CreateSaddle(sd) end
+	TS.ready = true
+	TS:RestoreAll()
+end)
+
+-- Another addon loaded: its windows may be on a tab.
+TS:On("ADDON_LOADED", function(name)
+	if name ~= addonName then TS:RestoreAll() end
+end)
+
+TS:On("PLAYER_LOGIN", function()
+	TS:CreateOptions()
+	if TS:HasEditMode() then
+		EventRegistry:RegisterCallback("EditMode.Enter", TS.UpdateEditState, TS)
+		EventRegistry:RegisterCallback("EditMode.Exit", function()
+			TS:UpdateEditState()
+			-- Leaving Edit Mode re-applies saved positions.
+			C_Timer.After(0, function() TS:FixOrphans() end)
+		end, TS)
+	end
+	-- Safety net for any other moment Edit Mode re-applies a layout.
+	C_Timer.NewTicker(1, function() TS:FixOrphans() end)
+	TS:RestoreAll()
+	C_Timer.After(2, function() TS:RestoreAll() end)
+	C_Timer.After(6, function() TS:RestoreAll() end)
+end)
+
+-- Captures that waited for combat to end (TS.pending: which frame goes where).
+TS:On("PLAYER_REGEN_ENABLED", function()
+	for name, target in pairs(TS.pending) do
+		TS.pending[name] = nil
+		local saddle = TS.saddles[target[1]]
+		if saddle and saddle.db.tabs[target[2]] then TS:Capture(saddle, target[2], name, false) end
+	end
+	for saddle in TS:EachSaddle() do
+		if saddle.pendingTab then
+			local i = saddle.pendingTab
+			saddle.pendingTab = nil
+			saddle:SelectTab(i)
 		end
-	elseif event == "PLAYER_LOGIN" then
-		TS:CreateOptions()
-		if TS:HasEditMode() then
-			EventRegistry:RegisterCallback("EditMode.Enter", TS.UpdateEditState, TS)
-			EventRegistry:RegisterCallback("EditMode.Exit", function()
-				TS:UpdateEditState()
-				-- Leaving Edit Mode re-applies saved positions.
-				C_Timer.After(0, function() TS:FixOrphans() end)
-			end, TS)
-		end
-		-- Safety net for any other moment Edit Mode re-applies a layout.
-		C_Timer.NewTicker(1, function() TS:FixOrphans() end)
-		TS:RestoreAll()
-		C_Timer.After(2, function() TS:RestoreAll() end)
-		C_Timer.After(6, function() TS:RestoreAll() end)
-	elseif event == "PLAYER_REGEN_ENABLED" then
-		for name, target in pairs(TS.pending) do
-			TS.pending[name] = nil
-			local saddle = TS.saddles[target[1]]
-			if saddle and saddle.db.tabs[target[2]] then TS:Capture(saddle, target[2], name, false) end
-		end
-		for saddle in TS:EachSaddle() do
-			if saddle.pendingTab then
-				local i = saddle.pendingTab
-				saddle.pendingTab = nil
-				saddle:SelectTab(i)
-			end
-			for i = 1, saddle.db.tabCount do saddle:Layout(i) end
-		end
+		for i = 1, saddle.db.tabCount do saddle:Layout(i) end
 	end
 end)
 

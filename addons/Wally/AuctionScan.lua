@@ -29,7 +29,7 @@ end
 -- A finished full scan is good for COOLDOWN seconds on its realm, across reloads, logins and alts.
 local COOLDOWN = 4 * 60 * 60
 
-local function RealmKey() return GetRealmName() or "?" end
+local function RealmKey() return ns.Units.RealmLabel() end
 
 local function Recent()
     local t = ns.db and ns.db.auctionScans[RealmKey()]

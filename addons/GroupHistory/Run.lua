@@ -67,6 +67,11 @@ function Run:FullName(run, short)
         if C.Short(full) == short then return full end
     end
     if run.me and C.Short(run.me) == short then return run.me end
+    -- Another shape of the name (an older run, a name the meter gave differently).
+    for full in pairs(run.members) do
+        if C.SameName(full, short) then return full end
+    end
+    if run.me and C.SameName(run.me, short) then return run.me end
 end
 
 function Run:Start()
@@ -194,7 +199,7 @@ ns:On("ENCOUNTER_END", function(_, name, _, _, status)
     local b = Boss(run, name)
     if status == 1 or status == true then
         b.kills = b.kills + 1
-        if ns.IsFinalBoss(run.instance, name) then run.finished = true end
+        if ns.IsFinalBoss(run.instance, name, run.instanceID) then run.finished = true end
     else
         b.wipes = b.wipes + 1
         run.wipes = run.wipes + 1

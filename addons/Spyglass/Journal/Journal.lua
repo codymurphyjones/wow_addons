@@ -76,7 +76,7 @@ function J.SetList(box, list, toTop)
         (not toTop) and ScrollBoxConstants and ScrollBoxConstants.RetainScrollPosition or nil)
 end
 
--- A choice list: the modern dropdown when the client has it, else a button
+-- A choice list: a WowStyle1DropdownTemplate dropdown when one can be made, else a button
 -- that steps through (left click next, right click previous). options are
 -- { key, label }; get() returns the key in use, set(key) changes it.
 function J.MakeDropdown(parent, width, options, get, set)
@@ -403,19 +403,18 @@ function Public:IsMinimapShown()
     return not (J.db and J.db.minimap.hide)
 end
 
+-- Through ns:SetOption, so Options > AddOns > SpyGlass shows it; the option's apply moves the button.
 function Public:SetMinimapShown(on)
-    J.db.minimap.hide = not on or nil
-    ns.Minimap:Update()
+    ns:SetOption("jdb.minimap.hide", not on)
 end
 
 ---------------------------------------------------------------------------
 -- Setup
 ---------------------------------------------------------------------------
 
-local events = CreateFrame("Frame")
-events:RegisterEvent("ADDON_LOADED")
-events:SetScript("OnEvent", function(_, _, name)
-    if name ~= ADDON then return end
+-- The journal's own saved variable, SpyGlassJournalDB, when the addon loads (after SpyGlassDB:
+-- the shared Core.lua and Core.lua).
+ns:OnLoad(function()
     -- Settings saved under the old name (LootPriority) carry over.
     if type(SpyGlassJournalDB) ~= "table" and type(LootPriorityJournalDB) == "table" then
         SpyGlassJournalDB = LootPriorityJournalDB
@@ -439,13 +438,16 @@ events:SetScript("OnEvent", function(_, _, name)
     db.showAbilities = nil
     db.showSoon = nil -- coming-soon places are always shown now
     db.extendUpgrades = db.extendUpgrades and true or false
+    -- On unless turned off (nil was on): kept as true/false, as Options > AddOns > SpyGlass shows them.
+    db.dungeonMap = db.dungeonMap ~= false
+    db.scrapShots = db.scrapShots ~= false
     db.minimap = type(db.minimap) == "table" and db.minimap or { angle = 200 }
     J.db = db
+    ns.jdb = db -- the "jdb." root of the options page's paths (Settings.lua)
     if SpyGlass and SpyGlass.RegisterCallback then
         SpyGlass:RegisterCallback("Journal", function() J:Refresh() end)
     end
     ns.Minimap:Init()
-    events:UnregisterEvent("ADDON_LOADED")
 end)
 
 SLASH_SPYGLASSJOURNAL1 = "/sgj"
@@ -454,14 +456,12 @@ SlashCmdList.SPYGLASSJOURNAL = function(msg)
     if msg == "pulls" or msg == "scrapbook" then
         J:OpenKind(msg)
     elseif msg == "map" then
-        J.db.dungeonMap = J.db.dungeonMap == false
+        ns:ToggleOption("jdb.dungeonMap")
         ns:Print(J.db.dungeonMap and "The map key opens SpyGlass's dungeon map inside dungeons." or "The map key opens the world map everywhere.")
     elseif msg == "dungeonmap" then
         if not ns.DungeonMap:ShowWindow() then ns:Print("You're not in a dungeon SpyGlass has a map for.") end
     elseif msg == "minimap" then
-        J.db.minimap.hide = not J.db.minimap.hide
-        ns.Minimap:Update()
-        if SpyGlass and SpyGlass.RefreshSettings then SpyGlass:RefreshSettings() end
+        ns:ToggleOption("jdb.minimap.hide")
         ns:Print(J.db.minimap.hide and "Minimap button hidden." or "Minimap button shown.")
     elseif msg == "" then
         Public:Toggle()
