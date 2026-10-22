@@ -6,7 +6,7 @@ local C = ns.Compat
 -- killed, avoidable damage, a cast nobody interrupted) and indirectly (a dead healer, low healing,
 -- an early pull, an over-pull), and what went wrong overall. Each party member has a tab of their
 -- own, grey while they live; it unlocks when they die and shows their last hits and the blame.
--- Your own hits are there at once; others' come from their own Group History right away, or from
+-- Your own hits are there at once; others' come from their own Fireside right away, or from
 -- the damage meter when the fight ends (the game hides it until then). The blame comes then too.
 local P = {}
 ns.DeathPopup = P
@@ -198,15 +198,15 @@ end
 -- ---------------------------------------------------------------------------
 
 local function Build()
-    frame = CreateFrame("Frame", "GroupHistoryDeathRecap", UIParent, "BackdropTemplate")
+    frame = CreateFrame("Frame", "FiresideDeathRecap", UIParent, "BackdropTemplate")
     frame:SetSize(WIDTH, HEIGHT); frame:SetPoint("CENTER", 0, 60); frame:SetFrameStrata("DIALOG")
     frame:SetClampedToScreen(true); frame:SetMovable(true); frame:EnableMouse(true); frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving); frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
     W.SetBackdrop(frame, 0.97)
-    tinsert(UISpecialFrames, "GroupHistoryDeathRecap")
+    tinsert(UISpecialFrames, "FiresideDeathRecap")
     local icon = frame:CreateTexture(nil, "ARTWORK"); icon:SetSize(22, 22); icon:SetPoint("TOPLEFT", 10, -8)
     icon:SetTexture(ns.ICON)
-    frame.title = Label(frame, "Death recap", "GroupHistoryGameFontNormal", 38, -12, 500); frame.title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    frame.title = Label(frame, "Death recap", "FiresideGameFontNormal", 38, -12, 500); frame.title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     local close = MakeButton(frame, "X", 22, 20); close:SetPoint("TOPRIGHT", -8, -8)
     close:SetScript("OnClick", function() frame:Hide() end)
 
@@ -216,14 +216,14 @@ local function Build()
     scroll:SetPoint("TOPLEFT", 12, -70); scroll:SetPoint("BOTTOMRIGHT", -32, 12)
     frame.body = CreateFrame("Frame", nil, scroll); frame.body:SetSize(WIDTH - 50, 10)
     scroll:SetScrollChild(frame.body)
-    frame.text = frame.body:CreateFontString(nil, "OVERLAY", "GroupHistoryGameFontHighlightSmall")
+    frame.text = frame.body:CreateFontString(nil, "OVERLAY", "FiresideGameFontHighlightSmall")
     frame.text:SetPoint("TOPLEFT"); frame.text:SetWidth(WIDTH - 60); frame.text:SetJustifyH("LEFT"); frame.text:SetSpacing(3)
     frame.scroll = scroll
 
     -- A member's page: header text and their hits.
     local page = CreateFrame("Frame", nil, frame)
     page:SetPoint("TOPLEFT", 12, -70); page:SetPoint("BOTTOMRIGHT", -12, 12); page:Hide()
-    page.text = Label(page, "", "GroupHistoryGameFontHighlightSmall", 0, 0, WIDTH - 40); page.text:SetJustifyH("LEFT"); page.text:SetSpacing(3)
+    page.text = Label(page, "", "FiresideGameFontHighlightSmall", 0, 0, WIDTH - 40); page.text:SetJustifyH("LEFT"); page.text:SetSpacing(3)
     page.list = W.CreateRowList(page, -130, { rowHeight = 34 })
     frame.page = page
     frame:Hide()
@@ -318,7 +318,7 @@ local function RefreshMember(name)
     elseif ctx.final then
         L[#L + 1] = "|cffaaaaaaNo healing on them was recorded this fight.|r"
     end
-    if d.synced then L[#L + 1] = "|cffaaaaaaHits sent by their own Group History.|r" end
+    if d.synced then L[#L + 1] = "|cffaaaaaaHits sent by their own Fireside.|r" end
     page.text:SetText(table.concat(L, "\n"))
     PlaceList(page)
     local items = {}
@@ -381,4 +381,4 @@ end
 function P:IsShown() return frame and frame:IsShown() or false end
 
 -- For other addons (Mr. Miyagi holds its coach window while this is up).
-GroupHistoryAPI.DeathPopupShown = function() return P:IsShown() end
+FiresideAPI.DeathPopupShown = function() return P:IsShown() end

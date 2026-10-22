@@ -130,7 +130,7 @@ function SW.PersonMenu(anchor, who, extra)
         m:Button({ text = "Invite to group", fn = function() Try("invite", ns.Compat.Invite, who.name) end })
     end
     if extra then extra(m) end
-    if who.name or who.guid then ns.GroupHistory.AddMenu(m, who.name, who.guid) end
+    if who.name or who.guid then ns.Fireside.AddMenu(m, who.name, who.guid) end
     m:Show(anchor)
 end
 
@@ -1122,43 +1122,43 @@ SW:AddPage("friends", {
             local queues = Read(SQ.GetGroupQueues, guid) or {}
             local canJoin = select(1, Read(SQ.GetGroupInfo, guid))
             local who = GuidName(members[1] and members[1].guid) or "Someone"
-            -- Group History on whoever in the group you've been with: "grouped 3×, 1 wipe" on the
+            -- Fireside on whoever in the group you've been with: "grouped 3×, 1 wipe" on the
             -- row (the first such member, named when it isn't the one listed), all of them in the tip.
-            local GH, known = ns.GroupHistory, {}
+            local FS, known = ns.Fireside, {}
             for _, mem in ipairs(members) do
                 local name = GuidName(mem.guid)
-                local info = GH.Get(name, mem.guid)
+                local info = FS.Get(name, mem.guid)
                 if info then known[#known + 1] = { name = name, guid = mem.guid, info = info } end
             end
             local brief = ""
             if known[1] then
                 local k = known[1]
-                local text = GH.Brief(k.info) or (k.info.note and "noted") or "rated"
+                local text = FS.Brief(k.info) or (k.info.note and "noted") or "marked"
                 if k.guid ~= (members[1] and members[1].guid) then text = Short(k.name) .. " " .. text end
-                local r = GH.Rating(k.info)
+                local r = FS.Rating(k.info)
                 brief = "  " .. W.Color(text, T.muted) .. (r ~= "" and (" " .. r) or "")
             end
             rows[#rows + 1] = { kind = "pair", label = Short(who) .. (#members > 1 and W.Color(("  +%d"):format(#members - 1), T.muted) or "") .. brief,
                 labelColor = T.text, color = canJoin and T.accent or T.muted, value = QueueName(queues[1]),
                 tip = known[1] and function(tt)
                     tt:AddLine(Short(who), T.accent[1], T.accent[2], T.accent[3])
-                    for _, k in ipairs(known) do GH.AddTip(tt, k.info, Short(k.name or "?")) end
-                    tt:AddLine("Click: ask to join, Group History", 0.4, 0.73, 1)
+                    for _, k in ipairs(known) do FS.AddTip(tt, k.info, Short(k.name or "?")) end
+                    tt:AddLine("Click: ask to join, Fireside", 0.4, 0.73, 1)
                 end or nil,
                 onClick = function()
-                    if not canJoin and not GH.Available() then return ns:Print("That group can't be joined right now.", true) end
+                    if not canJoin and not FS.Available() then return ns:Print("That group can't be joined right now.", true) end
                     local m = ns.Menu:New(page)
                     m:Title("Ask to join as")
                     for _, r in ipairs({ { "Tank", true, false, false }, { "Healer", false, true, false }, { "Damage", false, false, true } }) do
                         m:Button({ text = r[1], disabled = not canJoin, tooltip = not canJoin and "That group can't be joined right now." or nil,
                             fn = function() Try("ask to join", SQ.RequestToJoin, guid, r[2], r[3], r[4]) end })
                     end
-                    if GH.Available() then
-                        m:Header("Group History")
+                    if FS.Available() then
+                        m:Header("Fireside")
                         for i, mem in ipairs(members) do
                             if i > 5 then break end
                             local name = GuidName(mem.guid)
-                            GH.AddMenu(m, name, mem.guid, Short(name or "?"))
+                            FS.AddMenu(m, name, mem.guid, Short(name or "?"))
                         end
                     end
                     m:Show(GetMouseFoci and GetMouseFoci()[1] or page)

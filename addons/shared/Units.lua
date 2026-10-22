@@ -140,7 +140,7 @@ end
 function U.UnitKey(unit) return ForeverUnitKey(unit) end
 
 -- A unit's key, or its plain name when no key can be worked out (an NPC, a Forever unit that only
--- gives one name). nil only when the unit has no readable name. GroupHistory/MrMiyagi UnitFull.
+-- gives one name). nil only when the unit has no readable name. Fireside/MrMiyagi UnitFull.
 function U.UnitFull(unit)
     local key = U.UnitKey(unit)
     if key then return key end

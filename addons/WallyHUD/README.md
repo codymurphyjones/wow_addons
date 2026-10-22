@@ -17,7 +17,7 @@ It loads last: its TOC lists every addon of ours as an optional dependency. It r
 
 | Addon | What changes |
 |---|---|
-| Wally, Quartermaster, WealthPlanner, GroupHistory, MrMiyagi, TapeMeasure, SmartPlates, BattleRecap | Their colours live in one `Palette.lua` each, listed first in their TOC. WallyHUD repaints it in place: hairline borders, the shared surfaces and buttons, the one accent (BattleRecap's coral included). BattleRecap's window titles use primary text. |
+| Wally, Quartermaster, WealthPlanner, Fireside, MrMiyagi, TapeMeasure, SmartPlates, BattleRecap | Their colours live in one `Palette.lua` each, listed first in their TOC. WallyHUD repaints it in place: hairline borders, the shared surfaces and buttons, the one accent (BattleRecap's coral included). BattleRecap's window titles use primary text. |
 | SimplePanel (status rail) | Its "Wally" scheme follows WallyHUD: the shared palette, state colours and font. No dividers. Values are only coloured when they're a problem: fps under 30, latency over 300 ms, durability at 50% or less, bags nearly full. |
 | SaddleBags (tabs) | Underline tabs: capitals, the active one in primary text over a 2px accent line, no fills or borders. The panel, when it shows, is a hairline surface. |
 | Waypoint (arrow) | A see-through hairline panel instead of the gold border. The arrow and title keep the target's colour (yours, a guide's, a dungeon's), because that one means something. The "Fly to" button follows the palette. |

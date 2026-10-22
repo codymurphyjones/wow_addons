@@ -92,7 +92,7 @@ Every plugin has its own options on its right-click menu. Here's what each one s
 - Decline duels.
 - Decline group invites from strangers. While you're listed in Looking for Group this steps aside: invites from players who are also listed get through, anyone else is still declined.
 - Accept group invites from friends and guild.
-- With Group History installed: treat past groupmates you rated up as known, and decline invites from anyone you rated down.
+- With Fireside installed: treat past groupmates you'd group with again as known, and decline invites from anyone you marked "wouldn't group again".
 - Decline guild invites.
 - Block trades and block channel invites.
 - Hide whispers from strangers (GMs always get through).

@@ -143,6 +143,7 @@ function Fight:Analyze(run, f)
     end
     if ns.db.options.debug then self:Print(f) end
     if ns.DeathPopup then ns.DeathPopup:OnAnalyzed(f, order) end
+    if ns.Hearth then ns.Hearth:OnFight(run, f, order) end
     if run.temp then ns.Run:UpdateTemp() end
     -- The deaths live on in run.deaths; the fight keeps a count (saved variables would copy them twice).
     local n = 0

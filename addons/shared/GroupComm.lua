@@ -3,9 +3,10 @@ local _, ns = ...
 -- Private addon messages to your group (addons/shared, copied into each addon's Shared\ folder by
 -- the build). One channel object per addon prefix:
 --
---   local comm = ns.NewGroupComm("GHIS", { pace = 0.25, raids = false })
+--   local comm = ns.NewGroupComm("FiresideRecap", { pace = 0.25, raids = false })
 --   comm:On("D", function(payload, sender, m) ... end)
 --   comm:Send("D", text)
+--   comm:SendTo("L", text, "Given Family")   -- the same, as addon whispers to one player
 --
 -- It registers the prefix, queues what you send and lets it out one message every `pace` seconds
 -- (under the client's throttle), splits long payloads into chunks and puts them back together on
@@ -13,7 +14,7 @@ local _, ns = ...
 -- secret, malformed and your own messages.
 --
 -- Wire formats (unchanged from the addons this came from, so old versions still understand us):
---   framing "chunked" (default; GroupHistory, Spyglass):  kind|id|i|n|body
+--   framing "chunked" (default; Fireside, Spyglass):  kind|id|i|n|body
 --       id counts 1..999 per channel object, i of n chunks, each body at most `chunk` (230) bytes.
 --       Partial messages are kept per sender:id until every chunk is in.
 --   framing "plain" (Waypoint):  kind|version|rest  (just kind|version when rest is empty)
@@ -47,7 +48,7 @@ end
 GC.Readable = Readable
 
 -- Text with the wire separators taken out (or replaced), optionally cut to `max` bytes.
---   GC.Clean(s)               GroupHistory: ":", ";" and "|" removed, nil -> ""
+--   GC.Clean(s)               Fireside: ":", ";" and "|" removed, nil -> ""
 --   GC.Clean(s, "|", "/", 60) Waypoint: "|" -> "/", at most 60 bytes
 function GC.Clean(s, pattern, repl, max)
     local out = tostring(s or ""):gsub(pattern or "[:;|]", repl or "")
@@ -75,9 +76,9 @@ local function InInstanceGroup()
 end
 
 -- The channel to use now, or opts.fallback (nil by default) when there's none.
---   opts.raids     true (default): RAID in a raid. false: nothing in a raid (GroupHistory).
+--   opts.raids     true (default): RAID in a raid. false: nothing in a raid (Fireside).
 --   opts.instance  "alone" (default): INSTANCE_CHAT only when you're in an instance group and not
---                  also in a home group (GroupHistory, Spyglass). "first": INSTANCE_CHAT whenever
+--                  also in a home group (Fireside, Spyglass). "first": INSTANCE_CHAT whenever
 --                  you're in an instance group (Waypoint, BattleRecap's chat).
 --   opts.fallback  the channel when you're in no group ("SAY" for chat; nil for addon messages).
 function GC.Channel(opts)
@@ -165,12 +166,13 @@ function Comm:InGroup() return self:Channel() ~= nil end
 
 local function SendFn() return C_ChatInfo and C_ChatInfo.SendAddonMessage end
 
--- Sends one wire message now (no queue). true, or false and the result when it failed.
-function Comm:SendNow(msg, channel)
+-- Sends one wire message now (no queue). true, or false and the result when it failed. target:
+-- the player for a "WHISPER" message.
+function Comm:SendNow(msg, channel, target)
     channel = channel or self:Channel()
     local send = SendFn()
     if not (channel and send) then return false end
-    local ok, result = pcall(send, self.prefix, msg, channel)
+    local ok, result = pcall(send, self.prefix, msg, channel, target)
     -- A result code (0 is success); a false result counts as a failure too.
     local failed = not ok or result == false or (type(result) == "number" and result ~= 0)
     if failed then
@@ -184,12 +186,25 @@ function Comm:SendNow(msg, channel)
 end
 
 -- Lets the queue out, one message every `pace` seconds. The channel is looked up per message:
--- with no group left, the message is dropped (as before).
+-- with no group left, the message is dropped (as before). Whispers (SendTo) go out group or not.
 function Comm:Pump()
+    if not self.outbox[1] then self.pumping = false return end
+    -- During a boss encounter the 12.x client drops addon messages: hold them until it ends.
+    local lockdown = C_ChatInfo and C_ChatInfo.InChatMessagingLockdown
+    if lockdown then
+        local ok, locked = pcall(lockdown)
+        if ok and locked == true then
+            C_Timer.After(1, function() self:Pump() end)
+            return
+        end
+    end
     local msg = table.remove(self.outbox, 1)
-    if not msg then self.pumping = false return end
-    local channel = self:Channel()
-    if channel then self:SendNow(msg, channel) end
+    if type(msg) == "table" then
+        self:SendNow(msg.msg, "WHISPER", msg.target)
+    else
+        local channel = self:Channel()
+        if channel then self:SendNow(msg, channel) end
+    end
     C_Timer.After(self.opts.pace, function() self:Pump() end)
 end
 
@@ -223,6 +238,17 @@ end
 function Comm:Send(kind, payload)
     if not (self:Channel() and SendFn()) then return false end
     for _, msg in ipairs(self:Frames(kind, payload)) do self.outbox[#self.outbox + 1] = msg end
+    if not self.pumping then self.pumping = true; self:Pump() end
+    return true
+end
+
+-- Sends `payload` under `kind` to one player as addon whispers (same framing as Send), in the
+-- same queue and pace. Works with or without a group. false when the client can't send.
+function Comm:SendTo(kind, payload, target)
+    if not (type(target) == "string" and target ~= "" and SendFn()) then return false end
+    for _, msg in ipairs(self:Frames(kind, payload)) do
+        self.outbox[#self.outbox + 1] = { msg = msg, target = target }
+    end
     if not self.pumping then self.pumping = true; self:Pump() end
     return true
 end

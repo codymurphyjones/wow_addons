@@ -17,7 +17,7 @@ local function PersonMenu(m, person)
             if person.zone then sub:Header(person.zone) end
             sub:Button({ text = "Whisper", fn = function() C.Whisper(person.name) end })
             sub:Button({ text = "Invite to group", fn = function() C.Invite(person.name) end })
-            ns.GroupHistory.AddMenu(sub, person.name)
+            ns.Fireside.AddMenu(sub, person.name)
         end })
 end
 

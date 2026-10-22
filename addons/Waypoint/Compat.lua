@@ -2,7 +2,7 @@ local _, ns = ...
 
 -- Safe calls and names. On WoW Forever (a 12.x engine) some values are "secret": comparing or
 -- printing one is an error, so anything read from the game that might be goes through Readable.
--- (From GroupHistory's Compat.lua; names from the shared Units.lua.)
+-- (From Fireside's Compat.lua; names from the shared Units.lua.)
 local C = {}
 ns.Compat = C
 

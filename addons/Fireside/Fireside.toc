@@ -1,0 +1,50 @@
+## Interface: 16001
+## Title: Fireside: Party Kudos
+## Notes: Thank your party as it happens and at the end: sparks from the Hearth mid-run, then a campfire where everyone from the run gathers for kudos and private notes. A Mirror shows what others told you. /fire
+## Author: Dinoblankie + Claude
+## Version: 0.1.0
+## SavedVariables: FiresideDB
+## SavedVariablesPerCharacter: FiresideCharDB
+## IconTexture: Interface\AddOns\Fireside\Media\Icon
+## Category: Social
+## AddonCompartmentFunc: Fireside_OnCompartmentClick
+## X-Curse-Project-ID: 1759344
+
+..\shared\Fonts.lua
+..\shared\Palette.lua
+..\shared\Core.lua
+..\shared\API.lua
+..\shared\Units.lua
+..\shared\Format.lua
+..\shared\Tooltip.lua
+..\shared\GroupComm.lua
+..\shared\Secrets.lua
+Compat.lua
+..\shared\DeathRecap.lua
+..\shared\DamageMeter.lua
+Core.lua
+..\shared\Instances.lua
+Data.lua
+..\shared\Widgets.lua
+Meter.lua
+Recap.lua
+Run.lua
+Fight.lua
+Blame.lua
+History.lua
+Sync.lua
+Marks.lua
+Moments.lua
+Feedback.lua
+Social.lua
+Popup.lua
+DeathPopup.lua
+Hearth.lua
+..\shared\Window.lua
+Campfire.lua
+Mirror.lua
+UI.lua
+..\shared\MinimapButton.lua
+Minimap.lua
+..\shared\OptionsPage.lua
+Settings.lua

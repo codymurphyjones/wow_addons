@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- The game reads the rest of Group History uses, under one name (C): the secret-safe reads from
+-- The game reads the rest of Fireside uses, under one name (C): the secret-safe reads from
 -- the shared Secrets.lua (on WoW Forever, a 12.x engine, many combat values are "secret": comparing,
 -- testing or printing one is an error, so they become nil) and names, class colours and group units
 -- from the shared Units.lua (character keys: realmless "Given Family" on WoW Forever).

@@ -1,7 +1,7 @@
 local _, ns = ...
 local C = ns.Compat
 
--- Shares the waypoint path with your group over a hidden addon channel (after GroupHistory's
+-- Shares the waypoint path with your group over a hidden addon channel (after Fireside's
 -- Sync.lua). Messages, all short enough for one send:
 --   A|1|starter|id|after|mapID|x|y|title   added a waypoint after `after` (empty: at the end)
 --   S|1|...                                the same, quietly: resends of a whole path

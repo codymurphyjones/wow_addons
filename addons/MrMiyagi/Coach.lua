@@ -96,8 +96,8 @@ local function Process()
         for _, l in ipairs(result.lessons) do ns:Debug(("  %s (+%s): %s"):format(l.title, ns.Odds.Percent(l.gain or 0), l.what)) end
     end
     if ns.db.options.autoOpen then
-        -- Group History's death popup is already explaining this death: don't open on top of it.
-        local gh = GroupHistoryAPI and GroupHistoryAPI.DeathPopupShown
+        -- Fireside's death popup is already explaining this death: don't open on top of it.
+        local gh = FiresideAPI and FiresideAPI.DeathPopupShown
         local ok, shown = pcall(gh or function() return false end)
         if ok and shown then
             ns:Print("A lesson from this death is waiting: |cffffffff/miyagi last|r.")

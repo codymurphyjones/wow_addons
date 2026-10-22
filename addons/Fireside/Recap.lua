@@ -3,7 +3,7 @@ local _, ns = ...
 -- Death recaps (C_DeathRecap): the last hits before a death, with who dealt them, the spell, the
 -- amount and the victim's health. The meter gives every group member's death a recap ID; your own
 -- latest recap is also readable without one. Read by the shared DeathRecap.lua (addons/shared),
--- which BattleRecap, Mr. Miyagi and Group History all use; this keeps the last KEEP hits and drops
+-- which BattleRecap, Mr. Miyagi and Fireside all use; this keeps the last KEEP hits and drops
 -- the fields only BattleRecap needs.
 local Recap = {}
 ns.Recap = Recap

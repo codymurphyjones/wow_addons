@@ -65,7 +65,7 @@ STEPS = [
     ("Waypoint", "build_water.py", [], "land and water map for route planning (the game's map tiles, wago.tools)", [_module("numpy")]),
     ("WealthPlanner", "build_vendor_items.py", [], "which items vendors sell", [_questiedb]),
     ("WealthPlanner", "fetch_farms.py", [], "farming drops and spawns (Wowhead)", []),
-    ("shared", "build_instances.py", [], "the dungeons and raids Field Guide, SpyGlass and Group History share (QuestieDB)", [_questiedb]),
+    ("shared", "build_instances.py", [], "the dungeons and raids Field Guide, SpyGlass and Fireside share (QuestieDB)", [_questiedb]),
     ("shared", "build_recipes.py", [], "recipes for SpyGlass's journal and Wealth Planner's crafting, read once (Wowhead)", []),
     ("FieldGuide", "fetch_xp.py", [], "quest XP (QuestieDB + Wowhead cache)", [_questiedb]),
     ("FieldGuide", "build_guides.py", [], "the leveling guides", [_questiedb]),

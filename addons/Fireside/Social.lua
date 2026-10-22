@@ -18,7 +18,7 @@ local function OnUnitTooltip(tooltip, unit)
     local full = C.UnitFull(unit)
     local text = full and ns.History:Summary(full, true)
     if not text then return end
-    tooltip:AddLine("Group History", PAL.accent[1], PAL.accent[2], PAL.accent[3])
+    tooltip:AddLine("Fireside", PAL.accent[1], PAL.accent[2], PAL.accent[3])
     tooltip:AddLine(text, 0.85, 0.9, 0.95, true)
     tooltip:Show()
 end

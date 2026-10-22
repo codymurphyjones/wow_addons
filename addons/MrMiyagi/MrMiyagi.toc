@@ -8,6 +8,7 @@
 ## IconTexture: Interface\AddOns\MrMiyagi\Media\Icon
 ## Category: Combat
 ## AddonCompartmentFunc: MrMiyagi_OnCompartmentClick
+## X-Curse-Project-ID: 1759346
 
 ..\shared\Fonts.lua
 ..\shared\Palette.lua

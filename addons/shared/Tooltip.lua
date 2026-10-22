@@ -11,7 +11,7 @@ local addonName, ns = ...
 --         "spell" (ID)  "talent" (tab, index)  "unit" (unit)
 -- Built from MrMiyagi's Compat.lua (spell, talent and bag lines), SpyGlass's TooltipLines (colours,
 -- IsRed), SmartPlates' unit quest lines, Bandolier's Use: text, Wally's and TapeMeasure's item
--- tooltip hooks and Group History's unit tooltip hook. GearEngine reads items through it.
+-- tooltip hooks and Fireside's unit tooltip hook. GearEngine reads items through it.
 local T = {}
 ns.Tooltip = T
 

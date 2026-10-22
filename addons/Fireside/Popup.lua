@@ -1,8 +1,9 @@
 local _, ns = ...
 local C = ns.Compat
 
--- Two small windows: the party popup (when you join a party or someone new joins it: your history
--- with each member) and the end-of-run report (bosses, wipes, deaths, who caused the most).
+-- The party popup: when you join a party or someone new joins it, who's in it: what each member is
+-- known for (the kudos that reached you, Marks.lua) and your history with them. Also the run summary
+-- lines the Runs page shows. (The end of a run is the Campfire now: Campfire.lua.)
 local Popup = {}
 ns.Popup = Popup
 
@@ -18,7 +19,7 @@ local function Window(name, w, h)
     f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
     local icon = f:CreateTexture(nil, "ARTWORK"); icon:SetSize(22, 22); icon:SetPoint("TOPLEFT", 10, -8)
     icon:SetTexture(ns.ICON)
-    f.title = Label(f, "", "GroupHistoryGameFontNormal", 38, -12, w - 90); f.title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
+    f.title = Label(f, "", "FiresideGameFontNormal", 38, -12, w - 90); f.title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
     local close = MakeButton(f, "X", 22, 20); close:SetPoint("TOPRIGHT", -8, -8)
     close:SetScript("OnClick", function() f:Hide() end)
     f.lines = {}
@@ -41,8 +42,8 @@ local function PartyRow(i)
         r:SetSize(500, ROW - 4)
         -- One line across the row: a long "Given Family  level 60, Healer" is cut short instead of
         -- wrapping down into the summary under it.
-        r.name = Label(r, "", "GroupHistoryGameFontHighlight", 0, 0, 500); r.name:SetWordWrap(false)
-        r.text = Muted(Label(r, "", "GroupHistoryGameFontHighlightSmall", 0, -16, 500))
+        r.name = Label(r, "", "FiresideGameFontHighlight", 0, 0, 500); r.name:SetWordWrap(false)
+        r.text = Muted(Label(r, "", "FiresideGameFontHighlightSmall", 0, -16, 500))
         r.text:SetWordWrap(true); r.text:SetHeight(28)
         r:SetScript("OnClick", function(self) if self.full then ns.UI:ShowPlayer(self.full) end end)
         party.lines[i] = r
@@ -58,7 +59,7 @@ function Popup:ShowParty(force)
         return
     end
     if not party then
-        party = Window("GroupHistoryPartyPopup", 524, 100)
+        party = Window("FiresidePartyPopup", 524, 100)
         party:SetScript("OnUpdate", function(self, elapsed)
             if not self.closeAt or self:IsMouseOver() then return end
             if GetTime() >= self.closeAt then self:Hide() end
@@ -78,13 +79,13 @@ function Popup:ShowParty(force)
             r.full = full
             r.name:SetText(("%s  |cffaaaaaalevel %s%s|r"):format(C.Colored(full, C.Str(class)), C.Num(C.Call(UnitLevel, unit)) or "?",
                 p and p.lastRole and (", " .. p.lastRole) or ""))
-            r.text:SetText(summary or "New to you.")
+            r.text:SetText(summary or "|cffaaaaaaNew to you, and nobody has told your party about them yet.|r")
             r:Show()
         end
     end
     for i = n + 1, #party.lines do party.lines[i]:Hide() end
     if n == 0 then return party:Hide() end
-    party.title:SetText(anyKnown and "You've grouped with some of these players before" or "Your party")
+    party.title:SetText(anyKnown and "Who's in your party, and what they're known for" or "Your party: new faces all round")
     party:SetHeight(46 + n * ROW)
     local secs = ns.db.options.popupSeconds or 20
     party.closeAt = (secs > 0 and not force) and (GetTime() + secs) or nil
@@ -114,10 +115,8 @@ ns:On("GROUP_ROSTER_UPDATE", function()
 end)
 
 -- ---------------------------------------------------------------------------
--- End-of-run report
+-- Run summary (the Runs page)
 -- ---------------------------------------------------------------------------
-
-local report
 
 local DURATION = { days = false, alwaysHours = true }
 local function Duration(run) return ns.Format.Duration((run.stop or time()) - run.start, DURATION) end
@@ -165,20 +164,12 @@ function Popup.RunLines(run)
     local heal, hn = Top(healed)
     if dps then lines[#lines + 1] = ("Most damage: %s (%s)"):format(dps, AbbreviateNumbers and AbbreviateNumbers(dn) or dn) end
     if heal and hn > 0 then lines[#lines + 1] = ("Most healing: %s (%s)"):format(heal, AbbreviateNumbers and AbbreviateNumbers(hn) or hn) end
-    return lines
-end
-
-function Popup:ShowReport(run)
-    if not report then
-        report = Window("GroupHistoryRunReport", 440, 200)
-        report.text = Label(report, "", "GroupHistoryGameFontHighlightSmall", 12, -36, 416)
-        report.text:SetJustifyH("LEFT"); report.text:SetSpacing(2)
-        report.open = MakeButton(report, "Details", 80, 22); report.open:SetPoint("BOTTOMRIGHT", -10, 10)
-        report.open:SetScript("OnClick", function() report:Hide(); ns.UI:ShowRun(report.runID) end)
+    -- What was said at the campfire.
+    local kudos = {}
+    for _, e in ipairs(run.kudos or {}) do
+        kudos[#kudos + 1] = ("%s to %s: %s %s"):format(C.IsMe(e.from) and "you" or C.Short(e.from), C.IsMe(e.to) and "you" or C.Short(e.to),
+            ns.Marks.Icon(e.k), ns.Marks.Label(e.k))
     end
-    report.runID = run.id
-    report.title:SetText(run.instance .. (run.finished and "  |cff59f28cfull clear|r" or ""))
-    report.text:SetText(table.concat(Popup.RunLines(run), "\n"))
-    report:SetHeight(report.text:GetStringHeight() + 80)
-    report:Show()
+    if #kudos > 0 then lines[#lines + 1] = "At the campfire: " .. table.concat(kudos, ";  ") end
+    return lines
 end

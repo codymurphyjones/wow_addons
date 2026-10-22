@@ -3,7 +3,9 @@ local C = ns.Compat
 
 -- Everyone you've run a dungeon with: who they are, the runs you did together, how those went
 -- (finished, wipes), their deaths and how often they were the likely cause of a death, plus your
--- own note and thumbs up/down.
+-- private note and "would group again". The feedback about them (Marks.lua, Feedback.lua) lives on
+-- the same record: p.given (kudos you gave), p.heard (kudos others told your party they gave) and
+-- p.banner (the kudos their own Fireside says they've received).
 local H = {}
 ns.History = H
 
@@ -20,6 +22,7 @@ local function Tag(reason)
     end
     return "other"
 end
+H.Tag = Tag
 
 -- Players by compact name ("aranaliacaelmyr"), so every shape of a name finds its record.
 local byCompact, indexed
@@ -77,8 +80,18 @@ local function MergePlayer(kept, moved)
     if moved.last and (not kept.last or moved.last > kept.last) then
         kept.last, kept.lastRole = moved.last, moved.lastRole or kept.lastRole
     end
-    for _, k in ipairs({ "class", "race", "level", "guild", "note", "rating" }) do
+    for _, k in ipairs({ "class", "race", "level", "guild", "note", "rating", "banner" }) do
         if kept[k] == nil then kept[k] = moved[k] end
+    end
+    if type(moved.given) == "table" then
+        kept.given = kept.given or {}
+        for id, n in pairs(moved.given) do kept.given[id] = (kept.given[id] or 0) + n end
+    end
+    if type(moved.heard) == "table" then
+        kept.heard = kept.heard or {}
+        for giver, h in pairs(moved.heard) do
+            if not kept.heard[giver] or (h.t or 0) > (kept.heard[giver].t or 0) then kept.heard[giver] = h end
+        end
     end
 end
 
@@ -181,11 +194,14 @@ function H:AddRun(run)
         p.guild = m.guild or p.guild
         p.last, p.lastRole = run.stop or time(), m.role or (run.roles and (run.roles.tank == C.Short(full) and "tank"
             or run.roles.healer == C.Short(full) and "healer")) or p.lastRole
-        table.insert(p.runs, run.id)
-        p.t.runs = p.t.runs + 1
-        if run.finished then p.t.finished = p.t.finished + 1 end
-        p.t.wipes = p.t.wipes + (run.wipes or 0)
-        p.t.bosses = p.t.bosses + kills
+        -- Someone who left before the run began (kicked while forming) sat at its fire, but didn't run it.
+        if not m.before then
+            table.insert(p.runs, run.id)
+            p.t.runs = p.t.runs + 1
+            if run.finished then p.t.finished = p.t.finished + 1 end
+            p.t.wipes = p.t.wipes + (run.wipes or 0)
+            p.t.bosses = p.t.bosses + kills
+        end
     end
 end
 
@@ -198,28 +214,43 @@ function H:TopReason(p)
     return best, n
 end
 
--- One line about a player, for chat, tooltips and the popup.
+-- One line about a player, for chat, tooltips and the popups: what they're known for (the kudos
+-- that reached you), your runs together, and your own private take (would group again, your note).
+-- Never their faults: those stay on their page, for you (H:Private).
 function H:Summary(full, short)
     local p = self:Get(full)
     if not p then return nil end
     local t = p.t
     local parts = {}
-    parts[#parts + 1] = ("%d run%s together (%d finished)"):format(t.runs, t.runs == 1 and "" or "s", t.finished)
-    if t.wipes > 0 then parts[#parts + 1] = ("%d wipe%s"):format(t.wipes, t.wipes == 1 and "" or "s") end
-    parts[#parts + 1] = ("%d death%s"):format(t.deaths, t.deaths == 1 and "" or "s")
+    local known = ns.Marks.KnownLine(full, short and 2 or 3)
+    if known then parts[#parts + 1] = known end
     if t.runs > 0 then
-        parts[#parts + 1] = ("at fault %.1f deaths a run"):format(t.fault / t.runs)
+        local together = ("%d run%s together (%d finished)"):format(t.runs, t.runs == 1 and "" or "s", t.finished)
+        local last = p.runs[#p.runs] and ns.Run:Get(p.runs[#p.runs])
+        if last and not short then
+            together = together .. (", last %s %s"):format(last.instance, date("%m/%d", last.start))
+        end
+        parts[#parts + 1] = together
+    elseif not known then
+        return nil
     end
-    local reason, n = self:TopReason(p)
-    if reason and n >= 2 then parts[#parts + 1] = "often " .. reason end
-    local text = table.concat(parts, ", ")
-    local last = p.runs[#p.runs] and ns.Run:Get(p.runs[#p.runs])
-    if last and not short then
-        text = text .. (". Last: %s %s%s"):format(last.instance, date("%m/%d", last.start), last.finished and " (full clear)" or "")
-    end
-    if p.rating then text = text .. (p.rating > 0 and "  |cff59f28c+|r" or "  |cffd9736b-|r") end
+    local text = table.concat(parts, "  -  ")
+    if p.rating then text = text .. (p.rating > 0 and "  |cff59f28cwould group again|r" or "  |cffd9736bwouldn't group again|r") end
     if p.note and p.note ~= "" then text = text .. "  |cffffd24d\"" .. p.note .. "\"|r" end
     return text
+end
+
+-- What the data saw, for your eyes only (their page): deaths, and how often they likely set one off.
+function H:Private(full)
+    local p = self:Get(full)
+    if not p or p.t.runs == 0 then return nil end
+    local t = p.t
+    local parts = { ("%d death%s in %d run%s"):format(t.deaths, t.deaths == 1 and "" or "s", t.runs, t.runs == 1 and "" or "s") }
+    if t.wipes > 0 then parts[#parts + 1] = ("%d wipe%s"):format(t.wipes, t.wipes == 1 and "" or "s") end
+    parts[#parts + 1] = ("likely set off %.1f deaths a run"):format(t.fault / t.runs)
+    local reason, n = self:TopReason(p)
+    if reason and n >= 2 then parts[#parts + 1] = "most often " .. reason end
+    return table.concat(parts, ", ")
 end
 
 -- Runs you did with a player, newest first.
@@ -264,8 +295,8 @@ end
 -- For other addons (SimplePanel's Social switches, tooltips and person menus). name is the player's
 -- name in any shape ("Given Family", "GivenFamily", "Given Family-Server"); guid, when given,
 -- supplies the name when there's none or only the given name. Event "CHANGED" (no arguments) after
--- what Group History knows changes (a run, a rating, a note), at most once a frame.
-local _, FireAPI = ns.NewAPI("GroupHistoryAPI", 1)
+-- what Fireside knows changes (a run, a rating, a note), at most once a frame.
+local _, FireAPI = ns.NewAPI("FiresideAPI", 1)
 ns:OnChanged(function() FireAPI("CHANGED") end)
 
 local function Resolve(name, guid)
@@ -281,32 +312,37 @@ local function Resolve(name, guid)
 end
 
 -- What you know of a player, or nil if you've never grouped with them (nor rated or noted them).
--- Returns { full, rating = 1 / -1 / nil, runs, finished, wipes, deaths, bosses, note, last, summary }.
-function GroupHistoryAPI.Get(name, guid)
+-- Returns { full, rating = 1 / -1 / nil, runs, finished, wipes, deaths, bosses, note, last, summary,
+-- knownFor = { { id, label, givers } } (the kudos that reached you, most givers first) }.
+function FiresideAPI.Get(name, guid)
     if not (ns.db and ns.db.players) then return nil end
     local full = Resolve(name, guid)
     local p = full and H:Get(full)
     if not p then return nil end
     local t = p.t
+    local known = {}
+    for _, e in ipairs(ns.Marks.KnownFor(full)) do
+        known[#known + 1] = { id = e.id, label = ns.Marks.kudo[e.id].label, givers = e.weight }
+    end
     return { full = full, rating = p.rating, runs = t.runs, finished = t.finished, wipes = t.wipes, deaths = t.deaths,
-        bosses = t.bosses, note = p.note, last = p.last, summary = H:Summary(full, true) }
+        bosses = t.bosses, note = p.note, last = p.last, summary = H:Summary(full, true), knownFor = known }
 end
 
--- Opens the Group History window on a player.
-function GroupHistoryAPI.Show(name, guid)
+-- Opens the Fireside window on a player.
+function FiresideAPI.Show(name, guid)
     if not ns.db then return end
     local full = Resolve(name, guid)
     ns.UI:ShowPlayer(full and (H:Get(full) and full or H:Find(full)))
 end
 
 -- Thumbs up (1) or down (-1); the same rating again clears it.
-function GroupHistoryAPI.SetRating(name, guid, rating)
+function FiresideAPI.SetRating(name, guid, rating)
     local full = ns.db and Resolve(name, guid)
     if full then H:SetRating(full, rating) end
 end
 
 -- Your note on a player; "" clears it.
-function GroupHistoryAPI.SetNote(name, guid, note)
+function FiresideAPI.SetNote(name, guid, note)
     local full = ns.db and Resolve(name, guid)
     if full then H:SetNote(full, note or "") end
 end

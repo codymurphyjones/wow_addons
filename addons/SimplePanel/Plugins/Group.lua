@@ -56,21 +56,21 @@ end
 
 local function Colored(name, class) return ns.Units.Colored(name, class, { plain = true }) end
 
--- What Group History knows of each member: your +/- and note, else how often you've grouped. A
--- raid lists only those you've rated or noted.
+-- What Fireside knows of each member: your would-group-again +/- and note, else what they're
+-- known for and how often you've grouped. A raid lists only those you've marked or noted.
 local function HistoryLines(tt)
-    local GH = ns.GroupHistory
-    if not GH.Available() then return end
+    local FS = ns.Fireside
+    if not FS.Available() then return end
     local raid = IsInRaid and IsInRaid()
     local lines = {}
     for _, unit in ipairs(Units()) do
         if unit ~= "player" and UnitExists(unit) then
             -- UnitName's second value is the family name: the unit's "Given Family".
             local name = ns.Compat.UnitPlayer(unit)
-            local info = name and GH.Get(name, UnitGUID(unit))
-            local note, rating = GH.Note(info), GH.Rating(info)
+            local info = name and FS.Get(name, UnitGUID(unit))
+            local note, rating = FS.Note(info), FS.Rating(info)
             local right = (rating ~= "" or note) and (rating .. (note and ("  " .. W.Color(note, T.yellow)) or ""))
-                or GH.Brief(info) or W.Color("new", T.muted)
+                or FS.Brief(info) or W.Color("new", T.muted)
             if name and (not raid or rating ~= "" or note) then
                 local _, class = UnitClass(unit)
                 lines[#lines + 1] = { Colored(name, class), right }
@@ -78,7 +78,7 @@ local function HistoryLines(tt)
         end
     end
     if #lines == 0 then return end
-    tt:AddHeader("Group History")
+    tt:AddHeader("Fireside")
     for _, l in ipairs(lines) do tt:AddDouble(l[1], l[2], T.text, T.text) end
 end
 
@@ -126,14 +126,14 @@ SimplePanel.RegisterPlugin({
     menu = function(_, m)
         m:Button({ text = "Ready check", disabled = function() return not CanLead() end,
             tooltip = "Leader or assistant only.", fn = function() if DoReadyCheck then DoReadyCheck() end end })
-        -- Rate or note your party in Group History (a raid is too long a list for a menu).
-        if ns.GroupHistory.Available() and not (IsInRaid and IsInRaid()) then
-            m:Header("Group History")
+        -- Mark or note your party in Fireside (a raid is too long a list for a menu).
+        if ns.Fireside.Available() and not (IsInRaid and IsInRaid()) then
+            m:Header("Fireside")
             for _, unit in ipairs(Units()) do
                 local name = ns.Compat.UnitPlayer(unit)
                 if unit ~= "player" and name then
                     local _, class = UnitClass(unit)
-                    ns.GroupHistory.AddMenu(m, name, UnitGUID(unit), Colored(name, class))
+                    ns.Fireside.AddMenu(m, name, UnitGUID(unit), Colored(name, class))
                 end
             end
         end

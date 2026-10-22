@@ -89,14 +89,14 @@ local function IsGuildmate(name, guid)
     return false
 end
 
--- What the Group History addon knows of a player (GroupHistoryAPI.Get), or nil.
+-- What the Fireside addon knows of a player (FiresideAPI.Get), or nil.
 local function History(name, guid)
-    if not (name and GroupHistoryAPI and GroupHistoryAPI.Get) then return nil end
-    local ok, info = pcall(GroupHistoryAPI.Get, C.FullName(name, guid), guid)
+    if not (name and FiresideAPI and FiresideAPI.Get) then return nil end
+    local ok, info = pcall(FiresideAPI.Get, C.FullName(name, guid), guid)
     return ok and info or nil
 end
 
-local function HasHistory() return GroupHistoryAPI ~= nil and GroupHistoryAPI.Get ~= nil end
+local function HasHistory() return FiresideAPI ~= nil and FiresideAPI.Get ~= nil end
 
 -- Whether name is in your group: each member's "Given Family" against it.
 local function InMyGroup(name)
@@ -106,7 +106,7 @@ local function InMyGroup(name)
     return false
 end
 
--- Past groupmates you gave a thumbs up in Group History count too, while that switch is on.
+-- Past groupmates you'd group with again (Fireside) count too, while that switch is on.
 local function IsKnown(name, guid)
     if not name then return false end
     if InMyGroup(name) then return true end
@@ -202,7 +202,7 @@ end
 -- row of interaction rules: open or blocked, one per kind. `paused` returns why a switch is set
 -- aside for now, if it is; a paused switch neither blocks nor counts, whatever its value.
 
--- Switches that only exist with the Group History addon.
+-- Switches that only exist with the Fireside addon.
 local function HistorySwitch(sw)
     sw.available, sw.hideUnavailable = HasHistory, true
     return sw
@@ -220,11 +220,11 @@ local SWITCHES = {
         true, "No stranger invites", function() return IsListed() and LFG_PAUSED or nil end),
     OwnSwitch("acceptKnownInvites", "Accept group invites from friends and guild",
         "Joins straight away when a friend, Battle.net friend or guildmate invites you.", false, "Auto-join"),
-    -- With the Group History addon: your thumbs up and down on past groupmates.
-    HistorySwitch(OwnSwitch("knownFromHistory", "Treat players you rated up as known",
-        "Past groupmates you gave a thumbs up in Group History count like friends: their invites aren't declined as a stranger's, their whispers aren't hidden, and Accept group invites joins them too.")),
-    HistorySwitch(OwnSwitch("declineRatedDown", "Decline group invites from players you rated down",
-        "Group invites from anyone you gave a thumbs down in Group History are turned down, even while you're listed in Looking for Group.", true, "No rated-down invites")),
+    -- With the Fireside addon: whether you'd group with past groupmates again.
+    HistorySwitch(OwnSwitch("knownFromHistory", "Treat players you'd group with again as known",
+        "Past groupmates you marked \"would group again\" in Fireside count like friends: their invites aren't declined as a stranger's, their whispers aren't hidden, and Accept group invites joins them too.")),
+    HistorySwitch(OwnSwitch("declineRatedDown", "Decline group invites from players you wouldn't group with again",
+        "Group invites from anyone you marked \"wouldn't group again\" in Fireside are turned down, even while you're listed in Looking for Group.", true, "No invites from players you'd avoid")),
     {
         text = "Decline guild invites", tooltip = "Turns down invitations to join a guild.", block = true, short = "No guild invites",
         get = function()
@@ -367,7 +367,7 @@ ns:On("PARTY_INVITE_REQUEST", function(name, ...)
         if h and (h.rating or 0) < 0 then
             DeclineGroup()
             HidePopup("PARTY_INVITE")
-            Say("declined a group invite from " .. tostring(name) .. ": you rated them down in Group History.")
+            Say("declined a group invite from " .. tostring(name) .. ": you marked them 'wouldn't group again' in Fireside.")
             return
         end
     end

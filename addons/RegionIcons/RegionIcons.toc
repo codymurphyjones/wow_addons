@@ -5,8 +5,9 @@
 ## Version: 0.1.0
 ## OptionalDeps: OpenMap, RareScanner, Questie, TomTom, GatherMate2, HandyNotes
 ## SavedVariables: RegionIconsDB
-## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
+## IconTexture: Interface\AddOns\RegionIcons\Media\Icon
 ## Category: Map & Minimap
+## X-Curse-Project-ID: 1759351
 
 ..\shared\Core.lua
 ..\shared\WorldMap.lua

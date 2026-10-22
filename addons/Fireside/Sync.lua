@@ -1,7 +1,7 @@
 local _, ns = ...
 local C = ns.Compat
 
--- Group members running Group History send each other their own death recap (which each client
+-- Group members running Fireside send each other their own death recap (which each client
 -- can always read for itself) over private party addon messages, in case the damage meter didn't
 -- give one for them. Nobody needs it installed; it only fills gaps. The messages go through the
 -- shared GroupComm.lua (framing, pacing, the channel, dropping your own): never in a raid.
@@ -15,7 +15,7 @@ local received = {} -- short name -> { hits, maxHp, at = GetTime() }
 -- Senders are keyed by their short name, as the deaths are. ns.Units.IsMe also knows your own
 -- messages on WoW Forever, where a sender comes back as "Given Family", "GivenFamily" or
 -- "Given Family-Server".
-local comm = ns.NewGroupComm("GHIS", { pace = 0.25, raids = false, normalize = C.Short, isMe = ns.Units.IsMe })
+local comm = ns.NewGroupComm("FiresideRecap", { pace = 0.25, raids = false, normalize = C.Short, isMe = ns.Units.IsMe })
 
 -- Hits as text: spellId:amount:overkill:flags:source:spell per hit, ";" between hits.
 local Clean = ns.GroupComm.Clean
@@ -50,7 +50,7 @@ function Sync:ShareDeath(name, hits, maxHp)
     comm:Send("D", ("%s|%d|%s"):format(Clean(name), maxHp or 0, Encode(hits)))
 end
 
--- A member's recap sent by their own Group History, while it's fresh (for the death popup).
+-- A member's recap sent by their own Fireside, while it's fresh (for the death popup).
 function Sync:Peek(name)
     local r = received[name]
     if r and GetTime() - r.at <= FRESH then return r.hits, r.maxHp end

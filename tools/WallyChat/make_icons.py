@@ -69,12 +69,24 @@ def bottom():
 
 
 def logo():
+    """A conversation: a message (a dark bubble with lines of text, tail down left) answered by a
+    teal bubble with three typing dots (tail down right), overlapping it."""
     img, d = canvas(128)
     ik.wally_badge(d)
-    d.rounded_rectangle([s(26), s(32), s(102), s(82)], radius=s(14), fill=ACCENT)
-    d.polygon([(s(40), s(80)), (s(60), s(80)), (s(36), s(100))], fill=ACCENT)
-    for x in (46, 64, 82):
-        d.ellipse([s(x - 5), s(52), s(x + 5), s(62)], fill=DARK)
+    panel = (28, 33, 42, 255)
+    text = (237, 240, 245, 255)
+    # the message
+    d.rounded_rectangle([s(18), s(22), s(84), s(66)], radius=s(11), fill=panel, outline=ACCENT, width=s(3))
+    d.polygon([(s(28), s(64)), (s(42), s(64)), (s(24), s(80))], fill=panel)
+    d.line([(s(28), s(64)), (s(24), s(80)), (s(42), s(64))], fill=ACCENT, width=s(3), joint="curve")
+    d.rounded_rectangle([s(28), s(33), s(72), s(39)], radius=s(3), fill=text)
+    d.rounded_rectangle([s(28), s(45), s(62), s(50)], radius=s(2), fill=(237, 240, 245, 150))
+    # the reply, in front: a dark gap round it so the two bubbles read apart
+    d.rounded_rectangle([s(48), s(52), s(112), s(96)], radius=s(13), fill=DARK)
+    d.rounded_rectangle([s(52), s(56), s(108), s(92)], radius=s(11), fill=ACCENT)
+    d.polygon([(s(88), s(90)), (s(102), s(90)), (s(106), s(106))], fill=ACCENT)
+    for x in (66, 80, 94):
+        d.ellipse([s(x - 4.5), s(69.5), s(x + 4.5), s(78.5)], fill=DARK)
     save(img, "Icon.tga", 128)
 
 

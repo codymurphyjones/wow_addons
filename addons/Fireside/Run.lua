@@ -74,6 +74,33 @@ function Run:FullName(run, short)
     if run.me and C.SameName(run.me, short) then return run.me end
 end
 
+-- Everyone who has been in your party since it formed (never a raid), whether they're still in it:
+-- { [full] = member record + joined, left }. Gone when you leave the group.
+Run.session = {}
+local PRE_RUN = 20 * 60 -- someone who left this long before the run started still gets a seat
+
+function Run:UpdateSession()
+    if not IsInGroup() or IsInRaid() then wipe(self.session) return end
+    local present = {}
+    for _, unit in ipairs(C.GroupUnits()) do
+        local full, m = Member(unit)
+        if full then
+            present[full] = true
+            local s = self.session[full]
+            if s then
+                s.left = nil
+                s.class, s.role = s.class or m.class, s.role or m.role
+            else
+                m.joined = time()
+                self.session[full] = m
+            end
+        end
+    end
+    for full, s in pairs(self.session) do
+        if not present[full] and not s.left then s.left = time() end
+    end
+end
+
 function Run:Start()
     local name, _, _, diff, _, _, _, instanceID = GetInstanceInfo()
     local db = ns.db
@@ -88,6 +115,13 @@ function Run:Start()
     self.current = run
     db.currentRun = run.id
     self:UpdateMembers(run)
+    -- Whoever left the party shortly before (kicked while the group formed) is part of it too.
+    for full, s in pairs(self.session) do
+        if s.left and run.start - s.left <= PRE_RUN and not run.members[full] then
+            run.members[full] = { class = s.class, race = s.race, level = s.level, guild = s.guild, role = s.role,
+                joined = s.joined, left = s.left, before = true }
+        end
+    end
     ns:Debug(("Run %d started: %s"):format(run.id, run.instance))
     ns:Changed()
 end
@@ -106,7 +140,9 @@ function Run:Finish()
         return ns:Changed()
     end
     ns.History:AddRun(run)
-    if ns.db.options.report and ns.Popup then ns.Popup:ShowReport(run) end
+    if ns.Feedback then ns.Feedback:CheckPractice() end
+    -- The campfire opens once per run: at the last boss (Campfire.lua), else now.
+    if ns.db.options.report and ns.Campfire then ns.Campfire:OnRunEnd(run) end
     ns:Changed()
 end
 
@@ -199,7 +235,10 @@ ns:On("ENCOUNTER_END", function(_, name, _, _, status)
     local b = Boss(run, name)
     if status == 1 or status == true then
         b.kills = b.kills + 1
-        if ns.IsFinalBoss(run.instance, name, run.instanceID) then run.finished = true end
+        if ns.IsFinalBoss(run.instance, name, run.instanceID) then
+            run.finished = true
+            if ns.db.options.report and ns.Campfire then ns.Campfire:OnFinalBoss(run) end
+        end
     else
         b.wipes = b.wipes + 1
         run.wipes = run.wipes + 1
@@ -221,7 +260,7 @@ local pending
 local function Soon()
     if pending then return end
     pending = true
-    C_Timer.After(1, function() pending = false; Run:Check() end)
+    C_Timer.After(1, function() pending = false; Run:UpdateSession(); Run:Check() end)
 end
 ns:On("PLAYER_ENTERING_WORLD", Soon)
 ns:On("ZONE_CHANGED_NEW_AREA", Soon)

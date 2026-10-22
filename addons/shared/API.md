@@ -6,7 +6,7 @@ cited for each global.
 
 ## 1. How an API is made: `ns.NewAPI`
 
-`addons\shared\API.lua` (loaded by Bandolier, BattleRecap, GroupHistory, Quartermaster,
+`addons\shared\API.lua` (loaded by Bandolier, BattleRecap, Fireside, Quartermaster,
 SimplePanel, Spyglass, StatLedger, Wally, Waypoint, WealthPlanner, ZeppelinSigns):
 
 ```lua
@@ -96,27 +96,27 @@ Provider: BattleRecap (`BattleRecap\Core.lua`, after `ns:AddRecap`). `VERSION` 1
 Callers: SmartPlates (`Plugins\Nemesis.lua`: `Nemeses`, `RevengeTarget`, `OnRecap` at file load;
 OptionalDeps BattleRecap).
 
-### GroupHistoryAPI
+### FiresideAPI
 
-Provider: GroupHistory (`GroupHistory\History.lua` ~line 263; `DeathPopupShown` in
+Provider: Fireside (`Fireside\History.lua`, end of file; `DeathPopupShown` in
 `DeathPopup.lua`). `VERSION` 1. `name` is a player's name in any shape (`"Given Family"`,
 `"GivenFamily"`, `"Given Family-Server"`); `guid`, when given, supplies the name when there's none
 or only the given name.
 
 | Function | Returns |
 |---|---|
-| `Get(name [, guid])` | `{ full, rating (1 / -1 / nil), runs, finished, wipes, deaths, bosses, note, last, summary }`, or nil if you've never grouped with (nor rated or noted) them. |
-| `Show(name [, guid])` | Opens the Group History window on the player. |
-| `SetRating(name, guid, rating)` | Thumbs up (1) or down (-1); the same rating again clears it. |
+| `Get(name [, guid])` | `{ full, rating (1 / -1 / nil), runs, finished, wipes, deaths, bosses, note, last, summary, knownFor }`, or nil if you've never grouped with (nor marked or noted) them, and nobody has praised them to you. `knownFor` is `{ { id, label, givers } }`, the kudos that reached you, most givers first; `summary` leads with them and never mentions faults. |
+| `Show(name [, guid])` | Opens the Fireside window on the player. |
+| `SetRating(name, guid, rating)` | Your private "would group again" (1) or "wouldn't" (-1); the same value again clears it. Never sent to anyone. |
 | `SetNote(name, guid, note)` | Your note; `""` clears it. |
-| `DeathPopupShown()` | Whether Group History's death popup is up. |
+| `DeathPopupShown()` | Whether Fireside's death popup is up. |
 
 | Event | Args | Fired |
 |---|---|---|
-| `CHANGED` | none | After what Group History knows changes (a run, a rating, a note), at most once a frame. |
+| `CHANGED` | none | After what Fireside knows changes (a run, a kudo, a mark, a note), at most once a frame. |
 
-Callers: SimplePanel (`GroupHistory.lua`: `Get`, `Show`, `SetRating`, `SetNote`;
-`Plugins\Social.lua`: `Get`; OptionalDeps GroupHistory), MrMiyagi (`Coach.lua`: `DeathPopupShown`).
+Callers: SimplePanel (`Fireside.lua`: `Get`, `Show`, `SetRating`, `SetNote`;
+`Plugins\Social.lua`: `Get`; OptionalDeps Fireside), MrMiyagi (`Coach.lua`: `DeathPopupShown`).
 No one registers for `CHANGED` yet.
 
 ### QuartermasterAPI
@@ -356,7 +356,7 @@ events of its own.
 | `Theme` | SimplePanel's colours (`Widgets.lua`). |
 | `RangeSeconds(range)` | Seconds in `"15m"`, `"1h"`, `"2d"`; nil for `"session"`/`"all"`. |
 
-Callers: `shared\MinimapButton.lua` (`RegisterLauncher`; BattleRecap, FieldGuide, GroupHistory,
+Callers: `shared\MinimapButton.lua` (`RegisterLauncher`; BattleRecap, FieldGuide, Fireside,
 MrMiyagi, Quartermaster, RoadLog, SmartPlates, Spyglass, TapeMeasure, Wally, Waypoint,
 WealthPlanner), WallyHUD (`Density.lua`: `ListPlugins`, `SetDensityHidden`). Nothing outside
 SimplePanel calls `RegisterPlugin`, `Menu`, `Tooltip` or `Chart` yet. SimplePanel also turns
