@@ -81,7 +81,9 @@ local function OnEnter(pin)
     end
     if d then
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine("Click: navigate here", 0.5, 0.5, 0.5)
+        local r = ns.Targets:GetRequest()
+        GameTooltip:AddLine((r and r.owner == "Docks" and r.title == d.point.label) and "Click: stop navigating here"
+            or "Click: navigate here (click again to stop)", 0.5, 0.5, 0.5)
     end
     GameTooltip:Show()
 end
@@ -97,10 +99,16 @@ function Pins:Navigate(d)
 end
 
 local function OnClick(pin, button)
-    if IsControlKeyDown() then
-        if button == "LeftButton" then ns.MapPins:AddAtCursor() end
-    elseif button == "LeftButton" and pin.dock then
-        Pins:Navigate(pin.dock)
+    if ns.MapPins:AddClick(button) then
+        ns.MapPins:AddAtCursor()
+    elseif button == "LeftButton" and pin.dock and not IsModifierKeyDown() then
+        local r = ns.Targets:GetRequest()
+        if r and r.owner == "Docks" and r.title == pin.dock.point.label then
+            ns:Print(("Stopped navigating to %s."):format(pin.dock.point.label))
+            ns.Targets:ClearRequest(true)
+        else
+            Pins:Navigate(pin.dock)
+        end
     elseif button == "RightButton" and WorldMapFrame.NavigateToParentMap then
         WorldMapFrame:NavigateToParentMap()
     end

@@ -143,13 +143,6 @@ ns.DEFAULTS = {
     },
     -- Custom plates: { name = "Mob Name", color = {r,g,b} or nil, scale = 1.2, hide = false }
     custom = {},
-    -- SmartPlates' own target frame (TargetFrame.lua), in place of Blizzard's.
-    targetFrame = {
-        enabled = false,
-        width = 144,  -- its bar, in pixels (drawn at that size: crisp edges and text); 1.2x an enemy plate
-        height = 14,
-        fly = true,   -- an enemy target's plate flies into the frame (and back out when you switch away)
-    },
 }
 ns.CHAR_DEFAULTS = {
     window = { point = "CENTER", x = 0, y = 0 },
@@ -261,9 +254,6 @@ SlashCmdList.SMARTPLATES = function(msg)
         ns.CVars:PrintColorSettings()
     elseif cmd == "minimap" then
         ns:ToggleOption("char.minimap.hide")
-    elseif cmd == "target" and rest == "reset" then
-        ns.TargetFrame:ResetPosition()
-        ns:Print("The target frame is back in its place.", true)
     elseif cmd == "reset" then
         ns:ResetSettings()
         ns:Print("Settings reset to defaults.")

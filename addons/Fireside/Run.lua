@@ -208,6 +208,16 @@ end
 -- Bosses
 -- ---------------------------------------------------------------------------
 
+-- Bosses killed in a run, counted now (run.bossKills is only set once a run ends, so a run in
+-- progress showed 0 bosses with its last boss already down).
+function Run.BossKills(run)
+    local kills = 0
+    for _, b in pairs(run and run.bosses or {}) do
+        if (b.kills or 0) > 0 then kills = kills + 1 end
+    end
+    return kills
+end
+
 local function Boss(run, name)
     local b = run.bosses[name]
     if not b then

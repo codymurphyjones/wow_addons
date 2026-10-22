@@ -156,10 +156,6 @@ function Plates:UpdateUnit(f)
         u.kind = "npc"
     end
     u.style = ns.Style:Decide(u)
-    -- SmartPlates' target frame (TargetFrame.lua): always a full bar, never small, and it is the target.
-    if f.isTargetFrame then
-        u.isTargetFrame, u.isTarget, u.style, u.small = true, true, "normal", false
-    end
 end
 
 -- Width of the reaction ring around the bars, or 0 (glows and markers sit outside it).
@@ -190,7 +186,6 @@ end
 -- Healthbar size for this kind of plate.
 function Plates:Size(u)
     local g = ns.db.general
-    if u.isTargetFrame and ns.TargetFrame then return ns.TargetFrame.BarSize() end
     if u.small then return g.smallWidth, g.smallHeight end
     if u.reaction == "FRIENDLY" then return g.friendlyWidth, g.friendlyHeight end
     if u.isPlayer then return g.playerWidth, g.playerHeight end
@@ -204,29 +199,16 @@ function Plates:BaseScaleAlpha(f)
 end
 
 function Plates:ApplyScaleAlpha(f)
-    if f.isTargetFrame then
-        -- The target frame: drawn at its own size (Plates:Size), never scaled up; fully opaque.
-        f:SetScale(UIParent:GetEffectiveScale())
-        f:SetAlpha(1)
-        return
-    end
     local s, a = self:BaseScaleAlpha(f)
-    -- A plate flying into (or out of) the target frame: the flight sets them.
-    if f.dock and ns.TargetFrame then return ns.TargetFrame:DockApply(f, s, a) end
     f:SetScale(s)
     f:SetAlpha(a)
 end
 
--- The frame that shows your target: SmartPlates' target frame when it's on, else the target's plate.
+-- Your target's plate, if it has one.
 function Plates:TargetPlate()
-    local plate
     for _, p in pairs(self.byUnit) do
-        if p.active and p.unit.isTarget then
-            if p.isTargetFrame then return p end
-            plate = p
-        end
+        if p.active and p.unit.isTarget then return p end
     end
-    return plate
 end
 
 -- Full refresh of one plate.
@@ -252,9 +234,7 @@ function Plates:UpdateAll()
     if not ns.db then return end
     for unit, f in pairs(self.byUnit) do
         if f.active then
-            if f.isTargetFrame then
-                self:Refresh(f)
-            elseif Ours(unit) then
+            if Ours(unit) then
                 SetBlizzardShown(f.plate.UnitFrame, false)
                 self:Refresh(f)
             else
@@ -407,10 +387,6 @@ end)
 
 local function RefreshUnit(unit)
     local f = Plates.byUnit[unit]
-    if f and f.isTargetFrame then
-        if f.active then Plates:Refresh(f) end
-        return
-    end
     if not f or not f.active then
         -- A unit drawn by Blizzard may have become ours (e.g. it changed faction).
         local plate = C.PlateForUnit(unit) -- nil for raid/party/target tokens

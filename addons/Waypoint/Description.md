@@ -24,7 +24,8 @@ Waypoint times your flights, your rides and your travel speed, and plans the qui
 The arrow leads one step at a time: "Zeppelin to Undercity", then "Fly: Undercity to Tarren Mill", then the target. A chat line gives the whole trip and how long it takes.
 
 ### Paths you draw on the map
-- **Ctrl+left-click** the world map to drop waypoints. They join into a path, and the arrow leads you through it in order.
+- **Ctrl+click** the world map to drop waypoints. They join into a path, and the arrow leads you through it in order.
+- The first waypoint is **Blizzard's own map pin**, so the game's map and other map addons show it too. A pin set anywhere else (a chat link, OpenMap, another addon) becomes your next waypoint.
 - **Ctrl+right-click** removes the waypoint nearest the cursor, and the path joins up around it.
 - **Ctrl+Z** undoes your last 10 changes.
 

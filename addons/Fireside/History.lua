@@ -93,6 +93,17 @@ local function MergePlayer(kept, moved)
             if not kept.heard[giver] or (h.t or 0) > (kept.heard[giver].t or 0) then kept.heard[giver] = h end
         end
     end
+    if type(moved.flak) == "table" then
+        kept.flak = kept.flak or {}
+        for _, e in ipairs(moved.flak) do table.insert(kept.flak, e) end
+    end
+    if type(moved.reports) == "table" then
+        kept.reports = kept.reports or {}
+        for key, r in pairs(moved.reports) do
+            local had = kept.reports[key]
+            if not had or (r.hand or 2) < (had.hand or 2) then kept.reports[key] = r end
+        end
+    end
 end
 
 -- WoW Forever names: earlier versions saved other players as "Given-Family" (UnitName's two values
@@ -133,23 +144,17 @@ function H.ByName(tbl, name)
     end
 end
 
--- Who tanks and heals, when the game doesn't say: the tank takes the most damage as a class that
--- can tank, the healer does the most healing by a clear margin.
+-- Who tanks and heals. The tank is whoever has taken the most damage over the run so far, whatever
+-- role the game assigned (Blame.DataTank); the healer, when the game doesn't say, does the most
+-- healing by a clear margin.
 function H:InferRoles(run, f)
     run.roles = run.roles or {}
     local stats = f.stats
     if not stats then return end
-    local tank, healer = ns.Blame.Roles(run)
-    local taken, healed = 0, {}
-    for _, p in pairs(stats) do taken = taken + (p.taken or 0) end
-    if not tank then
-        local best, bestTaken = nil, 0
-        for name, p in pairs(stats) do
-            local class = p.class
-            if ns.TANK_CLASSES[class or ""] and (p.taken or 0) > bestTaken then best, bestTaken = name, p.taken end
-        end
-        if best and taken > 0 and bestTaken >= taken * 0.3 then run.roles.tank = best end
-    end
+    run.roles.tank = ns.Blame.DataTank(run, f) or run.roles.tank
+    run.roles.dataTank = true
+    local _, healer = ns.Blame.Roles(run)
+    local healed = {}
     if not healer then
         for name, p in pairs(stats) do healed[#healed + 1] = { name, p.healed or 0 } end
         table.sort(healed, function(a, b) return a[2] > b[2] end)
@@ -185,15 +190,12 @@ end
 
 -- A finished run: everyone in it gets it on their record.
 function H:AddRun(run)
-    local kills = 0
-    for _, b in pairs(run.bosses) do kills = kills + (b.kills > 0 and 1 or 0) end
-    run.bossKills = kills
+    run.bossKills = ns.Run.BossKills(run)
     for full, m in pairs(run.members) do
         local p = self:Get(full, true)
         p.class, p.race, p.level = m.class or p.class, m.race or p.race, m.level or p.level
         p.guild = m.guild or p.guild
-        p.last, p.lastRole = run.stop or time(), m.role or (run.roles and (run.roles.tank == C.Short(full) and "tank"
-            or run.roles.healer == C.Short(full) and "healer")) or p.lastRole
+        p.last, p.lastRole = run.stop or time(), ns.Blame.RoleOf(run, full)
         -- Someone who left before the run began (kicked while forming) sat at its fire, but didn't run it.
         if not m.before then
             table.insert(p.runs, run.id)
@@ -222,6 +224,10 @@ function H:Summary(full, short)
     if not p then return nil end
     local t = p.t
     local parts = {}
+    -- Flak first: the warning for a pattern, and (strongly) any you gave them yourself.
+    local warning, mine = ns.Marks.FlakLines(full, short)
+    if warning then parts[#parts + 1] = warning end
+    if mine then parts[#parts + 1] = mine end
     local known = ns.Marks.KnownLine(full, short and 2 or 3)
     if known then parts[#parts + 1] = known end
     if t.runs > 0 then
@@ -231,7 +237,7 @@ function H:Summary(full, short)
             together = together .. (", last %s %s"):format(last.instance, date("%m/%d", last.start))
         end
         parts[#parts + 1] = together
-    elseif not known then
+    elseif #parts == 0 then
         return nil
     end
     local text = table.concat(parts, "  -  ")

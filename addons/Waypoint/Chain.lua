@@ -4,6 +4,13 @@ local C = ns.Compat
 -- The waypoint path: waypoints in order, shared with your group (Comm.lua). The arrow leads to the
 -- first one; reaching it drops it from your copy only, so everyone walks the path at their own pace.
 -- Your own adds, removes and wipes can be undone (10 deep): Ctrl+Z on the map, or /way undo.
+--
+-- The first waypoint is Blizzard's map pin (C_Map's user waypoint): Waypoint keeps the two the same
+-- (SyncBlizzard), so the game's own pin, OpenMap and other map addons show the current waypoint. A
+-- pin set anywhere else (OpenMap, a chat link, another addon) becomes the path's new first waypoint;
+-- clearing Blizzard's pin finishes the first waypoint, and the next one takes its place. With no
+-- path, a "navigate to" you clicked (a town, a dock, a dungeon in Field Guide: Targets' request) is
+-- Blizzard's pin instead, and clearing the pin stops it.
 -- Saved per character: chain = { { id, by, mapID, x, y, title } }, chainStarter, chainT, reached.
 local Chain = {}
 ns.Chain = Chain
@@ -13,6 +20,9 @@ local UNDO_MAX = 10
 local undo = {} -- { kind = "add", id } | { kind = "remove", point, after } | { kind = "wipe" | "replace", old, starter, id }
 
 local entry = { owner = "path", key = "path", ordered = true, arrive = 15, visited = {} }
+local FRONT = "^"   -- `after` for a waypoint that goes before all the others
+Chain.FRONT = FRONT
+local NEAR = 0.002  -- two points closer than this (on the same map) are the same waypoint
 
 local function Points() return ns.char.chain end
 
@@ -33,6 +43,17 @@ end
 
 local function Copy(p)
     return { id = p.id, by = p.by, mapID = p.mapID, x = p.x, y = p.y, title = p.title }
+end
+
+local function Near(p, mapID, x, y)
+    return p.mapID == mapID and math.abs(p.x - x) < NEAR and math.abs(p.y - y) < NEAR
+end
+
+-- The waypoint of the path at a point, and its number.
+local function InPath(mapID, x, y)
+    for i, p in ipairs(Points()) do
+        if Near(p, mapID, x, y) then return p, i end
+    end
 end
 
 local function Record(action)
@@ -86,12 +107,13 @@ ns:On("PLAYER_LOGIN", function() Chain:MigrateNames() end)
 -- Changes to your copy (no undo, nothing sent)
 ---------------------------------------------------------------------------
 
--- Inserts p after the waypoint `after` (or at the end). False when it's already there or reached.
+-- Inserts p after the waypoint `after` (or at the end; FRONT: before all of them). False when
+-- it's already there or reached.
 function Chain:Insert(p, after, starter)
     local list = Points()
     if IndexOf(p.id) or ns.char.reached[p.id] then return false end
     if #list == 0 and not ns.char.chainStarter then ns.char.chainStarter = starter or p.by end
-    local i = after and IndexOf(after)
+    local i = after == FRONT and 0 or (after and IndexOf(after))
     table.insert(list, i and i + 1 or #list + 1, p)
     Bump()
     ns:Changed()
@@ -125,6 +147,13 @@ end
 
 -- Adds a waypoint at the end. newPath: wipe the path first and start your own.
 function Chain:Add(mapID, x, y, title, newPath)
+    if not newPath then
+        local same, i = InPath(mapID, x, y)
+        if same then
+            ns:Print(("Waypoint %d is already there."):format(i))
+            return
+        end
+    end
     local old, oldStarter
     if newPath and #Points() > 0 then
         old, oldStarter = self:WipeLocal()
@@ -141,6 +170,33 @@ function Chain:Add(mapID, x, y, title, newPath)
     else
         ns:Print(("Added waypoint %d: %s."):format(#Points(), ns.Nav:Describe(p)))
     end
+end
+
+-- A waypoint before all the others: the new current one (Blizzard's pin set somewhere else).
+function Chain:AddFirst(mapID, x, y, title)
+    local p = { id = NewID(), by = C.Me(), mapID = mapID, x = x, y = y, title = title }
+    self:Insert(p, FRONT, C.Me())
+    ns.Comm:SendAdd(p, FRONT)
+    Record({ kind = "add", id = p.id })
+    local n = #Points()
+    ns:Print(("Following the map pin at %s%s."):format(ns.Nav:Describe(p),
+        n > 1 and (" first (then the rest of your path: %d more)"):format(n - 1) or ""))
+end
+
+-- Follow this point now (another map's "follow this pin"): it's the first waypoint, or already is.
+function Chain:Follow(mapID, x, y, title)
+    local p, i = InPath(mapID, x, y)
+    if i == 1 then return end
+    if p then self:Remove(p.id) end
+    self:AddFirst(mapID, x, y, title)
+end
+
+-- Removes the n-th waypoint of the path. False when there isn't one.
+function Chain:RemoveAt(n)
+    local p = Points()[n]
+    if not p then return false end
+    self:Remove(p.id)
+    return true
 end
 
 function Chain:Remove(id)
@@ -212,7 +268,7 @@ function Chain:Reached(p, skipped)
 end
 
 ---------------------------------------------------------------------------
--- From the map (Ctrl+click) and /way x y
+-- From the map (double-click) and /way x y
 ---------------------------------------------------------------------------
 
 StaticPopupDialogs["WAYPOINT_ADD"] = {
@@ -247,10 +303,20 @@ function Chain:Request(mapID, x, y, title, noConfirm)
     end
 end
 
--- Ctrl+right-click: removes the waypoint nearest (cx, cy) on the map you're looking at.
+-- Ctrl+right-click: removes the waypoint nearest (cx, cy) on the map you're looking at (or stops
+-- the "navigate to" when its point is nearer).
 function Chain:RemoveNearest(mapID, cx, cy, aspect)
     aspect = aspect or 1
     local best, bestD
+    local r = ns.Targets and ns.Targets:GetRequest()
+    local rp = r and (r.held or r.points[1])
+    if rp then
+        local px, py = ns.Nav:OnCanvas(rp.mapID, rp.x, rp.y, mapID)
+        if px then
+            local dx, dy = (px - cx) * aspect, py - cy
+            best, bestD = rp, dx * dx + dy * dy
+        end
+    end
     for _, p in ipairs(Points()) do
         local px, py = ns.Nav:OnCanvas(p.mapID, p.x, p.y, mapID)
         if px then
@@ -259,8 +325,157 @@ function Chain:RemoveNearest(mapID, cx, cy, aspect)
             if not bestD or d < bestD then best, bestD = p, d end
         end
     end
-    if best then self:Remove(best.id) else ns:Print("No waypoint on this map to remove.") end
+    if best and best == rp then
+        ns:Print(("Stopped navigating to %s."):format(r.title or "your destination"))
+        ns.Targets:ClearRequest(true)
+    elseif best then
+        self:Remove(best.id)
+    else
+        ns:Print("No waypoint on this map to remove.")
+    end
 end
+
+---------------------------------------------------------------------------
+-- Blizzard's map pin: the first waypoint
+---------------------------------------------------------------------------
+
+local syncing   -- true while Waypoint sets or clears Blizzard's pin itself
+local mirrored  -- the waypoint Blizzard's pin was last set to (nil: none of ours)
+local ready     -- the game's map data is there (after the first PLAYER_ENTERING_WORLD)
+
+-- Blizzard's pin now: mapID, x, y, or nil.
+local function BlizzardPin()
+    if not (C_Map and C_Map.HasUserWaypoint and C_Map.GetUserWaypoint) then return end
+    if not C.Readable(C.Call(C_Map.HasUserWaypoint)) then return end
+    local point = C.Call(C_Map.GetUserWaypoint)
+    local pos = point and C.Readable(point.position)
+    if not (pos and pos.GetXY) then return end
+    local x, y = C.Call(pos.GetXY, pos)
+    local mapID = C.Num(point.uiMapID)
+    x, y = C.Num(x), C.Num(y)
+    if mapID and x and y then return mapID, x, y end
+end
+
+local function Quietly(fn, ...)
+    syncing = true
+    local ok = pcall(fn, ...)
+    syncing = false
+    return ok
+end
+
+-- The point Blizzard's pin should show: the path's first waypoint, else the request's ("navigate
+-- to") point; and the request when it's that.
+local function Manual()
+    local first = Points()[1]
+    if first then return first end
+    local T = ns.Targets
+    local r = T and T:GetRequest()
+    if not r then return end
+    local p = (T.current == r and T.point) or r.held or r.points[1]
+    return p, r
+end
+
+-- The request's point at mapID, x, y, if any.
+local function InRequest(mapID, x, y)
+    local r = ns.Targets and ns.Targets:GetRequest()
+    for _, p in ipairs(r and r.points or {}) do
+        if Near(p, mapID, x, y) then return p, r end
+    end
+end
+
+-- Points Blizzard's pin at the path's first waypoint, or the request's point (or clears ours when
+-- there's neither).
+function Chain:SyncBlizzard()
+    if not (ready and ns.db and C_Map and C_Map.SetUserWaypoint and UiMapPoint and UiMapPoint.CreateFromCoordinates) then return end
+    local first = Manual()
+    local mapID, x, y = BlizzardPin()
+    if not first then
+        if mirrored and mapID and Near(mirrored, mapID, x, y) and C_Map.ClearUserWaypoint then Quietly(C_Map.ClearUserWaypoint) end
+        mirrored = nil
+        return
+    end
+    if mapID and Near(first, mapID, x, y) then
+        mirrored = first
+        return
+    end
+    local allowed = not C_Map.CanSetUserWaypointOnMap or C.Call(C_Map.CanSetUserWaypointOnMap, first.mapID)
+    if not allowed then
+        -- This map won't take Blizzard's pin: Waypoint draws the first waypoint itself (MapPins.lua).
+        if mirrored and mapID and Near(mirrored, mapID, x, y) and C_Map.ClearUserWaypoint then Quietly(C_Map.ClearUserWaypoint) end
+        mirrored = nil
+        return
+    end
+    if Quietly(C_Map.SetUserWaypoint, UiMapPoint.CreateFromCoordinates(first.mapID, first.x, first.y)) then
+        mirrored = first
+        if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then Quietly(C_SuperTrack.SetSuperTrackedUserWaypoint, true) end
+    else
+        mirrored = nil
+    end
+end
+
+-- Whether Blizzard's pin is one of Waypoint's (a path waypoint or the request's point): then
+-- MapPins.lua hides its map icon and draws its own, so every pin on the map works the same.
+function Chain:IsOurs()
+    local mapID, x, y = BlizzardPin()
+    if not mapID then return false end
+    return (InPath(mapID, x, y) or InRequest(mapID, x, y)) and true or false
+end
+
+-- Whether Blizzard's pin shows this waypoint.
+function Chain:IsMirrored(p)
+    local mapID, x, y = BlizzardPin()
+    return mapID and Near(p, mapID, x, y) or false
+end
+
+-- Blizzard's pin changed: set somewhere else (a new first waypoint), or cleared (the first is done).
+function Chain:OnBlizzardPin()
+    if syncing or not (ready and ns.db) then return end
+    local mapID, x, y = BlizzardPin()
+    if mapID then
+        local _, i = InPath(mapID, x, y)
+        if i or InRequest(mapID, x, y) then
+            -- One of ours (OpenMap's Ctrl-click lands on a waypoint we just added): keep the order.
+            if i ~= 1 then self:SyncBlizzard() end
+            return
+        end
+        self:AddFirst(mapID, x, y)
+        return
+    end
+    if not mirrored then return end
+    local was = mirrored
+    mirrored = nil
+    local first = Points()[1]
+    if first and first == was then
+        local d = ns.Nav:To(first)
+        self:Reached(first, not (d and d <= 2 * (entry.arrive or 15)))
+        return
+    end
+    local r = ns.Targets and ns.Targets:GetRequest()
+    if r then
+        for _, p in ipairs(r.points) do
+            if p == was then
+                -- Cleared on the map: you stopped it (or the game cleared it on arrival).
+                local d = ns.Nav:To(p)
+                local there = d and d <= 2 * (r.arrive or 15)
+                if not there then ns:Print(("Stopped navigating to %s."):format(r.title or "your destination")) end
+                ns.Targets:ClearRequest(not there)
+                return
+            end
+        end
+    end
+end
+
+ns:On("USER_WAYPOINT_UPDATED", function() Chain:OnBlizzardPin() end)
+ns:OnChanged(function() Chain:SyncBlizzard() end)
+ns:On("PLAYER_ENTERING_WORLD", function()
+    if ready then return end
+    C_Timer.After(1, function()
+        ready = true
+        -- A pin the game kept from last time that isn't one of ours becomes the first waypoint.
+        Chain:OnBlizzardPin()
+        Chain:SyncBlizzard()
+    end)
+end)
 
 ns:OnLoad(function()
     -- An empty path has no starter, whatever was saved.

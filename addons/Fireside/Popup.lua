@@ -1,98 +1,44 @@
 local _, ns = ...
 local C = ns.Compat
 
--- The party popup: when you join a party or someone new joins it, who's in it: what each member is
--- known for (the kudos that reached you, Marks.lua) and your history with them. Also the run summary
--- lines the Runs page shows. (The end of a run is the Campfire now: Campfire.lua.)
+-- The party in chat: when you join a party, a line for each member; after that, a line for each
+-- newcomer only. Each says what they're known for (the kudos that reached you, Marks.lua) and your
+-- history with them. /fire party (and the minimap button's right-click) lists the whole party.
+-- Also the run summary lines the Runs page shows. (The end of a run is the Campfire: Campfire.lua.)
 local Popup = {}
 ns.Popup = Popup
 
-local W = ns.Widgets
-local Label, Muted, MakeButton = W.Label, W.Muted, W.MakeButton
-local ACCENT = W.ACCENT
+local known = {} -- the members you've already been told about, to spot newcomers
 
-local function Window(name, w, h)
-    local f = CreateFrame("Frame", name, UIParent, "BackdropTemplate")
-    f:SetSize(w, h); f:SetPoint("TOP", 0, -140); f:SetFrameStrata("DIALOG"); f:SetClampedToScreen(true)
-    W.SetBackdrop(f, 0.97)
-    f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    local icon = f:CreateTexture(nil, "ARTWORK"); icon:SetSize(22, 22); icon:SetPoint("TOPLEFT", 10, -8)
-    icon:SetTexture(ns.ICON)
-    f.title = Label(f, "", "FiresideGameFontNormal", 38, -12, w - 90); f.title:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3])
-    local close = MakeButton(f, "X", 22, 20); close:SetPoint("TOPRIGHT", -8, -8)
-    close:SetScript("OnClick", function() f:Hide() end)
-    f.lines = {}
-    tinsert(UISpecialFrames, name)
-    f:Hide()
-    return f
+-- "Grommash Swiftarrow (level 30, Healer): 2 runs together (2 finished)", or "...: new to you".
+local function Line(unit, full)
+    local _, class = C.Call(UnitClass, unit)
+    local p = ns.History:Get(full)
+    local summary = ns.History:Summary(full, true)
+    return ("%s |cffaaaaaa(level %s%s)|r: %s"):format(C.Colored(full, C.Str(class)), C.Num(C.Call(UnitLevel, unit)) or "?",
+        p and p.lastRole and (", " .. (p.lastRole == "damager" and "damage" or p.lastRole)) or "", summary or "|cffaaaaaanew to you|r")
 end
 
--- ---------------------------------------------------------------------------
--- Party popup
--- ---------------------------------------------------------------------------
-
-local party, known = nil, {} -- known: members in the last popup, to spot newcomers
-local ROW = 46
-
-local function PartyRow(i)
-    local r = party.lines[i]
-    if not r then
-        r = CreateFrame("Button", nil, party)
-        r:SetSize(500, ROW - 4)
-        -- One line across the row: a long "Given Family  level 60, Healer" is cut short instead of
-        -- wrapping down into the summary under it.
-        r.name = Label(r, "", "FiresideGameFontHighlight", 0, 0, 500); r.name:SetWordWrap(false)
-        r.text = Muted(Label(r, "", "FiresideGameFontHighlightSmall", 0, -16, 500))
-        r.text:SetWordWrap(true); r.text:SetHeight(28)
-        r:SetScript("OnClick", function(self) if self.full then ns.UI:ShowPlayer(self.full) end end)
-        party.lines[i] = r
-    end
-    r:ClearAllPoints(); r:SetPoint("TOPLEFT", 12, -36 - (i - 1) * ROW)
-    return r
-end
-
-function Popup:ShowParty(force)
+-- force: the whole party, asked for (/fire party, the minimap button). Otherwise only the members
+-- in only (a set of names), and only with the option on.
+function Popup:ShowParty(force, only, joined)
     if not (force or ns.db.options.popup) then return end
     if not IsInGroup() or IsInRaid() then
         if force then ns:Print("You're not in a party.", true) end
         return
     end
-    if not party then
-        party = Window("FiresidePartyPopup", 524, 100)
-        party:SetScript("OnUpdate", function(self, elapsed)
-            if not self.closeAt or self:IsMouseOver() then return end
-            if GetTime() >= self.closeAt then self:Hide() end
-        end)
-    end
-    local units = C.GroupUnits()
-    local n, anyKnown = 0, false
-    for _, unit in ipairs(units) do
+    local n = 0
+    for _, unit in ipairs(C.GroupUnits()) do
         local full = C.UnitFull(unit)
-        if full then
+        if full and (force or not only or only[full]) then
             n = n + 1
-            local r = PartyRow(n)
-            local _, class = C.Call(UnitClass, unit)
-            local p = ns.History:Get(full)
-            local summary = ns.History:Summary(full)
-            if summary then anyKnown = true end
-            r.full = full
-            r.name:SetText(("%s  |cffaaaaaalevel %s%s|r"):format(C.Colored(full, C.Str(class)), C.Num(C.Call(UnitLevel, unit)) or "?",
-                p and p.lastRole and (", " .. p.lastRole) or ""))
-            r.text:SetText(summary or "|cffaaaaaaNew to you, and nobody has told your party about them yet.|r")
-            r:Show()
+            ns:Print(((force or joined) and "In your party: " or "Joined: ") .. Line(unit, full), true)
         end
     end
-    for i = n + 1, #party.lines do party.lines[i]:Hide() end
-    if n == 0 then return party:Hide() end
-    party.title:SetText(anyKnown and "Who's in your party, and what they're known for" or "Your party: new faces all round")
-    party:SetHeight(46 + n * ROW)
-    local secs = ns.db.options.popupSeconds or 20
-    party.closeAt = (secs > 0 and not force) and (GetTime() + secs) or nil
-    party:Show()
+    if force and n == 0 then ns:Print("Nobody else in your party yet.", true) end
 end
 
--- On joining a party, or when someone new joins it.
+-- On joining a party: everyone in it. Later: whoever joins.
 local pending
 ns:On("GROUP_ROSTER_UPDATE", function()
     if pending then return end
@@ -100,17 +46,17 @@ ns:On("GROUP_ROSTER_UPDATE", function()
     C_Timer.After(1.5, function()
         pending = false
         if not IsInGroup() or IsInRaid() then wipe(known) return end
-        local newcomer = false
-        local now = {}
+        local joined = next(known) == nil
+        local now, newcomers = {}, {}
         for _, unit in ipairs(C.GroupUnits()) do
             local full = C.UnitFull(unit)
             if full then
                 now[full] = true
-                if not known[full] then newcomer = true end
+                if not known[full] then newcomers[full] = true end
             end
         end
         known = now
-        if newcomer then Popup:ShowParty(false) end
+        if next(newcomers) then Popup:ShowParty(false, newcomers, joined) end
     end)
 end)
 
@@ -125,7 +71,7 @@ local function Duration(run) return ns.Format.Duration((run.stop or time()) - ru
 function Popup.RunLines(run)
     local lines = {}
     lines[#lines + 1] = ("%s, %s. %d boss%s killed, %d wipe%s, %d death%s."):format(date("%m/%d %H:%M", run.start), Duration(run),
-        run.bossKills or 0, (run.bossKills or 0) == 1 and "" or "es", run.wipes or 0, (run.wipes or 0) == 1 and "" or "s",
+        ns.Run.BossKills(run), ns.Run.BossKills(run) == 1 and "" or "es", run.wipes or 0, (run.wipes or 0) == 1 and "" or "s",
         #run.deaths, #run.deaths == 1 and "" or "s")
     for _, name in ipairs(run.bossOrder or {}) do
         local b = run.bosses[name]

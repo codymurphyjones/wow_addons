@@ -1,0 +1,8 @@
+[["press","m"],["move",407,713],["wait",700],["shot","v3a_1_bloom"],
+ ["move",459,412],["wait",200],["type","flash"],["wait",200],["shot","v3a_2_typing"],["press","Enter"],["wait",600],
+ ["move",459,412],["wait",100],["wheel",100],["wait",100],["wheel",100],["wait",500],["shot","v3a_3_temper"],
+ ["eval","document.querySelector('#sim b[data-k=mouseover]').click()"],["wait",2500],["shot","v3a_4_pulse_mo_friend"],
+ ["press","Shift"],["wait",500],["move",407,380],["shot","v3a_5_shiftworld"],
+ ["type","smi"],["press","Enter"],["wait",700],["move",407,440],["wait",400],["shot","v3a_6_incant"],
+ ["mousedown"],["wait",900],["shot","v3a_7_sealing"],["mouseup"],["wait",300],["shot","v3a_8_sealed"],
+ ["eval","JSON.stringify(__state())"]]

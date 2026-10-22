@@ -142,11 +142,17 @@ local function Professions()
     return out
 end
 
+-- Whether a profession is really open: between the game's TRADE_SKILL_SHOW and TRADE_SKILL_CLOSE.
+-- The profession info below can still name the last profession after it closed, and
+-- TRADE_SKILL_LIST_UPDATE also fires with none open (a skill-up while gathering, a recipe learned),
+-- so that info alone made this window open by itself now and then.
+local tradeOpen = false
+
 -- The profession open now: { professionID, name, rank, max, modifier }, or nil.
 -- As the game's own window reads it (Professions.GetProfessionInfo): the child profession's info,
 -- which comes back with professionID 0 when there's none, then the base profession's.
 local function OpenProfession()
-    if not TS then return nil end
+    if not TS or not tradeOpen then return nil end
     local info = Read(TS.GetChildProfessionInfo)
     if not info or (info.professionID or 0) == 0 then info = Read(TS.GetBaseProfessionInfo) end
     if not info or (info.professionID or 0) == 0 then return nil end
@@ -263,8 +269,18 @@ local autoOpened = false -- a session opened this window (it closes with it)
 -- Out of sight by being off the screen, not by its opacity: LinkedInn takes an open profession
 -- window that's see-through for one of its own background reads, and closes it at your next click
 -- anywhere (the profession closed under you, back to All professions).
+-- In combat the game locks a window with secure buttons in it (the crafting window has them):
+-- moving it then is blocked. Such a window is left where it is and put out of sight when the fight
+-- ends (or let go of, if it closed meanwhile).
+local afterCombat = setmetatable({}, { __mode = "k" }) -- frame -> true: conceal it once combat ends
+local function Locked(f)
+    return InCombatLockdown() and f.IsProtected ~= nil and (f:IsProtected()) and true or false
+end
+
 local function Conceal(f)
     if not f then return end
+    if Locked(f) then afterCombat[f] = true return end
+    afterCombat[f] = nil
     concealing = true
     local st = hidden[f] or {}
     hidden[f] = st
@@ -277,11 +293,26 @@ local function Conceal(f)
 end
 
 local function Reveal(f)
+    if f then afterCombat[f] = nil end
     local st = f and hidden[f]
     if not (st and st.on) then return end
     st.on = false
-    if st.clamped then f:SetClampedToScreen(true); st.clamped = nil end
+    if st.clamped then
+        if Locked(f) then return end -- (it's closed: clamping it again can wait for next time)
+        f:SetClampedToScreen(true); st.clamped = nil
+    end
 end
+
+ns:On("PLAYER_REGEN_ENABLED", function()
+    for f in pairs(afterCombat) do
+        afterCombat[f] = nil
+        if f:IsShown() then Conceal(f) end
+    end
+    -- Windows closed in combat get their clamping back now.
+    for f, st in pairs(hidden) do
+        if not st.on and st.clamped and not Locked(f) then f:SetClampedToScreen(true); st.clamped = nil end
+    end
+end)
 
 -- A session ended: the window goes back to its overview, or closes if the session opened it.
 -- (A moment later: switching professions ends one session just before the next one starts.)
@@ -334,6 +365,7 @@ local function HookProfessions()
                 Sync()
                 if own or OpenProfession() then return end
                 if self.BookPage and self.BookPage:IsShown() then
+                    if Locked(self) then return end -- (in combat the game's window stays; it can't be closed now)
                     if InCombatLockdown() then self:Hide() else HideUIPanel(self) end
                     if panel and panel:IsShown() then panel:Hide() else PP:Show() end
                 end
@@ -367,7 +399,7 @@ local function TakeOver()
     local f = ProfessionsFrame
     -- Left on its book page, the game's window would stay open (out of sight) after the profession
     -- closes: it only closes itself from its crafting page.
-    if f and f.BookPage and f.BookPage:IsShown() and f.CraftingPage then
+    if f and f.BookPage and f.BookPage:IsShown() and f.CraftingPage and not Locked(f) then
         f.BookPage:Hide()
         f.CraftingPage:Show()
     end
@@ -1566,8 +1598,12 @@ ns:On("ADDON_LOADED", function(name)
 end)
 ns:On("PLAYER_LOGIN", function() HookProfessions(); HookTrainer() end)
 
-ns:On("TRADE_SKILL_SHOW", function() C_Timer.After(0, Sync) end)
+ns:On("TRADE_SKILL_SHOW", function()
+    tradeOpen = true
+    C_Timer.After(0, Sync)
+end)
 ns:On("TRADE_SKILL_CLOSE", function()
+    tradeOpen = false
     own = false
     linkSince = nil
     schematics = {}

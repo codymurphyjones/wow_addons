@@ -3,10 +3,12 @@ local WM = ns.WorldMap
 
 -- The planned trip (Route.lua's R:Lines) drawn as a dashed line: on the world map the whole way,
 -- on the minimap the part around you as a trail of dots. Each kind of travel has a colour family
--- (walking yellow, flights and rides purple, jumps red, swimming green) of 10 shades; each stage
+-- (walking cyan, flights and rides purple, jumps red, swimming green) of 10 shades; each stage
 -- of the plan (a task the arrow follows, a waypoint of your path) takes its own shade, so the legs
 -- of a path you dropped stand apart. Walks, swims and jumps follow the land map; flights and
 -- rides are drawn straight from stop to stop.
+-- Every line sits on a dark casing, so it stands out on the map's tan, green and snow alike; the
+-- colours keep clear of the ground's (no yellows or browns).
 -- Seeing it shows straight away when the land map has the ground wrong: walk the pass it missed
 -- once and it learns it (Route.lua), or mark it in RoadLog.
 local Way = {}
@@ -14,12 +16,12 @@ ns.WayLine = Way
 
 -- Hue (degrees), saturation and brightness range of each family.
 local FAMILIES = {
-    yellow = { 38, 64, 0.65, 1.0 },
-    purple = { 252, 302, 0.45, 0.85 },
+    cyan = { 175, 215, 0.55, 1.0 },  -- (yellow sank into the map's tan and olive ground)
+    purple = { 270, 315, 0.5, 0.9 },
     red = { -12, 18, 0.65, 0.95 },
     green = { 82, 150, 0.55, 0.9 },
 }
-local FAMILY = { walk = "yellow", fly = "purple", ride = "purple", drop = "red", swim = "green" }
+local FAMILY = { walk = "cyan", fly = "purple", ride = "purple", drop = "red", swim = "green" }
 -- The shades in the order stages take them: each is several steps from the one before.
 local ORDER = { 0, 5, 2, 7, 4, 9, 1, 6, 3, 8 }
 
@@ -40,7 +42,7 @@ for name, f in pairs(FAMILIES) do
         local i = ORDER[k]
         local t = i / 9
         local hue = f[1] + (f[2] - f[1]) * t
-        local value = (i % 2 == 0) and 1.0 or 0.72
+        local value = (i % 2 == 0) and 1.0 or 0.8
         local r, g, b = HSV(hue, f[3] + (f[4] - f[3]) * (1 - t), value)
         shades[k] = { r, g, b }
     end
@@ -50,11 +52,14 @@ Way.PALETTE = PALETTE
 
 -- A line's colour: its kind's family, at its stage's shade.
 local function Color(seg)
-    local shades = PALETTE[FAMILY[seg.kind] or "yellow"]
+    local shades = PALETTE[FAMILY[seg.kind] or "cyan"]
     return shades[seg.shade or 1] or shades[1]
 end
-local LINE = 2.25       -- world map: on-screen thickness
-local DASH, GAP = 4, 2  -- world map: on-screen dash and gap lengths (fine, so the route's bends show)
+local LINE = 3          -- world map: on-screen thickness
+local DASH, GAP = 6, 3  -- world map: on-screen dash and gap lengths (fine, so the route's bends show)
+local CASING = { 0.04, 0.07, 0.16 } -- the thin dark edge under the dashes (a deep navy, not black)
+local CASING_WIDTH = 1.8            -- times LINE
+local CASING_ALPHA = 0.55
 local REFRESH = 1      -- world map: seconds between redraws while it's open
 local DOT = 5          -- minimap: dot size
 local DOTS = 120       -- minimap: dots at most
@@ -82,7 +87,13 @@ local function Refresh(l, mapID)
     for _, seg in ipairs(trip) do
         local run
         local function Flush()
-            if run and #run >= 4 then l:Dashed(run, Color(seg), LINE, DASH, GAP, 0.9) end
+            if run and #run >= 4 then
+                -- The edge at ARTWORK sublevel 0, the dashes at 1: always under them.
+                for i = 3, #run - 1, 2 do
+                    l:Line(run[i - 2], run[i - 1], run[i], run[i + 1], CASING, LINE * CASING_WIDTH, CASING_ALPHA, 0)
+                end
+                l:Dashed(run, Color(seg), LINE, DASH, GAP, 1, 1)
+            end
             run = nil
         end
         for i = 1, #seg.pts - 1, 2 do

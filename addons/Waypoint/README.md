@@ -2,13 +2,15 @@
 
 <img src="Media/Logo.png" alt="Waypoint logo" width="128">
 
-A navigation arrow, like TomTom. It points at one thing at a time:
+A navigation arrow, like TomTom. It points at one thing at a time, the first of:
 
-1. **What another addon asks for**: Spyglass quest chains, WealthPlanner jobs, or any addon using the API below.
-2. **Your group's waypoint path**: waypoints you and your group drop on the world map.
-3. **Your Questie quests**, when nothing else is asking.
+1. **Your body**, while you're a ghost.
+2. **Your group's waypoint path**: waypoints you and your group drop on the world map. They go above everything an addon asks for.
+3. **A "Navigate to"**: a town, a vendor, a dock, a place an addon sends you to once.
+4. **What another addon asks for**: Field Guide's steps, Spyglass quest chains, WealthPlanner jobs, or any addon using the API below (the addon that owns the arrow first, else the newest).
+5. **Your Questie quests**, when nothing else is asking.
 
-The newest of 1 and 2 wins. Whenever the arrow starts pointing at something else, a chat line says what.
+Flight paths, boats and zeppelins aren't targets of their own: they're how the arrow gets you to whichever of these it follows, so it still takes you through them. Whenever the arrow starts pointing at something else, a chat line says what.
 
 Questie is optional. Without it the arrow only shows up for paths and other addons.
 
@@ -73,7 +75,7 @@ Flights are one of several ways Waypoint can plan a trip. It looks for the quick
 
   Times are always real walking times, so the mode never makes a flight or a boat look better than it is.
 - **RoadLog marks count too.** If you run RoadLog, its narrow-pass pins open every way out of their square, its roads count as walked (and as roads for the box above), and its blockers close the ways that cross them. New marks are picked up within 15 seconds.
-- **The planned route** is drawn as a dashed line on the world map, and as a trail of dots on the minimap around you. It covers every walk, swim and jump along the land map, and flights and rides straight from stop to stop. Each kind of travel has its own colour family of 10 shades: walking yellow, flights and rides purple, jumps red, swimming green.
+- **The planned route** is drawn as a dashed line on the world map, and as a trail of dots on the minimap around you. It covers every walk, swim and jump along the land map, and flights and rides straight from stop to stop. Each kind of travel has its own colour family of 10 shades: walking cyan, flights and rides purple, jumps red, swimming green. Every line sits on a dark outline, so it stands out on any ground.
   - **Stages:** a whole trip to one target (your corpse, a quest objective) is one shade. Each new task the arrow follows takes the next shade.
   - **Your waypoint path:** every leg between the waypoints you dropped is drawn too, each in its waypoint's own shade. The shades are ordered so that each one differs clearly from the one before, and a waypoint keeps its colour as you reach the ones before it.
   - **Fixing a wrong way:** if the line goes the wrong way, walk the right way once, or drop a RoadLog narrow-pass pin there.
@@ -102,18 +104,26 @@ The pick holds while you walk. It changes when you track or untrack a quest, cha
 
 | Click | What it does |
 |---|---|
-| **Ctrl+left-click** | Add a waypoint to the end of the path (asks first; `/way confirm off` stops asking) |
-| **Ctrl+right-click** | Remove the waypoint nearest the cursor. The path joins up around it |
+| **Ctrl+click** | Add a waypoint to the end of the path (`/way confirm on` asks first). Works on a town, dock or path pin too. Waypoint takes Ctrl+click over from Blizzard's map |
+| **Ctrl+right-click** | On any pin: remove that one (a waypoint anywhere in the path, the current one, a "navigate to", an addon's target). Elsewhere: the waypoint nearest the cursor. The path joins up around it |
 | **Ctrl+Z** | Undo your last path change (up to 10) |
 
 Plain clicks still zoom the map in and out.
+
+- **The first waypoint is Blizzard's map pin.** Waypoint keeps the game's own pin on the path's current waypoint, so the game's map, OpenMap and other map addons all show it. The pins after it are Waypoint's numbered pins.
+- **A pin set anywhere else** (OpenMap, a chat link, another addon) becomes the path's new first waypoint, ahead of the rest.
+- **Clearing Blizzard's pin** finishes the current waypoint, and the next one takes its place.
+- **A "navigate to" you click** (a town or dock on the map, a dungeon or town in Field Guide, the Navigate menu) is Blizzard's pin too while there's no path. Stop it by clearing the pin, Ctrl+right-clicking it, or clicking the same town or dock again.
+- **OpenMap:** Waypoint runs the waypoints there too. OpenMap's Ctrl+click and its pin button add Waypoint waypoints, "follow" on one of its saved pins makes it your current waypoint, and its "Drop a pin" button on the map is replaced by Waypoint's **Drop a waypoint** (click it, then click the map; Shift+right-click takes it off the map, as with OpenMap's buttons).
+- **One way to remove anything:** every pin on the map is Waypoint's (Blizzard's map icon hides under Waypoint's own), and Ctrl+right-click removes it. Off the map: the arrow's menu (Clear waypoint) lists every waypoint, and `/way list` and `/way remove <number>` do it in chat.
 
 - The arrow leads through the path in order. Reaching a waypoint takes it off your copy, so everyone walks the path at their own pace.
 - **Shared with your group:**
   - Your group sees your path on their map and arrow, and you see theirs. This only works for people who also run Waypoint.
   - Adds, removes and clears all show up immediately, with a chat line.
   - Anyone who joins later gets the path.
-- **Someone else's path:** Ctrl+left-click asks whether to **Append** to it or start a **New path**. A new path wipes theirs for everyone, and Ctrl+Z brings it back.
+  - **While you're going somewhere you chose yourself** (waypoints you placed, or a "navigate to" you clicked: a dungeon or town in Field Guide, a town or dock on the map, the Navigate menu), a teammate's waypoint doesn't just join your path: a popup asks whether to go there as well. **Yes** puts it first (then you carry on where you were going), **No** skips it, **Show** opens your map on it before you decide. A whole path sent at once is one question. An addon's own targets (Field Guide's leveling steps and the like) never make it ask.
+- **Someone else's path:** a Ctrl+click asks whether to **Append** to it or start a **New path**. A new path wipes theirs for everyone, and Ctrl+Z brings it back.
 - Your pins are gold and your teammates' are blue.
 
 ## Fall damage

@@ -43,7 +43,6 @@ Plugins\Social.lua
 Plugins\Nemesis.lua
 Plugins\Experience.lua
 Plugins\Resource.lua
-TargetFrame.lua
 ..\shared\OptionsPage.lua
 ..\shared\Widgets.lua
 Widgets.lua

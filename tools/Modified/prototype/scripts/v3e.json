@@ -1,0 +1,5 @@
+[["press","m"],["move",457,713],["wait",700],
+ ["move",457,370],["wait",1100],["move",470,420],["move",463,411],["wait",300],["press","Enter"],["wait",800],["shot","v3e_1_accepted"],
+ ["eval","document.querySelector('#sim b[data-k=mouseover]').click()"],["wait",2800],["shot","v3e_2_pulse_mo_friend"],
+ ["move",380,560],["wait",200],["type","pws, renew"],["press","Enter"],["wait",900],["shot","v3e_3_braid"],
+ ["eval","JSON.stringify(__state().text)"]]

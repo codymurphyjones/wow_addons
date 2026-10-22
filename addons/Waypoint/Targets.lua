@@ -5,14 +5,16 @@ local _, ns = ...
 --     plugin can find its own again after a reload and set it back up);
 --   * the waypoint path (Chain.lua), shared with your group;
 --   * your Questie quests (Questie.lua), only when there's nothing else.
+-- Your waypoint path (the waypoints set on the world map) goes above everything but your body:
+-- requests, the addon that owns the arrow, other addons' targets, Questie. Flights aren't a target
+-- of their own: they're how the arrow gets you to whatever it follows (Flight.lua, Route.lua).
 -- An addon can own the arrow (SetManager: Field Guide while it isn't paused): its entry wins over
--- every other addon's, and only your waypoint path goes above it. Otherwise the newest entry or
--- path wins. An entry is { owner, key, title, subtitle, points = { { mapID, x, y,
+-- every other addon's. Otherwise the newest entry wins. An entry is { owner, key, title, subtitle, points = { { mapID, x, y,
 -- label } }, arrive = yards, onClick, onArrive, ordered, t }. With several points the arrow leads to
 -- the nearest one you haven't reached yet, and moves on (quietly) as you reach them.
 --
--- A request (SetRequest: "Navigate to" a vendor, Quartermaster's vendor reagents) goes above all of
--- that: it's always the next point, whatever the arrow followed before, and when you get there (or
+-- A request (SetRequest: "Navigate to" a vendor, a town, Quartermaster's vendor reagents) goes above
+-- every addon's target (not your path): it's the next point, whatever addon the arrow followed before, and when you get there (or
 -- open that vendor) it clears and the arrow goes back to what it was following. It holds the
 -- nearest of its points on your continent, so it doesn't jump between vendors as you walk. An
 -- ordered request (ordered = true) is stops to make in turn instead: getting to one moves the arrow
@@ -100,7 +102,7 @@ end
 
 function T:GetEntry(owner) return entries[owner] end
 
--- A request: the next point, above everything else, until you get there. wp as for SetEntry; a
+-- A request: the next point, above every addon's target (not your path or body), until you get there. wp as for SetEntry; a
 -- point may carry npc = the NPC standing there, so opening its window counts as arriving.
 function T:SetRequest(owner, wp)
     if type(wp) ~= "table" then return false end
@@ -181,6 +183,8 @@ function T:Altered()
     local ok, exp = pcall(manager.expected)
     if not ok or type(exp) ~= "table" or not exp[1] then return false end -- nothing to point at
     if Yields() then return false end -- stepping aside on purpose, not changed by hand
+    -- Your waypoint path wins over the owner on purpose: no restore button that couldn't win back.
+    if self.current and self.current.owner == "path" then return false end
     local mine = entries[manager.owner]
     if not mine or self.current ~= mine or mine.key ~= exp[1] then return true end
     if type(mine.plan) == "table" then
@@ -256,13 +260,14 @@ end
 
 function T:GetCorpse() return corpse end
 
--- The entry the arrow follows.
+-- The entry the arrow follows: your body, then your waypoint path, then a request, then the
+-- addon that owns the arrow, then the newest addon target, then Questie.
 function T:Resolve()
     if corpse then return corpse end
-    if request then return request end
     local path = ns.Chain and ns.Chain:Entry()
+    if path then return path end
+    if request then return request end
     if manager then
-        if path then return path end
         if Yields() and ns.db and ns.db.quests then return questie end
         local mine = entries[manager.owner]
         if mine then return mine end
@@ -271,7 +276,6 @@ function T:Resolve()
     for _, e in pairs(entries) do
         if not best or (e.t or 0) > (best.t or 0) then best = e end
     end
-    if path and (not best or path.t > (best.t or 0)) then best = path end
     if not best and ns.db and ns.db.quests then best = questie end
     return best
 end
@@ -353,7 +357,9 @@ function T:Tick()
     local continent, n, w = ns.Nav:Player()
     local p = e and Pick(e, continent, n, w)
     local key = e and (e.owner .. ":" .. tostring(e.key or e.title or ""))
+    local moved = p ~= self.point
     self.current, self.point = e, p
+    if moved and ns.Chain then ns.Chain:SyncBlizzard() end
     if key ~= lastKey then
         lastKey = key
         if e and p and e.owner ~= "path" then Announce(e, p) end
@@ -394,10 +400,18 @@ function T:Skip(clear)
     end
 end
 
--- The waypoints the arrow could follow, newest first (up to n): { { text, clear = fn } }. Addon
--- targets, and the points of your waypoint path (the last added first).
+-- The waypoints the arrow could follow, newest first (up to n): { { text, clear = fn } }. Your
+-- "navigate to", addon targets, and every point of your waypoint path (the last added first).
 function T:History(n)
     local items = {}
+    if request then
+        items[#items + 1] = { t = math.huge, entry = request,
+            text = ("Navigate to: %s"):format(request.title or "your destination"),
+            clear = function()
+                ns:Print(("Stopped navigating to %s."):format(request and request.title or "your destination"))
+                T:ClearRequest(true)
+            end }
+    end
     for owner, e in pairs(entries) do
         items[#items + 1] = { t = e.t or 0, entry = e, text = ("%s  |cff999999(%s)|r"):format(e.title or "Waypoint", owner),
             clear = function()

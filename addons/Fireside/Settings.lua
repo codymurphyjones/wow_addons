@@ -8,11 +8,9 @@ ns.Settings = S
 
 S.page = ns.NewOptionsPage({ name = "Fireside", build = function(p)
     p:Header("Fireside")
-    p:Check({ path = "db.options.popup", label = "Show the party popup when you join a group",
-        tooltip = "Your history with each member, as soon as you join." })
-    p:Slider({ path = "db.options.popupSeconds", label = "Party popup closes after", min = 0, max = 60, step = 1,
-        format = function(v) return v == 0 and "Stays open" or ("%d s"):format(v) end,
-        tooltip = "Seconds (0 = stays open). It stays open while your mouse is over it." })
+    p:Check({ path = "db.options.popup", label = "Tell me in chat who joins my party",
+        tooltip = "When you join a party, a chat line for each member: what they're known for and your history with them. "
+            .. "After that, a line for each newcomer only. /fire party lists everyone." })
     p:Check({ path = "db.options.deathPopup", label = "Death recap popup when you die in a party",
         tooltip = "What killed you and who most likely caused it, as soon as you die in a dungeon group (/fire recap shows the last one again)." })
     p:Check({ path = "db.options.whisper", label = "History line in chat when you whisper someone you know" })
@@ -23,9 +21,11 @@ S.page = ns.NewOptionsPage({ name = "Fireside", build = function(p)
 
     p:Header("Feedback")
     p:Check({ path = "db.options.shareKudos", label = "Tell my party the kudos I've given",
-        tooltip = "When someone joins, your party hears the kudos you've given the others: testimony. Only kudos: never notes, ratings or anything negative." })
+        tooltip = "When someone joins, your party hears the kudos you've given the others, and kudos travel on as gossip from group to group." })
     p:Check({ path = "db.options.shareBanner", label = "Show my party the kudos I've received",
         tooltip = "Your own record, so people new to you see what you're known for." })
+    p:Check({ path = "db.options.relay", label = "Pass on what I've heard (gossip)",
+        tooltip = "Kudos and passed-on Flak you know of go on to the people you group with, never to the player they're about. Hearsay from people you haven't grouped with counts half, and can't make a Flak warning on its own." })
     p:Check({ path = "db.options.hearth", label = "Show the Hearth while in a party",
         tooltip = "A slim strip with your party's portraits: left-click someone to send a spark (a small thanks), right-click to jot a note for the campfire.",
         apply = function() if ns.Hearth then ns.Hearth:Refresh() end end })

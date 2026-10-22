@@ -843,6 +843,7 @@ end
 -- STAGES), along the land map (a field per leg, worked out in the background) and straight until
 -- that's ready. Each in its waypoint's shade.
 local STAGES = 5
+R.STAGES = STAGES -- MapPins.lua: the legs drawn here need no straight line of their own
 local function StageLines(lines, current, opts)
     local chain = ns.Chain and ns.Chain:Points() or {}
     local start

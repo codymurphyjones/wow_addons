@@ -64,13 +64,6 @@ local function GeneralPage()
             { "border", "Border" }, { "arrows", "Arrows", "Teal arrows either side of the plate." }, { "glow", "Glow" } } },
         { "check", "general.focusHighlight", "Orange border on your focus" },
         { "color", "colors.focus", "Focus colour" },
-        { "header", "Target frame" },
-        { "check", "targetFrame.enabled", "SmartPlates draws your target frame",
-            "A big SmartPlates plate for your target in place of Blizzard's target frame: health, name, threat, castbar, auras, combo points. Right-click it for its menu, shift-drag to move it (/sp target reset puts it back)." },
-        { "slider", "targetFrame.width", "Target frame width", 100, 320, 2, "%d px" },
-        { "slider", "targetFrame.height", "Target frame height", 8, 30, 1, "%d px" },
-        { "check", "targetFrame.fly", "Enemy plates fly into it",
-            "When you target an enemy, its plate glides into the target frame and fades out behind it; switch away while it's alive and it flies back, faster, to its place among the plates." },
         { "header", "Execute range" },
         { "check", "general.execute", "Highlight enemies in execute range", "Recolours the bar and marks the threshold. Needs readable health." },
         { "slider", "general.executePercent", "Below this health", 5, 50, 1, "%d%%" },
@@ -531,10 +524,6 @@ UI.page = ns.NewOptionsPage({ name = "SmartPlates", build = function(p)
     p:Check({ path = "db.general.friendlyPlayerBars", label = "Friendly players: small bars", tooltip = "A health and power bar a quarter the size of an enemy plate." })
     p:Check({ path = "db.general.friendlyNameOnly", label = "Friendly NPCs: name only", tooltip = "No healthbar on friendly NPCs, just a coloured name." })
     p:Check({ path = "db.castbar.enabled", label = "Show castbars" })
-    p:Check({ path = "db.targetFrame.enabled", label = "SmartPlates draws your target frame",
-        tooltip = "A big SmartPlates plate for your target in place of Blizzard's target frame. Right-click it for its menu, shift-drag to move it." })
-    p:Check({ path = "db.targetFrame.fly", label = "Enemy plates fly into the target frame",
-        tooltip = "When you target an enemy, its plate glides into the target frame and fades out behind it; it flies back when you switch away." })
     p:Check({ path = "db.auras.enabled", label = "Show auras on enemies" })
     p:Check({ path = "db.cvars.manage", label = "Let SmartPlates manage the game's nameplate settings",
         tooltip = "View distance, stacking, always showing plates and enemy plates (the window's Visibility tab). Off: your previous game settings are put back." })

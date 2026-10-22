@@ -22,6 +22,9 @@ ns.DEFAULTS = {
     dock = true,        -- sit under Waypoint's arrow (when Waypoint is installed)
     manageTracking = true, -- track the guide's quests, untrack the rest (never the ones you tracked)
     wingMaps = {},      -- [uiMapID inside a dungeon] = the wing it belongs to, learned as you play
+    -- The field (UI.lua) and what it learned: how long you stay to read (seconds), how often you look
+    -- ahead (0-1), and how many times you used each gesture (its whisper stops after a few).
+    field = { learn = true, dwell = 3, peek = 0, episodes = 0, used = {} },
 }
 
 ns.CHAR_DEFAULTS = {
@@ -30,7 +33,7 @@ ns.CHAR_DEFAULTS = {
     section = nil,   -- a section id you picked; nil: the next one worth doing
     skipped = {},    -- step keys you skipped by hand
     paused = false,  -- the guide keeps its hands off Waypoint's arrow
-    ignored = {},    -- quests you chose to leave (their item didn't drop): hidden, with what needs them
+    ignored = {},    -- quests you skipped (or left because their item didn't drop): never suggested, nor what needs them
     doneByHand = {}, -- quests you marked done ("Done it"), whatever the game's record says
     lastPick = nil,  -- the zone section Automatic last chose (kept while you travel through others)
     rerun = {},      -- quests whose item didn't drop and you chose to run the dungeon again for
@@ -45,23 +48,24 @@ ns:OnChanged(function()
 end)
 
 ns:On("PLAYER_LOGIN", function()
-    ns:Print("v" .. ns.VERSION .. " loaded. |cffffffff/fg|r shows or hides the guide, |cffffffff/fg help|r for more.")
+    ns:Print("v" .. ns.VERSION .. " loaded. Stand still and the guide surfaces around you; move and it lets go. |cffffffff/fg help|r for more.")
 end)
 
 local function Help()
-    ns:Print("/fg - show or hide the guide")
+    ns:Print("/fg - turn the guide on or off (stand still: it surfaces around you; move: it lets go)")
+    ns:Print("Rest the cursor on a light to read it. On the step to do now, wait for its ring to close, then flick off it: up = done it, down = skip, sideways = pause the arrow")
+    ns:Print("/fg trail - the whole section's trail at once, /fg relearn - forget the pace and gestures it learned")
     ns:Print("/fg list - the guides and their sections")
     ns:Print("/fg guide <name> - follow the other faction's guide (/fg guide auto: yours)")
     ns:Print("/fg section <number> - follow a section (/fg section auto: the next one worth doing)")
     ns:Print("/fg settings - pick a zone's guide, and other options")
     ns:Print("/fg dungeons - dungeons in your level range with quests left (/fg dungeon <n>: guide me there, /fg dungeon stop)")
-    ns:Print("/fg skip - skip the current step, /fg unskip - bring skipped steps back")
+    ns:Print("/fg skip - skip the current quest (Field Guide stops suggesting it), /fg unskip - bring skipped quests back")
     ns:Print("/fg arrow - point Waypoint's arrow at the current step again")
     ns:Print("/fg pause, /fg resume - hide the guide and leave Waypoint's arrow alone (Play on the arrow brings it back)")
-    ns:Print("/fg dock - sit under Waypoint's arrow (on), or move on your own")
     ns:Print("/fg questing - leave a dungeon's route and go back to the leveling guide")
     ns:Print("/fg questie - focus the current quest in Questie's tracker, or not")
-    ns:Print("/fg lock - lock or unlock the window, /fg minimap - show or hide the minimap button")
+    ns:Print("/fg minimap - show or hide the minimap button")
 end
 
 SLASH_FIELDGUIDE1 = "/fieldguide"
@@ -89,10 +93,12 @@ SlashCmdList.FIELDGUIDE = function(msg)
     elseif cmd == "settings" or cmd == "options" or cmd == "config" then
         ns.Settings:Open()
     -- The toggles change the same options as Options > AddOns > Field Guide (ns:SetOption), so the
-    -- page shows them; the options' applies dock the window and refresh the minimap button.
-    elseif cmd == "dock" then
-        ns:Print(ns:ToggleOption("db.dock") and "The guide sits under Waypoint's arrow; drag either to move both."
-            or "The guide moves on its own now.")
+    -- page shows them; the options' applies refresh the minimap button.
+    elseif cmd == "trail" or cmd == "plan" then
+        ns.UI:TogglePlan()
+    elseif cmd == "relearn" then
+        ns.UI:Relearn()
+        ns:Print("Forgot how you read: the field starts at its usual pace and whispers its gestures again.")
     elseif cmd == "pause" then
         ns.Engine:SetPaused(true)
     elseif cmd == "resume" then
@@ -108,8 +114,6 @@ SlashCmdList.FIELDGUIDE = function(msg)
         ns:Changed()
     elseif cmd == "questie" then
         ns:Print(ns:ToggleOption("db.focusQuestie") and "The current quest goes to the top of Questie's tracker." or "Questie's tracker is left alone.")
-    elseif cmd == "lock" then
-        ns:Print(ns:ToggleOption("db.locked") and "Window locked." or "Window unlocked: drag it to move it.")
     elseif cmd == "minimap" then
         ns:ToggleOption("char.minimap.hide")
     else

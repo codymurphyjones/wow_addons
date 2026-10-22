@@ -31,8 +31,9 @@ function API:Set(owner, wp)
     return ns.Targets:SetEntry(owner, wp)
 end
 
--- A request: the arrow's next point, above everything else (your path, Field Guide's dungeon and
--- leveling steps, other addons), until you get there; then it goes back to what it followed.
+-- A request: the arrow's next point, above every addon's target (Field Guide's dungeon and leveling
+-- steps, other addons), until you get there; then it goes back to what it followed. Only the
+-- player's waypoint path (set on the world map) and their body go above it.
 -- wp as for Set; a point may carry npc = the NPC standing there (opening its window counts as
 -- arriving). With several points it leads to the nearest on your continent and holds it; with
 -- ordered = true they're stops in turn instead (getting to one moves on to the next, and it clears
@@ -56,6 +57,35 @@ function API:ClearRequest() ns.Targets:ClearRequest(true) end
 --       them, then the auction house when auction lists anything), Add anyway (calls
 --       onAddAnyway(items)), or Cancel
 function API:NavigateTo(category, owner) return ns.Navigate:To(category, owner) end
+
+-- Towns (Data/Towns.lua, the world map's town badges): your faction's and neutral ones.
+--   Waypoint:Towns()  { { name, mapID, x, y (0-1), neutral, flight, lines = { { label, text } } } }
+--       a fresh copy each call (lines as the badge's tooltip: "Innkeeper", "Repair", ...)
+--   Waypoint:NavigateToTown(name)  leads the arrow there, as clicking its badge does
+local function MyTowns()
+    local f = UnitFactionGroup("player")
+    local mine = f == "Alliance" and "A" or f == "Horde" and "H" or nil
+    local out = {}
+    for _, t in ipairs(ns.Towns or {}) do
+        if t[5] == "AH" or t[5] == mine then out[#out + 1] = t end
+    end
+    return out
+end
+
+function API:Towns()
+    local out = {}
+    for _, t in ipairs(MyTowns()) do
+        local lines, flight = ns.TownPins:Lines(t)
+        out[#out + 1] = { name = t[1], mapID = t[2], x = t[3], y = t[4], neutral = t[5] == "AH", flight = flight, lines = lines }
+    end
+    return out
+end
+
+function API:NavigateToTown(name)
+    for _, t in ipairs(MyTowns()) do
+        if t[1] == name then return ns.TownPins:Navigate(t) end
+    end
+end
 function API:NavigateToUndiscoveredFlight(owner) return ns.Navigate:ToUndiscoveredFlight(owner) end
 function API:NavigateToItems(itemIDs, title, owner, auction) return ns.Navigate:ToItems(itemIDs, title, owner, auction) end
 function API:PlaceCategories() return ns.Navigate:Categories() end

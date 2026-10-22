@@ -56,13 +56,16 @@ M.WarnOnce = WarnOnce
 -- Checks: RareScanner's internals this needs, looked at once at login
 -- ---------------------------------------------------------------------------------------------
 
+-- What's missing (nil: all there), and RareScanner's canvas. "not yet": RareScanner adds its
+-- provider to its canvas only once the world map has first set a map (MapCanvas.MapSet), so at
+-- login it often isn't on one yet; Core.lua tries again then.
 local function Missing(provider)
     if type(provider) ~= "table" then return "RareScannerDataProviderMixin" end
     for _, k in ipairs({ "RefreshAllData", "RemoveAllData", "GetMap" }) do
         if type(provider[k]) ~= "function" then return "RareScannerDataProviderMixin." .. k end
     end
     local ok, map = pcall(provider.GetMap, provider)
-    if not ok or type(map) ~= "table" then return "RareScannerDataProviderMixin:GetMap()" end
+    if not ok or type(map) ~= "table" then return "not yet" end
     for _, k in ipairs({ "AcquirePin", "RemovePin", "GetMapID", "GetMapFrame" }) do
         if type(map[k]) ~= "function" then return "RareScanner's map canvas: " .. k end
     end
@@ -249,10 +252,7 @@ local function Refresh(self, ...)
     local neighbourPins, hostPins, drops = {}, {}, {}
     for _, zone in ipairs(list) do
         local ok, err = RunPass(zone, { source = zone, host = host, pins = neighbourPins, drops = drops }, ...)
-        if not ok then
-            WarnOnce("pass", "RareScanner errored while listing a nearby zone's icons; that zone is skipped.")
-            ns:Debug("pass " .. tostring(zone) .. ": " .. tostring(err))
-        end
+        if not ok then ns:Caught("RareScanner (nearby zone " .. tostring(zone) .. ")", err) end
     end
     -- the shown map last, with its own mapID (route, guide and animations end on it)
     local ok, err = RunPass(rawget(RS, "mapID"), { host = host, pins = hostPins }, ...)
@@ -260,7 +260,7 @@ local function Refresh(self, ...)
 
     for _, pin in ipairs(drops) do pcall(RS.RemovePin, RS, pin) end
     local okDedupe, errDedupe = pcall(Dedupe, hostPins, neighbourPins)
-    if not okDedupe then ns:Debug("dedupe: " .. tostring(errDedupe)) end
+    if not okDedupe then ns:Caught("RareScanner duplicates", errDedupe) end
     M.last = { host = host, zones = #list, pins = #neighbourPins - #drops }
     if not ok then geterrorhandler()(err) end
 end

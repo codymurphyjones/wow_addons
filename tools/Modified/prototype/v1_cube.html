@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- Sketch 1: the modifier keys are the three axes of a cube. Holding keys flies you to a corner;
+     each corner is a "world" with its own spell. Throwaway. -->
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;height:100%;background:#07080c;color:#cfd6e4;font:13px/1.3 Segoe UI,sans-serif;overflow:hidden}
+#stage{position:absolute;inset:0;perspective:900px}
+#cube{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.9,.2,1)}
+.v{position:absolute;width:64px;height:64px;margin:-32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+   background:radial-gradient(circle,#ffffff22,#0000 70%);transition:all .3s;font-size:11px;text-align:center}
+.v.on{background:radial-gradient(circle,#ffd86b,#ffb02033 60%,#0000 72%);color:#000;font-weight:700;transform-style:preserve-3d}
+.e{position:absolute;height:1px;background:#ffffff18;transform-origin:0 0}
+#hud{position:absolute;left:20px;bottom:20px;opacity:.6}
+</style></head><body><div id="stage"><div id="cube"></div></div><div id="hud">hold Shift / Ctrl / Alt</div>
+<script>
+const S=120, cube=document.getElementById('cube');
+const names={0:'None',1:'Shift',2:'Ctrl',3:'S+C',4:'Alt',5:'S+A',6:'C+A',7:'S+C+A'};
+const spells={0:'Fireball',1:'Frostbolt',4:'Blink'};
+const verts=[];
+for(let i=0;i<8;i++){const d=document.createElement('div');d.className='v';
+  const x=(i&1?1:-1)*S,y=(i&2?1:-1)*S,z=(i&4?1:-1)*S;
+  d.style.transform=`translate3d(${x}px,${y}px,${z}px)`;d.textContent=names[i]+(spells[i]?'\n'+spells[i]:'');
+  cube.appendChild(d);verts.push(d)}
+let k=0;function upd(){verts.forEach((v,i)=>v.classList.toggle('on',i===k));
+  cube.style.transform=`rotateX(${-20+(k&2?40:0)}deg) rotateY(${30+(k&1?-60:0)+(k&4?180:0)}deg)`}
+addEventListener('keydown',e=>{k=(e.shiftKey?1:0)|(e.ctrlKey?2:0)|(e.altKey?4:0);upd();e.preventDefault()});
+addEventListener('keyup',e=>{k=(e.shiftKey?1:0)|(e.ctrlKey?2:0)|(e.altKey?4:0);upd()});
+upd();
+</script></body></html>

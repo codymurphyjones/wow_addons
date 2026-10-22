@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- Sketch 2: a button is a sieve. Each rule is a gate; its width is how much it catches.
+     A drop (your intent) falls and the first gate that matches the situation catches it. Throwaway. -->
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;height:100%;background:#07080c;color:#cfd6e4;font:13px Segoe UI,sans-serif;overflow:hidden}
+.g{position:absolute;left:50%;height:6px;border-radius:3px;background:#ffffff30;transition:all .3s}
+.g span{position:absolute;top:-20px;left:0;right:0;text-align:center;font-size:12px;opacity:.7}
+.g.hit{background:#7cf3c0;box-shadow:0 0 18px #7cf3c0}
+#drop{position:absolute;left:50%;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#bfe7ff;box-shadow:0 0 14px #bfe7ff}
+#sit{position:absolute;left:20px;top:20px;opacity:.7}
+</style></head><body><div id="sit"></div><div id="drop"></div>
+<script>
+const gates=[ // narrow first
+ {w:120,label:'Flash Heal · mouseover friend',m:s=>s.mo==='friend'},
+ {w:200,label:'Flash Heal · target friend',m:s=>s.t==='friend'},
+ {w:280,label:'Smite · target enemy',m:s=>s.t==='enemy'},
+ {w:420,label:'Flash Heal · self (catch-all)',m:s=>true}];
+gates.forEach((g,i)=>{const d=document.createElement('div');d.className='g';d.style.width=g.w+'px';d.style.marginLeft=-g.w/2+'px';
+ d.style.top=(160+i*90)+'px';d.innerHTML='<span>'+g.label+'</span>';document.body.appendChild(d);g.el=d});
+const sits=[{t:'none',mo:'none'},{t:'enemy',mo:'none'},{t:'friend',mo:'none'},{t:'enemy',mo:'friend'}];let si=0,y=60,v=0;
+function frame(){const s=sits[si];document.getElementById('sit').textContent='target: '+s.t+'   mouseover: '+s.mo;
+ const hit=gates.findIndex(g=>g.m(s));y+=v;v+=.35;const stop=160+hit*90-14;if(y>stop){y=stop;v=0}
+ gates.forEach((g,i)=>g.el.classList.toggle('hit',i===hit&&y>=stop));document.getElementById('drop').style.top=y+'px';requestAnimationFrame(frame)}
+addEventListener('keydown',()=>{si=(si+1)%sits.length;y=60;v=0});frame();
+window.setSit=i=>{si=i;y=60;v=0};
+</script></body></html>

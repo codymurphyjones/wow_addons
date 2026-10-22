@@ -3,7 +3,7 @@
 ## Notes: A navigation arrow. Follows your Questie quests, takes targets from other addons, and lets your group build shared waypoint paths on the world map (Ctrl+click). /way
 ## Author: Dinoblankie + Claude
 ## Version: 0.1.1
-## OptionalDeps: Questie, ZeppelinSigns, RoadLog
+## OptionalDeps: Questie, ZeppelinSigns, RoadLog, OpenMap
 ## SavedVariables: WaypointDB
 ## SavedVariablesPerCharacter: WaypointCharDB
 ## IconTexture: Interface\AddOns\Waypoint\Media\Icon
@@ -35,6 +35,7 @@ Comm.lua
 Questie.lua
 Arrow.lua
 MapPins.lua
+OpenMap.lua
 MinimapPin.lua
 ..\shared\MinimapButton.lua
 Minimap.lua

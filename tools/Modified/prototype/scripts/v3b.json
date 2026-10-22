@@ -1,0 +1,7 @@
+[["press","m"],["move",407,713],["wait",700],
+ ["move",459,412],["wait",200],["type","flash"],["wait",200],["shot","v3b_2_typing"],["press","Enter"],["wait",600],["shot","v3b_3_born"],
+ ["move",412,330],["wait",900],["shot","v3b_4_sprout"],
+ ["press","Shift"],["wait",500],["move",407,370],["type","smi"],["press","Enter"],["wait",600],["move",370,470],["wait",100],["type","sw pain"],["press","Enter"],["wait",700],["shot","v3b_5_shiftworld"],
+ ["eval","document.querySelector('#sim b[data-k=target]').click();document.querySelector('#sim b[data-k=target]').click()"],["wait",2600],["shot","v3b_6_pulse"],
+ ["press","Shift"],["wait",300],["move",407,440],["wait",400],["shot","v3b_7_incant"],
+ ["eval","JSON.stringify(__state())"]]

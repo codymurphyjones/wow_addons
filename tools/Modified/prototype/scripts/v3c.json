@@ -1,0 +1,7 @@
+[["press","m"],["move",457,713],["wait",700],
+ ["move",510,415],["wait",300],["shot","v3c_1_compass"],["type","swp"],["wait",150],["shot","v3c_2_initials"],["press","Escape"],
+ ["move",457,370],["wait",1000],["shot","v3c_3_sprout"],
+ ["move",510,412],["wait",300],["press","Enter"],["wait",700],["shot","v3c_4_shape"],
+ ["move",457,370],["wait",100],["wheel",100],["wait",500],["shot","v3c_5_wheel"],
+ ["move",457,370],["type","renew,"],["type","pws"],["press","Enter"],["wait",600],["shot","v3c_6_braid"],
+ ["eval","JSON.stringify(__state())"]]

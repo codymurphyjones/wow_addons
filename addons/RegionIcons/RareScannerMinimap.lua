@@ -120,8 +120,7 @@ local function Harvest(zones, ownMap)
                 end
             end
         elseif err ~= "busy" then
-            ns.RareScanner.WarnOnce("minimap", "RareScanner errored while listing a nearby zone's icons for the minimap; that zone is skipped.")
-            ns:Debug("minimap " .. tostring(zone) .. ": " .. tostring(err))
+            ns:Caught("RareScanner minimap (nearby zone " .. tostring(zone) .. ")", err)
         end
     end
     Clear()
@@ -178,7 +177,7 @@ function N:Start()
     ns:On("PLAYER_REGEN_ENABLED", function() N:Refresh() end)
     ticker = C_Timer.NewTicker(TICK, function()
         local ok, err = pcall(N.Refresh, N)
-        if not ok then ns:Debug("minimap: " .. tostring(err)) end
+        if not ok then ns:Caught("RareScanner minimap", err) end
     end)
     return true
 end

@@ -28,15 +28,14 @@ local function Duration(run) return ns.Format.Duration((run.stop or time()) - ru
 
 local function RunLine(run)
     return ("%s  -  %s, %s%s, %d wipe%s, %d death%s"):format(date("%m/%d/%y %H:%M", run.start), Duration(run),
-        run.finished and "|cff59f28cfull clear|r" or ("%d boss%s"):format(run.bossKills or 0, (run.bossKills or 0) == 1 and "" or "es"),
+        run.finished and "|cff59f28cfull clear|r" or ("%d boss%s"):format(ns.Run.BossKills(run), ns.Run.BossKills(run) == 1 and "" or "es"),
         run.stop and "" or " (in progress)", run.wipes or 0, (run.wipes or 0) == 1 and "" or "s", #run.deaths, #run.deaths == 1 and "" or "s")
 end
 
 local function Members(run)
     local parts = {}
     for full, m in pairs(run.members) do
-        local role = m.role or (run.roles and (run.roles.tank == C.Short(full) and "tank" or run.roles.healer == C.Short(full) and "healer"))
-        parts[#parts + 1] = C.Colored(full, m.class) .. (role and ("|cffaaaaaa " .. role .. "|r") or "")
+        parts[#parts + 1] = C.Colored(full, m.class) .. "|cffaaaaaa " .. ns.Blame.RoleOf(run, full) .. "|r"
     end
     table.sort(parts)
     return table.concat(parts, ", ")
@@ -86,6 +85,8 @@ local function CreatePlayersPage()
     Hint(d.down, "Wouldn't group again", "Private: only you see it, next to their name. Nothing is sent to anyone.")
     d.info = Muted(Label(d, "", "FiresideGameFontHighlightSmall", 0, -32, 580))
     d.known = Label(d, "", "FiresideGameFontHighlight", 0, -52, 580); d.known:SetWordWrap(true)
+    -- Flak: the warning when it's a pattern, how it stands, and (strongly) the Flak you gave them.
+    d.flak = Label(d, "", "FiresideGameFontHighlight", 0, -72, 580); d.flak:SetWordWrap(true)
     d.sources = Muted(Label(d, "", "FiresideGameFontHighlightSmall", 0, -72, 580)); d.sources:SetWordWrap(true)
     d.totals = Label(d, "", "FiresideGameFontHighlightSmall", 0, -90, 580); d.totals:SetWordWrap(true)
     d.note = W.MakeEditBox(d, 420, "Your private note about them (Enter to save)")
@@ -103,7 +104,7 @@ local function CreatePlayersPage()
     -- Each line sits under the one above, however many lines the kudos and the private read wrap to.
     local function PlaceBelowTotals()
         local y = -52
-        for _, fs in ipairs({ d.known, d.sources, d.totals }) do
+        for _, fs in ipairs({ d.known, d.flak, d.sources, d.totals }) do
             fs:SetPoint("TOPLEFT", 0, y)
             local h = (fs:GetText() or "") ~= "" and math.ceil(fs:GetStringHeight() or 0) + 6 or 0
             y = y - h
@@ -148,6 +149,25 @@ local function CreatePlayersPage()
             date("%m/%d/%y", rec.first), rec.last and date("%m/%d/%y", rec.last) or "-") .. (rec.guild and ("  <" .. rec.guild .. ">") or ""))
         local known = ns.Marks.KnownLine(full, 6, 16)
         d.known:SetText(known and ("Known for  " .. known) or "|cffaaaaaaNot known for anything yet: kudos given at the campfire show up here.|r")
+        local warning, mine, r = ns.Marks.FlakLines(full, false)
+        local fl = {}
+        if warning then fl[#fl + 1] = warning end
+        if r.total > 0 and not warning then
+            fl[#fl + 1] = r.recovered
+                and ("|cffaaaaaaFlak: %d in all (%d first-hand), but it has faded or kudos outweigh it now: no warning.|r"):format(r.total, r.firstHand)
+                or ("|cffaaaaaaFlak: %d (%d first-hand) from %s source%s, not a pattern (a warning takes %d from %d; hearsay counts half).|r"):format(
+                    r.total, r.firstHand, (("%.1f"):format(r.sources):gsub("%.0$", "")), r.sources == 1 and "" or "s",
+                    ns.Marks.FLAK_MIN, ns.Marks.FLAK_SOURCES)
+        end
+        if mine then
+            local told, passed = 0, 0
+            for _, e in ipairs(r.mine) do
+                if e.told then told = told + 1 end
+                if e.passed then passed = passed + 1 end
+            end
+            fl[#fl + 1] = mine .. ("  |cffaaaaaa(%d told to them, %d passed on)|r"):format(told, passed)
+        end
+        d.flak:SetText(table.concat(fl, "\n"))
         local sources = Sources(full, rec)
         d.sources:SetText(sources or "")
         local private = ns.History:Private(full)
@@ -336,12 +356,13 @@ local function CreateSettingsPage()
     local o = ns.db.options
     Label(p, "Settings", "FiresideGameFontNormalLarge", 0, 0)
     local checks = {
-        { "popup", "Show the party popup when you join a group", "Who's in your party: what each is known for, and your history with them." },
+        { "popup", "Tell me in chat who joins my party", "When you join: a chat line for each member, what each is known for and your history with them. Then a line for each newcomer only." },
         { "whisper", "History line in chat when you whisper someone you know" },
         { "tooltip", "History on player tooltips" },
         { "report", "Open the campfire at the end of each run", "At the last boss, while the party is still together (else when the run ends)." },
-        { "shareKudos", "Tell my party the kudos I've given", "When someone joins, your party hears the kudos you've given the others: testimony. Only kudos: never notes, ratings or anything negative." },
+        { "shareKudos", "Tell my party the kudos I've given", "When someone joins, your party hears the kudos you've given the others, and kudos travel on as gossip from group to group." },
         { "shareBanner", "Show my party the kudos I've received", "Your own record, so people new to you see what you're known for." },
+        { "relay", "Pass on what I've heard (gossip)", "Kudos and passed-on Flak you know of go on to the people you group with, never to the player they're about. Hearsay from people you haven't grouped with counts half, and can't make a Flak warning on its own." },
         { "hearth", "Show the Hearth while in a party", "A slim strip with your party's portraits: left-click someone to send a spark (a small thanks), right-click to jot a note for the campfire." },
         { "prompts", "Offer a spark after a fight", "When the data saw someone do something worth a thank-you, a toast under the Hearth offers the spark in one click." },
         { "acceptTips", "Accept private notes", "Keep / try notes from the people you group with. Off: senders are told you've turned them off." },
@@ -367,13 +388,12 @@ local function CreateSettingsPage()
         Hint(box, title, hint)
         p[key] = box
     end
-    Number(-308, "Party popup closes after", "popupSeconds", "seconds (0 = stays open)", "It stays open while your mouse is over it.")
     Number(-334, "Over-pull at", "overpull", "mobs in combat at once", "A pull with this many mobs counts as an over-pull when analysing deaths.")
-    Muted(Label(p, "Praise in public, critique in private: kudos are seen by your party and travel with people as testimony; a note's \"try\" half reaches only its player. Who likely caused each death (the death's last hits, Blizzard's damage meter, who pulled, how many mobs came) stays on your own run and death pages, and turns into the campfire's lessons without names.",
+    Muted(Label(p, "Kudos are seen by your party and travel from group to group as gossip, and so does Flak you choose to pass on (never to its player; it only shows as a warning when it's a pattern); a note's \"try\" half reaches only its player. Who likely caused each death (the death's last hits, Blizzard's damage meter, who pulled, how many mobs came) stays on your own run and death pages, and turns into the campfire's lessons without names.",
         "FiresideGameFontHighlightSmall", 0, -368, 560)):SetWordWrap(true)
     p.Refresh = function()
         for key, b in pairs(p.boxes) do b:SetChecked(o[key]) end
-        for _, key in ipairs({ "popupSeconds", "overpull" }) do if not p[key]:HasFocus() then p[key]:SetText(tostring(o[key])) end end
+        for _, key in ipairs({ "overpull" }) do if not p[key]:HasFocus() then p[key]:SetText(tostring(o[key])) end end
     end
 end
 
@@ -423,6 +443,8 @@ function UI:Toggle()
     if not ns.db then return end
     win:Toggle()
 end
+
+function UI:Hide() win:Hide() end
 
 -- quiet: just the list (no "no history" message when full is nil).
 function UI:ShowPlayer(full, quiet)

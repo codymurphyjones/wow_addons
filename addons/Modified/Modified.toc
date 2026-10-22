@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: Modified
-## Notes: Visually design Shift/Ctrl/Alt modifier macros for your action bar buttons. /mod
+## Notes: Shape what your action buttons do with Shift, Ctrl and Alt. /mod lowers the veil.
 ## Version: 1.0.5
 ## SavedVariablesPerCharacter: ModifiedDB
 ## IconTexture: Interface\AddOns\Modified\Textures\Icon.tga
@@ -17,3 +17,7 @@ Settings.lua
 SpellPicker.lua
 UI_BarList.lua
 UI_Editor.lua
+Voice.lua
+Veil.lua
+Lens.lua
+Guide.lua

@@ -13,7 +13,7 @@ ns.DEFAULTS = {
     dockAlign = "CENTER", -- windows docked under the arrow (Field Guide): "LEFT", "CENTER" or "RIGHT"
     quests = true,   -- point at Questie quests when nothing else asks
     share = true,    -- share your waypoint path with your group
-    confirm = true,  -- ask before adding a waypoint from the map
+    confirm = false, -- ask before adding a waypoint from the map (Ctrl+click is deliberate: off)
     locked = false,  -- the arrow can't be dragged
     arrowHidden = false,
     flights = true,  -- lead to a flight master when flying is quicker
@@ -128,6 +128,8 @@ local function Help()
     ns:Print("/way <x> <y> [title] - add a waypoint in your zone to the path")
     ns:Print("/way clear - clear the waypoint path (for your group too)")
     ns:Print("/way undo - undo your last path change (Ctrl+Z with the map open)")
+    ns:Print("/way list - your waypoints, numbered")
+    ns:Print("/way remove <number> - remove one of them (or Ctrl+right-click it on the map)")
     ns:Print("/way quests on | off - point at Questie quests when nothing else asks")
     ns:Print("/way share on | off - share your path with your group")
     ns:Print("/way confirm on | off - ask before adding a waypoint")
@@ -140,7 +142,7 @@ local function Help()
     ns:Print("/way minimap - show or hide the minimap button")
     ns:Print("/way towns on | off - town icons on the world map (hover: what's there, click: go there)")
     ns:Print("/way docks on | off - zeppelin, skyship and ship docks on the world map (hover: ride time, click: go there)")
-    ns:Print("World map: Ctrl+left-click adds a waypoint, Ctrl+right-click removes the nearest one.")
+    ns:Print("World map: Ctrl+click adds a waypoint (the first is Blizzard's map pin), Ctrl+right-click any pin removes it, Ctrl+Z undoes.")
 end
 
 SLASH_WAYPOINT1 = "/waypoint"
@@ -164,6 +166,19 @@ SlashCmdList.WAYPOINT = function(msg)
         ns.Chain:Clear()
     elseif cmd == "undo" then
         ns.Chain:Undo()
+    elseif cmd == "list" then
+        local points = ns.Chain:Points()
+        local r = ns.Targets:GetRequest()
+        if #points == 0 and not r then ns:Print("No waypoints.") end
+        for i, p in ipairs(points) do
+            ns:Print(("%d. %s%s"):format(i, p.title and (p.title .. ", ") or "", ns.Nav:Describe(p)))
+        end
+        if r then ns:Print(("Navigate to: %s"):format(r.title or "your destination")) end
+        if #points > 0 then ns:Print("/way remove <number> removes one.") end
+    elseif cmd == "remove" then
+        local n = tonumber(arg)
+        if n and ns.Chain:RemoveAt(n) then return end
+        ns:Print(("There's no waypoint %s. /way list shows them."):format(arg ~= "" and arg or "with that number"))
     elseif cmd == "quests" then
         OnOff("quests", "Questie quests", arg)
         if not (ns.Questie and ns.Questie:Available()) then

@@ -43,13 +43,9 @@ local function CurrentRun()
 end
 CF.CurrentRun = CurrentRun
 
-local function RoleIn(run, full, m)
-    local short = C.Short(full)
-    local tank, healer = ns.Blame.Roles(run)
-    if m and m.role then return m.role end
-    if short == tank then return "tank" end
-    if short == healer then return "healer" end
-    return "damage"
+-- The tank is whoever took the most damage, whatever role the game assigned (Blame.RoleOf).
+local function RoleIn(run, full)
+    return ns.Blame.RoleOf(run, full)
 end
 
 -- Everyone at the fire: who's still with you, then who left (in the order they left), then you
@@ -318,9 +314,11 @@ local function BuildRemarks()
 
     o.kudoHead = Label(o, "Kudos  |cffaaaaaapublic: the party sees it land. Click to give.|r", NORMAL, 12, -124, 562)
     o.kudos = {}
+    -- One row across the panel: icons shrink to fit when there are more kudos than 32 px ones allow.
+    local step = math.min(38, math.floor(562 / #M.KUDOS))
     for i, k in ipairs(M.KUDOS) do
-        local b = MakeButton(o, "", 32, 32)
-        b:SetPoint("TOPLEFT", 12 + (i - 1) * 38, -142)
+        local b = MakeButton(o, "", step - 6, step - 6)
+        b:SetPoint("TOPLEFT", 12 + (i - 1) * step, -142 - (38 - step) / 2)
         b.icon = b:CreateTexture(nil, "ARTWORK"); b.icon:SetPoint("TOPLEFT", 3, -3); b.icon:SetPoint("BOTTOMRIGHT", -3, 3)
         b.icon:SetTexture(M.IconPath(k.id)); b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         b.check = b:CreateFontString(nil, "OVERLAY", SMALL); b.check:SetPoint("BOTTOMRIGHT", 2, -2)
@@ -364,7 +362,14 @@ local function BuildRemarks()
     o.send = MakeButton(o, "Send note privately", 140, 26); o.send:SetPoint("BOTTOMRIGHT", -194, 10)
     o.after = MakeButton(o, "Next", 174, 26); o.after:SetPoint("BOTTOMRIGHT", -12, 10)
     o.after:SetScript("OnClick", function()
-        if o.index < #o.list then CF:GoRound(o.index + 1) else o:Hide(); CF:Refresh(); Status("You've been round the whole fire.") end
+        if o.index < #o.list then
+            CF:GoRound(o.index + 1)
+        else
+            -- Round the whole fire: Fireside closes (the Hearth, or /fire, brings it back).
+            o:Hide()
+            ns.UI:Hide()
+            ns:Print("You've been round the whole fire. The Hearth or |cffffffff/fire|r opens it again.")
+        end
     end)
     o.send:SetScript("OnClick", function()
         local seat = o.seat
@@ -378,8 +383,108 @@ local function BuildRemarks()
         end
         CF:RefreshRemarks()
     end)
+    -- Flak has a panel of its own over this one (BuildFlak).
+    o.flakBtn = MakeButton(o, "Flak...", 90, 26); o.flakBtn:SetPoint("LEFT", o.back, "RIGHT", 8, 0)
+    o.flakBtn:SetScript("OnClick", function() CF:OpenFlak() end)
+    Hint(o.flakBtn, "Flak", "Something they did made the run worse. One Flak shows to nobody else: only a pattern does. "
+        .. "You choose whether to tell them, and whether to pass it on.")
     o:Hide()
     return o
+end
+
+-- The Flak panel: pick what they did, then whether to tell them and whether to pass it on.
+local function BuildFlak(o)
+    local fp = CreateFrame("Frame", nil, o, "BackdropTemplate")
+    fp:SetAllPoints(o); W.SetBackdrop(fp, 0.99); fp:SetFrameLevel(o:GetFrameLevel() + 20); fp:EnableMouse(true)
+    fp.title = Label(fp, "", LARGE, 12, -10, 560)
+    fp.about = Muted(Label(fp, ("About what they did, never who they are. One Flak shows to nobody else: other people only see a pattern "
+        .. "(%d or more from %d or more people or runs), and kudos that outweigh it clear it."):format(M.FLAK_MIN, M.FLAK_SOURCES), SMALL, 12, -34, 562))
+    fp.about:SetWordWrap(true)
+    fp.items = {}
+    for i, f in ipairs(M.FLAK) do
+        local b = MakeButton(fp, "", TIP_W - 4, 24)
+        b.text:SetWidth(TIP_W - 14); b.text:SetWordWrap(false)
+        b.text:SetText(M.FlakIcon(f.id, 14) .. " " .. f.label)
+        b.id = f.id
+        b:SetScript("OnClick", function(self)
+            fp.pick = (fp.pick ~= self.id) and self.id or nil
+            CF:RefreshFlak()
+        end)
+        Hint(b, f.label, "Flak: given by hand only, never from the data.")
+        fp.items[i] = b
+    end
+    fp.tell = W.MakeCheckbox(fp, "Tell them: they see it privately, and that it's from you")
+    fp.tell:SetPoint("TOPLEFT", 12, -196)
+    fp.pass = W.MakeCheckbox(fp, "Pass it on: it travels as gossip to other Fireside players, group to group (never to them)")
+    fp.pass:SetPoint("TOPLEFT", 12, -224)
+    fp.keep = Muted(Label(fp, "Neither: it stays on your own record of them.", SMALL, 12, -256, 562))
+    fp.given = Label(fp, "", SMALL, 12, -280, 562); fp.given:SetWordWrap(true)
+    fp.state = Label(fp, "", SMALL, 12, -320, 562)
+    fp.back = MakeButton(fp, "Back", 90, 26); fp.back:SetPoint("BOTTOMLEFT", 12, 10)
+    fp.back:SetScript("OnClick", function() fp:Hide(); CF:RefreshRemarks() end)
+    fp.give = MakeButton(fp, "Give Flak", 140, 26); fp.give:SetPoint("BOTTOMRIGHT", -12, 10)
+    fp.give:SetScript("OnClick", function()
+        local seat = o.seat
+        if not (seat and fp.pick) then return end
+        local tell, pass = fp.tell:GetChecked() and true or false, fp.pass:GetChecked() and true or false
+        if F:GiveFlak(CurrentRun(), seat.full, fp.pick, tell, pass) then
+            local how = tell and pass and "told to them and passed on" or tell and "told to them" or pass and "passed on"
+                or "kept on your own record"
+            fp.state:SetText(("Flak given: %s %s, %s."):format(M.FlakIcon(fp.pick), M.FlakLabel(fp.pick), how))
+            fp.pick = nil
+        else
+            fp.state:SetText("You've already given them that Flak for this run.")
+        end
+        CF:RefreshFlak()
+    end)
+    fp:Hide()
+    return fp
+end
+
+function CF:OpenFlak()
+    local o = remarks
+    if not (o and o.seat) or o.seat.me then return end
+    o.flakPanel = o.flakPanel or BuildFlak(o)
+    local fp = o.flakPanel
+    fp.seat, fp.pick = o.seat, nil
+    fp.tell:SetChecked(false); fp.pass:SetChecked(false)
+    fp.state:SetText("")
+    fp:Show()
+    self:RefreshFlak()
+end
+
+function CF:RefreshFlak()
+    local o = remarks
+    local fp = o and o.flakPanel
+    if not (fp and fp:IsShown() and o.seat) then return end
+    if fp.seat ~= o.seat then return fp:Hide() end
+    local run, seat = CurrentRun(), o.seat
+    fp.title:SetText("Flak for " .. C.Colored(seat.short, seat.class))
+    local given = F.FlakIn(run, seat.full)
+    local i = 0
+    for _, b in ipairs(fp.items) do
+        if M.Suits(M.flak[b.id], seat.role) or given[b.id] then
+            i = i + 1
+            b:ClearAllPoints()
+            b:SetPoint("TOPLEFT", 12 + ((i - 1) % TIP_COLS) * TIP_W, -72 - math.floor((i - 1) / TIP_COLS) * 28)
+            W.SetActive(b, (fp.pick == b.id or given[b.id]) and true or false)
+            b:SetEnabled(not given[b.id])
+            b:Show()
+        else
+            b:Hide()
+        end
+    end
+    local list = {}
+    for _, f in ipairs(M.FLAK) do
+        local e = given[f.id]
+        if e then
+            list[#list + 1] = ("%s %s|cffaaaaaa%s|r"):format(M.FlakIcon(f.id), f.label,
+                (e.told and e.passed and " (told, passed on)") or (e.told and " (told)") or (e.passed and " (passed on)") or " (kept)")
+        end
+    end
+    fp.given:SetText(#list > 0 and ("|cffff9020Your Flak for them this run:|r  " .. table.concat(list, ",  ")) or "")
+    local ready = fp.pick ~= nil and not given[fp.pick]
+    fp.give:SetEnabled(ready); fp.give:SetAlpha(ready and 1 or 0.4)
 end
 
 -- The kudo a note goes with: the first you've given them at this fire, else the data's suggestion.
@@ -406,6 +511,8 @@ function CF:RefreshRemarks(typing)
         o.pos:SetText(("%d of %d"):format(o.index, #o.list))
         o.prev:SetEnabled(o.index > 1); o.next:SetEnabled(o.index < #o.list)
         SetPortrait(o.portrait, seat)
+        o.flakBtn:SetShown(not seat.me)
+        if o.flakPanel and o.flakPanel.seat ~= seat then o.flakPanel:Hide() end
 
         -- Their story: moments, sparks, your jots.
         local L = {}
@@ -739,10 +846,12 @@ function CF.Build(win)
     -- The tray.
     page.trayLabel = Muted(Label(page, "Kudos: drag one onto someone, or pick one and click them. Your party sees it land.", SMALL, 0, -352, 586))
     page.tokens = {}
-    local x0 = (586 - (#M.KUDOS * (TOKEN + TOKEN_GAP) - TOKEN_GAP)) / 2
+    -- One row, centred: tokens shrink to fit when there are more kudos than 32 px ones allow.
+    local token = math.min(TOKEN, math.floor(586 / #M.KUDOS) - TOKEN_GAP)
+    local x0 = (586 - (#M.KUDOS * (token + TOKEN_GAP) - TOKEN_GAP)) / 2
     for i, k in ipairs(M.KUDOS) do
-        local t = MakeButton(page, "", TOKEN + 4, TOKEN + 4)
-        t:SetPoint("TOPLEFT", x0 + (i - 1) * (TOKEN + TOKEN_GAP) - 2, -370)
+        local t = MakeButton(page, "", token + 4, token + 4)
+        t:SetPoint("TOPLEFT", x0 + (i - 1) * (token + TOKEN_GAP) - 2, -370 - (TOKEN - token) / 2)
         t.icon = t:CreateTexture(nil, "ARTWORK"); t.icon:SetPoint("TOPLEFT", 3, -3); t.icon:SetPoint("BOTTOMRIGHT", -3, 3)
         t.icon:SetTexture(M.IconPath(k.id)); t.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         t.k = k.id
@@ -783,7 +892,8 @@ function CF:Refresh()
     local bits = { date("%m/%d %H:%M", run.start) }
     if live then table.insert(bits, 1, "|cff59f28cin progress|r") end
     if run.stop then bits[#bits + 1] = ns.Format.Duration(run.stop - run.start, { days = false, alwaysHours = true }) end
-    bits[#bits + 1] = ("%d boss%s"):format(run.bossKills or 0, (run.bossKills or 0) == 1 and "" or "es")
+    local kills = ns.Run.BossKills(run)
+    bits[#bits + 1] = ("%d boss%s"):format(kills, kills == 1 and "" or "es")
     bits[#bits + 1] = ("%d wipe%s"):format(run.wipes or 0, (run.wipes or 0) == 1 and "" or "s")
     bits[#bits + 1] = ("%d death%s"):format(#run.deaths, #run.deaths == 1 and "" or "s")
     page.sub:SetText(table.concat(bits, "  -  "))

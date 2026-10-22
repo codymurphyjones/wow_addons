@@ -12,6 +12,10 @@ local C = ns.Compat
 --   Cards   When someone new joins your party, each Fireside tells the party what kudos it has
 --           given the others ("C", testimony) and what its own player has received ("B", their own
 --           record). Nothing negative is ever in a card.
+--   Flak    given by hand, each time with two choices: tell the player ("K", to them alone) and pass
+--           it on (as gossip). Nobody ever sees it as a warning until it's a pattern (Marks.lua).
+--   Gossip  ("R") kudos and passed-on Flak as reports that travel from group to group, each
+--           Fireside passing on what it knows (never to the player a report is about).
 --   Thanks  ("T") and progress ("P"): you can thank someone for feedback, and when a tip sticks
 --           (Marks.STUCK clean runs in a row) the giver hears about it.
 -- Your received feedback is per character (ns.char.fb); what you know of others is on their record.
@@ -35,7 +39,7 @@ local function Wire(name) return ns.Units.Wire(name) or Clean(name, "[|;,=:]") e
 function F.DB()
     local fb = ns.char.fb
     if type(fb) ~= "table" then fb = {}; ns.char.fb = fb end
-    for _, k in ipairs({ "received", "letters", "sent", "feed", "sparks" }) do
+    for _, k in ipairs({ "received", "letters", "sent", "feed", "sparks", "flak" }) do
         if type(fb[k]) ~= "table" then fb[k] = {} end
     end
     return fb
@@ -135,6 +139,8 @@ local function Landed(run, from, to, k)
         if HasKudo(run, from, to, k) then return false end
         table.insert(run.kudos, { from = from, to = to, k = k, t = time() })
     end
+    -- Every kudo you see land is a report, passed on as gossip (yours too).
+    if not C.IsMe(to) then F.AddReport(to, from, "k", k, time(), C.IsMe(from) and 0 or 1) end
     if C.IsMe(to) then
         ReceiveMine(from, k)
         if ns.db.options.chat ~= false then
@@ -277,6 +283,220 @@ function F.JotsIn(run, to)
 end
 
 -- ---------------------------------------------------------------------------
+-- Flak: given by hand; told privately ("K") and/or passed on as gossip
+-- ---------------------------------------------------------------------------
+
+-- Your Flak for a member in a run: { [k] = entry }.
+function F.FlakIn(run, to)
+    local p = run and to and ns.History:Get(to)
+    local out = {}
+    for _, e in ipairs(p and p.flak or {}) do
+        if e.run == run.id then out[e.k] = e end
+    end
+    return out
+end
+
+-- You give Flak. tell: the player hears it privately, from you. pass: it travels as gossip (below)
+-- to other Fireside players, never to them.
+function F:GiveFlak(run, to, k, tell, pass)
+    if not (M.flak[k] and to) then return false, "unknown" end
+    if C.IsMe(to) then return false, "self" end
+    run = run or F.LiveRun()
+    local key = MemberOf(run, to) or ns.History:Key(to) or to
+    if run and F.FlakIn(run, key)[k] then return false, "given" end
+    local p = ns.History:Get(key, true)
+    p.flak = p.flak or {}
+    local t = time()
+    table.insert(p.flak, { k = k, t = t, run = run and run.id, told = tell and true or nil, passed = pass and true or nil })
+    if tell then comm:SendTo("K", k, key) end
+    if pass then
+        F.AddReport(key, Me(), "f", k, t, 0)
+        F:Gossip()
+    end
+    ns:Changed()
+    return true
+end
+
+-- Flak told to you: private, from its giver.
+comm:On("K", function(payload, sender)
+    local k = payload:match("^(%w+)$")
+    if not (k and M.flak[k]) then return end
+    local from = ns.History:Key(sender) or sender
+    local list = F.DB().flak
+    table.insert(list, { from = from, k = k, t = time() })
+    while #list > FEED_KEEP do table.remove(list, 1) end
+    Feed("flak", ("%s gave you Flak: %s %s"):format(from, M.FlakIcon(k), M.FlakLabel(k)), { from = from, k = k })
+    if ns.db.options.chat ~= false then
+        ns:Print(("%s gave you Flak: %s |cffffffff%s|r (only you see it). |cffffffff/fire mirror|r"):format(from, M.FlakIcon(k), M.FlakLabel(k)))
+    end
+    ns:Changed()
+end)
+
+-- ---------------------------------------------------------------------------
+-- Gossip: kudos and passed-on Flak travel from group to group ("R")
+-- ---------------------------------------------------------------------------
+-- Every kudo and every passed-on Flak is a report: { g (giver), kind ("k" or "f"), k, t, hand, via },
+-- kept on the record of the player it's about (p.reports), under a key every client works out the
+-- same way (giver, player, kind, what, day), so a report is stored once however many ways it arrives.
+-- hand: 0 yours, 1 from its own giver (first-hand), 2 passed along by someone else (via). Whenever
+-- the party changes, each Fireside passes what it knows on to the others, a report never to the
+-- player it's about, and reports that reach you are passed on again in your next group: gossip. How
+-- much a report counts is Marks.lua's (Marks.Trusted): hearsay from strangers counts half.
+
+local REPORTS_KEEP = 200            -- reports kept per player (the oldest go first)
+local REPORT_AGE = 365 * 86400      -- older reports aren't passed on, and go after two years
+local GOSSIP_MAX = 150              -- reports sent to one player per party change
+local told = {}                     -- [player][report key] = true: sent to them this session
+
+local function Compact(name) return ns.Units.Compact(name) or tostring(name) end
+
+function F.ReportKey(giver, about, kind, k, t)
+    return ("%s>%s>%s>%s>%d"):format(Compact(giver), Compact(about), kind, k, math.floor((tonumber(t) or 0) / 86400))
+end
+
+-- Stores a report about `about` (a first-hand one replaces hearsay of the same report).
+function F.AddReport(about, giver, kind, k, t, hand, via)
+    if not (about and giver and k) or C.IsMe(about) then return false end
+    if kind == "f" and not M.flak[k] then return false end
+    if kind == "k" and not M.kudo[k] then return false end
+    if hand ~= 0 and C.IsMe(giver) then return false end -- your own, come back round
+    local p = ns.History:Get(about, true)
+    if not p then return false end
+    p.reports = p.reports or {}
+    local key = F.ReportKey(giver, about, kind, k, t)
+    local had = p.reports[key]
+    if had and had.hand <= hand then return false end
+    p.reports[key] = { g = ns.History:Key(giver) or giver, kind = kind, k = k, t = math.min(tonumber(t) or time(), time()),
+        hand = hand, via = hand == 2 and (ns.History:Key(via) or via) or nil }
+    local n, oldest, oldestT = 0, nil, nil
+    for rk, r in pairs(p.reports) do
+        n = n + 1
+        if not oldestT or r.t < oldestT then oldest, oldestT = rk, r.t end
+    end
+    if n > REPORTS_KEEP and oldest then p.reports[oldest] = nil end
+    return true
+end
+
+-- What you'd pass on to `to`: reports about anyone but them, not sent to them yet this session;
+-- about people in the group first, then Flak, then the newest.
+local function GossipFor(to, inGroup)
+    local now = time()
+    local mine = told[Compact(to)] or {}
+    local list = {}
+    local relayKudos = ns.db.options.shareKudos ~= false
+    for about, p in pairs(ns.db.players) do
+        if p.reports and not C.SameName(about, to) then
+            for key, r in pairs(p.reports) do
+                if not mine[key] and now - (r.t or 0) <= REPORT_AGE and (r.kind == "f" or relayKudos) then
+                    list[#list + 1] = { key = key, about = about, r = r, near = inGroup[Compact(about)] and 1 or 0 }
+                end
+            end
+        end
+    end
+    table.sort(list, function(a, b)
+        if a.near ~= b.near then return a.near > b.near end
+        if a.r.kind ~= b.r.kind then return a.r.kind == "f" end
+        return (a.r.t or 0) > (b.r.t or 0)
+    end)
+    for i = #list, GOSSIP_MAX + 1, -1 do list[i] = nil end
+    return list
+end
+
+-- "name,name,...;about.giver.kind.k.t;..." with the names numbered from 1 (cleaned of separators).
+local function Encode(list)
+    local names, index, entries = {}, {}, {}
+    local function N(name)
+        name = Wire(name)
+        if not index[name] then
+            names[#names + 1] = name
+            index[name] = #names
+        end
+        return index[name]
+    end
+    for _, e in ipairs(list) do
+        entries[#entries + 1] = ("%d.%d.%s.%s.%d"):format(N(e.about), N(e.r.g), e.r.kind, e.r.k, e.r.t or 0)
+    end
+    return table.concat(names, ",") .. ";" .. table.concat(entries, ";")
+end
+
+-- Passes what you know on to everyone in your group (each gets what they haven't had from you).
+function F:Gossip()
+    if ns.db.options.relay == false or not IsInGroup() or IsInRaid() then return end
+    local members, inGroup = {}, {}
+    for _, unit in ipairs(C.GroupUnits()) do
+        local full = C.UnitFull(unit)
+        if full then
+            members[#members + 1] = full
+            inGroup[Compact(full)] = true
+        end
+    end
+    for _, to in ipairs(members) do
+        local list = GossipFor(to, inGroup)
+        if #list > 0 then
+            comm:SendTo("R", Encode(list), to)
+            local c = Compact(to)
+            told[c] = told[c] or {}
+            for _, e in ipairs(list) do told[c][e.key] = true end
+        end
+    end
+end
+
+comm:On("R", function(payload, sender)
+    local head, body = payload:match("^([^;]*);(.*)$")
+    if not head then return end
+    local names = {}
+    for name in head:gmatch("[^,]+") do names[#names + 1] = name end
+    local changed = false
+    for a, g, kind, k, t in body:gmatch("(%d+)%.(%d+)%.([fk])%.(%w+)%.(%d+)") do
+        local about, giver = names[tonumber(a)], names[tonumber(g)]
+        if about and giver and not C.SameName(about, sender) then
+            local key = MemberOf(F.LiveRun(), about) or ns.History:Key(about) or about
+            local hand = C.SameName(giver, sender) and 1 or 2
+            if F.AddReport(key, giver, kind, k, tonumber(t), hand, sender) then changed = true end
+        end
+    end
+    if changed then ns:Changed() end
+end)
+
+-- Reports from what was kept before gossip: kudos seen at your fires (run.kudos: first-hand, since
+-- you watched them land, or yours), your passed-on Flak, and Flak testimony (p.flakHeard). Once.
+local function SeedReports()
+    if ns.db.reportsSeeded then return end
+    for _, run in ipairs(ns.db.runs or {}) do
+        for _, e in ipairs(type(run) == "table" and run.kudos or {}) do
+            if e.from and e.to and not C.IsMe(e.to) then
+                F.AddReport(e.to, e.from, "k", e.k, e.t, C.IsMe(e.from) and 0 or 1)
+            end
+        end
+    end
+    for about, p in pairs(ns.db.players or {}) do
+        for _, e in ipairs(p.flak or {}) do
+            if e.passed then F.AddReport(about, Me() or "you", "f", e.k, e.t, 0) end
+        end
+        for giver, list in pairs(p.flakHeard or {}) do
+            for _, e in ipairs(type(list) == "table" and list or {}) do F.AddReport(about, giver, "f", e.k, e.t, 1) end
+        end
+        p.flakHeard = nil
+    end
+    ns.db.reportsSeeded = true
+end
+
+-- Reports older than two years go.
+local function PruneReports()
+    local now = time()
+    for _, p in pairs(ns.db.players or {}) do
+        for key, r in pairs(p.reports or {}) do
+            if now - (r.t or 0) > 2 * REPORT_AGE then p.reports[key] = nil end
+        end
+    end
+end
+
+ns:On("PLAYER_LOGIN", function()
+    SeedReports()
+    PruneReports()
+end)
+
+-- ---------------------------------------------------------------------------
 -- Cards: testimony and their own record, when the party changes
 -- ---------------------------------------------------------------------------
 
@@ -321,6 +541,8 @@ function F:ShareCards()
         local banner = Banner()
         if banner ~= "" then comm:Send("B", banner) end
     end
+    -- And the gossip: kudos and passed-on Flak you know of, yours and what reached you.
+    F:Gossip()
 end
 
 comm:On("C", function(payload, sender)

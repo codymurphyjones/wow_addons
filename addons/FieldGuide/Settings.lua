@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- Options > AddOns > Field Guide, built with the shared OptionsPage.lua (addons/shared). /fg
--- (lock, questie, dock, minimap, section) changes the same options, so the page shows them.
+-- (questie, minimap, section) changes the same options, so the page shows them.
 local S = {}
 ns.Settings = S
 
@@ -30,20 +30,19 @@ S.page = ns.NewOptionsPage({ name = "Field Guide", icon = true, build = function
             .. "are at your level to 2 above. Walking into a zone that doesn't suit you now (under your level, or "
             .. "more than 2 above it) counts as traveling: the zone you were on stays. Nothing changes while you're on a flight. "
             .. "A zone you pick here stays until you pick Automatic again (/fg section auto)." })
-    p:Check({ id = "Dock", path = "db.dock", label = "Sit under Waypoint's arrow",
-        apply = function() if ns.UI then ns.UI:Dock() end end,
-        tooltip = "The guide window sits under Waypoint's arrow and moves with it (the arrow's right-click menu sets left, center or right). "
-            .. "Off: drag the guide anywhere on its own (/fg dock)." })
     p:Check({ id = "Tracking", path = "db.manageTracking", label = "Manage quest tracking",
         tooltip = "The guide tracks the quests your next steps are about, and untracks the other quests addons tracked. "
             .. "Quests you track yourself stay tracked until they're done or you untrack them, and come first on the arrow "
             .. "(over the guide's step while the guide window is closed). A quest you untrack yourself isn't tracked again." })
 
-    p:Header("The guide window")
-    p:Check({ path = "db.locked", label = "Lock the window", tooltip = "The guide window can't be dragged (/fg lock)." })
-    p:Slider({ path = "db.nextSteps", label = "Next steps shown", min = 0, max = 10, step = 1,
+    p:Header("The field")
+    p:Slider({ path = "db.nextSteps", label = "Steps ahead", min = 0, max = 10, step = 1,
         format = function(v) return ("%d"):format(v) end,
-        tooltip = "How many of the steps after the current one the guide window lists under it." })
+        tooltip = "How many of the steps after the current one come up around you once you've stood still a while "
+            .. "(two more when you often look ahead)." })
+    p:Check({ path = "db.field.learn", label = "Learn how I read",
+        tooltip = "The field paces itself to how long you usually stay still to read: the longer you stay, the sooner the "
+            .. "next steps and the trail come up. /fg relearn forgets it." })
     p:Check({ path = "db.focusQuestie", label = "Focus the current quest in Questie",
         tooltip = "The current step's quest goes to the top of Questie's tracker (/fg questie)." })
     p:Check({ path = "char.minimap.hide", invert = true, label = "Show the minimap button",

@@ -1,7 +1,7 @@
 local _, ns = ...
 local PAL = ns.Palette
 
--- Draggable minimap button: left-click opens Fireside (the campfire), right-click the party popup.
+-- Draggable minimap button: left-click opens Fireside (the campfire), right-click your party's history in chat.
 -- The button itself is the shared MinimapButton.lua (addons/shared); SimplePanel's drawer takes it.
 ns.MinimapButton = ns.NewMinimapButton({
     name = "FiresideMinimapButton", title = "Fireside", icon = ns.ICON, angle = 200,

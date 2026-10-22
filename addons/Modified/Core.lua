@@ -8,10 +8,12 @@ ns.SAVED = { db = "ModifiedDB" }
 
 local DEFAULTS = {
     designs = {},      -- [actionSlot] = design (see MacroBuilder.lua)
+    echoes = {},       -- [spell name] = times cast: the Bloom offers your most used first (Voice.lua)
     showEmpty = false, -- show bars that have no actions on them
     showAllRanks = false, -- spell picker lists every known rank
     autoReload = true, -- reload the UI after Apply/Revert to clear action bar taint
-    point = nil,       -- saved window position
+    point = nil,       -- saved window position (/mod classic)
+    deskPoint = nil,   -- where the work area was dragged: { x, y } of its bottom-left (Veil.lua)
 }
 ns.DEFAULTS = DEFAULTS -- the options' defaults (Settings.lua, shared OptionsPage.lua)
 
@@ -103,6 +105,7 @@ function ns:IsPending(key) return self:PendingAfterCombat(key) end
 
 ns:OnChanged(function()
     if ns.UI then ns.UI:Refresh() end
+    if ns.Veil then ns.Veil:Refresh() end
 end)
 
 function ns:RequestRefresh() self:Changed() end
@@ -133,19 +136,22 @@ end
 ---------------------------------------------------------------------------
 
 ns:Slash({ "/mod", "/modified" }, {
+    { "classic", function() ns.UI:Toggle() end, "the old editor window" },
     { "reset", function()
         ns.db.point = nil
+        ns.db.deskPoint = nil
+        if ns.Veil and ns.Veil:IsOpen() then ns.Veil:Scan() end
         if ns.UI.frame then
             ns.UI.frame:ClearAllPoints()
             ns.UI.frame:SetPoint("CENTER", 120, 0)
         end
-        ns:Print("Window position reset.")
-    end, "reset the window position" },
+        ns:Print("Window positions reset.")
+    end, "put the work area back in the middle (and the classic window too)" },
     { "sync", function()
         ns.Manager:Reconcile()
         ns:Print("Managed macros re-synced.")
     end, "rebuild managed macros" },
     { { "settings", "options" }, function() ns.Settings:Open() end, "open settings" },
-    -- No command (or one not listed): toggle the window.
-    default = function() ns.UI:Toggle() end,
+    -- No command (or one not listed): lower or lift the veil (Veil.lua).
+    default = function() ns.Veil:Toggle() end,
 })

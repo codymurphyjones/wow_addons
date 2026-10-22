@@ -467,8 +467,9 @@ function Layer:Polyline(xy, col, thickness, edge, casing)
 end
 
 -- A polyline in canvas fractions as dashes (dash and gap on screen), carrying the pattern across
--- its corners. Alpha as Line.
-function Layer:Dashed(xy, col, thickness, dash, gap, alpha)
+-- its corners. Alpha as Line; sub: the ARTWORK sublevel (default 0: over a Polyline casing at 0,
+-- pass 1 to be sure it's on top).
+function Layer:Dashed(xy, col, thickness, dash, gap, alpha, sub)
     local w, h, scale = self.w, self.h, self.scale
     dash, gap = dash * scale, gap * scale
     local on, left = true, dash
@@ -481,7 +482,7 @@ function Layer:Dashed(xy, col, thickness, dash, gap, alpha)
             if on then
                 local a, b = at / len, (at + step) / len
                 self:Line((x0 + (x1 - x0) * a) / w, (y0 + (y1 - y0) * a) / h,
-                    (x0 + (x1 - x0) * b) / w, (y0 + (y1 - y0) * b) / h, col, thickness, alpha)
+                    (x0 + (x1 - x0) * b) / w, (y0 + (y1 - y0) * b) / h, col, thickness, alpha, sub)
             end
             at = at + step
             left = left - step

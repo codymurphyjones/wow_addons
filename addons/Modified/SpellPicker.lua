@@ -104,6 +104,7 @@ local function UniqueSpells(entries)
     table.sort(list, function(a, b) return a.name < b.name end)
     return list
 end
+P.UniqueSpells = UniqueSpells -- the Bloom's typed search (Voice.lua) uses the same list
 
 local function AddRank(list, id, rank, num, icon)
     for _, r in ipairs(list) do

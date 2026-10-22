@@ -132,39 +132,31 @@ local function Call(fn, ...)
     return unpack(r, 2, table.maxn(r))
 end
 
-local function SameName(a, b) return type(a) == "string" and Readable(a) and Same(a, b) end
+-- Application states that mean you're still waiting on (or being invited to) a group you applied to.
+local WAITING = { applied = true, invited = true, inviteaccepted = true }
 
--- Whether you're listed in the Looking for Group tool yourself.
+-- Whether you're looking for a group in the Looking for Group tool: listed yourself, or applied to a
+-- group's listing and still waiting. Either way strangers inviting you is the point, and who sent
+-- the invite can't be checked reliably (a leader browsing without listing their own group isn't in
+-- any search result), so their invites aren't declined.
 local function IsListed()
     if not LFG then return false end
     local v = Call(LFG.HasActiveEntryInfo)
-    return Readable(v) and v == true
-end
-
--- Whether name leads or is in a listing from the last Looking for Group search. A leader who
--- browses without listing their group can't be seen.
-local function InviterListed(name)
-    if not (LFG and name) then return false end
-    local a, b = Call(LFG.GetSearchResults)
+    if Readable(v) and v == true then return true end
+    local a, b = Call(LFG.GetApplications)
     local ids = type(a) == "table" and a or b
-    if type(ids) ~= "table" then return false end
-    for _, id in ipairs(ids) do
-        local info = Call(LFG.GetSearchResultInfo, id)
-        if type(info) == "table" and not info.isDelisted then
-            if SameName(info.leaderName, name) then return true end
-            for i = 1, tonumber(info.numMembers) or 0 do
-                -- Clients differ on where the member's name sits, so test every string returned.
-                local r = { Call(LFG.GetSearchResultMemberInfo, id, i) }
-                for j = 1, table.maxn(r) do
-                    if SameName(r[j], name) then return true end
-                end
-            end
+    for _, id in ipairs(type(ids) == "table" and ids or {}) do
+        local r = { Call(LFG.GetApplicationInfo, id) }
+        -- (resultID, status, pendingStatus, ...): the status is a string on every client that has it.
+        for j = 1, math.min(3, table.maxn(r)) do
+            local s = r[j]
+            if type(s) == "string" and Readable(s) and WAITING[s:lower()] then return true end
         end
     end
     return false
 end
 
-local LFG_PAUSED = "Paused while you're listed in Looking for Group. Invites from players who are also listed get through; others are declined."
+local LFG_PAUSED = "Paused while you're listed in Looking for Group or have applied to a group: invites from strangers aren't declined (you choose). Players you marked 'wouldn't group again' still are."
 
 -- ---------------------------------------------------------------------------
 -- The switches
@@ -216,7 +208,7 @@ local SWITCHES = {
     OwnSwitch("declineDuels", "Decline duels", "Turns every duel request down as it arrives.", true, "No duels"),
 
     OwnSwitch("declineStrangerInvites", "Decline group invites from strangers",
-        "Group invites from anyone who isn't a friend, a Battle.net friend or in your guild are turned down. While you're listed in Looking for Group this is set aside: invites from players who are also listed get through, others are declined.",
+        "Group invites from anyone who isn't a friend, a Battle.net friend or in your guild are turned down. While you're listed in Looking for Group, or have applied to a group there, this is set aside: strangers' invites reach you as usual.",
         true, "No stranger invites", function() return IsListed() and LFG_PAUSED or nil end),
     OwnSwitch("acceptKnownInvites", "Accept group invites from friends and guild",
         "Joins straight away when a friend, Battle.net friend or guildmate invites you.", false, "Auto-join"),
@@ -323,39 +315,6 @@ ns:On("DUEL_REQUESTED", function(name)
     Say("declined a duel from " .. tostring(C.PlayerName(name)) .. ".")
 end)
 
--- A stranger's invite while you're listed: it gets through if they're listed too. When the last
--- search doesn't show them, the search is run again and the popup waits up to 3 seconds for it.
-local pending -- { name, token }: the invite waiting on that search
-local token = 0
-
-local function SettleLFG(t, listed)
-    if not pending or pending.token ~= t then return end
-    local name = pending.name
-    pending = nil
-    if listed then
-        Say("let a group invite from " .. tostring(name) .. " through: you're both listed in Looking for Group.")
-    elseif not IsInGroup() then
-        DeclineGroup()
-        HidePopup("PARTY_INVITE")
-        Say("declined a group invite from " .. tostring(name) .. ": you're listed in Looking for Group, but they aren't.")
-    end
-end
-
-local function CheckLFGInvite(name)
-    token = token + 1
-    local t = token
-    pending = { name = name, token = t }
-    if InviterListed(name) then return SettleLFG(t, true) end
-    if not (LFG.RefreshResults and pcall(LFG.RefreshResults)) then return SettleLFG(t, false) end
-    C_Timer.After(3, function() SettleLFG(t, InviterListed(name)) end)
-end
-
-ns:On("LFG_LIST_SEARCH_RESULTS_RECEIVED", function()
-    if pending and InviterListed(pending.name) then SettleLFG(pending.token, true) end
-end)
-ns:On("PARTY_INVITE_CANCEL", function() pending = nil end)
-ns:On("GROUP_ROSTER_UPDATE", function() pending = nil end)
-
 ns:On("PARTY_INVITE_REQUEST", function(name, ...)
     local s = Settings()
     if not s then return end
@@ -376,8 +335,10 @@ ns:On("PARTY_INVITE_REQUEST", function(name, ...)
         AcceptGroup()
         HidePopup("PARTY_INVITE")
         Say("joined " .. tostring(name) .. "'s group.")
-    elseif not known and IsListed() then
-        CheckLFGInvite(name)
+    elseif not known and s.declineStrangerInvites and IsListed() then
+        -- Looking for a group (listed, or applied to one): a stranger's invite is the point, so the
+        -- popup stays for you to answer.
+        Say("let a group invite from " .. tostring(name) .. " through: you're looking for a group.")
     elseif not known and s.declineStrangerInvites then
         DeclineGroup()
         HidePopup("PARTY_INVITE")

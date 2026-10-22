@@ -1,0 +1,1 @@
+[["wait",500],["shot","v1_none"],["down","Shift"],["wait",600],["shot","v1_shift"],["down","Alt"],["wait",600],["shot","v1_shiftalt"],["up","Shift"],["up","Alt"]]

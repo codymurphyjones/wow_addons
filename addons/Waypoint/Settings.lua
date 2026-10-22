@@ -39,7 +39,7 @@ S.page = ns.NewOptionsPage({ name = "Waypoint", icon = true, build = function(p)
     p:Check({ path = "db.quests", label = "Questie quests", tooltip = "Point at your Questie quests when nothing else asks (/way quests).",
         apply = function() if ns.Questie then ns.Questie:Select() end end })
     p:Check({ path = "db.share", label = "Share waypoint paths with your group", tooltip = "Your group sees your waypoint path, and you see theirs (/way share)." })
-    p:Check({ path = "db.confirm", label = "Ask before adding a waypoint", tooltip = "Ctrl+click on the world map asks first (/way confirm)." })
+    p:Check({ path = "db.confirm", label = "Ask before adding a waypoint", tooltip = "Ctrl+clicking the world map asks first (/way confirm)." })
 
     p:Header("World map")
     p:Check({ path = "db.towns", label = "Town icons", tooltip = "Town icons on the world map, with what's there (/way towns, or the arrow's menu)." })

@@ -212,7 +212,37 @@ local function Dedupe(pins)
     return removed
 end
 
--- After a provider's own refresh: its refresh again for every neighbour.
+-- One neighbour's pass: the provider's refresh for that zone. Its plain values are put back
+-- straight after (Restore), off-map pins given back and duplicates dropped, so the provider is
+-- itself again between passes. Returns false when the provider turned out to draw the same for
+-- every map (no more passes for it).
+local function RunZone(provider, e, job, zone)
+    local pass = { zone = zone, host = job.host, pins = {}, drops = {}, live = true }
+    local kept = {}
+    busy = true
+    local ok, err = pcall(e.orig, StandIn(provider, pass, kept), unpack(job.args, 1, job.args.n))
+    busy = false
+    pass.live = false
+    Restore(provider, kept)
+    for _, pin in ipairs(pass.drops) do pcall(map.RemovePin, map, pin) end
+    if not pass.asked then
+        -- the same icons whatever the map: not one to repeat for the neighbours
+        e.global = true
+        for _, pin in ipairs(pass.pins) do pcall(map.RemovePin, map, pin) end
+        ns:Debug(e.label .. " doesn't draw per map: left alone")
+        return false
+    end
+    if not ok then ns:Caught(e.label .. " (nearby zone " .. tostring(zone) .. ")", err) end
+    local okD, removed = pcall(Dedupe, pass.pins)
+    job.count = job.count + #pass.pins - (okD and removed or 0)
+    return true
+end
+
+-- After a provider's own refresh: its refresh again for every neighbour, one neighbour per frame
+-- (the shown map's own icons are up at once; the neighbours' follow, without one long frame).
+-- A newer refresh of the provider (its own clears ours along with its) takes over; the map closing
+-- or changing stops the rest.
+local jobs = {}             -- provider -> the job under way
 local function AfterRefresh(provider, ...)
     if busy then return end
     local e = seen[provider]
@@ -220,34 +250,21 @@ local function AfterRefresh(provider, ...)
     local host = map:GetMapID()
     local list = ns.Zones.Neighbours(host)
     if #list == 0 then return end
-
-    busy = true
-    local pins, drops, kept = {}, {}, {}
-    for _, zone in ipairs(list) do
-        local pass = { zone = zone, host = host, pins = {}, drops = {}, live = true }
-        local ok, err = pcall(e.orig, StandIn(provider, pass, kept), ...)
-        pass.live = false
-        for _, pin in ipairs(pass.drops) do drops[#drops + 1] = pin end
-        if not pass.asked then
-            -- the same icons whatever the map: not one to repeat for the neighbours
-            e.global = true
-            for _, pin in ipairs(pass.pins) do drops[#drops + 1] = pin end
-            ns:Debug(e.label .. " doesn't draw per map: left alone")
-            break
+    local job = { host = host, zones = list, i = 0, count = 0, args = { n = select("#", ...), ... } }
+    jobs[provider] = job
+    local function Step()
+        if jobs[provider] ~= job then return end
+        if e.global or not map:IsVisible() or map:GetMapID() ~= host or not Wanted(e) then
+            jobs[provider] = nil
+            return
         end
-        for _, pin in ipairs(pass.pins) do pins[#pins + 1] = pin end
-        if not ok then
-            WarnOnce("pass:" .. e.label, e.label .. "'s map icons errored for a nearby zone; that zone is skipped.")
-            ns:Debug(e.label .. " pass " .. tostring(zone) .. ": " .. tostring(err))
-        end
+        job.i = job.i + 1
+        local zone = job.zones[job.i]
+        local more = zone and RunZone(provider, e, job, zone)
+        e.pins, e.host = job.count, host
+        if more and job.zones[job.i + 1] then C_Timer.After(0, Step) else jobs[provider] = nil end
     end
-    busy = false
-    Restore(provider, kept)
-
-    for _, pin in ipairs(drops) do pcall(map.RemovePin, map, pin) end
-    local okD, removed = pcall(Dedupe, pins)
-    e.pins = #pins - (okD and removed or 0)
-    e.host = host
+    Step()
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -272,6 +289,9 @@ function C.Scan()
     end
 end
 
+-- Finds the world map. It doesn't look at the providers yet: Core.lua's Start sets Pins.lua up
+-- first, so HereBeDragons' providers are known to be Pins.lua's and left alone here (handled by
+-- both, the same icon frame would be fought over and lost).
 function C.Install()
     if map then return true end
     map = WorldMapFrame
@@ -279,7 +299,6 @@ function C.Install()
         map = nil
         return false, "the world map's providers"
     end
-    C.Scan()
     if map.AddDataProvider then hooksecurefunc(map, "AddDataProvider", function() C.Scan() end) end
     return true
 end
@@ -290,7 +309,7 @@ function C.Redraw()
     for provider, e in pairs(seen) do
         if e then
             local ok, err = pcall(provider.RefreshAllData, provider)
-            if not ok then ns:Debug(e.label .. " refresh: " .. tostring(err)) end
+            if not ok then ns:Caught(e.label .. " refresh", err) end
         end
     end
 end
@@ -309,4 +328,4 @@ function C.Sources()
 end
 
 -- for the tests
-function C._Reset() map, busy = nil, false; wipe(seen); wipe(warned) end
+function C._Reset() map, busy = nil, false; wipe(seen); wipe(warned); wipe(jobs) end

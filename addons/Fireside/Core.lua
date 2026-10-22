@@ -10,8 +10,7 @@ ns.SAVED = { db = "FiresideDB", char = "FiresideCharDB" }
 ns.DEFAULTS = {
     options = {
         chat = true,
-        popup = true,         -- the party popup when you join a dungeon group
-        popupSeconds = 20,    -- it closes itself after this long (0 = stays open)
+        popup = true,         -- a chat line for each member when you join a party, then for each newcomer
         whisper = true,       -- a history line in chat when you whisper someone you know, or they whisper you
         tooltip = true,
         report = true,        -- the campfire at the end of each run (Campfire.lua)
@@ -19,6 +18,7 @@ ns.DEFAULTS = {
         overpull = 7,         -- this many hostile mobs in combat at once counts as an over-pull
         shareKudos = true,    -- tell the party the kudos you've given its members (testimony)
         shareBanner = true,   -- show the party the kudos you've received
+        relay = true,         -- pass kudos and passed-on Flak you know of on to your groups (gossip)
         acceptTips = true,    -- accept private keep / try notes
         hearth = true,        -- the Hearth strip while you're in a party (Hearth.lua)
         prompts = true,       -- after a fight, offer a spark for what the data saw
@@ -55,7 +55,7 @@ local function Help()
     ns:Print("/fire mirror - what people have told you", true)
     ns:Print("/fire people - everyone you've run with", true)
     ns:Print("/fire <name> - look someone up", true)
-    ns:Print("/fire party - show the party popup now", true)
+    ns:Print("/fire party - your history with everyone in your party, in chat", true)
     ns:Print("/fire run - this run so far", true)
     ns:Print("/fire recap - the last death recap", true)
     ns:Print("/fire debug - print what each fight's data harvest found (on/off)", true)

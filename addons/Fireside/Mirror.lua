@@ -100,7 +100,7 @@ local function PracticeItems()
         .. M.STUCK .. " runs in a row without it, the person who gave the tip hears it helped."
 end
 
-local KIND = { kudo = "Kudo", letter = "Note", thanks = "Thanks", stuck = "Practice", ripple = "Your tip helped" }
+local KIND = { kudo = "Kudo", letter = "Note", thanks = "Thanks", stuck = "Practice", ripple = "Your tip helped", flak = "Flak (only you see it)" }
 
 local function RipplesItems()
     local items = {}
@@ -118,7 +118,7 @@ local function RipplesItems()
             noIcon = true, text = e.text, detail = ("%s, %s"):format(KIND[e.kind] or e.kind, date("%m/%d %H:%M", e.t)), actions = actions,
         }
     end
-    return items, "Nothing yet. Kudos you receive, thanks for yours, and tips of yours that helped someone all show up here."
+    return items, "Nothing yet. Kudos you receive, thanks for yours, tips of yours that helped someone, and Flak someone chose to tell you all show up here."
 end
 
 local function GivenItems()

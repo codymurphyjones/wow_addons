@@ -1,0 +1,4 @@
+<Bindings>
+    <!-- Its own category, so Key Bindings shows a "Modified" section. BINDING_NAME_ is in Veil.lua. -->
+    <Binding name="MODIFIED_VEIL" category="Modified">ModifiedVeil_Toggle()</Binding>
+</Bindings>

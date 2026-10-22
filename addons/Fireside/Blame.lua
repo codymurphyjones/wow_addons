@@ -13,14 +13,61 @@ local EARLY = 20          -- seconds into a pull: deaths this early can be the p
 local LOW_HEALING = 0.35  -- healing under this share of the group's damage taken counts as low
 local THREAT_LEAD = 1.3   -- a victim doing this much more damage than anyone else pulled threat
 
--- The tank and healer of a run (assigned roles, else inferred from fights; History.lua).
-function Blame.Roles(run)
-    local tank, healer
-    for full, m in pairs(run.members) do
-        if m.role == "tank" then tank = C.Short(full) elseif m.role == "healer" then healer = C.Short(full) end
+local TANK_SHARE = 0.3    -- the tank took at least this share of the group's damage
+
+-- Who took the most damage over the run's fights (and extra, a fight not in run.fights yet): the
+-- tank, whatever role the game assigned. A short name, or nil when nobody took a clear share.
+function Blame.DataTank(run, extra)
+    local taken, total = {}, 0
+    local function Count(f)
+        for name, p in pairs(f.stats or {}) do
+            local t = p.taken or 0
+            taken[name] = (taken[name] or 0) + t
+            total = total + t
+        end
     end
-    local r = run.roles or {}
-    return tank or r.tank, healer or r.healer
+    local seen = false
+    for _, f in ipairs(run.fights or {}) do
+        Count(f)
+        if f == extra then seen = true end
+    end
+    if extra and not seen then Count(extra) end
+    local best, most = nil, 0
+    for name, t in pairs(taken) do
+        if t > most then best, most = name, t end
+    end
+    if best and total > 0 and most >= total * TANK_SHARE then return best end
+end
+
+-- The tank and healer of a run. The tank is whoever took the most damage (History.lua keeps it up
+-- to date fight by fight; a run saved before that is worked out once here), else the assigned tank.
+-- The healer is the assigned one, else inferred from healing; never the tank.
+function Blame.Roles(run)
+    run.roles = run.roles or {}
+    local r = run.roles
+    if not r.dataTank and run.fights and #run.fights > 0 then
+        r.tank, r.dataTank = Blame.DataTank(run) or r.tank, true
+    end
+    local tank = r.dataTank and r.tank or nil
+    local healer
+    for full, m in pairs(run.members or {}) do
+        local short = C.Short(full)
+        if not tank and m.role == "tank" then tank = short end
+        if m.role == "healer" then healer = healer or short end
+    end
+    tank = tank or r.tank
+    if healer == tank then healer = nil end
+    if not healer and r.healer ~= tank then healer = r.healer end
+    return tank, healer
+end
+
+-- A member's role in a run: "tank", "healer" or "damage".
+function Blame.RoleOf(run, full)
+    local short = C.Short(full)
+    local tank, healer = Blame.Roles(run)
+    if short == tank then return "tank" end
+    if short == healer then return "healer" end
+    return "damage"
 end
 
 local function ClassOf(run, short)

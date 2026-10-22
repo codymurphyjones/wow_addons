@@ -25,6 +25,8 @@ local MIN_SHARE = 0.015 -- a quest is shown when it pays at least this share of 
 -- pick yourself always shows; for one quest in an old zone, Questie has you covered.
 local RANGE = 4
 local TARGET = 2 -- the ideal: quests from your level up to this many above
+local REACH = 3  -- a quest on a route shows when it needs at most this many levels over yours
+local CATCHUP = 6 -- quests needed first are only routed to when they need at most this many over yours
 
 -- The section's levels come within RANGE of yours.
 local function InRange(s, level)
@@ -145,8 +147,11 @@ local function Unavailable(id)
     P = P or ns.Progress
     local q = Q(id)
     if q and not P:RaceAllowed(q.rm) then return true end
-    if P:Done(id) or P:InLog(id) then return false end
+    if P:Done(id) then return false end
+    -- Skipped by hand (or left because its item didn't drop): never suggested again, even while
+    -- it's in your log. It's yours to finish on your own.
     if ns.char.ignored[id] then return true end
+    if P:InLog(id) then return false end
     if q and Unreachable(q, 0) then return true end
     return q and PrereqsDone(q) and not P:Doable(id)
 end
@@ -227,6 +232,38 @@ local function NeedsDungeon(id, depth)
     return false
 end
 
+-- Cloth donations ("A Donation of Silk", ...): handed in on the spot at a city's cloth
+-- quartermaster with DONATION_COUNT of that cloth from your bags, with nothing to pick up first.
+-- Their quest data points at where the cloth drops, so on their own they'd send you off farming.
+-- They only show when the cloth is already in your bags and the quartermaster is close by: in the
+-- zone you're in, the city in it, or the zone around the city you're in. Never their "Do" step.
+local CLOTH = { Wool = 2592, Silk = 4306, Mageweave = 4338, Runecloth = 14047 }
+local DONATION_COUNT = 60
+
+local function DonationCloth(q)
+    local kind = q and type(q.n) == "string" and q.n:match("^A Donation of (%a+)$")
+    return kind and CLOTH[kind] or nil
+end
+
+local function ParentMap(map)
+    local info = map and C_Map.GetMapInfo(map)
+    return info and info.parentMapID or nil
+end
+
+local function DonationReady(q)
+    local item = DonationCloth(q)
+    if not item then return true end
+    if (GetItemCount and GetItemCount(item) or 0) < DONATION_COUNT then return false end
+    local qm = q.a and q.a[1]
+    local here = C_Map.GetBestMapForUnit("player")
+    if not (qm and here) then return false end
+    local near = { [here] = true }
+    local up = ParentMap(here)
+    if up then near[up] = true end
+    return near[qm] or near[ParentMap(qm) or -1] or false
+end
+E.DonationCloth = function(_, id) return DonationCloth(Q(id)) end
+
 -- Which of a section's quests to show: those worth the XP at your level, those in your log, and
 -- anything a shown quest needs first.
 local function Shown(section, level)
@@ -248,8 +285,12 @@ local function Shown(section, level)
     end
     for _, s in ipairs(section.steps) do
         local id = s[2]
+        -- Within reach: a quest needing more than REACH levels over yours waits (a higher quest pays
+        -- more XP, so Worth alone would show a level 50 quest at 30, and every quest it needs first
+        -- with it as "missed earlier").
+        local reach = (Q(id) and Q(id).r or 1) <= level + REACH
         if s[1] == "A" and not show[id] and not (Q(id) and Q(id).dq) and not NeedsDungeon(id, 0)
-            and (Worth(id, level) or P:InLog(id)) then
+            and ((reach and Worth(id, level) and DonationReady(Q(id))) or P:InLog(id)) then
             show[id] = true
             Need(id, 0)
         end
@@ -281,7 +322,8 @@ local function PickExit(guide, zone, level)
         if q and q.dq then
             -- a dungeon's quest is never a way out of a zone
         elseif q and P:InLog(id) then return e
-        elseif q and (q.r or 1) <= level and E:QuestOpen(id) and PrereqsDone(q) then
+        -- (Taken now, so within reach of the level you are now, whatever level it's chosen for.)
+        elseif q and (q.r or 1) <= math.min(level, P:Level() + REACH) and E:QuestOpen(id) and PrereqsDone(q) then
             local s = SectionFor(guide, e[2], level)
             if s and (not best or Score(s, level) < Score(bestS, level)) then best, bestS = e, s end
         end
@@ -327,7 +369,25 @@ local function Build(section)
     local missing, seen = {}, {}
     for _, s in ipairs(section.steps) do
         -- (Not for a quest you can't get yet: its missing part may only drop inside a dungeon.)
-        if s[1] == "A" and show[s[2]] and not Unavailable(s[2]) then Missing(s[2], missing, seen, 0) end
+        if s[1] == "A" and show[s[2]] and not Unavailable(s[2]) and not P:InLog(s[2]) then
+            -- What it needs first, on its own: routed to only when every quest in it needs at most
+            -- CATCHUP levels over yours. Otherwise the quest waits too (it can't be done before them).
+            local chain, mine = {}, {}
+            for id in pairs(seen) do mine[id] = true end
+            Missing(s[2], chain, mine, 0)
+            local near = true
+            for _, id in ipairs(chain) do
+                if (Q(id).r or 1) > level + CATCHUP then near = false; break end
+            end
+            if near then
+                for _, id in ipairs(chain) do
+                    seen[id] = true
+                    missing[#missing + 1] = id
+                end
+            else
+                show[s[2]] = nil
+            end
+        end
     end
     for _, id in ipairs(missing) do
         if not inSection[id] and not (section.instance == nil and Q(id).dq) then
@@ -338,7 +398,8 @@ local function Build(section)
         end
     end
     for _, s in ipairs(section.steps) do
-        if s[1] == "G" or s[1] == "Z" or s[1] == "I" or show[s[2]] then steps[#steps + 1] = s end
+        local farm = s[1] == "O" and DonationCloth(Q(s[2])) -- a donation's "Do": the cloth is in your bags
+        if s[1] == "G" or s[1] == "Z" or s[1] == "I" or (show[s[2]] and not farm) then steps[#steps + 1] = s end
     end
     -- The zone ends with the hand-off to the next zone for the level you'll have by then.
     if not section.instance then
@@ -888,6 +949,16 @@ end
 function E:SkipCurrent()
     local step = self.current and self.steps[self.current]
     if not step then return end
+    -- A quest goes whole (pick up, objectives, hand in): Field Guide doesn't suggest it again, nor
+    -- what needs it first. Yours to do on your own if you want it later (/fg unskip undoes it).
+    if step[1] ~= "G" and step[1] ~= "Z" and step[1] ~= "I" then
+        ns.char.ignored[step[2]] = true
+        pickDirty = true
+        ns:Print(("Skipped %s%s. Field Guide won't suggest it again (/fg unskip brings it back)."):format(
+            self:QuestName(step[2]), DonationCloth(Q(step[2])) and ": your cloth stays with you" or ""))
+        return ns:Changed()
+    end
+    -- Grinding, travelling, a dungeon run: just this step.
     ns.char.skipped[StepKey(step)] = true
     pickDirty = true
     local verb, name = self:Describe(step)
@@ -969,3 +1040,21 @@ function E:PrintList()
         end
     end
 end
+
+-- Enough cloth for a donation in your bags (or not any more): the plan changes.
+local clothReady = {}
+ns:On("BAG_UPDATE_DELAYED", function()
+    if not (ns.db and GetItemCount) then return end
+    local changed = false
+    for _, item in pairs(CLOTH) do
+        local ready = (GetItemCount(item) or 0) >= DONATION_COUNT
+        if clothReady[item] ~= ready then
+            if clothReady[item] ~= nil then changed = true end
+            clothReady[item] = ready
+        end
+    end
+    if changed then
+        E:Invalidate()
+        ns:Changed()
+    end
+end)

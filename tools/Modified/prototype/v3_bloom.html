@@ -1,0 +1,312 @@
+<!doctype html>
+<!-- Sketch 3: the Bloom. No window. A veil falls over the screen; your real action buttons are the
+     only way in. Rest the cursor on one and a lens blooms out of it.
+       * Your hands pick the world: hold Shift/Ctrl/Alt to peek at that modifier, tap to latch it.
+       * Angle around the core is WHO (target, mouseover, focus, self, target's target, cursor).
+       * Distance from the core is ORDER: inner petals are checked first.
+       * The bead arc behind a petal is its BREADTH: a catch-all wraps the whole lens.
+       * A pulse walks the petals in macro order and stops where the live situation would cast.
+       * Typing summons a spell where you point. Wheel changes a petal's temperament
+         (friend/enemy/alive/dead); with the right button held, the wheel orbits it to another WHO.
+       * Hold the core to seal (apply); hold it with the right button to unravel (revert).
+     The model below is a port of MacroBuilder.lua so the incantation (macro text) is real. -->
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;height:100%;background:#1b2330 url() ;color:#d8e0ee;font:13px/1.3 "Segoe UI",sans-serif;overflow:hidden;user-select:none}
+#world{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,#3a5068,#141a22 70%)}
+#veil{position:absolute;inset:0;background:#02030680;opacity:0;transition:opacity .4s;pointer-events:none}
+#veil.on{opacity:1}
+#bar{position:absolute;left:50%;bottom:24px;margin-left:-306px;display:flex;gap:4px}
+.ab{width:46px;height:46px;border:1px solid #000;background:#222 center/cover;box-shadow:inset 0 0 0 1px #555;position:relative;border-radius:3px}
+.ab .halo{position:absolute;inset:-7px;border-radius:50%;border:1px solid #9fd3ff00;transition:all .3s}
+#veil.on~#bar .ab .halo{border-color:#9fd3ff40}
+.ab .dots{position:absolute;left:0;right:0;top:-10px;height:6px;display:flex;justify-content:center;gap:2px}
+.ab .dots i{width:4px;height:4px;border-radius:50%}
+.ab.breath .halo{animation:breath 1.6s infinite}
+@keyframes breath{50%{border-color:#ffd86baa;inset:-10px}}
+#lens{position:absolute;width:0;height:0;opacity:0;transition:opacity .35s;pointer-events:none}
+#lens.on{opacity:1}
+.bead{position:absolute;width:4px;height:4px;margin:-2px;border-radius:50%;background:#fff;transition:left .4s,top .4s,opacity .4s}
+.petal{position:absolute;width:38px;height:38px;margin:-19px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:13px;color:#0008;transition:left .45s cubic-bezier(.2,.9,.2,1),top .45s cubic-bezier(.2,.9,.2,1),transform .2s,box-shadow .2s,opacity .3s}
+.petal.hover{transform:scale(1.25)}
+.petal.lit{box-shadow:0 0 0 3px #fff,0 0 26px 6px #fff8}
+.petal.ghostp{opacity:.28;border:1px dashed #fff}
+.petal .tag{position:absolute;top:42px;white-space:nowrap;font-weight:400;font-size:11px;color:#d8e0eecc;text-shadow:0 1px 2px #000}
+.petal .steps{position:absolute;left:40px;display:flex;gap:2px}
+.petal .steps i{width:12px;height:12px;border-radius:50%;opacity:.8}
+.petal.dead{filter:saturate(.2) brightness(.7)}
+#core{position:absolute;width:56px;height:56px;margin:-28px;border-radius:50%;background:#222 center/cover;box-shadow:0 0 0 2px #fff4}
+#seal{position:absolute;width:76px;height:76px;margin:-38px;border-radius:50%}
+#pulse{position:absolute;width:10px;height:10px;margin:-5px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px #fff}
+#cubeglyph{position:absolute;width:60px;height:46px}
+#cubeglyph i{position:absolute;width:7px;height:7px;margin:-3.5px;border-radius:50%;background:#ffffff30;transition:all .25s}
+#cubeglyph i.here{width:12px;height:12px;margin:-6px}
+#worldname{position:absolute;white-space:nowrap;font-size:12px;letter-spacing:.2em;text-transform:uppercase;opacity:.75;transform:translateX(-50%)}
+#compass span{position:absolute;transform:translate(-50%,-50%);font-size:11px;letter-spacing:.15em;text-transform:uppercase;opacity:0;transition:opacity .3s;white-space:nowrap}
+#ghost{position:absolute;width:30px;height:30px;margin:-15px;border-radius:50%;border:1px dashed #fff8;opacity:0;transition:opacity .2s}
+#whisper{position:absolute;white-space:nowrap;font-size:12px;color:#fff;text-shadow:0 1px 3px #000;pointer-events:none;transition:opacity .25s}
+#whisper .typed{font-size:16px;color:#ffe9a8}
+#whisper .sugg{opacity:.55}
+#whisper .sugg b{opacity:1;color:#fff}
+#incant{position:absolute;font:12px Consolas,monospace;white-space:pre;color:#bfe7ff;text-shadow:0 1px 2px #000;opacity:0;transition:opacity .3s;transform:translateX(-50%)}
+#sim{position:absolute;right:14px;top:12px;font-size:11px;opacity:.65;text-align:right}
+#sim b{cursor:pointer;padding:1px 5px;border:1px solid #fff3;border-radius:3px;margin-left:3px}
+#toast{position:absolute;left:50%;top:40px;transform:translateX(-50%);font-size:14px;opacity:0;transition:opacity .4s}
+</style></head><body>
+<div id="world"></div><div id="veil"></div><div id="bar"></div>
+<div id="lens"><div id="seal"></div><div id="core"></div><div id="pulse"></div><div id="ghost"></div>
+  <div id="cubeglyph"></div><div id="compass"></div><div id="worldname"></div><div id="incant"></div></div>
+<div id="whisper"></div><div id="toast"></div>
+<div id="sim">prototype-only situation:<br>target <b data-k="target">none</b> mouseover <b data-k="mouseover">none</b> focus <b data-k="focus">none</b> <b data-k="combat">calm</b></div>
+<script>
+/* ------------------------------------------------------------------ model (port of MacroBuilder.lua) */
+const MODS=[['none',[]],['shift',['shift']],['ctrl',['ctrl']],['alt',['alt']],['shiftctrl',['shift','ctrl']],
+  ['shiftalt',['shift','alt']],['ctrlalt',['ctrl','alt']],['shiftctrlalt',['shift','ctrl','alt']]];
+const MODBY={};MODS.forEach(([k,m],i)=>MODBY[k]={key:k,mods:m,rank:m.length*100+i});
+const NEEDS_EXISTS={mouseover:1,focus:1,targettarget:1};
+function NewRule(f){return Object.assign({mod:'none',unit:'default',reaction:'any',state:'any',combat:'any'},f||{})}
+const has=r=>r&&r.kind&&(r.kind==='item'?r.id!=null:r.name!=null);
+const uncond=r=>!NEEDS_EXISTS[r.unit]&&r.reaction==='any'&&r.state==='any'&&r.combat==='any';
+function Conditions(r){const p=MODBY[r.mod].mods.map(m=>'mod:'+m);
+  if(r.unit&&r.unit!=='default'){p.push('@'+r.unit);if(NEEDS_EXISTS[r.unit]&&r.reaction!=='help'&&r.reaction!=='harm')p.push('exists')}
+  if(r.reaction==='help'||r.reaction==='harm')p.push(r.reaction);
+  if(r.state==='alive')p.push('nodead');else if(r.state==='dead')p.push('dead');
+  if(r.combat!=='any')p.push(r.combat);return p.join(',')}
+const same=(a,b)=>a.mod===b.mod&&Conditions(a)===Conditions(b);
+function covers(x,y){if(uncond(x))return true;if(x.unit!==y.unit)return false;
+  return ['reaction','state','combat'].every(f=>x[f]==='any'||x[f]===y[f])}
+function conflicts(a,b){if(a.mod!==b.mod)return false;if(same(a,b))return true;return uncond(a)&&uncond(b)}
+function conflictWith(rules,c,ignore){return rules.find(r=>r!==ignore&&r!==c&&conflicts(r,c))}
+function normalize(rules){const out=[];for(const [k] of MODS){const g=[];for(const r of rules)if(r.mod===k){
+  let pos=g.length;for(let j=0;j<g.length;j++)if(covers(g[j],r)&&!same(g[j],r)){pos=j;break}g.splice(pos,0,r)}out.push(...g)}
+  rules.length=0;rules.push(...out)}
+const token=s=>s.kind==='item'?'item:'+s.id:s.name;
+function build(d){const ord=d.rules.map((r,i)=>({r,i})).filter(e=>has(e.r)).sort((a,b)=>MODBY[b.r.mod].rank-MODBY[a.r.mod].rank||a.i-b.i);
+  const seq=d.rules.some(r=>r.steps&&r.steps.length>1);let anyItem=false;
+  const entries=ord.map(({r})=>{if(r.kind==='item')anyItem=true;
+    const steps=(r.steps&&r.steps.length)?r.steps:[r];let t=steps.map(token).join(', ');
+    if(seq&&r.reset&&r.reset.seconds)t='reset='+r.reset.seconds+' '+t;return {cond:Conditions(r),token:t}});
+  const cl=[];for(const e of entries){const l=cl[cl.length-1];if(l&&l.token===e.token&&!seq)l.conds.push(e.cond);else cl.push({token:e.token,conds:[e.cond]})}
+  if(!cl.length)return '';
+  const parts=cl.map(c=>c.conds.length===1&&c.conds[0]===''?c.token:'['+c.conds.join('][')+'] '+c.token);
+  return '#showtooltip\n'+(seq?'/castsequence ':anyItem?'/use ':'/cast ')+parts.join('; ')}
+
+/* ------------------------------------------------------------------ fake game data */
+const SPELLS=[['Flash Heal','#8ee6ff',1],['Renew','#9dffb0',1],['Power Word: Shield','#ffe27a',1],['Smite','#ffcf6b',0],
+ ['Shadow Word: Pain','#c58bff',0],['Mind Blast','#b07bff',0],['Resurrection','#fff6c8',1],['Dispel Magic','#a8d0ff',2],
+ ['Psychic Scream','#e58bff',0],['Fade','#cccccc',2],['Holy Fire','#ff9a5c',0],['Lesser Heal','#a8f5d0',1],['Inner Fire','#ffb35c',2]]
+ .map(([name,color,help])=>({kind:'spell',name,color,help}));
+const echo={'Flash Heal':14,'Smite':9,'Renew':6,'Power Word: Shield':5,'Shadow Word: Pain':3};
+const colorOf=s=>(SPELLS.find(x=>x.name===s.name)||{color:'#999'}).color;
+const bar=[ 'Smite','Flash Heal','Renew','Power Word: Shield','Shadow Word: Pain','Mind Blast','Fade','Psychic Scream','Holy Fire','Dispel Magic','Inner Fire','Resurrection'];
+const designs={}; // slot -> sealed design
+const drafts={};  // slot -> unsealed draft
+
+/* ------------------------------------------------------------------ geometry */
+const UNITS=[['default','target',90],['mouseover','mouseover',30],['cursor','cursor',330],['player','self',270],['focus','focus',210],['targettarget',"target's target",150]];
+const ANG={};UNITS.forEach(([k,l,a])=>ANG[k]=a);const ULABEL={};UNITS.forEach(([k,l])=>ULABEL[k]=l);
+const TEMPERS=[['any','any'],['help','any'],['help','alive'],['harm','any'],['harm','alive'],['any','dead'],['help','dead'],['any','alive'],['harm','dead']];
+const WCOL={shift:[90,200,255],ctrl:[255,180,60],alt:[190,120,255]};
+function worldColor(w){const m=MODBY[w].mods;if(!m.length)return [220,228,240];const c=[0,0,0];m.forEach(k=>WCOL[k].forEach((v,i)=>c[i]+=v/m.length));return c}
+const rgb=(c,a=1)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+const R0=70,DR=42;const ringR=k=>R0+(k-1)*DR;
+const pol=(r,a)=>[r*Math.cos(a*Math.PI/180),-r*Math.sin(a*Math.PI/180)];
+function breadth(r){if(uncond(r))return 360;let s=56;if(r.reaction!=='any')s*=.6;if(r.state==='dead')s*=.5;else if(r.state==='alive')s*=.78;if(r.combat!=='any')s*=.6;return Math.max(s,12)}
+function tagOf(r){const p=[ULABEL[r.unit]];if(r.reaction==='help')p.push('friend');if(r.reaction==='harm')p.push('enemy');
+  if(r.state==='alive')p.push('alive');if(r.state==='dead')p.push('dead');if(r.combat==='combat')p.push('in combat');if(r.combat==='nocombat')p.push('calm');
+  return uncond(r)?'anyone':p.join(' · ')}
+
+/* ------------------------------------------------------------------ live situation */
+const sit={target:'enemy',mouseover:'none',focus:'none',combat:'calm'};
+const SITS=['none','friend','enemy','dead friend'];
+function matches(r){const u=r.unit==='default'?'target':r.unit;
+  if(r.combat==='combat'&&sit.combat!=='combat')return false;if(r.combat==='nocombat'&&sit.combat==='combat')return false;
+  if(uncond(r))return true;
+  let s=u==='player'?'friend':u==='cursor'?'friend':u==='targettarget'?'none':sit[u];
+  if(s==='none')return r.unit==='default'&&r.reaction==='any'&&r.state==='any'; // no target: plain cast still happens
+  const friend=s.includes('friend'),dead=s.startsWith('dead');
+  if(r.reaction==='help'&&!friend)return false;if(r.reaction==='harm'&&friend)return false;
+  if(r.state==='alive'&&dead)return false;if(r.state==='dead'&&!dead)return false;return true}
+
+/* ------------------------------------------------------------------ state */
+let anchor=null,sprout=false,sproutT=null,veil=false,slot=null,latched=0,held=0,lensX=0,lensY=0,hoverPetal=null,ghostAt=null,buffer='',suggI=0,proposalOn=false;
+const axisOf={Shift:1,Control:2,Alt:4};
+const worldKey=bits=>['none','shift','ctrl','shiftctrl','alt','shiftalt','ctrlalt','shiftctrlalt'][bits];
+const world=()=>worldKey(latched|held);
+const draft=()=>drafts[slot]||(drafts[slot]=JSON.parse(JSON.stringify(designs[slot]||{rules:[NewRule({kind:'spell',name:bar[slot]})]})));
+const worldRules=()=>draft().rules.filter(r=>r.mod===world());
+
+/* ------------------------------------------------------------------ dom */
+const $=id=>document.getElementById(id),lens=$('lens'),whisper=$('whisper');
+bar.forEach((n,i)=>{const b=document.createElement('div');b.className='ab';b.style.background=colorOf({name:n});b.innerHTML='<div class="halo"></div><div class="dots"></div>';
+  b.title='';b.onmouseenter=()=>dwell(i,b);b.onmouseleave=()=>clearTimeout(dwellT);$('bar').appendChild(b)});
+for(let i=0;i<8;i++){const d=document.createElement('i');$('cubeglyph').appendChild(d)}
+UNITS.forEach(u=>{const e=document.createElement('span');e.textContent=u[1];$('compass').appendChild(e)});
+const CUBEPOS=[[14,34],[34,40],[26,22],[46,28],[14,14],[34,20],[26,2],[46,8]]; // isometric corners, bits: shift=1 ctrl=2 alt=4
+document.querySelectorAll('#sim b').forEach(b=>b.onclick=()=>{const k=b.dataset.k;
+  if(k==='combat')sit.combat=sit.combat==='calm'?'combat':'calm';else sit[k]=SITS[(SITS.indexOf(sit[k])+1)%SITS.length];
+  b.textContent=sit[k];pulseT=0;render()});
+let dwellT;
+function dwell(i,el){if(!veil)return;clearTimeout(dwellT);dwellT=setTimeout(()=>bloom(i,el),350)}
+function bloom(i,el){slot=i;const r=el.getBoundingClientRect();lensX=r.left+r.width/2;lensY=Math.max(330,r.top-250);
+  lens.style.left=lensX+'px';lens.style.top=lensY+'px';lens.classList.add('on');buffer='';pulseT=0;render()}
+function dissolve(){lens.classList.remove('on');slot=null;buffer='';whisper.style.opacity=0;render()}
+function toast(t){$('toast').textContent=t;$('toast').style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').style.opacity=0,1800)}
+
+const petalEls=new Map(),beadPool=[];
+function petalEl(key){let e=petalEls.get(key);if(!e){e=document.createElement('div');e.className='petal';e.innerHTML='<span class="tag"></span><span class="steps"></span><span class="ch"></span>';lens.appendChild(e);petalEls.set(key,e)}return e}
+let layout=[]; // [{rule,x,y,k}]
+function render(){
+  $('veil').classList.toggle('on',veil);
+  document.querySelectorAll('.ab').forEach((b,i)=>{const d=drafts[i],s=designs[i];b.classList.toggle('breath',!!d&&JSON.stringify(d)!==JSON.stringify(s||null)&&veil);
+    const dots=b.querySelector('.dots');dots.innerHTML='';if(s&&veil)[...new Set(s.rules.map(r=>r.mod))].forEach(m=>{const i2=document.createElement('i');i2.style.background=rgb(worldColor(m));dots.appendChild(i2)})});
+  if(slot==null){petalEls.forEach(e=>e.remove());petalEls.clear();beadPool.forEach(b=>b.style.opacity=0);return}
+  const d=draft();normalize(d.rules);const w=world(),wc=worldColor(w),rules=worldRules();
+  $('core').style.background=colorOf({name:bar[slot]});$('core').style.boxShadow=`0 0 0 2px ${rgb(wc,.7)},0 0 30px ${rgb(wc,.35)}`;
+  // cube glyph + world name
+  const g=$('cubeglyph');g.style.left='-30px';g.style.top=(-ringR(Math.max(rules.length,1))-110)+'px';
+  [...g.children].forEach((e,i)=>{e.style.left=CUBEPOS[i][0]+'px';e.style.top=CUBEPOS[i][1]+'px';const k=worldKey(i);
+    const used=d.rules.some(r=>r.mod===k);e.className=k===w?'here':'';e.style.background=k===w?rgb(worldColor(k)):used?rgb(worldColor(k),.7):'#ffffff22'});
+  const wn=$('worldname');wn.textContent=(w==='none'?'bare hands':MODBY[w].mods.join(' + '))+(latched?'  · latched':'');wn.style.top=(-ringR(Math.max(rules.length,1))-52)+'px';wn.style.color=rgb(wc);
+  // petals
+  const pre=proposals(rules).length;layout=rules.map((r,k)=>{const [x,y]=pol(ringR(k+1+pre),ANG[r.unit]);return {rule:r,x,y,k:k+1+pre}});
+  const prev=anchor&&anchor.rule&&layout.find(p=>p.rule===anchor.rule);
+  if(prev&&anchor.x!=null){lensX+=anchor.x-prev.x;lensY+=anchor.y-prev.y;lensX=Math.max(200,Math.min(1080,lensX));lensY=Math.max(220,Math.min(620,lensY));
+    lens.style.left=lensX+'px';lens.style.top=lensY+'px'}
+  anchor=null;const live=new Set();
+  layout.forEach(p=>{const e=petalEl(p.rule);live.add(p.rule);e.style.left=p.x+'px';e.style.top=p.y+'px';
+    e.style.background=has(p.rule)?colorOf(p.rule):'transparent';e.style.border=has(p.rule)?'none':'1px dashed #fff8';
+    e.classList.toggle('dead',p.rule.state==='dead');e.classList.toggle('hover',hoverPetal===p.rule);e.classList.remove('ghostp');
+    e.querySelector('.ch').textContent=has(p.rule)?p.rule.name.split(' ').map(s=>s[0]).join(''):'?';
+    e.querySelector('.tag').textContent=(hoverPetal===p.rule||e.classList.contains('lit'))?tagOf(p.rule):'';
+    e.querySelector('.steps').innerHTML=(p.rule.steps&&p.rule.steps.length>1)?p.rule.steps.slice(1).map(s=>`<i style="background:${colorOf(s)}"></i>`).join(''):'';});
+  // proposals: a world with one catch-all petal suggests the rest of a shape
+  const props=proposals(rules);props.forEach((r,i)=>{const e=petalEl('prop'+i);live.add('prop'+i);const [x,y]=pol(ringR(i+1)-0,ANG[r.unit]);
+    e.style.left=x+'px';e.style.top=y+'px';e.style.background=colorOf(r);e.classList.add('ghostp');e.querySelector('.ch').textContent='';e.querySelector('.tag').textContent=tagOf(r);e.style.border='1px dashed #fff';
+    e.querySelector('.steps').innerHTML=''});
+  petalEls.forEach((e,k)=>{if(!live.has(k)){e.remove();petalEls.delete(k)}});
+  // bead arcs: breadth of each petal
+  let bi=0;const bead=()=>{let b=beadPool[bi++];if(!b){b=document.createElement('div');b.className='bead';lens.insertBefore(b,lens.firstChild);beadPool.push(b)}return b};
+  layout.forEach(p=>{const span=breadth(p.rule),r=ringR(p.k),n=Math.max(3,Math.round(span*r*Math.PI/180/9));
+    for(let j=0;j<n;j++){const a=ANG[p.rule.unit]-span/2+span*(span>=360?j/n:j/(n-1));const [x,y]=pol(r,a);const b=bead();
+      b.style.left=x+'px';b.style.top=y+'px';b.style.opacity=.55;b.style.background=rgb(wc)}});
+  // budget ring: macro length as beads around the core
+  const text=build(d),len=new TextEncoder().encode(text).length;
+  for(let j=0;j<40;j++){const [x,y]=pol(40,90-j*9);const b=bead();b.style.left=x+'px';b.style.top=y+'px';
+    b.style.background=len>255?'#ff5555':'#fff';b.style.opacity=j<Math.ceil(len/255*40)?.9:.12}
+  for(;bi<beadPool.length;bi++)beadPool[bi].style.opacity=0;
+  $('incant').textContent=text||'(silence)';$('incant').style.top='70px';
+}
+function proposals(rules){if(!sprout||rules.length!==1||!uncond(rules[0])||!has(rules[0]))return [];
+  const s=SPELLS.find(x=>x.name===rules[0].name);if(!s)return [];
+  const shape=s.help===1?[{unit:'mouseover',reaction:'help',state:'alive'},{reaction:'help',state:'alive'}]
+    :s.help===0?[{unit:'mouseover',reaction:'harm',state:'alive'},{reaction:'harm',state:'alive'}]:[{unit:'mouseover'}];
+  return shape.map(f=>NewRule(Object.assign({kind:'spell',name:s.name,mod:world()},f)))}
+
+/* ------------------------------------------------------------------ pointing */
+let mx=0,my=0;
+addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;point()});
+function point(){if(slot==null)return;const dx=mx-lensX,dy=my-lensY,r=Math.hypot(dx,dy);
+  let a=Math.atan2(-dy,dx)*180/Math.PI;if(a<0)a+=360;
+  hoverPetal=null;ghostAt=null;proposalOn=false;
+  const near=layout.find(p=>Math.hypot(p.x-dx,p.y-dy)<24);
+  if(near){hoverPetal=near.rule;if(!sproutT&&!sprout)sproutT=setTimeout(()=>{const lp=layout.find(p=>p.rule===hoverPetal);anchor={rule:hoverPetal,x:lp.x,y:lp.y};sprout=true;render();whisp()},650)}
+  else if(!sprout||!proposalNear(dx,dy)){clearTimeout(sproutT);sproutT=null;sprout=false}
+  if(near);
+  else if(sprout&&proposalNear(dx,dy))proposalOn=true;
+  else if(r>30&&r<ringR(worldRules().length+1)+30){
+    let best=UNITS[0],bd=999;for(const u of UNITS){let d=Math.abs(((a-u[2]+540)%360)-180);if(d<bd){bd=d;best=u}}
+    const slotIdx=layout.filter(p=>ringR(p.k)<r).length;ghostAt={unit:best[0],index:slotIdx,r,a:best[2]}}
+  const gh=$('ghost');if(ghostAt){const [x,y]=pol(Math.max(r,R0-12),ghostAt.a);gh.style.left=x+'px';gh.style.top=y+'px';gh.style.opacity=1}else gh.style.opacity=0;
+  $('incant').style.opacity=r<34?1:0;
+  const cr=ringR(worldRules().length+1)+26;[...$('compass').children].forEach((e,i)=>{const [x,y]=pol(cr,UNITS[i][2]);e.style.left=x+'px';e.style.top=y+'px';e.style.opacity=ghostAt?(UNITS[i][0]===ghostAt.unit?.95:.3):0})
+  // dissolve when the cursor wanders off
+  clearTimeout(point.t);if(r>ringR(worldRules().length+1)+90&&!buffer)point.t=setTimeout(dissolve,700);
+  render();whisp()}
+function proposalNear(dx,dy){return [...petalEls.keys()].some(k=>typeof k==='string'&&(()=>{const e=petalEls.get(k);return Math.hypot(parseFloat(e.style.left)-dx,parseFloat(e.style.top)-dy)<30})())}
+function whisp(){if(slot==null){whisper.style.opacity=0;return}
+  whisper.style.left=(mx+18)+'px';whisper.style.top=(my+14)+'px';whisper.style.opacity=1;let h='';
+  if(buffer){const s=suggestions();h=`<span class="typed">${buffer}</span> <span class="sugg">${s.map((x,i)=>i===suggI%Math.max(s.length,1)?'<b>'+x.name+'</b>':x.name).slice(0,4).join(' · ')}</span>`}
+  else if(hoverPetal&&sprout&&proposals(worldRules()).length)h='rest here: it could grow into this shape — move onto a ghost and press Enter';
+  else if(hoverPetal)h=`${tagOf(hoverPetal)} — type to change · wheel: temperament · right+wheel: orbit · ⌫ dissolve`;
+  else if(proposalOn)h='a suggested shape — Enter to accept it';
+  else if(ghostAt)h=`new petal for <b>${ULABEL[ghostAt.unit]}</b>, checked ${ordinal(ghostAt.index+1)} — type a spell (echoes: ${topEchoes().join(', ')})`;
+  else if(!worldRules().length&&Math.hypot(mx-lensX,my-lensY)<120)h=`${world()==='none'?'bare hands':MODBY[world()].mods.join(' + ')} is silent — point around the core and type a spell`;
+  else if(Math.hypot(mx-lensX,my-lensY)<34)h='the incantation · hold to seal · hold right to unravel';
+  whisper.innerHTML=h}
+const ordinal=n=>n+(['th','st','nd','rd'][n%10>3||~~(n%100/10)===1?0:n%10]);
+const topEchoes=()=>Object.entries(echo).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>e[0]);
+function suggestions(){const ws=buffer.toLowerCase().split(/\s+/).filter(Boolean);
+  const ini=n=>n.toLowerCase().split(/[^a-z]+/).filter(Boolean).map(x=>x[0]).join('');
+  return SPELLS.filter(s=>ws.every(w=>s.name.toLowerCase().includes(w)||ini(s.name).startsWith(w))).sort((a,b)=>(echo[b.name]||0)-(echo[a.name]||0)||a.name.localeCompare(b.name))}
+
+/* ------------------------------------------------------------------ hands: modifier worlds */
+const downAt={};let otherKeySince=false;
+addEventListener('keydown',e=>{
+  if(e.key in axisOf){if(!e.repeat){downAt[e.key]=performance.now();otherKeySince=false;held|=axisOf[e.key];pulseT=0;render()}e.preventDefault();return}
+  otherKeySince=true;
+  if(e.key==='m'&&!veil&&slot==null){veil=true;render();return}
+  if(slot==null){if(e.key==='Escape'){veil=false;render()}return}
+  if(e.key==='Escape'){if(buffer)buffer='';else dissolve();e.preventDefault()}
+  else if(e.key==='Backspace'){if(buffer)buffer=buffer.slice(0,-1);else if(hoverPetal)removePetal(hoverPetal)}
+  else if(e.key==='Tab'){suggI++;e.preventDefault()}
+  else if(e.key==='Enter'){commit(false)}
+  else if(e.key.length===1){buffer+=e.key;suggI=0}
+  render();whisp()});
+addEventListener('keyup',e=>{if(!(e.key in axisOf))return;const bit=axisOf[e.key];held&=~bit;
+  if(performance.now()-downAt[e.key]<260&&!otherKeySince)latched^=bit; // a tap latches / unlatches that axis
+  pulseT=0;render();whisp()});
+
+/* ------------------------------------------------------------------ verbs */
+function resolve(q){const save=buffer;buffer=q;const r=suggestions()[0];buffer=save;return r}
+function commit(braid){const d=draft();
+  if(buffer.includes(',')){const parts=buffer.split(',').map(x=>x.trim()).filter(Boolean).map(resolve);if(parts.some(x=>!x)){toast('one of those spells is unknown');return}
+    let t=hoverPetal;if(!t&&ghostAt){t=NewRule({mod:world(),unit:ghostAt.unit});const c=conflictWith(d.rules,t);if(c)t=c;else{const ws=worldRules(),b=ws[ghostAt.index];d.rules.splice(b?d.rules.indexOf(b):d.rules.length,0,t);anchor={rule:t,x:mx-lensX,y:my-lensY}}}
+    if(!t){toast('point somewhere first');return}t.steps=parts.map(x=>({kind:'spell',name:x.name}));Object.assign(t,t.steps[0]);hoverPetal=t;buffer='';return}
+  if(!buffer&&proposalOn){proposals(worldRules()).forEach(r=>d.rules.push(r));sprout=false;toast('the shape takes root');return}
+  if(!buffer)return;
+  if(/^\d+$/.test(buffer.trim())&&hoverPetal){hoverPetal.reset={seconds:+buffer};buffer='';return}
+  const s=suggestions()[suggI%Math.max(suggestions().length,1)];if(!s)return;
+  const act={kind:'spell',name:s.name};
+  let target=hoverPetal;
+  if(!target&&ghostAt){const cand=NewRule(Object.assign({mod:world(),unit:ghostAt.unit},act));
+    const clash=conflictWith(d.rules,cand);
+    if(clash)target=clash; // the same spot already exists: it takes the spell
+    else{const ws=worldRules();const before=ws[ghostAt.index];const at=before?d.rules.indexOf(before):d.rules.length;d.rules.splice(at,0,cand);hoverPetal=cand;target=null;anchor={rule:cand,x:mx-lensX,y:my-lensY};
+      if(!braid){buffer='';echo[s.name]=(echo[s.name]||0)+1;return}target=cand}}
+  if(!target){toast('point at a petal, or at open space around the core, then press Enter');return}
+  if(braid){target.steps=target.steps&&target.steps.length?target.steps:[{kind:target.kind,name:target.name}];
+    if(target.steps.length===1&&target.name===s.name&&!target._b){target._b=1}else target.steps.push(act);}
+  else{Object.assign(target,act);if(target.steps)target.steps[0]=act}
+  buffer='';echo[s.name]=(echo[s.name]||0)+1}
+function removePetal(r){const d=draft();d.rules.splice(d.rules.indexOf(r),1);hoverPetal=null}
+addEventListener('wheel',e=>{if(slot==null)return;const r=hoverPetal;if(!r)return;const d=draft();
+  if(e.buttons&2){ // orbit to the next WHO
+    const order=UNITS.map(u=>u[0]);let i=order.indexOf(r.unit);for(let n=0;n<6;n++){i=(i+(e.deltaY>0?1:5))%6;const t={...r,unit:order[i]};if(!conflictWith(d.rules,t,r)){r.unit=order[i];break}}}
+  else{let i=TEMPERS.findIndex(t=>t[0]===r.reaction&&t[1]===r.state);for(let n=0;n<9;n++){i=(i+(e.deltaY>0?1:8))%9;const t={...r,reaction:TEMPERS[i][0],state:TEMPERS[i][1]};if(!conflictWith(d.rules,t,r)){r.reaction=t.reaction;r.state=t.state;break}}}
+  render();whisp()},{passive:true});
+addEventListener('contextmenu',e=>e.preventDefault());
+let holdStart=0,holdBtn=0;
+addEventListener('mousedown',e=>{if(slot==null||Math.hypot(mx-lensX,my-lensY)>34){if(proposalOn&&e.button===0)commit(false),render();return}holdStart=performance.now();holdBtn=e.button});
+addEventListener('mouseup',e=>{if(!holdStart)return;const held=performance.now()-holdStart;holdStart=0;if(held<700)return;
+  if(holdBtn===0){designs[slot]=JSON.parse(JSON.stringify(draft()));toast('sealed — '+bar[slot]+' now listens to your hands')}
+  else{delete designs[slot];delete drafts[slot];toast('unravelled — '+bar[slot]+' is plain again')}render()});
+
+/* ------------------------------------------------------------------ the pulse and the seal ring */
+let pulseT=0,last=performance.now();
+function tick(now){const dt=(now-last)/1000;last=now;
+  if(slot!=null){const rules=worldRules().filter(has);const hit=rules.findIndex(matches);
+    pulseT+=dt*2.2;const stopAt=hit<0?rules.length:hit;const pos=Math.min(pulseT,stopAt+.0001);
+    const i=Math.floor(pos),f=pos-i;const pts=[{x:0,y:0},...layout.filter(p=>has(p.rule)).map(p=>({x:p.x,y:p.y}))];
+    const A=pts[Math.min(i,pts.length-1)],B=pts[Math.min(i+1,pts.length-1)];
+    $('pulse').style.left=(A.x+(B.x-A.x)*f)+'px';$('pulse').style.top=(A.y+(B.y-A.y)*f)+'px';
+    $('pulse').style.opacity=hit<0&&pulseT>rules.length?.15:1;
+    layout.forEach(p=>petalEls.get(p.rule)&&petalEls.get(p.rule).classList.toggle('lit',p.rule===rules[hit]&&pulseT>=stopAt));
+    if(pulseT>stopAt+3)pulseT=0;
+    const s=$('seal');const h=holdStart?Math.min((now-holdStart)/700,1):0;
+    s.style.background=h?`conic-gradient(${holdBtn===0?'#ffd86b':'#ff6b6b'} ${h*360}deg,transparent 0)`:'transparent';}
+  requestAnimationFrame(tick)}
+requestAnimationFrame(tick);
+window.__state=()=>({world:world(),latched,rules:slot!=null?draft().rules:null,text:slot!=null?build(draft()):null});
+render();
+</script></body></html>

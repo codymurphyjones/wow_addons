@@ -90,7 +90,7 @@ Every plugin has its own options on its right-click menu. Here's what each one s
 
 **Blocks and filters.** The Social plugin's switches act for you and keep working even if the button is hidden:
 - Decline duels.
-- Decline group invites from strangers. While you're listed in Looking for Group this steps aside: invites from players who are also listed get through, anyone else is still declined.
+- Decline group invites from strangers. While you're listed in Looking for Group, or have applied to a group there, this steps aside: strangers' invites reach you as usual (players you marked "wouldn't group again" in Fireside are still declined).
 - Accept group invites from friends and guild.
 - With Fireside installed: treat past groupmates you'd group with again as known, and decline invites from anyone you marked "wouldn't group again".
 - Decline guild invites.

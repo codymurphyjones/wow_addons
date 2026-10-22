@@ -512,8 +512,9 @@ function Arrow:ShowMenu()
         if ns.Route and ns.Route:BlockedCount() > 0 then
             root:CreateButton(("Forget blocked ways (%d)"):format(ns.Route:BlockedCount()), function() ns.Route:ClearBlocks() end)
         end
-        -- The last few waypoints: hover for the list, click one to clear it.
-        local history = ns.Targets:History(5)
+        -- Every waypoint (your whole path, however long, your Navigate to, addons' targets):
+        -- hover for the list, click one to clear it.
+        local history = ns.Targets:History(100)
         root:CreateCheckbox("Show towns on the map", function() return ns.db.towns end, function()
             ns:ToggleOption("db.towns")
         end)

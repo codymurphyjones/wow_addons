@@ -15,7 +15,7 @@ ns.MinimapButton = ns.NewMinimapButton({
         end
         GameTooltip:AddLine("Left-click: show or hide the arrow", 0.75, 0.8, 0.85)
         GameTooltip:AddLine("Right-click: Navigate to a trainer, vendor, bank, mailbox...", 0.75, 0.8, 0.85)
-        GameTooltip:AddLine("Ctrl+click the world map: add or remove waypoints", 0.75, 0.8, 0.85)
+        GameTooltip:AddLine("World map: double-click adds a waypoint, Ctrl+right-click removes one", 0.75, 0.8, 0.85)
         GameTooltip:AddLine("Drag: move around the minimap", 0.75, 0.8, 0.85)
     end,
     click = function(self, mouseButton)

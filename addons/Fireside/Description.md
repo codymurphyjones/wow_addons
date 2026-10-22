@@ -40,6 +40,21 @@ When the last boss dies, while the party is still together, the campfire opens. 
 | Calm after a wipe | Explained the fights |
 | Patient with newcomers | Led well |
 | Fair with loot | Great company |
+| High damage | Kept us buffed |
+| Came prepared | Clutch play |
+| Knew the way | Good target calls |
+
+**Flak**, for when someone made the run worse: **Flak...** on their remarks opens a short list of what they did (pulled before the group was ready, kept pulling aggro, kept losing the mobs, healing didn't keep up, kept standing in what hurts, ignored the plan, away for long stretches, left before the end, unfair with loot, rude to the group, came unprepared). It's about what they did, never who they are, and it's only ever given by hand. Each time you choose:
+
+- **Tell them**: they see it privately, and that it's from you.
+- **Pass it on**: it travels as gossip: the Fireside players you group with learn it, and pass it on to the people they group with, and so on. Never to the player themselves.
+- Neither: it stays on your own record of them.
+
+Kudos travel the same way, so a good name spreads as far as a bad one.
+
+One bad run never follows anyone around. Flak only shows as a warning on someone's tooltip, their page and the party line when it's a pattern: at least 5 from 3 or more people or runs, and then only when it's a lot in the last 30 days, or a history that their kudos don't outweigh. The warning says how much is first-hand ("Flak: 6 in the last 30 days, 4 first-hand"). Old Flak fades, and kudos that strongly outweigh it clear the warning. Flak you gave someone yourself always shows to you, in orange.
+
+**Hearsay counts less.** Flak or kudos from someone you've grouped with yourself (or straight from its giver) count in full. Anything passed along from people you've never met counts half, and everything one person passes along counts as half a source at most, however many names it carries, so nobody can invent a pattern on their own. `Pass on what I've heard` in the settings turns your part in the gossip off.
 
 **In the middle of the ring, the fire tells the run's lessons** for the whole group, with no names: "*Watch the ground.* 2 deaths started in avoidable damage (Flamestrike)." A clean run says so.
 
@@ -66,7 +81,7 @@ Your own page, for your eyes only (`/fire mirror`):
 ### Known for: reputation built from kudos
 Fireside remembers everyone you've run with. When someone new joins your party, each Fireside in the group shares the kudos it has given the others, and its own player's kudo record. Even a stranger can arrive with "Known for: Steady tank (4), Quick kicks (2)".
 
-- **On tooltips**, **in the party popup** when you join a group, and **in chat** when you whisper someone you've run with.
+- **On tooltips**, **in chat** when you join a party (and for each newcomer after that), and **in chat** when you whisper someone you've run with.
 - Only kudos are ever shared. Nothing negative about anyone is ever sent to anyone else.
 
 ### People: everyone you've run with
@@ -83,7 +98,7 @@ In **Options > AddOns > Fireside** (or the Settings tab of the window), you can 
 - whether the campfire opens at the end of each run
 - whether to tell your party the kudos you've given, and show them the kudos you've received
 - whether to accept private notes (if you turn them off, people who try to send you one are told)
-- the party popup and how long it stays up
+- the chat line for who joins your party
 - tooltips, the whisper line, the death recap popup, chat messages
 - the minimap button
 - how many mobs count as an over-pull in the death analysis
@@ -112,7 +127,7 @@ Names are WoW Forever's realmless "Given Family" names. Fights are read from Bli
 | `/fire mirror` | What people have told you |
 | `/fire people` | Everyone you've run with |
 | `/fire <name>` | Look someone up |
-| `/fire party` | Show the party popup now |
+| `/fire party` | Your history with everyone in your party, in chat |
 | `/fire run` | This run so far |
 | `/fire recap` | The last death recap |
 | `/fire minimap` | Show or hide the minimap button |

@@ -178,7 +178,7 @@ local function SetUp(name, lib)
     provider.HandlePin = function(self, icon, data, ...)
         handle(self, icon, data, ...)
         local ok, err = pcall(AfterHandlePin, c, self, icon, data)
-        if not ok then ns:Debug(name .. " pin: " .. tostring(err)) end
+        if not ok then ns:Caught(name .. " pin", err) end
     end
     local refresh = provider.RefreshAllData
     if type(refresh) == "function" then
@@ -214,7 +214,7 @@ function P.Scan()
     for name, lib in LibStub:IterateLibraries() do
         if type(name) == "string" and name:match("^HereBeDragons.*%-Pins%-2%.0$") and type(lib) == "table" then
             local ok, err = pcall(SetUp, name, lib)
-            if not ok then ns:Debug("set up " .. name .. ": " .. tostring(err)) end
+            if not ok then ns:Caught("setting up " .. name, err) end
         end
     end
 end
@@ -224,7 +224,7 @@ function P.Install()
     if not ticker then
         ticker = C_Timer.NewTicker(TICK, function()
             local ok, err = pcall(P.Tick)
-            if not ok then ns:Debug("minimap: " .. tostring(err)) end
+            if not ok then ns:Caught("minimap pins", err) end
         end)
     end
     return true
@@ -238,7 +238,7 @@ function P.Redraw()
     for _, c in pairs(copies) do
         c.provider.forceUpdate = true   -- (Questie's copy redraws only on a new map, or with this)
         local ok, err = pcall(c.provider.RefreshAllData, c.provider)
-        if not ok then ns:Debug(c.name .. " refresh: " .. tostring(err)) end
+        if not ok then ns:Caught(c.name .. " refresh", err) end
     end
 end
 

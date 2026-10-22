@@ -53,6 +53,25 @@ end
 
 local function OnOff(v) return v and "|cff40ff40on|r" or "|cffff5050off|r" end
 
+-- Errors caught while drawing other addons' icons. They're caught so one addon's error never stops
+-- another's icons, but kept (the last 20) so a missing icon can be explained: /regionicons errors.
+-- The first one of a session says so in chat.
+local caught, told = {}, false
+function ns:Caught(where, err)
+    caught[#caught + 1] = { t = date and date("%H:%M:%S") or "", where = tostring(where), err = tostring(err) }
+    if #caught > 20 then table.remove(caught, 1) end
+    if not told then
+        told = true
+        ns:Print("An error came up while drawing " .. tostring(where) .. "'s icons (that part is skipped). "
+            .. "/regionicons errors shows it.", true)
+    end
+end
+
+local function Errors()
+    if #caught == 0 then ns:Print("No errors this session.", true) return end
+    for _, c in ipairs(caught) do ns:Print(("%s  %s: %s"):format(c.t, c.where, c.err), true) end
+end
+
 local function Status()
     if not ns.active then
         ns:Print("Not running: " .. tostring(ns.failed or "not started yet") .. ".", true)
@@ -125,6 +144,24 @@ local function OpenMapToggles()
     end
 end
 
+-- RareScanner, when it's there: wrapped as soon as its provider is on its canvas. That happens
+-- only once the world map has set a map, so this is tried at start, as the map opens and when it
+-- sets a map, until it works (it used to be tried once at login, and so missed now and then).
+local rareTold = false
+local function TryRareScanner()
+    if ns.RareScanner.Ready() or not _G.RareScannerDataProviderMixin then return end
+    local ok, missing = ns.RareScanner.Install()
+    if ok then
+        local okM, why = ns.RareScannerMinimap:Start()
+        if not okM then ns:Debug("RareScanner minimap icons off: " .. tostring(why) .. " isn't there") end
+        ns.Apply()
+    elseif missing ~= "not yet" and not rareTold then
+        rareTold = true
+        ns:Print("RareScanner changed (" .. tostring(missing) .. " is missing), so its icons are left out. "
+            .. "An update of Region Icons may be needed.", true)
+    end
+end
+
 local function Start()
     if ns.active then return end
     local okC, whyC = ns.Canvas.Install()
@@ -134,28 +171,26 @@ local function Start()
         return
     end
     ns.active = true
+    -- HereBeDragons' copies first: their providers are Pins.lua's, and Canvas leaves those alone.
     ns.Pins.Install()
-    ns.Canvas.Scan()    -- (again, now that HereBeDragons' providers are known: those are Pins.lua's)
+    ns.Canvas.Scan()
 
-    -- RareScanner, when it's there
-    if _G.RareScannerDataProviderMixin then
-        local ok, missing = ns.RareScanner.Install()
-        if not ok then
-            ns:Print("RareScanner changed (" .. tostring(missing) .. " is missing), so its icons are left out. "
-                .. "An update of Region Icons may be needed.", true)
-        else
-            local okM, why = ns.RareScannerMinimap:Start()
-            if not okM then ns:Debug("RareScanner minimap icons off: " .. tostring(why) .. " isn't there") end
-        end
-    end
+    TryRareScanner()
     OpenMapToggles()
 
-    -- addons loaded later, and their copies of HereBeDragons: looked for as the map opens
+    -- addons loaded later, their copies of HereBeDragons, and RareScanner's canvas: looked for as
+    -- the map opens and as it sets a map
     if WorldMapFrame then
         WorldMapFrame:HookScript("OnShow", function()
             ns.Pins.Scan()
             ns.Canvas.Scan()
+            TryRareScanner()
         end)
+    end
+    if EventRegistry and EventRegistry.RegisterCallback then
+        EventRegistry:RegisterCallback("MapCanvas.MapSet", function()
+            C_Timer.After(0.2, TryRareScanner)
+        end, ns)
     end
     ns.Apply()
 end
@@ -180,6 +215,7 @@ local commands = {
     { "sources", Sources, "the addons whose world map icons were found" },
     { "source", Source, "<addon>: that addon's world map icons on nearby zones, on or off" },
     { "refresh", function() ns.Apply() ns:Print("Refreshed.", true) end, "draw the icons again" },
+    { "errors", Errors, "errors caught while drawing other addons' icons this session" },
     { { "config", "options" }, function() if ns.Settings then ns.Settings:Open() end end, "open Options > AddOns > Region Icons" },
     { "debug", Toggle("debug", "Debug messages"), nil },
 }
