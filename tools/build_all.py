@@ -51,6 +51,16 @@ def _module(name):
     return check
 
 
+def _node_recast():
+    """Node and @recast-navigation (yarn install) for the navigation bake."""
+    import shutil
+    if not shutil.which("node"):
+        return "Node.js isn't installed"
+    if not os.path.isdir(os.path.join(REPO, "node_modules", "@recast-navigation", "core")):
+        return "run yarn install first (@recast-navigation)"
+    return None
+
+
 def _saved(addon):
     def check():
         found = savedvars.files(addon)
@@ -63,6 +73,10 @@ def _saved(addon):
 STEPS = [
     ("Waypoint", "build_places.py", [], "places, vendors and towns for Navigate To", [_questiedb]),
     ("Waypoint", "build_water.py", [], "land and water map for route planning (the game's map tiles, wago.tools)", [_module("numpy")]),
+    ("Waypoint", "build_transit.py", [], "flights, boat timetables and teleports (the game's tables, CMaNGOS)", [_module("numpy"), _module("lupa")]),
+    ("Waypoint", "nav_links.py", [], "lifts, portals and the Deeprun Tram for the walkable ground (CMaNGOS, wago.tools)", []),
+    ("Waypoint", "nav_build.py", ["--clean"], "the walkable ground for routes: buildings, bridges, caves (the game's files, Recast)",
+     [_module("numpy"), _node_recast]),
     ("WealthPlanner", "build_vendor_items.py", [], "which items vendors sell", [_questiedb]),
     ("WealthPlanner", "fetch_farms.py", [], "farming drops and spawns (Wowhead)", []),
     ("shared", "build_instances.py", [], "the dungeons and raids Field Guide, SpyGlass and Fireside share (QuestieDB)", [_questiedb]),

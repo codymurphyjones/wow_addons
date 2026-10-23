@@ -170,6 +170,39 @@ end
 --                      onClick = function(row) end }, ... }, "Text when there are no rows"
 --       end,
 --   })
+-- Dungeon maps (SpyGlass's, with mob packs and pull plans), floor by floor:
+--   API:DungeonMapInstances()        { { key, name } } of every instance with a map, by name
+--   API:DungeonMapFloors(instance)   { { index, name, uiMap, packs, fullArt } } in order, or nil;
+--                                    instance: SpyGlass's key, the instance (map) ID or its name
+--   API:DungeonMapFloorOf(uiMapID)   the instance key and floor index a game map is, or nil
+--   API:OpenDungeonMap(instance, floor)  opens the journal's Maps tab on it (floor: index or uiMapID;
+--                                    default: where you are). False when there's no map of it.
+function API:DungeonMapInstances()
+    local out = {}
+    for _, e in ipairs(ns.DungeonMap:Instances()) do out[#out + 1] = { key = e[1], name = e[2] } end
+    return out
+end
+
+function API:DungeonMapFloors(instance)
+    local key = ns.DungeonMap:FindKey(instance)
+    return key and ns.DungeonMap:Floors(key) or nil
+end
+
+function API:DungeonMapFloorOf(uiMapID)
+    return ns.DungeonMap:FloorOfMap(uiMapID)
+end
+
+function API:OpenDungeonMap(instance, floor)
+    local M = ns.DungeonMap
+    local key = instance and M:FindKey(instance) or M:Current()
+    if not key then return false end
+    if type(floor) == "number" and floor > #(M:Data(key).floors or {}) then
+        local k, i = M:FloorOfMap(floor)
+        floor = k == key and i or nil
+    end
+    return ns.Maps:Open(key, floor) and true or false
+end
+
 function API:RequestJournalTab(addon, tab)
     return ns.Plugins:RequestJournalTab(addon, tab)
 end

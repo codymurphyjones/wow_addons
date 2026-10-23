@@ -178,6 +178,105 @@ local function Landing(d)
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- Timetables: where in its loop each boat and zeppelin is (Data\Transit.lua)
+-- ---------------------------------------------------------------------------------------------
+
+-- Each route's loop and its stops' times in it are laid out from the game's path (build_transit.py).
+-- Where the boat is in its loop is Timetable.lua's: learned from sightings (yours, your guild's and
+-- group's), kept until the weekly reset, its length fitted to them. Until one's seen, a dock's
+-- wait counts as half a loop.
+local ALERT_AHEAD = 30 -- seconds before a boat comes in that the alert goes off
+local schedule         -- dock key -> { boat, stop (where it leaves from), land (where it lands) }; a stop is
+                       -- { continent, north, west, arrive, depart (seconds into the loop), docks }
+
+local function Schedule(key)
+    if not schedule then
+        schedule = {}
+        for _, b in ipairs(ns.Transit and ns.Transit.boats or {}) do
+            for i, st in ipairs(b.stops) do
+                for _, k in ipairs(st.docks) do
+                    local dest = k:match("^[^:]+:[^:]+:(.+)$")
+                    for j, o in ipairs(b.stops) do
+                        if j ~= i then
+                            for _, k2 in ipairs(o.docks) do
+                                if k2:match("^[^:]+:([^:]+):") == dest then schedule[k] = { boat = b, stop = st, land = o } end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return key and schedule[key]
+end
+
+local function ServerNow() return (GetServerTime and GetServerTime()) or time() end
+
+-- Where a route's loop is: when it began (server time), its length, and its stops' times scaled
+-- to that length (a fitted loop a little off the database's); nil when it's not known.
+local function Loop(sch)
+    local TT = ns.Timetable
+    if not TT then return nil end
+    local epoch, period, unsure = TT:Loop(sch.boat) -- (not "TT and TT:Loop()": that keeps only the first value)
+    if not epoch then return nil end
+    local k = period / sch.boat.period
+    return epoch, period, sch.stop[4] * k, sch.stop[5] * k, unsure
+end
+
+-- The boat leaving dock key, for someone getting there arriveIn seconds from now: seconds from
+-- then until it leaves, seconds riding, and whether that's known (false: half a loop, a guess).
+-- nil when the dock has no timetable.
+function R:Departure(key, arriveIn)
+    local sch = Schedule(key)
+    if not sch then return nil end
+    local b = sch.boat
+    local ride = (sch.land[4] - sch.stop[5]) % b.period
+    local epoch, period, _, depart = Loop(sch)
+    if not epoch then return b.period / 2, ride, false end
+    local t = (ServerNow() + (arriveIn or 0) - epoch) % period
+    local leave = (depart - t) % period
+    if leave < 2 then leave = leave + period end -- pulling out as you get there: the next one
+    return leave, ride, true
+end
+
+-- Seconds until the boat at dock key comes in (and leaves), and how many seconds that may be off;
+-- nil when unknown.
+function R:NextBoat(key)
+    local sch = Schedule(key)
+    if not sch then return nil end
+    local epoch, period, arriveAt, depart, unsure = Loop(sch)
+    if not epoch then return nil end
+    local t = (ServerNow() - epoch) % period
+    local leave = (depart - t) % period
+    if leave < 2 then leave = leave + period end
+    local arrive = (arriveAt - t) % period
+    if arrive > leave then arrive = 0 end -- it's in now
+    return arrive, leave, unsure
+end
+
+-- You were carried off dock key just now: its boat left then, which places its loop (kept and
+-- shared: Timetable.lua).
+local function SawDeparture(key)
+    local sch = Schedule(key)
+    if not (sch and ns.Timetable) then return end
+    ns.Timetable:Departed(sch.boat, ServerNow() - sch.stop[5])
+end
+
+-- At a dock whose loop isn't known: ask your guild and group (Timetable.lua).
+function R:AskTimetable(key)
+    local sch = Schedule(key)
+    if sch and ns.Timetable then ns.Timetable:Ask(sch.boat) end
+end
+
+-- What a dock's ride costs from arriveIn seconds from now: the wait from then plus the ride when
+-- there's a timetable, else the learned (or guessed) wait and ride together.
+local function RideCost(dep, arriveIn)
+    local leave, ride = R:Departure(dep.dock.t.key, arriveIn)
+    if leave then return leave + ride end
+    return dep.rideSecs
+end
+
+-- ---------------------------------------------------------------------------------------------
 -- Hearthstone and teleports
 -- ---------------------------------------------------------------------------------------------
 
@@ -362,6 +461,16 @@ local function TeleportPoint(id, city)
         end
         return p
     end
+    -- Not cast yet: where the server puts you (Data\Transit.lua), else the town.
+    local tp = ns.Transit and ns.Transit.teleports[id]
+    if tp and tp[5] ~= 0 then
+        local p = portPoints[id]
+        if not (p and p.mapID == tp[5] and p.x == tp[6]) then
+            p = { mapID = tp[5], x = tp[6], y = tp[7], label = city }
+            portPoints[id] = p
+        end
+        return p
+    end
     return Town(city)
 end
 
@@ -375,6 +484,13 @@ local function Vertex(point, kind)
     local c, n, w = ns.Nav:World(point)
     if not c then return nil end
     return { point = point, c = c, n = n, w = w, land = Island(point), kind = kind }
+end
+
+-- The fixed place (NavGrid.lua: a flight master, dock or town) a vertex stands at, kept on it as
+-- v.place; nil when it's at none.
+local function PlaceOf(v)
+    if v.place == nil then v.place = G.Place and G:Place(v.c, v.n, v.w) or false end
+    return v.place or nil
 end
 
 -- What a leg is called in chat.
@@ -908,7 +1024,16 @@ local function BuildLines(route, way, hereField, targetField, target, c, n, w)
     for i, leg in ipairs(route.legs) do
         local a, b = leg.from, leg.to
         if leg.kind == "fly" or leg.kind == "ride" then
-            if a.c == b.c then Add(leg.kind, a.c, { a.n, a.w, b.n, b.w }) end
+            -- A flight along its hops' routes through the air (Flight.lua); a ride straight.
+            local air = leg.kind == "fly" and a.c == b.c and F.FlightRoute and F:FlightRoute(a.node, b.node)
+            if air and #air >= 4 then
+                local pts = { a.n, a.w }
+                for k = 1, #air do pts[#pts + 1] = air[k] end
+                pts[#pts + 1], pts[#pts + 2] = b.n, b.w
+                Add("fly", a.c, pts)
+            elseif a.c == b.c then
+                Add(leg.kind, a.c, { a.n, a.w, b.n, b.w })
+            end
         elseif leg.kind == "walk" or leg.kind == "swim" or leg.kind == "drop" then
             local pts = {}
             if i == 1 then pts[1], pts[2] = n, w end
@@ -1006,9 +1131,19 @@ end
 -- so the strategy doesn't flip between two that cost about the same as you move.
 local KEEP_SECS, KEEP_SHARE = 60, 0.15
 local COMMITTED = { fly = true, ride = true, hearth = true, teleport = true }
--- Yards from where a flight or ride starts beyond which it's been taken (or given up): the plan
--- made with it no longer stands.
+-- Yards farther from where a flight or ride starts than you were when it was planned, beyond which
+-- it's been taken (or given up): the plan made with it no longer stands.
 local LEFT_STOP = 200
+
+-- Whether the route's next flight or ride is behind you: you've left its continent, or you're well
+-- farther from where it starts than when the route was planned (you took it and landed elsewhere).
+-- Being far from it because you haven't got there yet doesn't count: a flight master 500 yards off
+-- stays the plan while the land map is worked out again (it is whenever a walked step or RoadLog
+-- teaches it something), instead of the route vanishing and coming back.
+local function Taken(route, nx, c, n, w)
+    if nx.from.c ~= c then return true end
+    return Dist(n, w, nx.from.n, nx.from.w) > (route.fromDist or 0) + LEFT_STOP
+end
 
 -- What the route planned before would take from where you are now: the way to where its next step
 -- starts, that step, and the rest as planned. nil when it no longer applies (another target, or
@@ -1086,7 +1221,8 @@ function R:Plan(p, last)
     local maxDrop, climb = self:MaxDrop(), ns.db.climb or 1
     local offroad = R:Offroad()
     local hereField = grid and G:Field("here", c, n, w, { speed = speed, swim = swim, safe = fall, once = once,
-        maxDrop = maxDrop, climb = climb, offroad = offroad, slack = G.MOVE }) or nil
+        maxDrop = maxDrop, climb = climb, offroad = offroad, slack = G.MOVE,
+        goal = target.c == c and { target.n, target.w } or nil }) or nil
     -- To the target: worked out toward you first (A*), so the walk from here is there early.
     local targetOpts = { speed = speed, swim = swim, safe = fall, once = once, maxDrop = maxDrop, climb = climb,
         offroad = offroad, slack = 0, reverse = true, toward = target.c == c and { n, w } or nil }
@@ -1094,10 +1230,10 @@ function R:Plan(p, last)
     G.rush = false
     if grid and ((not hereField and G:Working("here")) or (not targetField and G:Working("target"))) then
         -- The plan made before still stands while the new one is worked out, unless its next step
-        -- is behind you: a flight, ride or port you've taken (you're far from where it starts).
+        -- is behind you: a flight or ride you've taken (Taken).
         local nx = last and last.next
         if nx and COMMITTED[nx.kind] and nx.from and nx.kind ~= "hearth" and nx.kind ~= "teleport"
-            and (nx.from.c ~= c or Dist(n, w, nx.from.n, nx.from.w) > LEFT_STOP) then
+            and Taken(last, nx, c, n, w) then
             last, kept.p = nil, nil
             self.lines, self.steer = nil, nil
         end
@@ -1164,6 +1300,9 @@ function R:Plan(p, last)
                 climb = climb, offroad = offroad, slack = 0, reverse = true } or nil)
         end
         self.steer = aim and ns.db.steer and { aim = aim, point = Steer(way, c, n, w, aim) } or nil
+        -- How far its next flight or ride starts from where you are now (Taken).
+        local nx = route and route.next
+        if nx and nx.from and nx.from.c == c then route.fromDist = Dist(n, w, nx.from.n, nx.from.w) end
         return route
     end
     local direct
@@ -1228,8 +1367,19 @@ function R:Plan(p, last)
                 starts[#starts + 1] = { index = #V, secs = ItemCooldown(HEARTHSTONE) + CAST + LOAD, kind = "hearth" }
             end
         end
+        -- Astral Recall: the shaman's own hearthstone, when it's off cooldown.
+        local astral = ns.Transit and ns.Transit.astralRecall
+        if ns.db.useHearth and astral and SpellKnown(astral) and SpellReady(astral) then
+            local hp, bind = HearthPoint()
+            local v = Vertex(hp, "teleport")
+            if v then
+                v.name, v.spell = bind, astral
+                V[#V + 1] = v
+                starts[#starts + 1] = { index = #V, secs = CAST + LOAD, kind = "teleport" }
+            end
+        end
         for id, city in pairs(ns.db.useTeleports and ns.Transports.TELEPORTS or {}) do
-            if SpellKnown(id) and HasRune() and SpellUsable(id) then
+            if SpellKnown(id) and (ns.Transports.NO_RUNE[id] or HasRune()) and SpellUsable(id) and SpellReady(id) then
                 local v = Vertex(TeleportPoint(id, city), "teleport")
                 if v then
                     v.name, v.spell = city, id
@@ -1262,11 +1412,18 @@ function R:Plan(p, last)
                 elseif v == 2 and targetField then
                     cost, kind = G:Cost(targetField, a.n, a.w), "walk"
                 else
-                    local d = Dist(a.n, a.w, b.n, b.w)
-                    if a.land == b.land then
-                        cost, kind = d * F.DETOUR / speed, "walk"
-                    elseif a.shore and b.shore and swim > 0 then
-                        cost, kind = d * SWIM_DETOUR / swim, "swim"
+                    -- Between two fixed places (flight masters, docks, towns): the walk baked over the
+                    -- ground (NavGrid.lua), lifts and portals included. Else the straight line.
+                    local baked = G.PlaceWalk and PlaceOf(a) and PlaceOf(b) and G:PlaceWalk(a.c, a.place, b.place, speed, swim)
+                    if baked then
+                        cost, kind = baked, "walk"
+                    else
+                        local d = Dist(a.n, a.w, b.n, b.w)
+                        if a.land == b.land then
+                            cost, kind = d * F.DETOUR / speed, "walk"
+                        elseif a.shore and b.shore and swim > 0 then
+                            cost, kind = d * SWIM_DETOUR / swim, "swim"
+                        end
                     end
                 end
                 if cost and best + cost < dist[v] then dist[v], prev[v], how[v] = best + cost, u, kind end
@@ -1277,8 +1434,9 @@ function R:Plan(p, last)
                 end
             end
         end
-        if a.ride and best + a.rideSecs < dist[a.ride] then
-            dist[a.ride], prev[a.ride], how[a.ride] = best + a.rideSecs, u, "ride"
+        if a.ride then
+            local rs = RideCost(a, best)
+            if best + rs < dist[a.ride] then dist[a.ride], prev[a.ride], how[a.ride] = best + rs, u, "ride" end
         end
         if u == 1 then
             for _, s in ipairs(starts) do
@@ -1366,6 +1524,8 @@ function R:Plan(p, last)
     end
     if legs[1].kind == "walk" or legs[1].kind == "swim" or legs[1].kind == "drop" then route.aim = legs[1].to.point end
     if route.next.kind == "fly" then route.from, route.to = route.next.from.node, route.next.to.node end
+    -- A ride ahead whose boat's loop isn't known: ask your guild and group now, not at the dock.
+    if route.next.kind == "ride" then R:AskTimetable(route.next.from.dock.t.key) end
     -- Said in chat only when the ways you'd travel change (a flight, a ride, a hearthstone, jumps
     -- with Walk on Air or taking damage, swims), or the target does: re-planning as you go keeps
     -- coming up with slightly different versions of the same trip, and those stay quiet.
@@ -1453,7 +1613,14 @@ function R:AtText(leg)
     if leg.kind == "fly" then return "Talk to the flight master" end
     if leg.kind == "ride" then
         local t = leg.from.dock.t
-        return ("Wait for the %s to %s"):format((LABEL[t.kind] or "Ship"):lower(), t.dest)
+        local what = ("the %s to %s"):format((LABEL[t.kind] or "Ship"):lower(), t.dest)
+        local arrive, leave, unsure = self:NextBoat(t.key)
+        local about = unsure and unsure > 10 and "about " or ""
+        if arrive and arrive > 0 then return ("Wait for %s: in %s%s, leaves %s later"):format(what, about, F.Clock(arrive), F.Clock(leave - arrive)) end
+        if leave then return ("Board %s: it leaves in %s%s"):format(what, about, F.Clock(leave)) end
+        local sch = Schedule(t.key)
+        if sch then return ("Wait for %s (every %s)"):format(what, F.Clock(sch.boat.period)) end
+        return ("Wait for %s"):format(what)
     end
     if leg.kind == "swim" then
         local tip = self:FormTip(leg)
@@ -1947,6 +2114,7 @@ local function Watch()
     local d = NearestDock(c, n, w)
     if d then
         if not atDock or atDock.d.t.key ~= d.t.key then
+            R:AskTimetable(d.t.key)
             -- Back at the dock you left: still the same wait.
             atDock = { d = d, since = (trip and trip.d.t.key == d.t.key) and trip.since or now }
         end
@@ -1958,10 +2126,34 @@ local function Watch()
     end
     -- Carried away from the dock you left: you're on its ride.
     if trip and carried and not R.riding then
-        R.riding = { d = trip.d, since = trip.since, left = now, expect = R:RideSecs(trip.d.t) }
+        SawDeparture(trip.d.t.key)
+        local _, ride = R:Departure(trip.d.t.key, 0)
+        R.riding = { d = trip.d, since = trip.since, left = now, expect = ride or R:RideSecs(trip.d.t) }
         F.route = nil
         ns:Changed()
     end
+end
+
+-- Waiting at the dock of the route's next ride: a banner, the boat's sound and a flash of the
+-- game's taskbar icon ALERT_AHEAD seconds before it comes in (once a boat).
+local alerted
+local function DockAlert()
+    local nx = F.route and F.route.next
+    if not (nx and nx.kind == "ride" and atDock and atDock.d.t.key == nx.from.dock.t.key) then return end
+    local key = nx.from.dock.t.key
+    local arrive = R:NextBoat(key)
+    if not arrive or arrive <= 0 or arrive > ALERT_AHEAD then return end
+    local stamp = key .. math.floor((ServerNow() + arrive) / 10)
+    if alerted == stamp then return end
+    alerted = stamp
+    local t = nx.from.dock.t
+    local text = ("The %s to %s comes in %d seconds"):format((LABEL[t.kind] or "Ship"):lower(), t.dest, math.floor(arrive + 0.5))
+    if RaidNotice_AddMessage and RaidWarningFrame then
+        RaidNotice_AddMessage(RaidWarningFrame, text, ChatTypeInfo and ChatTypeInfo.RAID_WARNING or { r = 1, g = 0.8, b = 0.2 })
+    end
+    if PlaySound then pcall(PlaySound, SOUNDKIT and SOUNDKIT.RAID_WARNING or 8959) end
+    if FlashClientIcon then pcall(FlashClientIcon) end
+    ns:Print(text .. ".")
 end
 
 local acc = 0
@@ -1970,6 +2162,7 @@ CreateFrame("Frame"):SetScript("OnUpdate", function(_, elapsed)
     if acc < 0.5 then return end
     acc = 0
     Watch()
+    DockAlert()
 end)
 
 -- ZeppelinSigns boarded, landed or gave up a ride: catch up right away, not at the next check.
@@ -2004,6 +2197,21 @@ function R:Status()
     end
     ns:Print(("Boats, zeppelins and skyships %s: %d docks you can use, %d rides timed. /way transports on | off"):format(
         ns.db.transports and "on" or "off", count, timed))
+    -- The timetables: which routes' boats Waypoint knows the place of (Timetable.lua).
+    local known, unknown = {}, 0
+    for _, b in ipairs(ns.Transit and ns.Transit.boats or {}) do
+        local epoch, period, unsure
+        if ns.Timetable then epoch, period, unsure = ns.Timetable:Loop(b) end
+        if epoch then
+            local rec = ns.db.loops and ns.db.loops[b.name]
+            known[#known + 1] = ("%s (%d sighting%s, within %ds; loop %.1fs)"):format(b.name, rec and #rec.seen or 1,
+                rec and #rec.seen == 1 and "" or "s", math.floor(unsure + 0.5), period)
+        else
+            unknown = unknown + 1
+        end
+    end
+    ns:Print(("Timetables known: %s. %d not yet (ride one, or someone in your guild or group does)."):format(
+        #known > 0 and table.concat(known, ", ") or "none", unknown))
     local hp, bind = HearthPoint()
     if ItemCount(HEARTHSTONE) == 0 then
         ns:Print("Hearthstone: not in your bags.")

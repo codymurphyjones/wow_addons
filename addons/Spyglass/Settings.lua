@@ -70,7 +70,7 @@ end
 ---------------------------------------------------------------------------
 
 -- Built with the shared OptionsPage.lua (addons/shared). Options are paths into SpyGlassDB
--- ("db.") and the journal's SpyGlassJournalDB ("jdb.", ns.jdb = ns.J.db); /sg tab, /sgj map,
+-- ("db.") and the journal's SpyGlassJournalDB ("jdb.", ns.jdb = ns.J.db); /sg tab,
 -- /sgj minimap and the journal's own checkboxes change them through ns:SetOption, so every UI
 -- shows the same value. The journal's saved table has no defaults table, so each control here
 -- names its default.
@@ -95,9 +95,6 @@ local function Build(p)
         apply = function() ns.CharPanel:ApplyTabSetting() end })
 
     p:Header("Journal")
-    p:Check({ path = "jdb.dungeonMap", default = true, label = "Dungeon map on the map key",
-        tooltip = "Inside a dungeon SpyGlass has a map for, the map key opens SpyGlass's dungeon map instead of "
-            .. "the world map (press it again to close it). Off: the world map everywhere. /sgj map" })
     p:Check({ path = "jdb.extendUpgrades", default = false, label = "Extend upgrade search",
         tooltip = "Count upgrades up to 3 levels above yours: places and gear you'll reach soon, not only what "
             .. "you can run and wear now (also on the journal's home page).",

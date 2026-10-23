@@ -8,7 +8,7 @@ Requires **Waypoint** and **Questie**.
 
 ## The field: no window
 
-Field Guide has no window, no buttons and nothing that stays on screen. **Stand still** and the guide surfaces around your character; **move** (or get into a fight) and it lets go.
+Field Guide has no window, no buttons and nothing that stays on screen. **Stand still** and the guide surfaces around your character; **move** (or get into a fight) and it lets go. It stays away in combat and inside dungeons, raids, battlegrounds and arenas.
 
 - **Hotspots where things are.** Each place you have steps at (a quest giver, a hunting ground) is one light, in the direction it really is from you (up on the screen is the way you face, so turning turns the field), farther out the farther away it is. The field is wide and flat and stays in the top 70% of the screen, above your bars.
 - **Stillness is depth.** The longer you stay still, the more comes up: the hotspot of the step to do now, with its name; then who, where, the XP, and everything else you do at that place, in order; then the other hotspots, numbered in the order you'll get to them, and a moon for a dungeon that's due (on a dungeon's route: the way back to questing). `/fg trail` brings up every step left.

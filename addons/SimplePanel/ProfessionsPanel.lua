@@ -409,19 +409,48 @@ end
 
 -- With LinkedInn loaded, a profession you didn't open yourself is held back for a moment: LinkedInn
 -- reads professions (other players', and your own in the background) by opening them, and closes
--- each again within a second or two. One that closes in time never shows here; one still open
--- after that (a link you clicked) does. Whose profession it is can't be told at once (the game
--- marks a link as one only a moment after it opens), so what counts is whether you opened it: a
--- click in this window, or a spell you cast (your spellbook, an action bar, the game's book).
-local LINK_HOLD = 2.5
+-- each again, though a read can take several seconds (its reply, then reading the recipes). One that
+-- closes in time never shows here; one still open after that (a link you clicked) does. Whose
+-- profession it is can't be told at once (the game marks a link as one only a moment after it
+-- opens), so what counts is whether you opened it: a click in this window, or a profession's own
+-- spell you cast (your spellbook, an action bar, the game's book). Any other spell doesn't count:
+-- in a dungeon you're always casting, and a background read then showed here (and stayed).
+local LINK_HOLD = 6
 local ASKED_WITHIN = 3
 local linkSince, holdTimer
-local askedAt = -60 -- when you last opened a profession, or cast a spell
+local askedAt = -60 -- when you last opened a profession, or cast one of its spells
 
 local function YouAsked() return GetTime() - askedAt < ASKED_WITHIN end
 
+-- Your professions' spells (spell ID -> true), built again when they change.
+local professionSpells
+local function ProfessionSpell(id)
+    if not professionSpells then
+        professionSpells = {}
+        for _, p in ipairs(Professions()) do
+            for _, sp in ipairs(p.spells) do
+                if sp.spellID and not sp.passive then professionSpells[sp.spellID] = true end
+            end
+        end
+    end
+    return professionSpells[id] or false
+end
+for _, e in ipairs({ "SKILL_LINES_CHANGED", "SPELLS_CHANGED", "LEARNED_SPELL_IN_TAB" }) do
+    ns:On(e, function() professionSpells = nil end)
+end
+
+-- UNIT_SPELLCAST_SENT (unit, target, castGUID, spellID) and _SUCCEEDED (unit, castGUID, spellID):
+-- the spell is the last argument.
 for _, e in ipairs({ "UNIT_SPELLCAST_SENT", "UNIT_SPELLCAST_SUCCEEDED" }) do
-    ns:On(e, function(unit) if not Secret(unit) and unit == "player" then askedAt = GetTime() end end)
+    ns:On(e, function(unit, ...)
+        if Secret(unit) or unit ~= "player" then return end
+        local id = select(select("#", ...), ...)
+        if type(id) == "number" and not Secret(id) and ProfessionSpell(id) then askedAt = GetTime() end
+    end)
+end
+-- The game's Professions book opens one without a cast (LinkedInn's reads open links instead).
+if TS and TS.OpenTradeSkill and hooksecurefunc then
+    hooksecurefunc(TS, "OpenTradeSkill", function() askedAt = GetTime() end)
 end
 
 local function LinkedInnLoaded()

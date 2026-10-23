@@ -908,7 +908,8 @@ end
 
 -- Quest tracking: the guide tracks the quests in your log that its current and next steps are
 -- about, and untracks the others that aren't yours (quests you tracked yourself stay, and one you
--- untracked yourself isn't tracked again). Off with ns.db.manageTracking, or while paused.
+-- untracked yourself isn't tracked again; and nothing is untracked while none of the guide's
+-- quests are in your log). Off with ns.db.manageTracking, or while paused.
 local TRACK_AHEAD = 5
 function E:SyncTracking()
     if not (ns.db.manageTracking and Waypoint and Waypoint.TrackQuest and Waypoint.TrackedQuests) or ns.char.paused then return end
@@ -929,6 +930,10 @@ function E:SyncTracking()
         end
     end
     for id in pairs(want) do Waypoint:TrackQuest("FieldGuide", id) end
+    -- Nothing of the guide's in your log (a travel stretch: "Go to Desolace"): leave tracking as it
+    -- is. Untracking everything empties Questie's tracker, and Questie then hides it altogether,
+    -- header and all, so there's nothing left to click to bring it back.
+    if not next(want) then return end
     for id, by in pairs(Waypoint:TrackedQuests()) do
         if by ~= "user" and not want[id] then Waypoint:UntrackQuest("FieldGuide", id) end
     end

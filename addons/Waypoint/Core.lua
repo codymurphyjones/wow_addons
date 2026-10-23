@@ -134,6 +134,7 @@ local function Help()
     ns:Print("/way share on | off - share your path with your group")
     ns:Print("/way confirm on | off - ask before adding a waypoint")
     ns:Print("/way flights [on | off] - lead to a flight master when flying is quicker (no option: what it knows)")
+    ns:Print("/way where - which floor Waypoint has you on, where floors are stacked (a city's streets and bridges)")
     ns:Print("/way transports on | off - also plan with boats, zeppelins, skyships, your hearthstone and mage teleports")
     ns:Print("/way options - all of Waypoint's settings (Options > AddOns > Waypoint)")
     ns:Print("/way blocked - the way the arrow leads isn't there (a fence, a ledge): block it and find another; /way unblock forgets them")
@@ -200,6 +201,8 @@ SlashCmdList.WAYPOINT = function(msg)
         if ns.Settings then ns.Settings:Open() end
     elseif cmd == "flights" then
         if arg == "on" or arg == "off" then OnOff("flights", "Flight paths", arg) else ns.Flight:Status() end
+    elseif cmd == "where" then
+        ns:Print("Where Waypoint has you: " .. (ns.Grid.WhereText and ns.Grid:WhereText() or "the land map only (no walkable-ground data here)"))
     elseif cmd == "towns" and arg == "debug" then
         ns.TownPins:Debug()
     elseif cmd == "towns" then

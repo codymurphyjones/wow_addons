@@ -665,8 +665,13 @@ end
 -- Each frame
 -- ---------------------------------------------------------------------------------------------
 
+-- Instances where the guide stays out of the way: dungeons, raids, battlegrounds and arenas.
+local QUIET = { party = true, raid = true, pvp = true, arena = true }
+
 local function Still()
     if InCombatLockdown() or UnitAffectingCombat("player") then return false end
+    local inside, kind = Call(IsInInstance)
+    if inside and QUIET[kind] then return false end
     local moving = Call(IsPlayerMoving)
     if issecretvalue and issecretvalue(moving) then moving = nil end
     if moving == nil then moving = (Num(Call(GetUnitSpeed, "player")) or 0) > 0 end

@@ -19,6 +19,20 @@ on any branch, so spawns come from the open CMaNGOS classic world database):
     reaction override the database's where Wowhead lists the NPC.
 
 Packs: spawns per floor, single-linkage clustered (3 map units); bosses alone.
+Floors: each spawn's candidate floors (the UiMapAssignment rectangles it stands in) are scored
+where it lands on each: how brightly that floor's art is drawn there, plus a bonus inside the
+floor's height range; neighbours choose together unless a spawn's own art clearly disagrees. A
+pack left on undrawn ground is marked unsure (check = 1) and listed in pulls_review.txt.
+Linked packs (link = n: the same n in an instance aggro together): CMaNGOS's creature_linking
+(aggro and follow flags), creature_linking_template (each spawn to its nearest master) and
+spawn groups that aggro together or move in formation.
+Patrols (path = { x1, y1, x2, y2, ... } on the pack's floor): waypoint movement from
+creature_movement (by spawn), creature_movement_template (by NPC) and formations' waypoint_path.
+Seen in game (seen = players): pulls players recorded in dungeons (SpyGlass's dungeon watch,
+Journal/DungeonWatch.lua), from Data/contributed.json (ingest_contrib.py); a recorded pull that
+took in several packs links them.
+Map art: read from the game's own files when the client has them (tools/_shared/casc.py), else
+downloaded from wago.tools.
 Pictures: the 1002x668 map art scaled to 768x512 in the top-left of a 1024x512
 DXT1 BLP2 with mipmaps (w/h in PullData give the used region).
 
@@ -49,6 +63,8 @@ ADDON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abs
 OUT = os.path.join(ADDON, "Journal", "PullData.lua")
 MEDIA = os.path.join(ADDON, "Media", "Pulls")
 ZONE_ART = os.path.join(ADDON, "Journal", "ZoneArt.lua")
+CONTRIB = os.path.join(ADDON, "Data", "contributed.json")
+REVIEW = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pulls_review.txt")
 CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".wowhead_cache")
 WOWHEAD = "https://www.wowhead.com/forever/"
 CLASSIC_BUILD = "1.15.9.70003"  # classic era: only its Map table is complete on wago
@@ -56,6 +72,14 @@ CASC = "https://wago.tools/api/casc/%d"
 PACE = (1.5, 3.0)   # seconds between Wowhead requests
 FILE_PACE = 0.4     # between wago / GitHub downloads
 LINK = 3.0          # pack clustering distance, map units (0-100)
+UNDRAWN = -0.5      # a floor's art this dim (standard deviations) is parchment or another floor's ghost
+HEIGHT_BONUS = 1.0  # a candidate floor whose height range holds the spawn
+OWN_ART = 1.5       # a spawn leaves its neighbours' floor when its own art there is this much brighter
+SIGHTED_BONUS = 3.0 # a floor players saw the NPC on in game (Journal/DungeonWatch.lua) wins
+AGGRO_LINK = 0x1 | 0x2 | 0x400   # creature_linking flags: aggro on aggro (both ways), follow
+GROUP_AGGRO = 0x1   # spawn_group flags: aggro together
+PATH_STEP, PATH_POINTS = 0.8, 40   # a patrol's points: this far apart at least (map units), this many at most
+SEEN_REACH = 12.0   # a recorded pull's packs: within this of where the player stood (map units)
 TEX_W, TEX_H = 1024, 512
 USED_W, USED_H = 768, 512   # the 1002x668 art keeps its 3:2 shape
 ART_W, ART_H = 1002, 668
@@ -114,11 +138,32 @@ def instance_keys():
     return re.findall(r'\["([^"]+)"\]\s*=', block[:block.index("}")])
 
 
+def shipped_instances():
+    """{ key: (area, [boss npcIDs]) } from SpyGlass's own Data/Loot.lua (build_loot.py, itself
+    from AtlasLoot): the same keys, zones and bosses, for when AtlasLootClassic isn't installed."""
+    path = os.path.join(ADDON, "Data", "Loot.lua")
+    out, cur = {}, None
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            m = re.match(r'\{ key = "([^"]+)",.*?\bareaID = (\d+)', line)
+            if m:
+                cur = out.setdefault(m.group(1), (int(m.group(2)), []))
+                continue
+            if line.startswith("{ key ="):
+                cur = None
+                continue
+            m = re.search(r"npcIDs = \{ ([\d, ]+) \}", line)
+            if m and cur is not None:
+                cur[1].extend(int(x) for x in m.group(1).split(","))
+    return out
+
+
 def atlas_instances():
-    """{ key: (area, [boss npcIDs]) } from AtlasLootClassic."""
+    """{ key: (area, [boss npcIDs]) } from AtlasLootClassic, else SpyGlass's own copy of it."""
     path = paths.atlasloot_data()
     if not path:
-        raise SystemExit("AtlasLootClassic_DungeonsAndRaids/data.lua not found")
+        print("  (AtlasLootClassic isn't installed: zones and bosses from SpyGlass's Data/Loot.lua)")
+        return shipped_instances()
     text = open(path, encoding="utf-8").read()
     heads = list(re.finditer(r'^data\["([^"]+)"\]\s*=\s*\{', text, re.M))
     out = {}
@@ -185,6 +230,98 @@ def world_db(fetcher, maps):
     return spawns, templates
 
 
+def dist3(a, b):
+    return ((a["position_x"] - b["position_x"]) ** 2 + (a["position_y"] - b["position_y"]) ** 2
+            + (a["position_z"] - b["position_z"]) ** 2) ** 0.5
+
+
+def world_behaviour(fetcher, spawns):
+    """What the server does with the spawns: links [(guid, guid)] between spawns that aggro
+    together, and patrols { guid: [(x, y, z), ...] } for spawns that walk a path."""
+    text = sqldump.cmangos(fetcher)
+    by_guid = {s["guid"]: s for s in spawns}
+    links = []
+    for guid, master, flag in sql_rows(text, "creature_linking"):
+        if flag & AGGRO_LINK and guid in by_guid and master in by_guid:
+            links.append((guid, master))
+    by_entry = {}
+    for s in spawns:
+        by_entry.setdefault((s["map"], s["id"]), []).append(s)
+    for entry, mapid, master_entry, flag, rng in sql_rows(text, "creature_linking_template"):
+        if not flag & AGGRO_LINK:
+            continue
+        masters = by_entry.get((mapid, master_entry), [])
+        for sp in by_entry.get((mapid, entry), []):
+            best = min((m for m in masters if m is not sp), key=lambda m: dist3(sp, m), default=None)
+            if best and (not rng or dist3(sp, best) <= rng):
+                links.append((sp["guid"], best["guid"]))
+    groups = {r[0]: r for r in sql_rows(text, "spawn_group") if r[2] == 0}
+    formations = {r[0]: r for r in sql_rows(text, "spawn_group_formation")}
+    members = {}
+    for gid, guid, _slot, _chance in sql_rows(text, "spawn_group_spawn"):
+        if gid in groups and guid in by_guid:
+            members.setdefault(gid, []).append(guid)
+    for gid, guids in members.items():
+        if groups[gid][6] & GROUP_AGGRO or gid in formations:
+            links += [(guids[0], g) for g in guids[1:]]
+    own, tmpl, wp = {}, {}, {}
+    for r in sql_rows(text, "creature_movement"):
+        if r[0] in by_guid:
+            own.setdefault(r[0], []).append((r[1], r[2], r[3], r[4]))
+    for r in sql_rows(text, "creature_movement_template"):
+        if r[1] == 0:
+            tmpl.setdefault(r[0], []).append((r[2], r[3], r[4], r[5]))
+    for r in sql_rows(text, "waypoint_path"):
+        wp.setdefault(r[0], []).append((r[1], r[2], r[3], r[4]))
+    paths = {}
+    for sp in spawns:
+        if sp.get("MovementType") == 2:
+            pts = own.get(sp["guid"]) or tmpl.get(sp["id"])
+            if pts:
+                paths[sp["guid"]] = [(x, y, z) for _, x, y, z in sorted(pts)]
+    for gid, guids in members.items():
+        f = formations.get(gid)
+        if f and f[4] and f[4] in wp:
+            paths.setdefault(sorted(guids)[0], [(x, y, z) for _, x, y, z in sorted(wp[f[4]])])
+    return links, paths
+
+
+def observed_pulls():
+    """Pulls players recorded in dungeons (ingest_contrib.py's Data/contributed.json):
+    [ { i: instance map ID, m: uiMap, npcs: [ids], x, y (0-100 or null), n: players } ]."""
+    try:
+        import json
+        with open(CONTRIB, encoding="utf-8") as f:
+            return json.load(f).get("pulls") or []
+    except (OSError, ValueError):
+        return []
+
+
+def sightings():
+    """{ (uiMap, npc) } players saw in game (ingest_contrib.py's "sightings": { uiMap: { npc: players } })."""
+    try:
+        import json
+        with open(CONTRIB, encoding="utf-8") as f:
+            data = json.load(f).get("sightings") or {}
+    except (OSError, ValueError):
+        return set()
+    return {(int(u), int(n)) for u, npcs in data.items() for n in npcs}
+
+
+SIGHTED = set()  # filled by main: (uiMap, npc) seen in game, which settles a spawn's floor
+
+
+def simplify(points):
+    """A patrol's points on its floor: drop ones closer than PATH_STEP, keep at most PATH_POINTS."""
+    out = []
+    for q in points:
+        if not out or (q[0] - out[-1][0]) ** 2 + (q[1] - out[-1][1]) ** 2 >= PATH_STEP * PATH_STEP:
+            out.append(q)
+    if len(out) > PATH_POINTS:
+        out = [out[round(i * (len(out) - 1) / (PATH_POINTS - 1))] for i in range(PATH_POINTS)]
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Floors
 # ---------------------------------------------------------------------------
@@ -235,10 +372,11 @@ class Floors:
         return [a for rows in self.assign.values() for a in rows if a["uimap"] == u]
 
     def candidates(self, mapid, x, y, z, allowed):
-        """{ uiMap: (u, v) 0-100 } for every floor whose rectangle (and height range) holds the
-        position. The game picks among them by the WMO group the player stands in, which a
-        spawn doesn't record, so several floors can qualify (see pick_floors)."""
-        out, near = {}, {}
+        """{ uiMap: (u, v, inHeight) } (u, v 0-100) for every floor whose rectangle holds the
+        position; inHeight: its height range does too. The game picks among them by the WMO
+        group the player stands in, which a spawn doesn't record, so several floors can
+        qualify (see pick_floors)."""
+        out = {}
         for a in self.assign.get(mapid, []):
             if a["uimap"] not in allowed:
                 continue
@@ -249,8 +387,24 @@ class Floors:
             v = a["UiMin_1"] + (a["Region_3"] - x) / (a["Region_3"] - a["Region_0"]) * (a["UiMax_1"] - a["UiMin_1"])
             if not (0 <= u <= 1 and 0 <= v <= 1):
                 continue
-            (out if z0 <= z <= z1 else near)[a["uimap"]] = (u * 100, v * 100)
-        return out or near
+            inside = z0 <= z <= z1
+            if a["uimap"] not in out or (inside and not out[a["uimap"]][2]):
+                out[a["uimap"]] = (u * 100, v * 100, inside)
+        return out
+
+    def project(self, mapid, u, x, y):
+        """A world point on floor u's map (0-100, past its edges too), or None: through the
+        assignment rectangle that holds it, else the floor's largest."""
+        rows = [a for a in self.assign.get(mapid, []) if a["uimap"] == u]
+        if not rows:
+            return None
+        inside = [a for a in rows if a["Region_0"] <= x <= a["Region_3"] and a["Region_1"] <= y <= a["Region_4"]]
+        a = (inside or sorted(rows, key=lambda r: -(r["UiMax_0"] - r["UiMin_0"]) * (r["UiMax_1"] - r["UiMin_1"])))[0]
+        if a["Region_4"] == a["Region_1"] or a["Region_3"] == a["Region_0"]:
+            return None
+        uu = a["UiMin_0"] + (a["Region_4"] - y) / (a["Region_4"] - a["Region_1"]) * (a["UiMax_0"] - a["UiMin_0"])
+        vv = a["UiMin_1"] + (a["Region_3"] - x) / (a["Region_3"] - a["Region_0"]) * (a["UiMax_1"] - a["UiMin_1"])
+        return uu * 100, vv * 100
 
     def world_rect(self, u):
         """World X at the map's top and bottom edge, world Y at its left and right edge."""
@@ -268,6 +422,18 @@ class Floors:
 # ---------------------------------------------------------------------------
 
 ARTS = {}
+LOCAL = []  # the game's local storage (casc.py), once opened; [None] when it can't be
+
+
+def local_file(fdid):
+    if not LOCAL:
+        try:
+            import casc
+            LOCAL.append(casc.Casc.open())
+        except Exception as e:  # noqa: BLE001 (any reason: no client here, another layout)
+            print("  (the game's own files can't be read: %s; downloading the map art)" % e)
+            LOCAL.append(None)
+    return LOCAL[0].read(fdid) if LOCAL[0] else None
 
 
 def floor_art(fetcher, floors, u):
@@ -277,7 +443,7 @@ def floor_art(fetcher, floors, u):
     tiles = floors.tiles.get(floors.art.get(u)) or []
     canvas = Image.new("RGB", (1024, 768))
     for row, col, fdid in tiles:
-        data = fetcher.get(CASC % fdid, binary=True, name="casc-%d.blp" % fdid)
+        data = local_file(fdid) or fetcher.get(CASC % fdid, binary=True, name="casc-%d.blp" % fdid)
         if not data:
             tiles = None
             break
@@ -313,15 +479,32 @@ def lit(fetcher, floors, u):
     return LIT[u]
 
 
+def drawn_at(fetcher, floors, u, x, y):
+    """How brightly floor u's art is drawn at (x, y) 0-100 (lit), or -9 without art."""
+    m = lit(fetcher, floors, u)
+    if m is None:
+        return -9.0
+    return float(m[max(0, min(ART_H - 1, int(y / 100 * ART_H))), max(0, min(ART_W - 1, int(x / 100 * ART_W)))])
+
+
 def pick_floors(fetcher, floors, pts):
-    """pts: [(spawn, { uiMap: (u, v) })]. Spawns standing over several floors are grouped
-    with their neighbours (20 yards across, 6 up or down) and each group goes to the
-    floor whose art is lit brightest under it. Returns [(uiMap, u, v, npc)]."""
+    """pts: [(spawn, { uiMap: (u, v, inHeight) })]. Each candidate floor is scored where the
+    spawn lands on it: its art's brightness there (lit), plus HEIGHT_BONUS inside its height
+    range, plus SIGHTED_BONUS where players saw the NPC in game. Spawns over several floors choose together with their neighbours (20 yards across,
+    6 up or down), unless a spawn's own art is clearly brighter on another floor (OWN_ART).
+    Returns [(uiMap, u, v, npc, spawn, unsure)]: unsure when the floor's art there is undrawn."""
     out, open_ = [], []
+
+    def score(u, c, npc):
+        return drawn_at(fetcher, floors, u, c[0], c[1]) + (HEIGHT_BONUS if c[2] else 0.0) +             (SIGHTED_BONUS if (u, npc) in SIGHTED else 0.0)
+
+    def unsure(u, c, npc):
+        return (u, npc) not in SIGHTED and drawn_at(fetcher, floors, u, c[0], c[1]) < UNDRAWN
+
     for s, cands in pts:
         if len(cands) == 1:
-            (u, (x, y)), = cands.items()
-            out.append((u, x, y, s["id"]))
+            (u, c), = cands.items()
+            out.append((u, c[0], c[1], s["id"], s, unsure(u, c, s["id"])))
         else:
             open_.append((s, cands))
     n = len(open_)
@@ -344,19 +527,18 @@ def pick_floors(fetcher, floors, pts):
     for i in range(n):
         groups.setdefault(find(i), []).append(open_[i])
     for members in groups.values():
-        score = {}
+        total = {}
         for s, cands in members:
-            for u, (x, y) in cands.items():
-                m = lit(fetcher, floors, u)
-                v = -9.0 if m is None else float(m[min(ART_H - 1, int(y / 100 * ART_H)), min(ART_W - 1, int(x / 100 * ART_W))])
-                score[u] = score.get(u, 0.0) + v
-        best = max(score, key=lambda u: (score[u], -u))
+            for u, c in cands.items():
+                total[u] = total.get(u, 0.0) + score(u, c, s["id"])
         for s, cands in members:
-            if best in cands:
-                out.append((best, cands[best][0], cands[best][1], s["id"]))
-            else:
-                u = max(cands, key=lambda u: score.get(u, -1e9))
-                out.append((u, cands[u][0], cands[u][1], s["id"]))
+            own = {u: score(u, c, s["id"]) for u, c in cands.items()}
+            best = max(cands, key=lambda u: (total.get(u, -1e9), own[u], -u))
+            mine = max(cands, key=lambda u: (own[u], -u))
+            if own[mine] - own[best] > OWN_ART:
+                best = mine
+            c = cands[best]
+            out.append((best, c[0], c[1], s["id"], s, unsure(best, c, s["id"])))
     return out
 
 
@@ -461,6 +643,47 @@ def clusters(points):
     return list(groups.values())
 
 
+def link_packs(packs, links, observed, mapid):
+    """Gives packs that aggro together the same link number (only groups of two or more), and
+    marks packs players recorded pulling (seen = players). packs: [(floor, x, y, mobs, boss, extra)]."""
+    parent = list(range(len(packs)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    of = {}
+    for i, q in enumerate(packs):
+        for g in q[5]["guids"]:
+            of[g] = i
+    for a, b in links:
+        if a in of and b in of:
+            parent[find(of[a])] = find(of[b])
+    # Pulls recorded in game: the packs near where the player stood, holding the NPCs that came.
+    for ob in observed:
+        if ob.get("i") != mapid or ob.get("x") is None:
+            continue
+        want = set(ob.get("npcs") or [])
+        near = [i for i, q in enumerate(packs) if q[5]["uiMap"] == ob.get("m")
+                and (q[1] - ob["x"]) ** 2 + (q[2] - ob["y"]) ** 2 <= SEEN_REACH ** 2
+                and want & {m for m, _ in q[3]}]
+        for i in near:
+            packs[i][5]["seen"] = packs[i][5].get("seen", 0) + int(ob.get("n") or 1)
+        for i in near[1:]:
+            parent[find(i)] = find(near[0])
+    roots = {}
+    for i in range(len(packs)):
+        roots.setdefault(find(i), []).append(i)
+    n = 0
+    for members in sorted(roots.values()):
+        if len(members) > 1:
+            n += 1
+            for i in members:
+                packs[i][5]["link"] = n
+
+
 def hostile_factions(fetcher):
     """Faction templates players can fight: hostile or neutral, i.e. not friendly to players
     and not aligned with the Alliance or the Horde (city guards and the like). Many
@@ -508,6 +731,13 @@ def main():
             by_map.setdefault(INSTANCE_MAP[atlas[k][0]], []).append(k)
     spawns, templates = world_db(fetcher, set(by_map))
     print("%d spawns in %d instances" % (len(spawns), len(by_map)))
+    links, patrols = world_behaviour(fetcher, spawns)
+    print("%d aggro links, %d patrols" % (len(links), len(patrols)))
+    observed = observed_pulls()
+    SIGHTED.update(sightings())
+    if observed or SIGHTED:
+        print("%d pulls, %d NPC sightings recorded in game (Data/contributed.json)" % (len(observed), len(SIGHTED)))
+    review = []
 
     wh = {}
     for k in keys:
@@ -540,8 +770,8 @@ def main():
                 skipped += 1
                 continue
             placed.append((s, cands))
-        for u, x, y, nid in pick_floors(fetcher, floors, placed):
-            pts[u].append((x, y, nid))
+        for u, x, y, nid, sp, unsure in pick_floors(fetcher, floors, placed):
+            pts[u].append((x, y, nid, sp, unsure))
 
         # Floors -> wings (shared instances): by where each wing's bosses stand.
         owner = {}
@@ -550,7 +780,7 @@ def main():
                 owner[u] = mkeys[0]
                 continue
             votes = {}
-            for x, y, nid in pts[u]:
+            for x, y, nid, *_ in pts[u]:
                 if nid in boss_of:
                     votes[boss_of[nid]] = votes.get(boss_of[nid], 0) + 1
             fname = floors.floor_name(u)
@@ -578,13 +808,31 @@ def main():
                 packs = [(g, None) for g in clusters(trash)] + [([b], b[2]) for b in bosses]
                 for g, boss in packs:
                     counts = {}
-                    for p in g:
-                        counts[p[2]] = counts.get(p[2], 0) + 1
-                        npcs[p[2]] = npc_row(templates[p[2]], listed.get(p[2]), p[2] in boss_of)
-                    entry["packs"].append((n, sum(p[0] for p in g) / len(g), sum(p[1] for p in g) / len(g),
-                                           sorted(counts.items(), key=lambda c: (-c[1], c[0])), boss))
-            entry["packs"].sort(key=lambda p: (p[0], round(p[2], 1), round(p[1], 1), p[3]))
-            seen = {p[2] for f in kfloors for p in pts[f]}
+                    for q in g:
+                        counts[q[2]] = counts.get(q[2], 0) + 1
+                        npcs[q[2]] = npc_row(templates[q[2]], listed.get(q[2]), q[2] in boss_of)
+                    extra = {"guids": [q[3]["guid"] for q in g], "uiMap": u}
+                    if all(q[4] for q in g):
+                        extra["check"] = True
+                    # A patrol: the first of the pack's spawns that walks a path, on this floor.
+                    for q in g:
+                        way = patrols.get(q[3]["guid"])
+                        if way:
+                            on = [floors.project(mapid, u, wx, wy) for wx, wy, _ in way]
+                            on = [c for c in on if c and -2 <= c[0] <= 102 and -2 <= c[1] <= 102]
+                            on = simplify(on)
+                            if len(on) >= 2:
+                                extra["path"] = on
+                                break
+                    entry["packs"].append((n, sum(q[0] for q in g) / len(g), sum(q[1] for q in g) / len(g),
+                                           sorted(counts.items(), key=lambda c: (-c[1], c[0])), boss, extra))
+            entry["packs"].sort(key=lambda q: (q[0], round(q[2], 1), round(q[1], 1), q[3]))
+            link_packs(entry["packs"], links, observed, mapid)
+            for q in entry["packs"]:
+                if q[5].get("check"):
+                    review.append("%s floor %d at %.1f, %.1f: %s" % (k, q[0], q[1], q[2], ", ".join(
+                        "%dx %s" % (c, npcs[m][0]) for m, c in q[3])))
+            seen = {q[2] for f in kfloors for q in pts[f]}
             lost = [b for b in atlas[k][1] if b not in seen]
             if lost:
                 report.append("%s: bosses without a spawn (scripted/summoned): %s" % (k, lost))
@@ -592,6 +840,15 @@ def main():
             print("%-28s %d floors, %d packs (%d skipped spawns in map)" % (k, len(kfloors), len(entry["packs"]), skipped))
 
     write(out, npcs)
+    with open(REVIEW, "w", encoding="utf-8", newline="\n") as f:
+        f.write("Packs on undrawn ground on every floor they could be on (check = 1): their floor or\n"
+                "position is a guess. Look at each in game (SpyGlass's dungeon map) and note what's wrong.\n\n")
+        f.write("\n".join(review) + "\n")
+    print("%d packs to check: %s" % (len(review), REVIEW))
+    print("%d linked groups, %d patrols, %d packs seen in game" % (
+        sum(len({q[5]["link"] for q in e["packs"] if q[5].get("link")}) for e in out.values()),
+        sum(1 for e in out.values() for q in e["packs"] if q[5].get("path")),
+        sum(1 for e in out.values() for q in e["packs"] if q[5].get("seen"))))
     print("wrote Journal/PullData.lua: %d instances, %d packs, %d NPCs, %d floors, images %.1f MB"
           % (len(out), sum(len(e["packs"]) for e in out.values()), len(npcs),
              sum(len(e["floors"]) for e in out.values()), total_bytes / 1048576.0))
@@ -630,7 +887,10 @@ def write(out, npcs):
         "-- instances[key]: name (GetInstanceInfo), instanceID (Map.db), area (zone ID), uiMap (floor uiMapIDs);",
         "--   floors[i]: file (Media\\Pulls\\<file>.blp, 1024x512; the map fills w x h from the top left),",
         "--     name, uiMap, subzones, world = { X at top edge, Y at left edge, X at bottom edge, Y at right edge }",
-        "--   packs[i] = { floor, x, y (0-100 map coordinates), { {npcID, count}, ... }, boss = npcID }",
+        "--   packs[i] = { floor, x, y (0-100 map coordinates), { {npcID, count}, ... }, boss = npcID,",
+        "--     link = n (packs of an instance with the same n aggro together), path = { x1, y1, x2, y2, ... }",
+        "--     (its patrol on the floor), seen = players who recorded pulling it, check = 1 (on undrawn",
+        "--     ground on every floor it could be on: a guess, tools/Spyglass/pulls_review.txt) }",
         "ns.PullData = {",
         "  npcs = {",
     ]
@@ -650,9 +910,18 @@ def write(out, npcs):
                         ", ".join(lua_str(s) for s in f["subzones"]), ", ".join(fmt(v) for v in f["world"])))
         L.append("      },")
         L.append("      packs = {")
-        for floor, x, y, mobs, boss in e["packs"]:
+        for floor, x, y, mobs, boss, extra in e["packs"]:
             ms = ", ".join("{ %d, %d }" % m for m in mobs)
-            L.append("        { %d, %s, %s, { %s }%s }," % (floor, fmt(x), fmt(y), ms, ", boss = %d" % boss if boss else ""))
+            more = ", boss = %d" % boss if boss else ""
+            if extra.get("link"):
+                more += ", link = %d" % extra["link"]
+            if extra.get("path"):
+                more += ", path = { %s }" % ", ".join("%s, %s" % (fmt(px), fmt(py)) for px, py in extra["path"])
+            if extra.get("seen"):
+                more += ", seen = %d" % extra["seen"]
+            if extra.get("check"):
+                more += ", check = 1"
+            L.append("        { %d, %s, %s, { %s }%s }," % (floor, fmt(x), fmt(y), ms, more))
         L.append("      },")
         L.append("    },")
     L += ["  },", "}", ""]

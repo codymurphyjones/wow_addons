@@ -1,7 +1,8 @@
 local ADDON, ns = ...
 
 -- The journal's Pulls tab: plan a dungeon pull by pull on its map. Click a pack to put it in the
--- selected pull (click again to take it out), right-click to cycle a raid mark on it. Plans are
+-- selected pull with the packs that aggro with it (click again to take one out; Shift-click adds it
+-- alone), right-click to cycle a raid mark on it. Plans are
 -- saved per dungeon. In a group, the host's plan (Group.lua) is shared with everyone running
 -- SpyGlass and updates live as the host edits it; anyone can switch back to their own plan.
 local P = {}
@@ -103,7 +104,7 @@ G:On("PLAN", function(payload, sender)
     if not key then return end
     P.shared[key], P.sharedFrom = plan, sender
     P:Refresh()
-    M:RefreshWindow()
+    ns.Maps:Refresh()
 end)
 
 G:Listen(function(event)
@@ -114,7 +115,7 @@ G:Listen(function(event)
         if event == "host" and not G:IsHost() then wipe(P.shared) end
     end
     P:Refresh()
-    M:RefreshWindow()
+    ns.Maps:Refresh()
 end)
 
 -- ---------------------------------------------------------------------------
@@ -132,7 +133,7 @@ end
 local function Edited(key)
     P:Share(key)
     P:Refresh()
-    M:RefreshWindow()
+    ns.Maps:Refresh()
 end
 
 local function OnPackClick(index, button)
@@ -156,6 +157,18 @@ local function OnPackClick(index, button)
     local sel = page.selected or #plan.pulls
     plan.pulls[sel] = plan.pulls[sel] or { packs = {} }
     table.insert(plan.pulls[sel].packs, index)
+    -- Packs that aggro with it come along (those in no pull yet); Shift-click adds it alone.
+    local d = M:Data(key)
+    local link = d and d.packs[index] and d.packs[index].link
+    if link and not IsShiftKeyDown() then
+        local taken = {}
+        for _, pull in ipairs(plan.pulls) do
+            for _, idx in ipairs(pull.packs) do taken[idx] = true end
+        end
+        for i, pack in ipairs(d.packs) do
+            if pack.link == link and not taken[i] then table.insert(plan.pulls[sel].packs, i) end
+        end
+    end
     Edited(key)
 end
 
@@ -194,9 +207,10 @@ function P:Build(parent)
     holder:SetPoint("TOPLEFT", 0, -30); holder:SetPoint("BOTTOMRIGHT", -282, 0)
     page.canvas = M:CreateCanvas(holder, {
         onPackClick = OnPackClick,
-        onPackEnter = function(_, tip)
+        onPackEnter = function(index, tip)
             if Editable() then
                 tip:AddLine("Click: add to / remove from the selected pull", 0.6, 0.6, 0.6)
+                if M:Data(ns.J.db.pullInst).packs[index].link then tip:AddLine("Shift-click: add it without its linked packs", 0.6, 0.6, 0.6) end
                 tip:AddLine("Right-click: raid mark", 0.6, 0.6, 0.6)
             end
         end,
@@ -214,7 +228,7 @@ function P:Build(parent)
     if page.follow.text then page.follow.text:SetText("Show the host's plan") end
     page.follow:SetScript("OnClick", function(self)
         ns.J.db.followHost = self:GetChecked() and true or false
-        P:Refresh(); M:RefreshWindow()
+        P:Refresh(); ns.Maps:Refresh()
     end)
 
     page.pulls = {}

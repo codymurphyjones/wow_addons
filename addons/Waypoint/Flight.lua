@@ -60,7 +60,12 @@ local function Node(name)
     local cached = nodeCache[name]
     if cached then return cached end
     local rec = DB().nodes[name]
-    if not (rec and rec.m and rec.x and rec.y) then return nil end
+    if not (rec and rec.m and rec.x and rec.y) then
+        -- Not seen yet: where the game's tables put it (Data\Transit.lua).
+        local tn = ns.Transit and ns.Transit.nodes[name]
+        if not (tn and tn[4] ~= 0) then return nil end
+        rec = { m = tn[4], x = tn[5], y = tn[6] }
+    end
     local point = { mapID = rec.m, x = rec.x, y = rec.y, label = name }
     local c, n, w = ns.Nav:World(point)
     if not c then return nil end
@@ -86,6 +91,7 @@ end
 -- joined flight points (union-find); any two in one group can be flown between. Only flight
 -- points a map listed get in, so undiscovered ones never do, whatever the client says.
 local groups -- name -> group id, rebuilt when a map or a flight adds to Reach() (nil: rebuild)
+local ways = {} -- "a>b" -> the hops between them (HopWay), forgotten with groups
 
 local function Groups()
     if groups then return groups end
@@ -182,11 +188,86 @@ local function SecondsPerYard()
     return spy
 end
 
--- How long a flight takes, and whether that's timed (true) or estimated.
+-- The network's hops (Data\Transit.lua): from -> { { from, to, yards, route { n, w, ... } } }.
+local hopsFrom
+local function Hops()
+    if hopsFrom then return hopsFrom end
+    hopsFrom = {}
+    for _, h in ipairs(ns.Transit and ns.Transit.hops or {}) do
+        hopsFrom[h[1]] = hopsFrom[h[1]] or {}
+        table.insert(hopsFrom[h[1]], h)
+    end
+    return hopsFrom
+end
+
+-- A flight from a to b as the game flies it: hop by hop, through flight points of the network you
+-- have (Groups), the shortest way. { hops = { hop, ... }, yards } or nil (the tables have none).
+local function HopWay(a, b)
+    local key = a .. ">" .. b
+    local c = ways[key]
+    if c ~= nil then return c or nil end
+    local g = Groups()
+    local dist, prev, done = { [a] = 0 }, {}, {}
+    while true do
+        local u, best
+        for k, d in pairs(dist) do
+            if not done[k] and (not best or d < best) then u, best = k, d end
+        end
+        if not u or u == b then break end
+        done[u] = true
+        for _, h in ipairs(Hops()[u] or {}) do
+            local v = h[2]
+            if (v == b or g[v] ~= nil) and not done[v] and (not dist[v] or best + h[3] < dist[v]) then
+                dist[v], prev[v] = best + h[3], h
+            end
+        end
+    end
+    if not dist[b] then
+        ways[key] = false
+        return nil
+    end
+    local hops, x = {}, b
+    while x ~= a do
+        local h = prev[x]
+        table.insert(hops, 1, h)
+        x = h[1]
+    end
+    local way = { hops = hops, yards = dist[b] }
+    ways[key] = way
+    return way
+end
+
+-- How long a flight takes, and whether that's timed (true) or estimated: the time you took last,
+-- else hop by hop along the game's routes (Data\Transit.lua's times fitted to timed flights), else
+-- the straight line at the seconds per yard of the flights you've timed.
 function F:FlightTime(a, b)
     local t = DB().times[a.name .. ">" .. b.name]
     if t then return t, true end
+    local way = HopWay(a.name, b.name)
+    local fl = ns.Transit and ns.Transit.flight
+    if way and fl then return fl.base + way.yards * fl.perYard + #way.hops * fl.perHop, false end
     return Dist(a.n, a.w, b.n, b.w) * SecondsPerYard(), false
+end
+
+-- Where a flight from a to b goes through the air: { north, west, ... } along its hops, or nil.
+function F:FlightRoute(a, b)
+    local way = HopWay(a.name, b.name)
+    if not way then return nil end
+    local pts = {}
+    for _, h in ipairs(way.hops) do
+        local r = h[4]
+        for i = 1, #r do pts[#pts + 1] = r[i] end
+    end
+    return pts
+end
+
+-- The flight points a flight from a to b stops over at (not a or b), in order: { name, ... }.
+function F:FlightStops(a, b)
+    local way = HopWay(a.name, b.name)
+    if not way then return nil end
+    local out = {}
+    for i = 1, #way.hops - 1 do out[#out + 1] = way.hops[i][2] end
+    return out
 end
 
 -- "3m 05s" (the shared Format.lua)
@@ -297,7 +378,7 @@ local function Learn()
         end
     end
     -- What this flight master's map offers, now: it replaces what the last visit saw.
-    if here then Reach()[here] = offered; groups = nil end
+    if here then Reach()[here] = offered; groups, ways = nil, {} end
     spy = nil
     local after = 0
     for _ in pairs(Known()) do after = after + 1 end
@@ -649,7 +730,7 @@ local function Watch()
         if flying.from and flying.to and not Retired(flying.from) and not Retired(flying.to) then
             Reach()[flying.from] = Reach()[flying.from] or {}
             Reach()[flying.from][flying.to] = true
-            groups = nil
+            groups, ways = nil, {}
         end
         if flying.to then
             SetExact(flying.to)

@@ -8,12 +8,12 @@ ns.J = J
 
 J.FRAME_W, J.FRAME_H = 900, 600
 J.TITLE_FONT = "Fonts\\MORPHEUS.TTF"
-J.TABS = { "Dungeons", "Raids", "World", "Professions", "Pulls", "Scrapbook" }
+J.TABS = { "Dungeons", "Raids", "World", "Professions", "Maps", "Pulls", "Scrapbook" }
 -- What each tab shows: instances of that kind (AtlasData's inst.kind), or the
--- Professions, Pull Planner (Pulls.lua) or Scrapbook (Scrapbook.lua) page.
-J.TAB_KINDS = { "dungeon", "raid", "world", "professions", "pulls", "scrapbook" }
+-- Professions, dungeon Maps (Maps.lua), Pull Planner (Pulls.lua) or Scrapbook (Scrapbook.lua) page.
+J.TAB_KINDS = { "dungeon", "raid", "world", "professions", "maps", "pulls", "scrapbook" }
 -- Tabs with a page of their own instead of instance tiles: kind -> module.
-local PAGES = { professions = "Professions", pulls = "Pulls", scrapbook = "Scrapbook" }
+local PAGES = { professions = "Professions", maps = "Maps", pulls = "Pulls", scrapbook = "Scrapbook" }
 
 function J.TabKind()
     return J.TAB_KINDS[J.db and J.db.tab or 1] or "dungeon"
@@ -181,7 +181,7 @@ local function BuildCrumbs()
     bar.parts[1].text:SetText(HOME or "Home")
     bar.parts[1]:SetScript("OnClick", function() J:ShowHome() end)
     bar.parts[2]:SetScript("OnClick", function()
-        if J.TabKind() == "pulls" or J.TabKind() == "scrapbook" then
+        if J.TabKind() == "maps" or J.TabKind() == "pulls" or J.TabKind() == "scrapbook" then
             J:Refresh(true)
         elseif J.TabKind() == "professions" then
             J.state.profView = nil
@@ -199,7 +199,7 @@ function J:UpdateCrumbs()
     if J.TabKind() == "professions" then
         local prof, view = ns.Professions:Crumbs()
         labels = { HOME or "Home", prof, view }
-    elseif J.TabKind() == "pulls" or J.TabKind() == "scrapbook" then
+    elseif J.TabKind() == "maps" or J.TabKind() == "pulls" or J.TabKind() == "scrapbook" then
         local a, b = ns[PAGES[J.TabKind()]]:Crumbs()
         labels = { HOME or "Home", a, b }
     else
@@ -266,6 +266,7 @@ local function Build()
     f.home = ns.Home:Build(inset)
     f.instance = ns.Instance:Build(inset)
     f.professions = ns.Professions:Build(inset)
+    f.maps = ns.Maps:Build(inset)
     f.pulls = ns.Pulls:Build(inset)
     f.scrapbook = ns.Scrapbook:Build(inset)
 
@@ -336,6 +337,7 @@ function J:Refresh(toTop)
     local own = PAGES[J.TabKind()] -- a tab with its own page
     local home = not own and self.state.view == "home"
     f.professions:SetShown(own == "Professions")
+    f.maps:SetShown(own == "Maps")
     f.pulls:SetShown(own == "Pulls")
     f.scrapbook:SetShown(own == "Scrapbook")
     f.home:SetShown(home)
@@ -422,6 +424,11 @@ ns:OnLoad(function()
     LootPriorityJournalDB = nil
     SpyGlassJournalDB = type(SpyGlassJournalDB) == "table" and SpyGlassJournalDB or {}
     local db = SpyGlassJournalDB
+    -- The Maps tab came in before Pulls: a saved Pulls or Scrapbook tab moves along once.
+    if not db.mapsTab then
+        if type(db.tab) == "number" and db.tab >= 5 then db.tab = db.tab + 1 end
+        db.mapsTab = true
+    end
     db.tab = (type(db.tab) == "number" and db.tab >= 1 and db.tab <= #J.TABS) and db.tab or 1
     -- The home page starts on instances for your level. Saves from before
     -- this default (which started on all levels) are moved over once.
@@ -439,8 +446,9 @@ ns:OnLoad(function()
     db.showSoon = nil -- coming-soon places are always shown now
     db.extendUpgrades = db.extendUpgrades and true or false
     -- On unless turned off (nil was on): kept as true/false, as Options > AddOns > SpyGlass shows them.
-    db.dungeonMap = db.dungeonMap ~= false
+    db.dungeonMap = nil -- the map key always opens the dungeon map inside dungeons now
     db.scrapShots = db.scrapShots ~= false
+    db.watch = db.watch ~= false
     db.minimap = type(db.minimap) == "table" and db.minimap or { angle = 200 }
     J.db = db
     ns.jdb = db -- the "jdb." root of the options page's paths (Settings.lua)
@@ -455,11 +463,10 @@ SlashCmdList.SPYGLASSJOURNAL = function(msg)
     msg = strlower(strtrim(msg or ""))
     if msg == "pulls" or msg == "scrapbook" then
         J:OpenKind(msg)
-    elseif msg == "map" then
-        ns:ToggleOption("jdb.dungeonMap")
-        ns:Print(J.db.dungeonMap and "The map key opens SpyGlass's dungeon map inside dungeons." or "The map key opens the world map everywhere.")
-    elseif msg == "dungeonmap" then
-        if not ns.DungeonMap:ShowWindow() then ns:Print("You're not in a dungeon SpyGlass has a map for.") end
+    elseif msg == "maps" or msg == "dungeonmap" then
+        ns.Maps:Open()
+    elseif msg == "watch" or msg:match("^watch ") then
+        ns.DungeonWatch:Command(msg:sub(7))
     elseif msg == "minimap" then
         ns:ToggleOption("jdb.minimap.hide")
         ns:Print(J.db.minimap.hide and "Minimap button hidden." or "Minimap button shown.")
@@ -467,7 +474,8 @@ SlashCmdList.SPYGLASSJOURNAL = function(msg)
         Public:Toggle()
     else
         ns:Print("/sgj - open the journal, /sgj pulls - the Pull Planner, /sgj scrapbook - your Scrapbook")
-        ns:Print("/sgj dungeonmap - this dungeon's map, /sgj map - the map key opens it inside dungeons (on/off)")
+        ns:Print("/sgj maps - the dungeon maps, on the one you're in (the map key opens them inside dungeons too)")
+        ns:Print("/sgj watch [on|off] - the dungeon watch: notes real pulls and NPCs to improve the pull maps")
         ns:Print("/sgj minimap - show or hide the minimap button")
     end
 end

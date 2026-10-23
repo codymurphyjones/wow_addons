@@ -23,8 +23,8 @@ local _, ns = ...
 local G = {}
 ns.Grid = G
 
-local BUDGET = 4         -- milliseconds of work per frame
-local RUSH = 12          -- ...while you're waiting for a route (G.rush: nothing to follow yet)
+local BUDGET = 2         -- milliseconds of work per frame (none in combat)
+local RUSH = 6           -- ...while you're waiting for a route (G.rush: nothing to follow yet)
 local STEEP_COST = 3     -- steep squares take this many times longer to cross
 local MOVE = 3           -- squares you can move before your field is worked out again
 local SLIDE = 1.5        -- sliding down a small drop is this much slower than walking
@@ -429,6 +429,7 @@ local listeners = {} -- G:OnReady's
 local driver = CreateFrame("Frame")
 driver:Hide()
 driver:SetScript("OnUpdate", function(self)
+    if InCombatLockdown and InCombatLockdown() then return end -- the frames are yours in a fight
     local key = queue[1]
     local job = key and jobs[key]
     if not job then

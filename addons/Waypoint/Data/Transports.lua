@@ -44,11 +44,12 @@ ns.Transports = {
 -- platforms are only ~17 yards apart).
 ns.Transports.RADIUS = { zeppelin = 15, skyship = 15, ship = 60 }
 
--- Mage teleports: spell ID -> the city (an ns.Towns name), where to assume it lands until you've
--- cast it once. Spells the client doesn't have are simply never known.
+-- Teleports: spell ID -> the city. Where each lands is the server's (Data\Transit.lua) until you've
+-- cast it once. Only spells this client has (the later expansions' teleports aren't in it).
 ns.Transports.TELEPORTS = {
     [3561] = "Stormwind City", [3562] = "Ironforge", [3565] = "Darnassus",
     [3567] = "Orgrimmar", [3563] = "Undercity", [3566] = "Thunder Bluff",
-    [32271] = "Exodar", [32272] = "Silvermoon City", [33690] = "Shattrath City", [35715] = "Shattrath City",
-    [49359] = "Theramore Isle", [49358] = "Stonard", [53140] = "Dalaran",
+    [18960] = "Moonglade", -- Teleport: Moonglade (druids)
 }
+-- Teleports that need no Rune of Teleportation (the mage ones do).
+ns.Transports.NO_RUNE = { [18960] = true }

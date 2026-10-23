@@ -12,3 +12,6 @@ tools/*/*.tar.xz.tmp
 
 # Signed-in browser profile for tools/curseforge/update_descriptions.py.
 tools/curseforge/.profile/
+
+# The navigation bake's working files (tools/Waypoint/nav_*.py, nav_bake.mjs): rebuilt from the game.
+tools/Waypoint/.nav/

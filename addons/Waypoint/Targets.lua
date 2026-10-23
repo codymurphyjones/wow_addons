@@ -350,12 +350,54 @@ local function Arrive(e, p)
     end
 end
 
+-- In the quest's area: the client's own word (the minimap's quest area), or within AREA yards of
+-- one of the objective's spots. Only quest objectives (not where a quest is handed in).
+local AREA = 60
+local function InArea(e, continent, n, w)
+    if not (e and e.questID and e.obj ~= "done" and e.points) then return false end
+    local fn = C_Minimap and C_Minimap.IsInsideQuestBlob
+    if fn then
+        local ok, inside = pcall(fn, e.questID)
+        if ok and inside == true and not (issecretvalue and issecretvalue(inside)) then return true end
+    end
+    if not continent or #e.points < 2 then return false end
+    for _, q in ipairs(e.points) do
+        local d = ns.Nav:To(q, continent, n, w)
+        if d and d <= AREA then return true end
+    end
+    return false
+end
+
+-- A point inside a dungeon or raid, from outside it: its entrance (shared Instances.lua; the wing's,
+-- for a wing's floor; the nearest of several). Kept per point, so it's the same point each time.
+local entranceOf = setmetatable({}, { __mode = "k" })
+local function Entrance(p, continent, n, w)
+    local I = ns.Instances
+    if not (p and p.mapID and I and I.ByMap) then return p end
+    if IsInInstance and IsInInstance() then return p end
+    local inst, wing = I:ByMap(p.mapID)
+    if not inst then return p end
+    local cached = entranceOf[p]
+    if cached then return cached end
+    local list = (wing and wing.entrance and { wing.entrance }) or inst.entrances or { inst.entrance }
+    local best, bd
+    for _, en in ipairs(list) do
+        local q = { mapID = en[1], x = en[2] / 100, y = en[3] / 100, label = (inst.name or "Dungeon") .. " entrance" }
+        local d = continent and ns.Nav:To(q, continent, n, w)
+        if not best or (d and (not bd or d < bd)) then best, bd = q, d end
+    end
+    entranceOf[p] = best or p
+    return best or p
+end
+
 function T:Tick()
     if not ns.db then return end
     UpdateCorpse()
     local e = self:Resolve()
     local continent, n, w = ns.Nav:Player()
-    local p = e and Pick(e, continent, n, w)
+    local picked = e and Pick(e, continent, n, w)
+    local p = Entrance(picked, continent, n, w)
+    self.inArea = InArea(e, continent, n, w)
     local key = e and (e.owner .. ":" .. tostring(e.key or e.title or ""))
     local moved = p ~= self.point
     self.current, self.point = e, p
@@ -369,7 +411,7 @@ function T:Tick()
     if not (e and p and continent) then return end
     local d = ns.Nav:To(p, continent, n, w)
     if d and d <= (e.arrive or DEFAULT_ARRIVE) then
-        Arrive(e, p)
+        Arrive(e, picked)
         if not e.request and (e.ordered or #e.points > 1) then self.point = Pick(e, continent, n, w) end
     elseif d and e.arrived and d > 2 * (e.arrive or DEFAULT_ARRIVE) then
         e.arrived = nil

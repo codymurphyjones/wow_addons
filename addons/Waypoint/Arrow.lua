@@ -15,6 +15,15 @@ local f
 local buttons = {} -- owner -> { text, icon, color, tooltip, onClick }, from other addons (API:SetButton)
 local MIN_W, MAX_W = 230, 330 -- the frame widens to fit its text, up to MAX_W
 
+-- A line's text, set only when it changed (the arrow updates often; most of the time nothing has).
+local function Text(fs, text)
+    text = text or ""
+    if fs.shownText ~= text then
+        fs.shownText = text
+        fs:SetText(text)
+    end
+end
+
 local function SavePosition()
     local point, _, _, x, y = f:GetPoint()
     ns.db.arrow = { point = point, x = x, y = y }
@@ -152,7 +161,7 @@ local function Build()
         GameTooltip:Show()
     end)
     f:SetScript("OnLeave", GameTooltip_Hide)
-    f:SetScript("OnUpdate", function() Arrow:Update(); Arrow:Fit() end)
+    f:SetScript("OnUpdate", function(_, elapsed) Arrow:Tick(elapsed) end)
 
     -- Another addon's button (one shows: the first by owner name): a small icon when it gives
     -- one, a text button otherwise.
@@ -278,7 +287,7 @@ local function Terrain(p)
     if now < terrainAt then return end
     terrainAt = now + 0.5
     local text = p and ns.Route and ns.Route:TerrainText(p)
-    f.terrain:SetText(text or "")
+    Text(f.terrain, text or "")
     local h = text and 72 or 58
     if math.abs(f:GetHeight() - h) > 0.5 then f:SetHeight(h) end
 end
@@ -302,6 +311,156 @@ local function RideText(riding)
     return (riding.timed and "Arrives in " or "Arrives in about ") .. ns.Flight.Clock(riding.left)
 end
 
+-- The arrow eases round to where it should point (EASE: how quickly, frame rate aside), rather
+-- than snapping: a new heading (a bend in the way, the next step) turns it smoothly.
+local EASE = 18
+local IDLE = 0.15       -- seconds without moving or turning before the arrow updates less often
+local IDLE_EVERY = 0.1  -- ...every this many seconds then
+local shownAngle, wantAngle
+function Arrow:Turn(angle)
+    wantAngle = angle
+    if not shownAngle then
+        shownAngle = angle
+        f.arrow:SetRotation(angle)
+    end
+end
+
+local still, sinceUpdate, lastSpot = 0, 0, nil
+function Arrow:Tick(elapsed)
+    -- Moving or turning: every frame. Standing still: a few times a second (countdowns still tick).
+    local c, n, w = ns.Nav:Player()
+    local facing = GetPlayerFacing and C.Num(GetPlayerFacing()) or 0
+    local spot = (c or 0) .. ":" .. math.floor((n or 0) * 4) .. ":" .. math.floor((w or 0) * 4) .. ":" .. math.floor(facing * 100)
+    if spot ~= lastSpot then still, lastSpot = 0, spot else still = still + elapsed end
+    sinceUpdate = sinceUpdate + elapsed
+    if still < IDLE or sinceUpdate >= IDLE_EVERY then
+        sinceUpdate = 0
+        self:Update()
+        self:Fit()
+    end
+    if wantAngle and shownAngle and f.arrow:IsShown() then
+        local diff = (wantAngle - shownAngle + math.pi) % (2 * math.pi) - math.pi
+        if math.abs(diff) > 0.002 then
+            shownAngle = shownAngle + diff * (1 - math.exp(-EASE * elapsed))
+            f.arrow:SetRotation(shownAngle)
+        end
+    elseif not f.arrow:IsShown() then
+        shownAngle = nil
+    end
+end
+
+-- How far it is to p along the planned way (the route's walk, Route.lua's R:Way), from where you
+-- are: the straight line to the way's nearest point, the way's own length on from there, and the
+-- last bit to p. The straight line d when there's no way (or it's no longer than that).
+local function AlongWay(p, d)
+    local rt = ns.Route
+    local way = rt and rt:Way()
+    local c, n, w = ns.Nav:Player()
+    local pc, pn, pw = ns.Nav:World(p)
+    if not (way and c and way.continent == c and pc == c and way.squares and way.squares[2]) then return d end
+    local sq = way.squares
+    local best, bi
+    for i = 1, math.min(#sq, 60) do
+        local dd = (sq[i].n - n) ^ 2 + (sq[i].w - w) ^ 2
+        if not best or dd < best then best, bi = dd, i end
+    end
+    local len = math.sqrt(best)
+    for i = bi + 1, #sq do
+        len = len + math.sqrt((sq[i].n - sq[i - 1].n) ^ 2 + (sq[i].w - sq[i - 1].w) ^ 2)
+    end
+    len = len + math.sqrt((pn - sq[#sq].n) ^ 2 + (pw - sq[#sq].w) ^ 2)
+    return math.max(d, len)
+end
+
+-- A hearthstone or teleport step: a button over the arrow's icon that uses it (a secure button: set
+-- up out of combat only; in combat the arrow says to wait, R:Action). castFor: what it's set to.
+local castFor
+local HEARTHSTONE = ns.Items and ns.Items.ITEMS and ns.Items.ITEMS.HEARTHSTONE or 6948
+
+-- It's not the arrow's child, nor anchored to it: a secure button inside a frame makes that frame
+-- protected, and the game then blocks showing or hiding the arrow in combat. So it hangs off the
+-- screen itself, placed over the arrow's icon each time it's set up (out of combat), and hides
+-- with the arrow (after the fight, if the arrow hides during one).
+local function PlaceCast(b)
+    local x, y = f.arrow:GetCenter()
+    if not x then return end
+    local s = f.arrow:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    b:ClearAllPoints()
+    b:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x * s, y * s)
+    b:SetFrameStrata(f:GetFrameStrata())
+    b:SetFrameLevel(f:GetFrameLevel() + 10)
+end
+
+local function CastButton()
+    if f.cast then return f.cast end
+    local b = CreateFrame("Button", "WaypointArrowCast", UIParent, "SecureActionButtonTemplate")
+    b:SetSize(36, 36)
+    PlaceCast(b)
+    b:RegisterForClicks("AnyUp", "AnyDown")
+    b:SetAttribute("useOnKeyDown", false)
+    b.icon = b:CreateTexture(nil, "ARTWORK"); b.icon:SetAllPoints()
+    b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+    b:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        if self.item then GameTooltip:SetItemByID(self.item) elseif self.spell then GameTooltip:SetSpellByID(self.spell) end
+        GameTooltip:AddLine("Click: use it now", 0.6, 1, 0.6)
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", GameTooltip_Hide)
+    b:Hide()
+    -- The arrow hidden or dragged: the button goes too (or follows), out of combat.
+    local pending
+    local function Sync()
+        if InCombatLockdown() then
+            pending = true
+            return
+        end
+        pending = false
+        if not f:IsShown() then
+            b:Hide()
+            castFor = nil
+        elseif b:IsShown() then
+            PlaceCast(b)
+        end
+    end
+    f:HookScript("OnHide", Sync)
+    f:HookScript("OnDragStop", Sync)
+    local ev = CreateFrame("Frame")
+    ev:RegisterEvent("PLAYER_REGEN_ENABLED")
+    ev:SetScript("OnEvent", function() if pending then Sync() end end)
+    f.cast = b
+    return b
+end
+
+-- Shows the button for leg (hearth or teleport), or hides it (nil). Out of combat only.
+function Arrow:SetCast(leg)
+    local want = leg and (leg.kind == "hearth" and "item:" .. HEARTHSTONE or leg.to and leg.to.spell and "spell:" .. leg.to.spell) or nil
+    if want == castFor or InCombatLockdown() then return end
+    castFor = want
+    local b = CastButton()
+    if not want then
+        b:Hide()
+        return
+    end
+    b.item, b.spell = nil, nil
+    if leg.kind == "hearth" then
+        b:SetAttribute("type", "item")
+        b:SetAttribute("item", "item:" .. HEARTHSTONE)
+        b.item = HEARTHSTONE
+        local icon = C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(HEARTHSTONE) or (GetItemIcon and GetItemIcon(HEARTHSTONE))
+        b.icon:SetTexture(icon or 134414)
+    else
+        b:SetAttribute("type", "spell")
+        b:SetAttribute("spell", leg.to.spell)
+        b.spell = leg.to.spell
+        local icon = C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(leg.to.spell)
+        b.icon:SetTexture(icon or 136235)
+    end
+    PlaceCast(b)
+    b:Show()
+end
+
 -- Every frame while shown: turn the arrow and update the distance.
 function Arrow:Update()
     -- Twice a second: whether the restore icon should show.
@@ -319,9 +478,9 @@ function Arrow:Update()
         f.compass:Hide()
         Paint(nil)
         f.arrow:Hide(); f.check:Hide()
-        f.title:SetText("On the " .. riding.label)
-        f.where:SetText(RideText(riding))
-        f.sub:SetText("")
+        Text(f.title, "On the " .. riding.label)
+        Text(f.where, RideText(riding))
+        Text(f.sub, "")
         Terrain(nil)
         return
     end
@@ -339,9 +498,9 @@ function Arrow:Update()
             fs:SetPoint("CENTER", f.compass, "CENTER", -math.sin(a) * 21, math.cos(a) * 21)
         end
         f.compass:Show()
-        f.title:SetText("Waypoint")
-        f.where:SetText("Nothing to point at")
-        f.sub:SetText("")
+        Text(f.title, "Waypoint")
+        Text(f.where, "Nothing to point at")
+        Text(f.sub, "")
         Terrain(nil)
         return
     end
@@ -351,40 +510,48 @@ function Arrow:Update()
     local flying = fl and fl:Flying()
     if flying then
         f.arrow:Hide(); f.check:Hide()
-        f.title:SetText("Flying to " .. flying.to)
-        f.where:SetText(flying.left and ("Lands in about " .. fl.Clock(flying.left)) or "In flight")
-        f.sub:SetText("Then: " .. (e.title or ns.Nav:Describe(p)))
+        Text(f.title, "Flying to " .. flying.to)
+        Text(f.where, flying.left and ("Lands in about " .. fl.Clock(flying.left)) or "In flight")
+        Text(f.sub, "Then: " .. (e.title or ns.Nav:Describe(p)))
         return
     end
     if riding then
         f.arrow:Hide(); f.check:Hide()
-        f.title:SetText("On the " .. riding.label)
-        f.where:SetText(RideText(riding))
-        f.sub:SetText("Then: " .. (e.title or ns.Nav:Describe(p)))
+        Text(f.title, "On the " .. riding.label)
+        Text(f.where, RideText(riding))
+        Text(f.sub, "Then: " .. (e.title or ns.Nav:Describe(p)))
         return
     end
     local route = fl and fl.route
     local leg = route and route.next
     local sub = e.subtitle or (p.label ~= e.title and p.label) or nil
     if leg then
-        f.title:SetText(rt:Title(leg))
+        Text(f.title, rt:Title(leg))
         sub = "Then: " .. (e.title or ns.Nav:Describe(p))
         if route.direct < math.huge and not route.onFoot then sub = sub .. "  ·  saves ~" .. fl.Clock(route.gain) end
         if not route.aim then
-            -- Hearthstone or teleport: right where you stand.
-            f.arrow:Hide(); f.check:Show()
-            f.where:SetText("|cff59f28c" .. rt:Action(leg) .. "|r")
-            f.sub:SetText(sub)
+            -- Hearthstone or teleport: right where you stand. A button to use it.
+            self:SetCast(leg)
+            f.arrow:Hide(); f.check:SetShown(InCombatLockdown() or not (f.cast and f.cast:IsShown()))
+            Text(f.where, "|cff59f28c" .. rt:Action(leg) .. "|r")
+            Text(f.sub, sub)
             return
         end
         p = route.aim
     else
-        f.title:SetText(e.title or "Waypoint")
+        Text(f.title, e.title or "Waypoint")
         if e.owner == "path" and ns.Chain:Count() > 1 then
             sub = (sub and (sub .. "  ·  ") or "") .. ("%d more after this"):format(ns.Chain:Count() - 1)
         end
     end
-    f.sub:SetText(sub or ns.Nav:Describe(p))
+    Text(f.sub, sub or ns.Nav:Describe(p))
+    self:SetCast(nil)
+    -- In the quest's area (Targets.lua): you're there; no arrow to chase a spawn point around.
+    if not leg and ns.Targets.inArea then
+        f.arrow:Hide(); f.check:Show()
+        Text(f.where, "|cff59f28cIn the area: " .. (e.subtitle or "its objective is around you") .. "|r")
+        return
+    end
     local d, angle = ns.Nav:To(p)
     Terrain(d and p)
     -- Around a lake or a cliff: point along the way there, not straight at it.
@@ -395,7 +562,7 @@ function Arrow:Update()
     end
     if not d then
         f.arrow:Hide(); f.check:Hide()
-        f.where:SetText(angle == "continent" and ("Other continent: " .. ns.Nav:Describe(p))
+        Text(f.where, angle == "continent" and ("Other continent: " .. ns.Nav:Describe(p))
             or angle == "instance" and "Can't tell where you are" or ns.Nav:Describe(p))
         return
     end
@@ -407,32 +574,33 @@ function Arrow:Update()
         if jump and facing then
             f.check:Hide()
             f.arrow:Show()
-            f.arrow:SetRotation(jump - facing)
+            Arrow:Turn(jump - facing)
             f.arrow:SetVertexColor(JUMP[1], JUMP[2], JUMP[3])
             shownColor = nil -- Paint puts the target's color back once you've jumped
-            f.where:SetText("|cff59f28c" .. rt:AtText(leg) .. "|r")
+            Text(f.where, "|cff59f28c" .. rt:AtText(leg) .. "|r")
             return
         end
         f.arrow:Hide(); f.check:Show()
-        f.where:SetText("|cff59f28c" .. (leg and rt:AtText(leg) or "You're there") .. "|r")
+        Text(f.where, "|cff59f28c" .. (leg and rt:AtText(leg) or "You're there") .. "|r")
         return
     end
     f.check:Hide()
+    d = AlongWay(p, d)
     local facing = GetPlayerFacing and C.Num(GetPlayerFacing())
     if facing then
         f.arrow:Show()
-        f.arrow:SetRotation(angle - facing)
+        Arrow:Turn(angle - facing)
     else
         f.arrow:Hide()
     end
     local tip = leg and rt:FormTip(leg)
     if tip and C.Readable(IsSwimming and IsSwimming()) then
         -- Swimming the planned swim in your own form: the shift comes first.
-        f.where:SetText(("|cffffd100%s|r  ·  %s to go"):format(tip, ns.Nav.Distance(d)))
+        Text(f.where, ("|cffffd100%s|r  ·  %s to go"):format(tip, ns.Nav.Distance(d)))
     elseif leg then
-        f.where:SetText(("%s to the %s  ·  ~%s"):format(ns.Nav.Distance(d), rt:Place(leg), fl.Clock(route.total)))
+        Text(f.where, ("%s to the %s  ·  ~%s"):format(ns.Nav.Distance(d), rt:Place(leg), fl.Clock(route.total)))
     else
-        f.where:SetText(("%s  ·  ~%s"):format(ns.Nav.Distance(d), ns.Nav.ETA(d)))
+        Text(f.where, ("%s  ·  ~%s"):format(ns.Nav.Distance(d), ns.Nav.ETA(d)))
     end
 end
 

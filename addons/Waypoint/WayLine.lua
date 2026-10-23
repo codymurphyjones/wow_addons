@@ -60,13 +60,28 @@ local DASH, GAP = 6, 3  -- world map: on-screen dash and gap lengths (fine, so t
 local CASING = { 0.04, 0.07, 0.16 } -- the thin dark edge under the dashes (a deep navy, not black)
 local CASING_WIDTH = 1.8            -- times LINE
 local CASING_ALPHA = 0.55
-local REFRESH = 1      -- world map: seconds between redraws while it's open
+local CHECK = 0.5      -- seconds between looks at whether the trip changed (a redraw only then)
 local DOT = 5          -- minimap: dot size
 local DOTS = 120       -- minimap: dots at most
 local MINI_UPDATE = 0.1
 
 local function Lines()
+    if ns.Targets and ns.Targets.inArea then return nil end -- in the quest's area: nothing to follow
     return ns.Route and ns.Route:Lines()
+end
+
+-- What a trip looks like, as a short string: its legs' kinds and shades, their points to the yard.
+-- Route.lua makes a new trip each time it plans (about once a second), most often the same as the
+-- one before: the maps are redrawn only when this changes.
+local function Signature(trip)
+    if not trip then return "" end
+    local parts = {}
+    for _, seg in ipairs(trip) do
+        local pts, sum = seg.pts, 0
+        for i = 1, #pts do sum = (sum * 31 + math.floor(pts[i])) % 1000000007 end
+        parts[#parts + 1] = (seg.kind or "") .. (seg.shade or 0) .. ":" .. seg.continent .. ":" .. #pts .. ":" .. sum
+    end
+    return table.concat(parts, "|")
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -109,11 +124,13 @@ local function Refresh(l, mapID)
     end
 end
 
--- Redrawn when the map, its zoom or its visibility changes, every REFRESH seconds while it's open,
--- and when OpenMap switches between its stitched map and Blizzard's (the line, the pins and the
--- town badges go somewhere else, at other levels).
+-- Redrawn when the map, its zoom or its visibility changes, when the trip changes (looked at every
+-- CHECK seconds while the map is open: Signature), and when OpenMap switches between its stitched
+-- map and Blizzard's (the line, the pins and the town badges go somewhere else, at other levels).
+local drawnSig
 layer = WM.NewLayer({
-    lines = true, level = 2050, refresh = Refresh, interval = REFRESH,
+    lines = true, level = 2050, refresh = function(l, mapID) drawnSig = Signature(Lines()); Refresh(l, mapID) end,
+    interval = CHECK, every = function(l) if Signature(Lines()) ~= drawnSig then l:Refresh() end end,
     onStitched = function(l) l:Refresh(); ns:Changed() end,
 })
 Way.layer = layer
@@ -139,6 +156,10 @@ local function GetDot(i)
     return dot
 end
 
+-- The dots are placed again only when something they depend on changed: where you are (to a
+-- quarter yard), which way the minimap faces, its zoom, size and shape, or the trip.
+local placedKey
+
 local function UpdateMinimap()
     if not Minimap then return end
     local count = 0
@@ -147,6 +168,11 @@ local function UpdateMinimap()
     -- not, round or square, and where you are.
     local v = trip and WM.MinimapView()
     local c = v and v.continent
+    local key = v and c and table.concat({ c, math.floor(v.n * 4), math.floor(v.w * 4), v.radius, v.half,
+        v.rotate and math.floor((v.sin or 0) * 500) or 0, v.rotate and math.floor((v.cos or 0) * 500) or 0,
+        v.square and 1 or 0, Signature(trip) }, ",") or ""
+    if key == placedKey then return end
+    placedKey = key
     if trip and c then
         local spacing = v.radius / 10
         local edge = v.radius * 0.95

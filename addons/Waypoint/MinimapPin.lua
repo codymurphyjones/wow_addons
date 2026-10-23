@@ -29,7 +29,7 @@ end
 local function Update()
     if not Minimap then return end
     if not pin then Build() end
-    if ns:InBattleground() then pin:Hide() return end
+    if ns:InBattleground() or ns.Targets.inArea then pin:Hide() return end
     local p = ns.Targets.point
     if p and ns.Flight then p = ns.Flight:Aim(p) end
     -- The minimap now; round, as the pin always was (a square minimap still clamps to a circle).
@@ -45,6 +45,10 @@ local function Update()
     local px, py, inside = v:PlaceWorld(pc, pn, pw, 4) -- out of range: on the rim, 4 pixels in
     local onRim = not inside
     local col = ns:ColorOf(ns.Targets.current)
+    -- Nothing moved (you, the point, the minimap's turn and zoom): leave it where it is.
+    local key = math.floor(px * 4) .. "," .. math.floor(py * 4) .. "," .. (onRim and 1 or 0) .. "," .. tostring(col)
+    if key == pin.placed and pin:IsShown() then return end
+    pin.placed = key
     pin.glow:SetVertexColor(col[1], col[2], col[3], 0.7); pin.dot:SetVertexColor(col[1], col[2], col[3])
     pin.glow:SetShown(not onRim)
     pin:SetAlpha(onRim and 0.8 or 1)

@@ -25,5 +25,9 @@
     "data:unpack": "python tools/datasets.py unpack",
     "data:pack": "python tools/datasets.py pack",
     "deploy:full": "python tools/build_all.py && python addon_sync.py publish"
+  },
+  "devDependencies": {
+    "@recast-navigation/core": "0.43.1",
+    "@recast-navigation/generators": "0.43.1"
   }
 }

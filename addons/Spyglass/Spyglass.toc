@@ -51,9 +51,12 @@ Journal\Model.lua
 Journal\Instance.lua
 Journal\Professions.lua
 Journal\PullData.lua
+Journal\MapTiles.lua
 Journal\Group.lua
 Journal\DungeonMap.lua
+Journal\Maps.lua
 Journal\Pulls.lua
+Journal\DungeonWatch.lua
 Journal\Scrapbook.lua
 ..\shared\MinimapButton.lua
 Journal\Minimap.lua

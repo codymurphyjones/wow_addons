@@ -173,6 +173,7 @@ local function Note(fact)
     if ns.Sync then ns.Sync:Add(fact) end
     C:Flush()
 end
+C.Note = Note -- Journal/DungeonWatch.lua's pulls and floor sightings go the same way
 
 local function Position(npc)
     local map = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
@@ -479,6 +480,8 @@ local CHECK = {
     B = "^B:%d+:%a+:%-?%d+:[im]%d+$",
     S = "^S:%d+:%d+$",
     K = "^K:%d+:[tiqu]o?%d*$",
+    P = "^P:%d+:%d+:[%d%.%-]+:[%d%.%-]+:[%dx%.]+$", -- a pull (Journal/DungeonWatch.lua)
+    W = "^W:%d+:%d+:%d+$",                         -- an NPC seen on a dungeon floor
 }
 
 -- Is the fact one of ours, well formed?

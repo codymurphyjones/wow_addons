@@ -16,7 +16,11 @@ Questie is optional. Without it the arrow only shows up for paths and other addo
 
 ## The arrow
 
-- It shows the target, the distance and about how long it takes to get there. At the target it shows a check mark.
+- It shows the target, the distance along the planned way (not the straight line, so it doesn't jump at bends) and about how long it takes to get there. At the target it shows a check mark.
+- It turns smoothly to each new heading, and while you stand still it updates only a few times a second.
+- **Hearthstone and teleport steps** put a button on the arrow: click it to use your Hearthstone, Astral Recall or the teleport (out of combat).
+- **In a quest's area** (the game's own quest area on the minimap, or near the objective's spots) the arrow shows "In the area" instead of chasing one spawn point, and the line and the minimap dot go away.
+- **A target inside a dungeon or raid** leads to its entrance (the wing's, for a wing's floor) while you're outside it.
 - Drag it to move it (`/way lock` stops that).
 - **Left-click** runs the target's own action, for example opening the Spyglass quest window.
 - **Right-click** moves on: to the next waypoint, to another quest, or away from an addon's target.
@@ -31,7 +35,7 @@ When flying gets you there sooner, the arrow leads to the flight master first ("
 How it decides:
 
 - **Running:** the straight line to the target, plus 20% for roads and hills, at your travel speed. That is your mount's speed once you've ridden (Waypoint remembers the fastest mount you've had), else your run speed.
-- **Flying:** each flight is timed from take-off to landing, and that time is used from then on (shared by all your characters). A flight you haven't taken yet is estimated from the ones you have, by seconds per yard of straight line.
+- **Flying:** each flight is timed from take-off to landing, and that time is used from then on (shared by all your characters). A flight you haven't taken yet is flown hop by hop as the game flies it, through the flight points of the network you know, along the game's own routes through the air (`Data\Transit.lua`, built by `tools\Waypoint\build_transit.py` from the game's flight tables, with times fitted to timed flights). The planned flight is drawn along that route on the map. Flight points are placed from the game's tables until you've stood at them.
 - **By air:** run to the flight master + 20 s to talk, take off and land + the flight + run from where you land.
 - Waypoint learns which flight points you know from the flight master's map, so **talk to a flight master once** after installing it. `/way flights` shows what it knows; `/way flights off` turns this off.
 
@@ -41,24 +45,39 @@ Flights are one of several ways Waypoint can plan a trip. It looks for the quick
 
 | Step | How long Waypoint counts it |
 |---|---|
-| **Running and swimming** | Along Waypoint's land and water map (below), from where you are and to the target: around lakes, cliffs and lava, or straight across water when swimming there is quicker than going around. Swims of 200 yards or more become their own step ("Swim to the far shore"). Between other stops on the way (a flight's landing and a dock), a straight line plus 20% |
+| **Running and swimming** | Along the walkable ground (below), from where you are and to the target: around lakes, cliffs and lava, over bridges and up stairs, or straight across water when swimming there is quicker than going around. Swims of 200 yards or more become their own step ("Swim to the far shore"). Between flight masters, docks and towns, the walk baked over the ground (lifts, portals and the tram included); between other stops, a straight line plus 20% |
 | **Aquatic Form** | Druids who know it have their swims counted at its speed (50% faster at first, then the speed Waypoint saw you swim in it). Waypoint tells you when to shift: "Switch to Aquatic Form and swim to Auberdine" at the shore, and a chat line when you're in the water in your own form |
 | **Flights** | As above, between flight points you know on one continent |
-| **Boats, zeppelins, skyships** | How long the ride took you before, from reaching the dock to arriving, waiting included (an average of your last trips). A ride you haven't taken counts as 4 minutes for a zeppelin or skyship and 5 for a ship |
+| **Boats, zeppelins, skyships** | The wait from when you'll get to the dock, plus the ride. Each route's loop and its stops' times come from the game's tables; where the boat is in its loop is learned from sightings (below), and until one's known a wait counts as half a loop. Routes without a timetable (Forever's own) use how long the ride took you before, waiting included, else 4 minutes for a zeppelin or skyship and 5 for a ship |
 | **Hearthstone** | What's left of its cooldown + 10 s to cast + 15 s of loading screen, when it's in your bags |
-| **Mage teleports** | 10 s to cast + 15 s of loading screen, for teleports you know with a Rune of Teleportation in your bags |
+| **Teleports** | 10 s to cast + 15 s of loading screen: the mage teleports this client has (Stormwind, Ironforge, Darnassus, Orgrimmar, Undercity, Thunder Bluff) with a Rune of Teleportation in your bags, and Teleport: Moonglade. They land where the server puts you |
+| **Astral Recall** | Like the hearthstone, when it's off cooldown |
 | **Jumping down cliffs** | Drops you'd take no damage from (under about 14.6 yards) are slid down. Bigger ones are jumped up to the fall damage you said you'll take (**Fall damage you'll take** in the settings: none by default). With **Walk on Air** (the Skyborne racial: no reagent, 90-second cooldown, used first when it's ready), or **Slow Fall** (mage) or **Levitate** (priest) known *and* a Light Feather in your bags, any drop is jumped. A cliff spread over several squares counts as one fall: the whole way down is checked against your limit, not each step. Each jump is its own step: "Jump down with Slow Fall" ("Cast Slow Fall and jump down" at the edge), or "Jump down 41 yd" ("Jump down: about 50% of your health (1,932 HP)"). At the edge, the arrow stays up, turns green and points the way to jump (toward where you land). It also checks your health now and says **Heal first** when the jump would leave you under 15% or kill you, since jumps in a row add up. The chat line gives the trip's total. Cliffs are never climbed, spell or not |
 
 - **The docks** are Zeppelin Signs' list: the Horde zeppelins, Forever's skyships and all the ships. If you run Zeppelin Signs, docks you moved or added with `/zep mark` count too. Zeppelins are left out for Alliance, and ships from Alliance ports (Menethil, Theramore, Southshore, Auberdine, Rut'theran, Stormwind) for Horde.
+- **Timetables** (`Timetable.lua`): a boat's loop only starts over when the servers restart, so a sighting (you being carried off a dock) stays good until the weekly reset. Sightings are shared with your guild and your group (just the route and the time, with **Share waypoints** on), and anyone at a dock whose boat isn't known asks them. The loop's length is fitted to the sightings as they come in (the world database's may be a little off the live servers'), so a timetable gets more exact the more it's seen: with one sighting it's good for about half a day, with two a few hours apart or more, until the reset. A sighting that fits none of the others means the server restarted, and starts it again. `/way flights` lists which are known.
+- **At the dock** the arrow says when the boat comes and leaves ("Wait for the zeppelin to Undercity: in 1m 40s, leaves 1m later"; "about" while it's not exact), once Waypoint knows where it is in its loop. 30 seconds before it comes in: a raid-warning banner, a sound and a flash of the game's taskbar icon.
 - **On a ride** the arrow shows "On the zeppelin to Undercity" and when it should arrive, then picks your target up again.
 - **Where things land:**
   - Your hearthstone is learned when you set it at an innkeeper or use it; until then it's guessed from the town of that name.
-  - Each mage teleport is learned the first time you cast it.
+  - Each teleport lands where the server puts you; where it really took you is learned the first time you cast it.
   - A ride with no dock at the other end (the Thunder Bluff skyship, Gadgetzan) is learned the first time you take it.
 - **When it's used:** on your own continent a route is only used when it saves at least 45 seconds and 15% of the trip over running. Somewhere you can't run to, the quickest way always wins.
 - **Sticking to a plan:** once Waypoint has picked a way (a flight, a ride, your hearthstone or a teleport), it keeps it as you move. A different way only takes over if it's at least a minute and 15% quicker than finishing the current plan from where you are now. In combat, nothing about your bags, cooldowns or spells is re-read (the game hides them then), so the plan stays as it was and the arrow says "Hearthstone once combat ends".
 - `/way transports off` plans without boats, zeppelins, skyships, your hearthstone and teleports (flights only). `/way flights` lists what it has learned.
-- The Deeprun Tram isn't planned.
+- **Lifts, portals and the Deeprun Tram** are part of the walkable ground (below): taken like a walk, for their own time.
+
+### The walkable ground
+
+Walks and swims are planned over the game's own ground: `Data\Nav<map>.lua`, baked from the game's files by `tools\Waypoint\nav_build.py` (part of `yarn build`; it needs Node.js and `yarn install`). It reads every map tile's terrain, water, buildings (cities, bridges, docks, caves, tunnels, stairs) and the rocks and models placed on them, and has Recast (the navigation library game servers use) work out where a character can stand and walk: no steeper than about 50 degrees, steps no higher than a yard, two yards of headroom.
+
+- **8-yard cells, as many floors as are stacked.** A road under a bridge, the canals under Stormwind's streets, a cave under a hill: each floor is its own place, linked to its neighbours by a walk, a swim (water deeper than about 1.7 yards) or a drop with its height (for fall damage).
+- **Only where players can get to.** Ground nothing leads to (the terrain under a city's streets, sealed caves, peaks you can't climb) is left out.
+- **Fast in the game.** Each 533-yard map tile has doors on its edges, with the times across the tile between them baked in. A route is found door to door first, then walked out node by node, nearest you first; the rest follows in the background. Tiles are unpacked only when a route needs them.
+- **It replaces the land and water map below** where it has data (Eastern Kingdoms, Kalimdor, Zephras Isle, Hyjal Crater, Dalaran City). Walking passes you've learned aren't needed with it; blocked ways (`/way blocked`, RoadLog's blockers), roads and the road box still count. A blocked way or a new road only redoes the tiles it touches.
+- **Lifts, portals and the tram** (`tools\Waypoint\nav_links.py`, from the game's tables and the CMaNGOS world database): every lift (Thunder Bluff, Undercity, the Great Lift, Gnomeregan and the rest) for its round trip, the Darnassus portal, and the Deeprun Tram between Stormwind and Ironforge (2 minutes).
+- **Zones above your level and the other faction's towns** are walked around when there's a fair way round: ground in a zone whose quests are mostly 4 or more levels above you counts four times as long, within 150 yards of the other faction's towns six times. Never the zone or town you start in or are going to, and never a capital. Only the choice of way changes; times stay real.
+- **Off in combat:** working out routes pauses in a fight, and otherwise takes 2 milliseconds a frame. Your field stops once the target and a margin past it are worked out, and goes on only when something farther is asked about.
 
 ### The land and water map
 

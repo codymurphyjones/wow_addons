@@ -1,0 +1,58 @@
+Packs on undrawn ground on every floor they could be on (check = 1): their floor or
+position is a guess. Look at each in game (SpyGlass's dungeon map) and note what's wrong.
+
+ShadowfangKeep floor 1 at 30.0, 38.8: 1x Shadowfang Moonwalker
+ShadowfangKeep floor 2 at 29.5, 80.3: 1x Baron Silverlaine
+ShadowfangKeep floor 7 at 67.1, 81.4: 1x Shadowfang Whitescalp, 1x Tormented Officer
+TheDeadmines floor 1 at 34.2, 36.9: 2x Defias Miner
+TheDeadmines floor 1 at 72.1, 37.5: 1x Defias Strip Miner
+TheDeadmines floor 1 at 74.0, 40.4: 1x Defias Strip Miner
+TheDeadmines floor 1 at 61.2, 91.5: 1x Defias Strip Miner
+TheDeadmines floor 1 at 48.5, 92.4: 1x Sneed's Shredder
+TheDeadmines floor 1 at 63.5, 93.5: 1x Defias Strip Miner
+TheDeadmines floor 2 at 75.0, 66.2: 1x Defias Pirate
+WailingCaverns floor 1 at 31.2, 38.9: 1x Evolving Ectoplasm
+WailingCaverns floor 1 at 71.0, 83.1: 1x Deviate Dreadfang
+Uldaman floor 1 at 25.8, 36.0: 1x Galgann Firehammer
+TheTempleOfAtal'Hakkar floor 1 at 76.7, 36.1: 1x Ogom the Wretched
+TheTempleOfAtal'Hakkar floor 1 at 39.7, 45.8: 1x Zul'Lor
+TheTempleOfAtal'Hakkar floor 1 at 55.0, 59.0: 1x Gasher
+ScarletMonasteryCathedral floor 1 at 43.6, 74.6: 1x Scarlet Myrmidon
+ScarletMonasteryCathedral floor 1 at 53.7, 85.1: 3x Scarlet Defender, 1x Scarlet Sorcerer, 1x Scarlet Myrmidon
+ScarletMonasteryCathedral floor 1 at 59.9, 86.3: 1x Scarlet Myrmidon
+ScarletMonasteryGraveyard floor 1 at 24.4, 50.8: 1x Bloodmage Thalnos
+Zul'Farrak floor 1 at 62.4, 65.0: 1x Sul'lithuz Sandcrawler
+LowerBlackrockSpire floor 1 at 33.4, 23.2: 3x Blackhand Veteran, 1x Blackhand Elite
+LowerBlackrockSpire floor 1 at 45.7, 23.8: 1x Rage Talon Dragonspawn, 1x Rage Talon Flamescale
+LowerBlackrockSpire floor 1 at 28.9, 34.3: 3x Rage Talon Dragonspawn
+LowerBlackrockSpire floor 1 at 46.9, 64.1: 1x Bannok Grimaxe
+LowerBlackrockSpire floor 5 at 30.3, 13.3: 2x Blackhand Dreadweaver, 2x Blackhand Summoner
+LowerBlackrockSpire floor 5 at 37.4, 61.4: 1x Spirestone Lord Magus
+BlackrockDepths floor 1 at 60.0, 26.9: 2x Blazing Fireguard, 2x Fireguard Destroyer
+BlackrockDepths floor 1 at 54.5, 34.1: 2x Blazing Fireguard
+BlackrockDepths floor 2 at 67.3, 28.9: 1x Fireguard Destroyer
+BlackrockDepths floor 2 at 59.2, 34.0: 4x Fireguard Destroyer
+BlackrockDepths floor 2 at 49.4, 84.1: 1x Lord Roccor
+Scholomance floor 2 at 26.7, 68.4: 1x Risen Construct
+Scholomance floor 4 at 67.6, 56.8: 1x Instructor Malicia
+Zul'Gurub floor 1 at 41.8, 63.3: 1x Gurubashi Berserker
+Zul'Gurub floor 1 at 65.7, 68.6: 1x Bloodlord Mandokir
+Stratholme floor 1 at 59.8, 26.7: 1x Hearthsinger Forresten
+Stratholme floor 1 at 84.7, 45.4: 1x Hearthsinger Forresten
+Stratholme floor 1 at 54.0, 71.0: 1x Stratholme Courier
+Stratholme floor 2 at 70.2, 16.4: 5x Thuzadin Acolyte
+Stratholme floor 2 at 78.4, 48.0: 5x Thuzadin Acolyte
+Maraudon floor 2 at 48.4, 68.6: 1x Tinkerer Gizlock
+Ragefire floor 1 at 27.2, 73.1: 2x Searing Blade Enforcer
+Ragefire floor 1 at 26.6, 77.5: 1x Searing Blade Cultist
+MoltenCore floor 1 at 67.3, 65.9: 1x Baron Geddon
+MoltenCore floor 1 at 80.6, 75.7: 1x Lava Annihilator
+DireMaulEast floor 1 at 9.2, 63.5: 1x Warpwood Crusher
+DireMaulNorth floor 1 at 28.6, 55.2: 1x Knot Thimblejack
+DireMaulNorth floor 1 at 62.0, 65.7: 1x Stomper Kreeg
+DireMaulNorth floor 1 at 27.0, 71.0: 1x Wandering Eye of Kilrogg
+DireMaulNorth floor 1 at 63.8, 73.0: 3x Gordok Mastiff
+DireMaulWest floor 3 at 26.5, 68.4: 1x Highborne Summoner
+DireMaulWest floor 3 at 29.3, 72.1: 1x Highborne Summoner
+TheRuinsofAhnQiraj floor 1 at 71.7, 59.9: 1x Buru the Gorger
+TheRuinsofAhnQiraj floor 1 at 72.6, 67.0: 1x Hive'Zara Soldier

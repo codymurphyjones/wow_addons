@@ -38,7 +38,9 @@ Click the tab again, or any other tab, to go back to your stats.
 |---|---|
 | `/sg` | Open or close the list on the Character window |
 | `/sg journal` or `/sgj` | Open or close the loot journal |
+| `/sgj maps` | The journal's Maps tab, on the dungeon you're in |
 | `/sgj minimap` | Hide or show the journal's minimap button |
+| `/sgj watch` | The dungeon watch: what it has noted (`/sgj watch on` / `off`) |
 | `/sg atlas` | Open AtlasLoot |
 | `/sg tab` | Hide or show the Character window tab |
 | `/sg options` | Open SpyGlass's settings |
@@ -113,6 +115,44 @@ your game client. This server may have changed some fights.
 The tiles use only the game's own art: the Dungeon Finder backgrounds where the game has one for
 the place. Elsewhere, a tinted generic card with the first boss's portrait. No images from other
 addons are used.
+
+The journal's **Maps** tab shows each dungeon's map floor by floor, with its mob packs and your pull
+plan on top (**Plan pulls** opens the Pulls tab on it). Inside a dungeon the map key opens the
+journal on the Maps tab, on the dungeon and floor you're in, and follows you between floors; press
+it again to close it, or click **World Map** for the game's map.
+
+The dungeon maps (the Maps and Pulls tabs) draw Blizzard's own dungeon map art
+at full size, 12 tiles per floor straight from the game's files (`Journal/MapTiles.lua`). The list
+of tiles is built by `tools/Spyglass/build_map_tiles.py` from OpenMap's `Data/DungeonMaps.lua`
+(MIT; checked against the WoW Forever install), matched to each instance's floors by name. Where
+there's no full-size art (Naxxramas), the floor uses the smaller picture `fetch_pulls.py` makes.
+Mob packs sit on the same 0-100 map coordinates either way.
+
+On the maps:
+
+- **Linked packs** (they aggro together, from the world database's creature links and spawn
+  groups) are joined by faint orange lines and light up together when you point at one. In the
+  Pulls tab, clicking one adds its whole group to the pull; Shift-click adds it alone.
+- **Patrols** are drawn as their route (purple), brighter when you point at the pack.
+- **Guesses**: a faded pack with a `?` stands where the game's map shows no ground on any floor it
+  could be on. `fetch_pulls.py` lists them in `tools/Spyglass/pulls_review.txt`.
+- The tooltip says how many players were recorded pulling a pack there.
+
+### The dungeon watch
+
+Inside a dungeon or raid SpyGlass notes what really happens, so the maps can be checked against
+it (`Journal/DungeonWatch.lua`, on unless `/sgj watch off`):
+
+- each **pull**: the hostile NPCs in combat during its first seconds (nameplates and your group's
+  targets), your floor, and where you stood when the game says;
+- the **NPCs seen on each floor** (nameplates as they come into view).
+
+Nothing about you is kept: no names, times or group. Everything is pooled in your saved variables
+(`SpyGlassDB.observed`); with "Share discoveries" on, it's also sent to the collector like other
+discoveries. Values the game keeps secret in combat are left out and counted (`/sgj watch`).
+`tools/Spyglass/ingest_contrib.py` extracts the pool and the collected facts into
+`Data/contributed.json` (`pulls`, `sightings`); the next `fetch_pulls.py` run uses sightings to
+settle each spawn's floor and recorded pulls to link packs and count them.
 
 ## Plugins
 
@@ -246,4 +286,8 @@ this API, so other addons can too; see `API.lua`. It provides:
 - item info and usability;
 - the shared tooltip and click handlers;
 - a refresh callback: `SpyGlass:RegisterCallback(owner, fn)` calls `fn("REFRESH")` when the lists should be
-  redrawn (dot or colon call; one callback per owner; see `addons\shared\API.md`).
+  redrawn (dot or colon call; one callback per owner; see `addons\shared\API.md`);
+- the dungeon maps, floor by floor: `DungeonMapInstances()`, `DungeonMapFloors(instance)` (each floor's
+  name, game map ID, pack count, and whether it has full-size art), `DungeonMapFloorOf(uiMapID)`, and
+  `OpenDungeonMap(instance, floor)` (instance: SpyGlass's key, the instance ID or its name; floor: its
+  number or its game map ID; default: where you are).
