@@ -890,10 +890,16 @@ local reached = {} -- "north:west" of the turns you've reached
 local function Steer(way, c, n, w, aim)
     if not (way and way[2] and aim) then return nil end
     local ac, an, aw = ns.Nav:World(aim)
+    -- The floor aim is on, when it's known: a climb's start (_h), or a flight master's (G:Spot).
+    local ah = aim._h
+    if not ah and ac == c and G.Spot then
+        local spot = G:Spot(ac, an, aw)
+        ah = spot and spot.h
+    end
     -- Along a city's streets the straight line is no good: the land map doesn't see the buildings.
     local onStreets = false
     for i = 1, math.min(#way, 150) do if way[i].street then onStreets = true break end end
-    if ac == c and not onStreets and G:Clear(c, n, w, an, aw) then return nil end
+    if ac == c and not onStreets and G:Clear(c, n, w, an, aw, ah) then return nil end
     local start, still = 1, {}
     for i = 2, #way do
         local s = way[i]
@@ -912,10 +918,47 @@ local function Steer(way, c, n, w, aim)
             best = best or s
             break
         end
-        if G:Clear(c, n, w, s.n, s.w) then best = s elseif i > start then break end
+        if G:Clear(c, n, w, s.n, s.w, s.h) then best = s elseif i > start then break end
     end
     if not best or best == way[1] then best = way[math.max(start, 2)] or way[2] end
     return { _c = c, _n = best.n, _w = best.w, _island = false, label = "the way" }
+end
+
+-- Flight masters up a tower, a ramp or stairs (NavGrid.lua's spots, Data\Spots.lua): the arrow
+-- leads to where the climb up starts first, then up to them. You're on the climb once you've been
+-- within ENTRANCE_REACHED yards of where it starts, or your tracked floor is above it near the
+-- flight master; it stays so until you're CLIMB_LEFT yards away, or the arrow leads elsewhere.
+-- Worked out from where you are each time it's asked (R:Lead, every arrow update), never kept on
+-- a plan: a plan kept while the land map is worked out again would hold a climb you're already on.
+local ENTRANCE_REACHED, CLIMB_NEAR, CLIMB_ABOVE, CLIMB_LEFT = 8, 45, 3, 80
+local climbing -- the spot whose climb you're on
+-- The point where the climb up to aim starts, while you've yet to get on it; nil otherwise.
+local function ClimbStart(aim, c, n, w)
+    if not (aim and G and G.Spot) then return nil end
+    local ac, an, aw = ns.Nav:World(aim)
+    local s = ac == c and G:Spot(ac, an, aw)
+    local e = s and s.entrance
+    if not e then return nil end
+    if climbing ~= s then climbing = nil end -- leading somewhere else now
+    local d = Dist(n, w, s.n, s.w)
+    if climbing and d > CLIMB_LEFT then climbing = nil end
+    if not climbing then
+        local hh = G:HereHeight(c, n, w)
+        if Dist(n, w, e.n, e.w) <= ENTRANCE_REACHED or (hh and d <= CLIMB_NEAR and hh >= e.h + CLIMB_ABOVE) then
+            climbing = s
+        end
+    end
+    if climbing then return nil end
+    s.point = s.point or { _c = ac, _n = e.n, _w = e.w, _h = e.h, _island = false,
+        label = s.kind == "fp" and "the way up to the flight master" or "the way up" }
+    return s.point
+end
+
+-- Where the arrow steers on the way to aim: { aim, toward (the climb's start, or aim), point }.
+local function SteerFor(way, c, n, w, aim)
+    if not (aim and ns.db.steer) then return nil end
+    local toward = ClimbStart(aim, c, n, w) or aim
+    return { aim = aim, toward = toward, point = Steer(way, c, n, w, toward) }
 end
 
 -- The way Waypoint plans to walk from where you are: { continent, squares }.
@@ -1120,11 +1163,27 @@ function R:TerrainText(p)
     if height ~= "" then return height end
 end
 
--- Where to point the arrow on the way to point p: around lakes and cliffs (nil: straight at it).
-function R:SteerPoint(p)
+-- Where to point the arrow on the way to point p, heading for toward (p, or where the climb up to
+-- it starts: R:Lead): around lakes and cliffs (nil: straight at it). A steer worked out for the
+-- other of the two (you got on the climb since the plan) doesn't count.
+function R:SteerPoint(p, toward)
     if not ns.db.steer then return nil end
     local s = self.steer
-    if s and s.aim == p then return s.point end
+    if s and s.aim == p and (s.toward or p) == (toward or p) then return s.point end
+end
+
+-- Where the arrow leads on the way to point p (the flight master, or the target itself): where the
+-- climb up to it starts while you've yet to get on it (a point; its label "the way up to ..."), else
+-- nil. Worked out from where you are now. R.leadInfo: the same, for /way where.
+function R:Lead(p)
+    local c, n, w = ns.Nav:Player()
+    local up = c and ClimbStart(p, c, n, w)
+    if up then
+        self.leadInfo = ("leading to the climb's start, %.0f yd off"):format(Dist(n, w, up._n, up._w))
+    else
+        self.leadInfo = climbing and ("on the climb up to " .. climbing.name) or nil
+    end
+    return up
 end
 
 -- A different plan has to beat the one you're on by this much (seconds, and share of the trip),
@@ -1251,9 +1310,7 @@ function R:Plan(p, last)
                 local rest = {}
                 for i = nearest, #way.squares do rest[#rest + 1] = way.squares[i] end
                 self.way = { continent = c, squares = rest }
-                if kept.steer then
-                    self.steer = { aim = kept.steer.aim, point = Steer(rest, c, n, w, kept.steer.aim) }
-                end
+                if kept.steer then self.steer = SteerFor(rest, c, n, w, kept.steer.aim) end
             end
             return Same(last and last.p, p) and last or nil, true
         end
@@ -1264,7 +1321,7 @@ function R:Plan(p, last)
             local way = CityWay(c, n, w, G:Detail(c, G:Path(partial, n, w)), target.n, target.w, true)
             self.way = way and { continent = c, squares = way } or nil
             self.lines = BuildLines(nil, self.way, nil, nil, target, c, n, w)
-            self.steer = ns.db.steer and { aim = p, point = Steer(way, c, n, w, p) } or nil
+            self.steer = SteerFor(way, c, n, w, p)
             return nil, true
         end
         -- Nothing to follow at all: the fields get more time each frame until there is.
@@ -1299,7 +1356,8 @@ function R:Plan(p, last)
             StageLines(self.lines, p, grid and { speed = speed, swim = swim, safe = fall, once = once, maxDrop = maxDrop,
                 climb = climb, offroad = offroad, slack = 0, reverse = true } or nil)
         end
-        self.steer = aim and ns.db.steer and { aim = aim, point = Steer(way, c, n, w, aim) } or nil
+        -- (A flight master up a tower: toward where the climb starts first, the way there leads past it.)
+        self.steer = SteerFor(way, c, n, w, aim)
         -- How far its next flight or ride starts from where you are now (Taken).
         local nx = route and route.next
         if nx and nx.from and nx.from.c == c then route.fromDist = Dist(n, w, nx.from.n, nx.from.w) end

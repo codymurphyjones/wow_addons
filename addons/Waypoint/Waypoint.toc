@@ -36,6 +36,7 @@ Data\Nav1.lua
 Data\Nav2991.lua
 Data\Nav2995.lua
 Data\Nav2980.lua
+Data\Spots.lua
 NavGrid.lua
 Route.lua
 Chain.lua

@@ -552,10 +552,13 @@ function Arrow:Update()
         Text(f.where, "|cff59f28cIn the area: " .. (e.subtitle or "its objective is around you") .. "|r")
         return
     end
-    local d, angle = ns.Nav:To(p)
+    -- A flight master up a tower (Route.lua's R:Lead): to where the climb up starts first. There the
+    -- arrow points on up, never "You're there" or "Talk to the flight master" on the street under it.
+    local up = rt and rt.Lead and rt:Lead(p)
+    local d, angle = ns.Nav:To(up or p)
     Terrain(d and p)
     -- Around a lake or a cliff: point along the way there, not straight at it.
-    local steer = d and rt and rt:SteerPoint(p)
+    local steer = d and rt and rt:SteerPoint(p, up or p)
     if steer then
         local _, around = ns.Nav:To(steer)
         if around then angle = around end
@@ -566,7 +569,7 @@ function Arrow:Update()
             or angle == "instance" and "Can't tell where you are" or ns.Nav:Describe(p))
         return
     end
-    if d <= (leg and rt:Radius(leg) or e.arrive or 15) then
+    if not up and d <= (leg and rt:Radius(leg) or e.arrive or 15) then
         -- At the cliff's edge: a green arrow toward where the jump lands, not a check mark.
         local facing = GetPlayerFacing and C.Num(GetPlayerFacing())
         local jump
@@ -585,7 +588,7 @@ function Arrow:Update()
         return
     end
     f.check:Hide()
-    d = AlongWay(p, d)
+    if not up then d = AlongWay(p, d) end -- (the way runs on past the climb's start, up to p)
     local facing = GetPlayerFacing and C.Num(GetPlayerFacing())
     if facing then
         f.arrow:Show()
@@ -598,7 +601,10 @@ function Arrow:Update()
         -- Swimming the planned swim in your own form: the shift comes first.
         Text(f.where, ("|cffffd100%s|r  ·  %s to go"):format(tip, ns.Nav.Distance(d)))
     elseif leg then
-        Text(f.where, ("%s to the %s  ·  ~%s"):format(ns.Nav.Distance(d), rt:Place(leg), fl.Clock(route.total)))
+        local place = up and ("way up to the " .. rt:Place(leg)) or rt:Place(leg)
+        Text(f.where, ("%s to the %s  ·  ~%s"):format(ns.Nav.Distance(d), place, fl.Clock(route.total)))
+    elseif up then
+        Text(f.where, ("%s to %s  ·  ~%s"):format(ns.Nav.Distance(d), up.label, ns.Nav.ETA(d)))
     else
         Text(f.where, ("%s  ·  ~%s"):format(ns.Nav.Distance(d), ns.Nav.ETA(d)))
     end

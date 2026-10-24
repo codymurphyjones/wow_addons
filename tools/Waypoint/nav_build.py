@@ -180,6 +180,10 @@ def main(argv):
     for mapid in (int(m) for m in args.maps.split(",")):
         nav_stitch.main([str(mapid)])
         nav_pack.main([str(mapid)])
+    # The flight masters' floors and entrances (Data/Spots.lua), over every stitched map even when
+    # --maps names only some: it's one file for all of them, so each build writes it whole.
+    import nav_spots
+    nav_spots.main([])
 
 
 if __name__ == "__main__":

@@ -245,11 +245,51 @@ local function Into(m, id)
     return out
 end
 
--- The node at a world point: of its cell's floors, the one nearest the height (or the ground's,
--- Grid.lua's, without one); an empty cell (inside a wall, out at sea) takes the nearest within 3.
+-- ---------------------------------------------------------------------------------------------
+-- Spots: the flight masters' floors, and where the climb up to the ones on a tower starts
+-- (Data\Spots.lua, nav_spots.py). The game gives a target's place on the map, not its height:
+-- without the spot's, a flight master on a tower would be found on the street under it.
+-- ---------------------------------------------------------------------------------------------
+
+local SPOT_NEAR = 6 -- yards from a spot a point may be to be it
+
+-- The spot at a world point: { name, n, w, h, entrance = { n, w, h } or nil }, or nil. A point
+-- nearer the spot's entrance than the spot is the entrance (Nethergarde's is a yard from it, 14 below).
+local function SpotAt(m, n, w)
+    if m.spots == nil then
+        m.spots = false
+        local rows = ns.NavSpots and ns.NavSpots[m.continent]
+        if rows then
+            m.spots = {}
+            for k, r in ipairs(rows) do
+                m.spots[k] = { kind = r[1], name = r[2], n = r[3], w = r[4], h = r[5],
+                    entrance = r[6] and { n = r[6], w = r[7], h = r[8] } or nil }
+            end
+        end
+    end
+    if not m.spots then return nil end
+    local best, bd
+    for _, s in ipairs(m.spots) do
+        local d = (s.n - n) ^ 2 + (s.w - w) ^ 2
+        if d <= SPOT_NEAR * SPOT_NEAR and (not bd or d < bd) then best, bd = s, d end
+    end
+    local e = best and best.entrance
+    if e and (e.n - n) ^ 2 + (e.w - w) ^ 2 < bd then return nil end
+    return best
+end
+
+-- The height to look for at a world point when none is given: a spot's, else the ground's.
+local function HeightHint(m, n, w)
+    local s = SpotAt(m, n, w)
+    if s then return s.h end
+    return Old:Height(m.continent, n, w)
+end
+
+-- The node at a world point: of its cell's floors, the one nearest the height (or a spot's, or the
+-- ground's, Grid.lua's, without one); an empty cell (inside a wall, out at sea) takes the nearest within 3.
 local function Locate(m, n, w, height)
     local gr, gc = floor((m.max - n) / m.fine), floor((m.max - w) / m.fine)
-    height = height or Old:Height(m.continent, n, w)
+    height = height or HeightHint(m, n, w)
     for ring = 0, 3 do
         local best, bd
         for dr = -ring, ring do
@@ -1015,7 +1055,7 @@ LocateReached = function(f, n, w)
         end
     end
     local gr, gc = floor((m.max - n) / m.fine), floor((m.max - w) / m.fine)
-    local hint = Old:Height(m.continent, n, w)
+    local hint = HeightHint(m, n, w)
     for ring = 0, 3 do
         local best, bd
         for dr = -ring, ring do
@@ -1308,31 +1348,50 @@ function G:Height(continent, n, w)
 end
 
 -- Whether a straight line between two points stays on ground you walk (or water, when it starts
--- in water) without a drop: cell by cell along the line, each step a link of the map.
-function G:Clear(continent, n1, w1, n2, w2)
+-- in water) without a drop: cell by cell along the line, each step a link of the map to the floor
+-- nearest the one you're on. Given h2, the end point's floor, it must end on it: a floor under or
+-- over the end (the street under a flight master's tower, a turn of the ramp below it) isn't it,
+-- there the straight line would lead into the tower's wall. Without h2 any floor there will do.
+local CLEAR_FLOOR = 3 -- yards the line may end above or below the end point's floor
+function G:Clear(continent, n1, w1, n2, w2, h2)
     local m = Map(continent)
     if not m then return Old:Clear(continent, n1, w1, n2, w2) end
     local a = HereNode(continent, n1, w1) or Locate(m, n1, w1)
     if not a then return false end
-    local swimming = select(4, Where(m, a)) == 1
+    local _, _, ha, ka = Where(m, a)
+    local swimming = ka == 1
     local d = sqrt((n2 - n1) ^ 2 + (w2 - w1) ^ 2)
     local steps = math.ceil(d / (m.fine * 0.5))
-    local cur = a
+    local cur, hc = a, ha
     local cr, cc = floor((m.max - n1) / m.fine), floor((m.max - w1) / m.fine)
     for i = 1, steps do
         local n, w = n1 + (n2 - n1) * i / steps, w1 + (w2 - w1) * i / steps
         local r, c = floor((m.max - n) / m.fine), floor((m.max - w) / m.fine)
         if r ~= cr or c ~= cc then
-            local nxt
+            local nxt, nh, nd
             for _, l in ipairs(Links(m, cur)) do
-                local _, _, _, k, lr, lc = Where(m, l[1])
-                if lr == r and lc == c and l[2] ~= 2 and (k == 1) == swimming then nxt = l[1] break end
+                local _, _, lh, k, lr, lc = Where(m, l[1])
+                if lr == r and lc == c and l[2] ~= 2 and l[2] ~= 3 and (k == 1) == swimming then
+                    local dd = abs(lh - hc)
+                    if not nd or dd < nd then nxt, nh, nd = l[1], lh, dd end
+                end
             end
             if not nxt then return false end
-            cur, cr, cc = nxt, r, c
+            cur, hc, cr, cc = nxt, nh, r, c
         end
     end
-    return true
+    return not h2 or abs(hc - h2) <= CLEAR_FLOOR
+end
+
+-- The spot at a world point (Data\Spots.lua: a flight master): { name, n, w, h, entrance }, or nil.
+function G:Spot(continent, n, w)
+    local m = Map(continent)
+    return m and SpotAt(m, n, w) or nil
+end
+
+-- The height of the floor you're on, tracked as you move (nil when it isn't known here).
+function G:HereHeight(continent, n, w)
+    if HereNode(continent, n, w) then return here.h end
 end
 
 -- The ways a path's points join are already the map's own: nothing to put in.
@@ -1482,6 +1541,9 @@ function G:WhereText()
     local n = #FloorsAt(m, here.n, here.w)
     local text = ("on the floor at %.0f yd (%d floor%s here; %d still possible%s)"):format(here.h or 0, n, n == 1 and "" or "s",
         #(here.cands or {}), here.z and ("; the game says you're at " .. math.floor(here.z + 0.5)) or "; tracked as you move")
+    -- The flight master the arrow is leading to, when it's one with a climb (Route.lua's R:Lead).
+    local lead = ns.Route and ns.Route.leadInfo
+    if lead then text = text .. "; " .. lead end
     -- The routes in use: which floor each starts from (yours, or one it reached yours from).
     for _, key in ipairs({ "here", "target" }) do
         local f = fields[key]
