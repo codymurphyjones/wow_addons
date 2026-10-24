@@ -1524,11 +1524,12 @@ def after_upload(cfg, addon, manual):
     pid = cfg["projects"][addon.name]
     for cached in API_CACHE_DIR.glob(f"files_{pid}_*.json"):
         cached.unlink(missing_ok=True)
+    # Publishing only talks to CurseForge: the game folder is sync's (`yarn test`, `yarn test:watch`).
     if manual:
-        print("Marked for manual release - approve it on CurseForge, then run sync.")
+        print("Marked for manual release - approve it on CurseForge.")
         return True
-    print("CurseForge may take a few minutes to process it; until then sync keeps your dev build.")
-    return run_sync(cfg, [addon.name], refresh=True)
+    print("CurseForge may take a few minutes to process it.")
+    return True
 
 
 def lint(addons):
@@ -1750,7 +1751,7 @@ def publish_outbox(cfg, cf, addons, args):
     by_lower = {a.name.lower(): a for a in addons}
     ok = True
     for zpath, name, version in items:
-        state = load_json(STATE_PATH, {})  # after_upload's sync may have written it
+        state = load_json(STATE_PATH, {})
         addon = by_lower.get((name or "").lower())
         if not addon:
             print(f"\n{zpath.name}: no matching addon in {cfg['source_dir']} - left in place")
