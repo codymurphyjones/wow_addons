@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.1"
+ns.VERSION = "0.1.2"
 ns.PREFIX = "|cff55d6beWealth Planner|r"
 -- Built from the folder name so the path survives renaming the folder.
 ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon"

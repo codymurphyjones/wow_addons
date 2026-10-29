@@ -16,10 +16,10 @@ local _, ns = ...
 --
 -- The nearest of Waypoint's towns show too, with its town badge: rest the cursor for what's there.
 -- Double-click a hotspot, a moon or a town and Waypoint's arrow leads there.
--- Otherwise nothing is clicked. Rest the cursor on a hotspot: it lists every step there, in order. Rest it on
--- the step to do now until its ring closes, then flick the cursor off it: up = done it, down = skip,
--- sideways = pause the arrow. A thrown step lingers as a ghost for a few seconds: rest the cursor on
--- it to take it back. Flick a moon toward you to go where it leads.
+-- Rest the cursor on a hotspot: it lists every step there, in order. Rest it on the step to do now
+-- until its ring closes, then flick the cursor off it: up = done it, down = skip, sideways = pause the
+-- guide. Or move to one of the whispers around the ring and click it. A thrown step lingers as a ghost
+-- for a few seconds: rest the cursor on it to take it back. Flick a moon toward you to go where it leads.
 --
 -- It learns (ns.db.field): how long you stay to read paces how fast the field opens; looking ahead
 -- often brings more steps up; a gesture you've used a few times stops being whispered (hesitate on a
@@ -221,11 +221,67 @@ local function NewHot()
     g.keep.bg:SetAllPoints(); g.keep.bg:SetColorTexture(1, 1, 1, 0.06)
     g.keep:SetScript("OnEnter", function(self) self.bg:SetColorTexture(1, 1, 1, 0.16) end)
     g.keep:SetScript("OnLeave", function(self) self.bg:SetColorTexture(1, 1, 1, 0.06) end)
-    g.keep:SetScript("OnClick", function() if ns.Engine then ns.Engine:SkipCurrent() end end)
+    g.keep:SetScript("OnClick", function() Hot.Act(g, "down", 0, -1) end)
     g.keep:Hide()
+    -- Beside it, "Done it": the quest is finished, whatever the game's record says.
+    g.done = CreateFrame("Button", nil, g.block)
+    g.done:SetSize(100, 20)
+    g.done.text = Shadow(g.done:CreateFontString(nil, "OVERLAY", "FieldGuideGameFontHighlightSmall"))
+    g.done.text:SetAllPoints()
+    g.done.text:SetText(Icon("done", 14) .. " |cffbfc4bfDone it|r")
+    g.done.bg = g.done:CreateTexture(nil, "BACKGROUND")
+    g.done.bg:SetAllPoints(); g.done.bg:SetColorTexture(1, 1, 1, 0.06)
+    g.done:SetScript("OnEnter", function(self)
+        self.bg:SetColorTexture(1, 1, 1, 0.16)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Done it")
+        GameTooltip:AddLine("Count this quest as finished, whatever the game's record says. Rest the cursor on its ghost to take it back.", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    g.done:SetScript("OnLeave", function(self) self.bg:SetColorTexture(1, 1, 1, 0.06); GameTooltip:Hide() end)
+    g.done:SetScript("OnClick", function() Hot.Act(g, "up", 0, 1) end)
+    g.done:Hide()
+    -- The whispers around a closed ring, one per way out. Each is a button too: the cursor can go
+    -- to one and click it (the ring stays closed on the way there).
     g.hint = {}
     for _, dir in ipairs({ "up", "down", "left", "right" }) do
-        g.hint[dir] = Shadow(g:CreateFontString(nil, "OVERLAY", "FieldGuideGameFontHighlight"))
+        local b = CreateFrame("Button", nil, g)
+        b:SetSize(1, 20)
+        b:EnableMouse(false)
+        b.text = Shadow(b:CreateFontString(nil, "OVERLAY", "FieldGuideGameFontHighlight"))
+        b.text:SetPoint("CENTER")
+        b.SetText = function(self, text)
+            if self.text:GetText() == text then return end
+            self.text:SetText(text)
+            local on = text ~= ""
+            self:SetWidth(on and math.ceil(self.text:GetStringWidth()) + 12 or 1)
+            self:EnableMouse(on)
+            if not on and self.over then
+                self.over, g.overHint = nil, nil
+                self.text:SetTextColor(1, 1, 1)
+                GameTooltip:Hide()
+            end
+        end
+        b:SetScript("OnEnter", function(self)
+            self.over = true
+            g.overHint = true
+            self.text:SetTextColor(1, 0.82, 0)
+            if self.tip then
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:SetText(self.tip[1])
+                GameTooltip:AddLine(self.tip[2], 1, 1, 1, true)
+                GameTooltip:Show()
+            end
+        end)
+        b:SetScript("OnLeave", function(self)
+            self.over = nil
+            g.overHint = nil
+            g.armedUntil = GetTime() + 0.35
+            self.text:SetTextColor(1, 1, 1)
+            GameTooltip:Hide()
+        end)
+        b:SetScript("OnClick", function(self) if self.action then Hot.Act(g, self.action, self.dx, self.dy) end end)
+        g.hint[dir] = b
     end
     g.hint.up:SetPoint("BOTTOM", g, "TOP", 0, 10)
     g.hint.down:SetPoint("TOP", g.num, "BOTTOM", 0, -6)
@@ -242,7 +298,7 @@ local function Release(g)
     g:Hide(); g:EnableMouse(false)
     live[g.key] = nil
     g.key, g.steps, g.entry, g.role, g.x, g.y, g.tx, g.ty, g.alpha, g.charge, g.ghostUntil, g.closedAt = nil
-    g.flashUntil, g.lastClick = nil
+    g.flashUntil, g.lastClick, g.armedUntil, g.overHint = nil
     pool[#pool + 1] = g
 end
 
@@ -318,7 +374,7 @@ local function LayoutBlock(g)
     local lw, dw, lh, dh = m.lw, m.dw, m.lh, m.dh
     local w, h = math.max(lw, dw) + 18, lh + dh + (dh > 0 and lh > 0 and 4 or 0) + 16
     if g.wantKeep then
-        w, h = math.max(w, 150 + 16), h + 26
+        w, h = math.max(w, 100 + 6 + 150 + 16), h + 26
     end
     g.block:SetSize(w, h)
     local right = g.x >= 0
@@ -340,8 +396,16 @@ local function LayoutBlock(g)
     local x = right and 8 or -8
     g.label:SetPoint("TOP" .. just, g.block, "TOP" .. just, x, -6)
     g.detail:SetPoint("TOP" .. just, g.block, "TOP" .. just, x, -6 - (lh > 0 and lh + 4 or 0))
+    -- Done it nearest the light, Skip beside it.
+    g.done:ClearAllPoints()
+    g.done:SetPoint("BOTTOM" .. just, g.block, "BOTTOM" .. just, x, 6)
     g.keep:ClearAllPoints()
-    g.keep:SetPoint("BOTTOM" .. just, g.block, "BOTTOM" .. just, x, 6)
+    if right then
+        g.keep:SetPoint("LEFT", g.done, "RIGHT", 6, 0)
+    else
+        g.keep:SetPoint("RIGHT", g.done, "LEFT", -6, 0)
+    end
+    g.done:SetShown(g.wantKeep and true or false)
     g.keep:SetShown(g.wantKeep and true or false)
 end
 
@@ -351,7 +415,7 @@ local function Words(g, stage)
     local e, role = g.entry, g.role
     local resting = hovered == g
     local label, detail = "", ""
-    -- The step to do now is a quest: its skip button shows ("Keep my cloth" for a cloth donation).
+    -- The step to do now is a quest: its Done it and Skip buttons show ("Keep my cloth" for a cloth donation).
     g.wantKeep = (role == "current" or role == "pulse") and e.canDone or false
     if g.wantKeep then
         local text = Icon("skip", 14) .. (ns.Engine:DonationCloth(e.id) and " |cffbfc4bfKeep my cloth (skip)|r" or " |cffbfc4bfSkip this quest|r")
@@ -408,21 +472,36 @@ local function Hints(g, show)
     local f = L()
     local e = g.entry
     local hesitating = g.closedAt and GetTime() - g.closedAt > 1.6
-    local function Say(dir, text, uses)
-        local on = show and text and (hesitating or (f.used[uses] or 0) < 3)
-        g.hint[dir]:SetText(on and text or "")
+    -- A whisper the cursor is on stays, whatever was learned.
+    local function Say(dir, text, uses, action, dx, dy, tip)
+        local b = g.hint[dir]
+        local on = show and text and (hesitating or b.over or (f.used[uses] or 0) < 3)
+        b.action, b.dx, b.dy, b.tip = action, dx, dy, tip
+        b:SetText(on and text or "")
     end
     if g.role == "moon" then
         -- "Toward you" is down for a moon above your character, up for one below.
         local text = Icon(e.leveling and "leveling" or "dungeon", 18) .. " toward you: " .. (e.leveling and "back to questing" or "go")
-        Say("up", g.y < 0 and text or nil, "moon"); Say("down", g.y >= 0 and text or nil, "moon")
+        local tip = e.leveling and { "Back to questing", "Leave this dungeon's route and go back to the leveling guide." }
+            or { e.name, "Switch the guide to this dungeon: its quests, the run, then the turn-ins." }
+        Say("up", g.y < 0 and text or nil, "moon", "moon", 0, 1, tip)
+        Say("down", g.y >= 0 and text or nil, "moon", "moon", 0, -1, tip)
         Say("left", nil); Say("right", nil)
         return
     end
-    Say("up", e.canDone and (Icon("done", 20) .. " done it") or nil, "up")
-    Say("down", Icon("skip", 20) .. " skip", "down")
-    local side = ns.char.paused and (Icon("play", 20) .. " arrow") or (Icon("pause", 20) .. " arrow")
-    Say("left", side, "side"); Say("right", side, "side")
+    Say("up", e.canDone and (Icon("done", 20) .. " done it") or nil, "up", "up", 0, 1,
+        { "Done it", "Count this quest as finished, whatever the game's record says." })
+    Say("down", Icon("skip", 20) .. " skip", "down", "down", 0, -1, e.canDone
+        and { "Skip this quest", "Field Guide won't suggest this quest again (nor what needs it first). /fg unskip brings it back." }
+        or { "Skip this step", "Move on to the next step. /fg unskip brings it back." })
+    local side, tip
+    if ns.char.paused then
+        side, tip = Icon("play", 20) .. " resume guide", { "Resume the guide", "Waypoint's arrow follows Field Guide's steps again." }
+    else
+        side, tip = Icon("pause", 20) .. " pause guide", { "Pause the guide",
+            "Field Guide stops steering Waypoint's arrow and hides. Press Play on the arrow (or /fg resume) to bring it back." }
+    end
+    Say("left", side, "side", "side", -1, 0, tip); Say("right", side, "side", "side", 1, 0, tip)
 end
 
 -- Double-click: Waypoint's arrow leads to this place (a request, as a town badge's click on the
@@ -469,9 +548,17 @@ function Hot.Click(g, button)
     end
 end
 
+-- A closed ring stays closed while the cursor is on one of its whispers, or on its way to one.
+local function Armed(g)
+    return (g.charge or 0) >= 1 and (g.overHint or (g.armedUntil and GetTime() < g.armedUntil)) and true or false
+end
+
 function Hot.Enter(g)
+    if hovered and hovered ~= g then hovered.armedUntil, hovered.overHint = nil, nil end
     hovered = g
     wipe(samples)
+    -- Back from one of its own whispers: still closed.
+    if Armed(g) then g.armedUntil = nil; return end
     g.charge = 0
     g.closedAt = nil
     if episode and g.role == "next" then episode.peeked = true end
@@ -490,28 +577,20 @@ local function Restore(e)
     ns:Changed()
 end
 
-local function Throw(g, dx, dy)
-    local f = L()
+-- What a way out of a step does, flicked or clicked: "up" done it, "down" skip, "side" pause or
+-- resume the guide, "moon" go where a moon leads. dx, dy: the way the step leaves.
+function Hot.Act(g, action, dx, dy)
     local e = g.entry
-    if g.role == "moon" then
-        -- Toward you: toward your character.
-        local cx, cy = -g.x, -g.y
-        local len = math.sqrt(cx * cx + cy * cy) * math.sqrt(dx * dx + dy * dy)
-        if len == 0 or (cx * dx + cy * dy) / len < 0.6 then return false end
-        f.used.moon = (f.used.moon or 0) + 1
+    if not e then return end
+    g.armedUntil, g.overHint, g.charge = nil, nil, 0
+    GameTooltip:Hide()
+    if action == "moon" then
         if e.leveling then ns.Instance:Stop() else ns.Instance:Resume() end
-        return true
+        return
     end
-    local action
-    if math.abs(dy) > math.abs(dx) then
-        action = dy > 0 and "up" or "down"
-    else
-        action = "side"
-    end
-    if action == "up" and not e.canDone then return false end
-    f.used[action] = (f.used[action] or 0) + 1
-    -- The step leaves the way you threw it and lingers there as a ghost.
-    if action ~= "side" then
+    if action == "up" and not e.canDone then return end
+    -- The step leaves that way and lingers there as a ghost.
+    if action ~= "side" and g.x then
         local len = math.sqrt(dx * dx + dy * dy)
         local ghost = {}
         for k, v in pairs(e) do ghost[k] = v end
@@ -530,14 +609,40 @@ local function Throw(g, dx, dy)
     else
         ns.Engine:SetPaused()
     end
+end
+
+local function Throw(g, dx, dy)
+    local f = L()
+    if g.role == "moon" then
+        -- Toward you: toward your character.
+        local cx, cy = -g.x, -g.y
+        local len = math.sqrt(cx * cx + cy * cy) * math.sqrt(dx * dx + dy * dy)
+        if len == 0 or (cx * dx + cy * dy) / len < 0.6 then return false end
+        f.used.moon = (f.used.moon or 0) + 1
+        Hot.Act(g, "moon")
+        return true
+    end
+    local action
+    if math.abs(dy) > math.abs(dx) then
+        action = dy > 0 and "up" or "down"
+    else
+        action = "side"
+    end
+    if action == "up" and not g.entry.canDone then return false end
+    f.used[action] = (f.used[action] or 0) + 1
+    Hot.Act(g, action, dx, dy)
     return true
 end
 
 function Hot.Leave(g)
     if hovered ~= g then return end
     hovered = nil
-    for _, h in pairs(g.hint) do h:SetText("") end
-    if (g.charge or 0) < 1 or (g.role ~= "current" and g.role ~= "moon") then return end
+    if (g.charge or 0) < 1 or (g.role ~= "current" and g.role ~= "moon") then
+        for _, h in pairs(g.hint) do h:SetText("") end
+        return
+    end
+    -- Drifting off slowly leaves the whispers up for a moment, so the cursor can get to one.
+    g.armedUntil = GetTime() + 0.5
     -- The cursor's speed as it left: fast is a throw, slow is letting go of it.
     local x, y = Cursor()
     local now = GetTime()
@@ -827,13 +932,13 @@ function UI:Tick(elapsed)
             local touchable = g.alpha > 0.4
             if g:IsMouseEnabled() ~= touchable then g:EnableMouse(touchable) end
             -- The ring: closing while the cursor rests; a slow breath on the step to do now.
-            local charge = (hovered == g) and (g.charge or 0) or 0
+            local charge = (hovered == g or Armed(g)) and (g.charge or 0) or 0
             if g.flashUntil and now < g.flashUntil then charge = 1 end -- a waypoint was just set here
             local lit = math.floor(charge * 12 + 0.5)
             for i, d in ipairs(g.ring) do
                 d:SetAlpha(i <= lit and 0.95 or ((g.role == "current" and stage >= 1) and (0.12 + 0.1 * math.sin(now * 2 + i)) or 0))
             end
-            Hints(g, hovered == g and charge >= 1 and (g.role == "current" or g.role == "moon"))
+            Hints(g, charge >= 1 and (g.role == "current" or g.role == "moon"))
         end
     end
 

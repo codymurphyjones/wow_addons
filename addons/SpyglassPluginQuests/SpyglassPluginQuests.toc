@@ -2,7 +2,7 @@
 ## Title: SpyGlassPluginQuests
 ## Notes: Expands SpyGlass to every known item: quest rewards with their chains, world drops, vendor gear and crafted gear, ranked by your StatLedger priorities. Needs SpyGlass.
 ## Author: Dinoblankie + Claude
-## Version: 1.1.5
+## Version: 1.1.6
 ## Dependencies: Spyglass
 ## LoadOnDemand: 1
 ## SavedVariablesPerCharacter: SpyGlassPluginQuestsDB, LootPriorityPluginDB

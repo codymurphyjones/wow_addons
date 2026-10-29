@@ -924,6 +924,51 @@ local function Steer(way, c, n, w, aim)
     return { _c = c, _n = best.n, _w = best.w, _island = false, label = "the way" }
 end
 
+-- Following the way drawn on the map, from where you are this moment: the point FOLLOW_LOOK yards
+-- on along it from its nearest point to you (FOLLOW_STREETS along a city's streets, where corners
+-- are tight). Ahead is along the way toward the target, not where you face, so the arrow never
+-- points back along it however you turn; it turns where the line turns, a few steps early, and
+-- moves along smoothly as you walk. A turn of a zigzag or a way round (a via) is never cut: the
+-- arrow points at it until you're within FOLLOW_VIA yards. Only the way's first FOLLOW_SEARCH yards
+-- count as where you are (it starts about where you stand), so a way that comes back near itself
+-- further on doesn't pull the arrow ahead. false: the way ends within reach (straight at the
+-- target); nil: no way to follow.
+local FOLLOW_LOOK, FOLLOW_STREETS, FOLLOW_VIA, FOLLOW_SEARCH = 20, 10, 4, 80
+local function Follow(way, c, n, w)
+    if not (way and way[2]) then return nil end
+    local bestD, bi, bt, along = nil, 1, 0, 0
+    for i = 1, #way - 1 do
+        local a, b = way[i], way[i + 1]
+        local dn, dw = b.n - a.n, b.w - a.w
+        local len2 = dn * dn + dw * dw
+        local t = len2 > 0 and math.max(0, math.min(1, ((n - a.n) * dn + (w - a.w) * dw) / len2)) or 0
+        local d = (a.n + dn * t - n) ^ 2 + (a.w + dw * t - w) ^ 2
+        if not bestD or d < bestD then bestD, bi, bt = d, i, t end
+        along = along + math.sqrt(len2)
+        if along > FOLLOW_SEARCH then break end
+    end
+    local left = FOLLOW_LOOK
+    for i = bi, math.min(#way, bi + 20) do
+        if way[i].street then left = FOLLOW_STREETS break end
+    end
+    local a, b = way[bi], way[bi + 1]
+    local cn, cw = a.n + (b.n - a.n) * bt, a.w + (b.w - a.w) * bt
+    for i = bi + 1, #way do
+        local s = way[i]
+        local seg = Dist(cn, cw, s.n, s.w)
+        if seg >= left then
+            local t = left / seg
+            return { _c = c, _n = cn + (s.n - cn) * t, _w = cw + (s.w - cw) * t, _island = false, label = "the way" }
+        end
+        if s.via and Dist(n, w, s.n, s.w) > FOLLOW_VIA then
+            return { _c = c, _n = s.n, _w = s.w, _island = false, label = "the way" }
+        end
+        left = left - seg
+        cn, cw = s.n, s.w
+    end
+    return false
+end
+
 -- Flight masters up a tower, a ramp or stairs (NavGrid.lua's spots, Data\Spots.lua): the arrow
 -- leads to where the climb up starts first, then up to them. You're on the climb once you've been
 -- within ENTRANCE_REACHED yards of where it starts, or your tracked floor is above it near the
@@ -1169,7 +1214,19 @@ end
 function R:SteerPoint(p, toward)
     if not ns.db.steer then return nil end
     local s = self.steer
-    if s and s.aim == p and (s.toward or p) == (toward or p) then return s.point end
+    if not (s and s.aim == p and (s.toward or p) == (toward or p)) then return nil end
+    -- Heading for the target along the way drawn on the map: follow that line, worked out from
+    -- where you are this moment (a steer picked at the last plan jumps as you walk on). On the way
+    -- to a climb's start (the way runs on past it), the steer picked at the plan.
+    if (s.toward or p) == p then
+        local c, n, w = ns.Nav:Player()
+        local way = self.way
+        if c and way and way.continent == c then
+            local point = Follow(way.squares, c, n, w)
+            if point ~= nil then return point or nil end
+        end
+    end
+    return s.point
 end
 
 -- Where the arrow leads on the way to point p (the flight master, or the target itself): where the

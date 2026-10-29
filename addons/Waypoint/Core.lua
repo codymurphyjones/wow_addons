@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.1"
+ns.VERSION = "0.1.2"
 -- Waypoint's logo, shipped in the addon (Media\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\Waypoint\\Media\\Icon"
 

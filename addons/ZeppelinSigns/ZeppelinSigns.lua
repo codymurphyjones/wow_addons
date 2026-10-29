@@ -1,6 +1,6 @@
 local _, Z = ...
 
-Z.VERSION = "1.1.4"
+Z.VERSION = "1.1.5"
 -- How close (in yards) you must stand to a dock for its sign to show. The two
 -- Grom'gol zeppelin masters are only ~17 yards apart, so zeppelins stay below that.
 -- Ship piers are long, so ports show from further out. Mousing over a master has

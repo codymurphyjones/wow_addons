@@ -2,7 +2,7 @@
 ## Title: Fireside: Party Kudos
 ## Notes: Thank your party as it happens and at the end: sparks from the Hearth mid-run, then a campfire where everyone from the run gathers for kudos and private notes. A Mirror shows what others told you. /fire
 ## Author: Dinoblankie + Claude
-## Version: 0.1.1
+## Version: 0.1.2
 ## SavedVariables: FiresideDB
 ## SavedVariablesPerCharacter: FiresideCharDB
 ## IconTexture: Interface\AddOns\Fireside\Media\Icon

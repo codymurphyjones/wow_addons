@@ -1,0 +1,641 @@
+{
+ "name": "Wally Addon Collection",
+ "gameVersionTypeId": 88568,
+ "addons": [
+  {
+   "id": 414434,
+   "name": "Attune",
+   "page": "https://www.curseforge.com/wow/addons/attune",
+   "file": {
+    "id": 9263982,
+    "name": "Attune-Forever-v16001-34.zip",
+    "url": "https://edge.forgecdn.net/files/9263/982/Attune-Forever-v16001-34.zip",
+    "folders": [
+     "Attune"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 6124,
+   "name": "Auctionator",
+   "page": "https://www.curseforge.com/wow/addons/auctionator",
+   "file": {
+    "id": 9162359,
+    "name": "341",
+    "url": null,
+    "folders": [
+     "Auctionator"
+    ]
+   },
+   "locked": true,
+   "requires": []
+  },
+  {
+   "id": 1729275,
+   "name": "Bandolier: Consumable Manager",
+   "page": "https://www.curseforge.com/wow/addons/bandolier-consumable-manager",
+   "file": {
+    "id": 9287505,
+    "name": "Bandolier v1.0.6",
+    "url": "https://edge.forgecdn.net/files/9287/505/Bandolier_v1_0_6.zip",
+    "folders": [
+     "Bandolier"
+    ]
+   },
+   "locked": false,
+   "requires": [
+    1735014
+   ]
+  },
+  {
+   "id": 13501,
+   "name": "Bartender4",
+   "page": "https://www.curseforge.com/wow/addons/bartender4",
+   "file": {
+    "id": 9040207,
+    "name": "4.18.3.1",
+    "url": null,
+    "folders": [
+     "Bartender4"
+    ]
+   },
+   "locked": true,
+   "requires": []
+  },
+  {
+   "id": 1743876,
+   "name": "BattleRecap",
+   "page": "https://www.curseforge.com/wow/addons/battlerecap",
+   "file": {
+    "id": 9287374,
+    "name": "BattleRecap v1.1.2",
+    "url": "https://edge.forgecdn.net/files/9287/374/BattleRecap_v1_1_2.zip",
+    "folders": [
+     "BattleRecap"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1515481,
+   "name": "Better Cast Bars",
+   "page": "https://www.curseforge.com/wow/addons/better-cast-bars",
+   "file": {
+    "id": 9302972,
+    "name": "BetterCastBars-2.2.2.zip",
+    "url": null,
+    "folders": [
+     "BetterCastBars"
+    ]
+   },
+   "locked": true,
+   "requires": []
+  },
+  {
+   "id": 13344,
+   "name": "BugGrabber",
+   "page": "https://www.curseforge.com/wow/addons/bug-grabber",
+   "file": {
+    "id": 9277326,
+    "name": "v12.1.1",
+    "url": "https://edge.forgecdn.net/files/9277/326/!BugGrabber-v12.1.1.zip",
+    "folders": [
+     "!BugGrabber"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 6273,
+   "name": "BugSack",
+   "page": "https://www.curseforge.com/wow/addons/bugsack",
+   "file": {
+    "id": 9277342,
+    "name": "v12.1.8",
+    "url": "https://edge.forgecdn.net/files/9277/342/BugSack-v12.1.8.zip",
+    "folders": [
+     "BugSack"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1759230,
+   "name": "Convergence",
+   "page": "https://www.curseforge.com/wow/addons/convergence",
+   "file": {
+    "id": 9306909,
+    "name": "Convergence v1.0.1",
+    "url": "https://edge.forgecdn.net/files/9306/909/Convergence_v1_0_1.zip",
+    "folders": [
+     "Convergence"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 61284,
+   "name": "Details! Damage Meter",
+   "page": "https://www.curseforge.com/wow/addons/details",
+   "file": {
+    "id": 9202791,
+    "name": "Details.20261015.15339.172",
+    "url": null,
+    "folders": [
+     "Details",
+     "Details_EncounterDetails",
+     "Details_TinyThreat",
+     "Details_Vanguard",
+     "Details_DataStorage",
+     "Details_RaidCheck",
+     "Details_Streamer",
+     "Details_Compare2"
+    ]
+   },
+   "locked": true,
+   "requires": []
+  },
+  {
+   "id": 989270,
+   "name": "Dialogue UI",
+   "page": "https://www.curseforge.com/wow/addons/dialogueui",
+   "file": {
+    "id": 9058348,
+    "name": "1.0.6",
+    "url": "https://edge.forgecdn.net/files/9058/348/DialogueUI-1.0.6.zip",
+    "folders": [
+     "DialogueUI"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1723093,
+   "name": "EasyMarksForever",
+   "page": "https://www.curseforge.com/wow/addons/easymarksforever",
+   "file": {
+    "id": 9043582,
+    "name": "EasyMarksForever-0.1.10",
+    "url": null,
+    "folders": [
+     "EasyMarksForever"
+    ]
+   },
+   "locked": true,
+   "requires": []
+  },
+  {
+   "id": 1759231,
+   "name": "Field Guide",
+   "page": "https://www.curseforge.com/wow/addons/field-guide",
+   "file": {
+    "id": 9311283,
+    "name": "FieldGuide v0.1.1",
+    "url": "https://edge.forgecdn.net/files/9311/283/FieldGuide_v0_1_1.zip",
+    "folders": [
+     "FieldGuide"
+    ]
+   },
+   "locked": false,
+   "requires": [
+    1759571
+   ]
+  },
+  {
+   "id": 1759344,
+   "name": "Fireside: Party Kudos",
+   "page": "https://www.curseforge.com/wow/addons/fireside-party-kudos",
+   "file": {
+    "id": 9311639,
+    "name": "Fireside v0.1.1",
+    "url": "https://edge.forgecdn.net/files/9311/639/Fireside_v0_1_1.zip",
+    "folders": [
+     "Fireside"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1723473,
+   "name": "GnomeLevelUp",
+   "page": "https://www.curseforge.com/wow/addons/gnomelevelup",
+   "file": {
+    "id": 9298779,
+    "name": "v1.4.5",
+    "url": "https://edge.forgecdn.net/files/9298/779/GnomeLevelUp-v1.4.5.zip",
+    "folders": [
+     "GnomeLevelUp"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1708496,
+   "name": "HeadHunter - Wanted: Dead or Alive",
+   "page": "https://www.curseforge.com/wow/addons/headhunter-wanted-dead-or-alive",
+   "file": {
+    "id": 9282433,
+    "name": "0.7.0",
+    "url": null,
+    "folders": [
+     "HeadHunter"
+    ]
+   },
+   "locked": true,
+   "requires": []
+  },
+  {
+   "id": 1710286,
+   "name": "Layer-Swap",
+   "page": "https://www.curseforge.com/wow/addons/layer",
+   "file": {
+    "id": 9277612,
+    "name": "LayerSwap-1.13",
+    "url": "https://edge.forgecdn.net/files/9277/612/LayerSwap-1.13.zip",
+    "folders": [
+     "LayerSwap"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1725169,
+   "name": "Linked Inn: Profession Finder",
+   "page": "https://www.curseforge.com/wow/addons/linked-inn-profession-finder",
+   "file": {
+    "id": 9259459,
+    "name": "v1.6.0",
+    "url": "https://edge.forgecdn.net/files/9259/459/LinkedInn-v1.6.0.zip",
+    "folders": [
+     "LinkedInn"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1705364,
+   "name": "Manners - Buff Nearby Players",
+   "page": "https://www.curseforge.com/wow/addons/manners",
+   "file": {
+    "id": 9310616,
+    "name": "v1.8.6",
+    "url": "https://edge.forgecdn.net/files/9310/616/Manners-v1.8.6.zip",
+    "folders": [
+     "Manners"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1728963,
+   "name": "Modified: Macro Manager",
+   "page": "https://www.curseforge.com/wow/addons/modified",
+   "file": {
+    "id": 9311641,
+    "name": "Modified v1.0.5",
+    "url": "https://edge.forgecdn.net/files/9311/641/Modified_v1_0_5.zip",
+    "folders": [
+     "Modified"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1759346,
+   "name": "Mr. Miyagi",
+   "page": "https://www.curseforge.com/wow/addons/mr-miyagi",
+   "file": {
+    "id": 9287380,
+    "name": "MrMiyagi v0.1.0",
+    "url": "https://edge.forgecdn.net/files/9287/380/MrMiyagi_v0_1_0.zip",
+    "folders": [
+     "MrMiyagi"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1759351,
+   "name": "Open Maps: Region Icons",
+   "page": "https://www.curseforge.com/wow/addons/open-maps-region-icons",
+   "file": {
+    "id": 9311642,
+    "name": "RegionIcons v0.1.1",
+    "url": "https://edge.forgecdn.net/files/9311/642/RegionIcons_v0_1_1.zip",
+    "folders": [
+     "RegionIcons"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1735937,
+   "name": "OpenMap",
+   "page": "https://www.curseforge.com/wow/addons/openmap",
+   "file": {
+    "id": 9299630,
+    "name": "v0.7.5-beta-forever",
+    "url": "https://edge.forgecdn.net/files/9299/630/OpenMap-v0.7.5-beta.zip",
+    "folders": [
+     "OpenMap"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 888580,
+   "name": "Plumber",
+   "page": "https://www.curseforge.com/wow/addons/plumber",
+   "file": {
+    "id": 9206877,
+    "name": "1.9.6 d",
+    "url": "https://edge.forgecdn.net/files/9206/877/Plumber-1.9.6-d.zip",
+    "folders": [
+     "Plumber"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1735119,
+   "name": "Quartermaster:  Order Lists",
+   "page": "https://www.curseforge.com/wow/addons/quartermaster-order-lists",
+   "file": {
+    "id": 9287381,
+    "name": "Quartermaster v0.1.5",
+    "url": "https://edge.forgecdn.net/files/9287/381/Quartermaster_v0_1_5.zip",
+    "folders": [
+     "Quartermaster"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 334372,
+   "name": "Questie",
+   "page": "https://www.curseforge.com/wow/addons/questie",
+   "file": {
+    "id": 9303385,
+    "name": "v12.2.0+v1.0.7",
+    "url": "https://edge.forgecdn.net/files/9303/385/Questie-v12.2.0%2bv1.0.7.zip",
+    "folders": [
+     "QuestieDB",
+     "Questie"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 84208,
+   "name": "RareScanner",
+   "page": "https://www.curseforge.com/wow/addons/rarescanner",
+   "file": {
+    "id": 9296107,
+    "name": "RareScanner_FOREVER_1.60.1.b15",
+    "url": "https://edge.forgecdn.net/files/9296/107/RareScanner_FOREVER_1.60.1.b15.zip",
+    "folders": [
+     "RareScanner"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1735030,
+   "name": "Saddlebags: Tab System",
+   "page": "https://www.curseforge.com/wow/addons/saddlebags-tab-system",
+   "file": {
+    "id": 9287718,
+    "name": "SaddleBags v1.0.4",
+    "url": "https://edge.forgecdn.net/files/9287/718/SaddleBags_v1_0_4.zip",
+    "folders": [
+     "SaddleBags"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1740497,
+   "name": "SimplePanel",
+   "page": "https://www.curseforge.com/wow/addons/simplepanel",
+   "file": {
+    "id": 9311643,
+    "name": "SimplePanel v0.1.6",
+    "url": "https://edge.forgecdn.net/files/9311/643/SimplePanel_v0_1_6.zip",
+    "folders": [
+     "SimplePanel"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1743890,
+   "name": "SmartPlates",
+   "page": "https://www.curseforge.com/wow/addons/smartplates",
+   "file": {
+    "id": 9311644,
+    "name": "SmartPlates v0.1.4",
+    "url": "https://edge.forgecdn.net/files/9311/644/SmartPlates_v0_1_4.zip",
+    "folders": [
+     "SmartPlates"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1735122,
+   "name": "SpyGlass Plugin: Quests",
+   "page": "https://www.curseforge.com/wow/addons/spyglass-plugin-quests",
+   "file": {
+    "id": 9311647,
+    "name": "SpyglassPluginQuests v1.1.5",
+    "url": "https://edge.forgecdn.net/files/9311/647/SpyglassPluginQuests_v1_1_5.zip",
+    "folders": [
+     "SpyglassPluginQuests"
+    ]
+   },
+   "locked": false,
+   "requires": [
+    1735103
+   ]
+  },
+  {
+   "id": 1735103,
+   "name": "Spyglass: Loot Journal",
+   "page": "https://www.curseforge.com/wow/addons/spyglass-loot-journal",
+   "file": {
+    "id": 9311646,
+    "name": "Spyglass v1.0.9",
+    "url": "https://edge.forgecdn.net/files/9311/646/Spyglass_v1_0_9.zip",
+    "folders": [
+     "Spyglass"
+    ]
+   },
+   "locked": false,
+   "requires": [
+    1735014
+   ]
+  },
+  {
+   "id": 1735014,
+   "name": "StatLedger",
+   "page": "https://www.curseforge.com/wow/addons/statledger",
+   "file": {
+    "id": 9284902,
+    "name": "StatLedger v1.0.3",
+    "url": "https://edge.forgecdn.net/files/9284/902/StatLedger_v1_0_3.zip",
+    "folders": [
+     "StatLedger"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1735039,
+   "name": "Tape Measure: Sizing Up Gear",
+   "page": "https://www.curseforge.com/wow/addons/tape-measure-sizing-up-gear",
+   "file": {
+    "id": 9287407,
+    "name": "TapeMeasure v1.0.4",
+    "url": "https://edge.forgecdn.net/files/9287/407/TapeMeasure_v1_0_4.zip",
+    "folders": [
+     "TapeMeasure"
+    ]
+   },
+   "locked": false,
+   "requires": [
+    1735014
+   ]
+  },
+  {
+   "id": 1759561,
+   "name": "Wally Chat",
+   "page": "https://www.curseforge.com/wow/addons/wally-chat",
+   "file": {
+    "id": 9287722,
+    "name": "WallyChat v0.1.0",
+    "url": "https://edge.forgecdn.net/files/9287/722/WallyChat_v0_1_0.zip",
+    "folders": [
+     "WallyChat"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1759563,
+   "name": "Wally HUD",
+   "page": "https://www.curseforge.com/wow/addons/wally-hud",
+   "file": {
+    "id": 9287723,
+    "name": "WallyHUD v0.1.0",
+    "url": "https://edge.forgecdn.net/files/9287/723/WallyHUD_v0_1_0.zip",
+    "folders": [
+     "WallyHUD"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1759564,
+   "name": "Wally Tooltip",
+   "page": "https://www.curseforge.com/wow/addons/wally-tooltip",
+   "file": {
+    "id": 9287726,
+    "name": "WallyTooltip v0.1.0",
+    "url": "https://edge.forgecdn.net/files/9287/726/WallyTooltip_v0_1_0.zip",
+    "folders": [
+     "WallyTooltip"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1735051,
+   "name": "Wally: Junk and Inventory Manager",
+   "page": "https://www.curseforge.com/wow/addons/wally-junk-and-inventory-manager",
+   "file": {
+    "id": 9287408,
+    "name": "Wally v0.1.6",
+    "url": "https://edge.forgecdn.net/files/9287/408/Wally_v0_1_6.zip",
+    "folders": [
+     "Wally"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1759571,
+   "name": "Waypoint: Geography Aware Navigation",
+   "page": "https://www.curseforge.com/wow/addons/waypoint-geography-aware-navigation",
+   "file": {
+    "id": 9311648,
+    "name": "Waypoint v0.1.1",
+    "url": "https://edge.forgecdn.net/files/9311/648/Waypoint_v0_1_1.zip",
+    "folders": [
+     "Waypoint"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  },
+  {
+   "id": 1759573,
+   "name": "Wealth Planner",
+   "page": "https://www.curseforge.com/wow/addons/wealth-planner",
+   "file": {
+    "id": 9311650,
+    "name": "WealthPlanner v0.1.1",
+    "url": "https://edge.forgecdn.net/files/9311/650/WealthPlanner_v0_1_1.zip",
+    "folders": [
+     "WealthPlanner"
+    ]
+   },
+   "locked": false,
+   "requires": [
+    1735051
+   ]
+  },
+  {
+   "id": 1740482,
+   "name": "Zeppelin Signs",
+   "page": "https://www.curseforge.com/wow/addons/zeppelin-signs",
+   "file": {
+    "id": 9311651,
+    "name": "ZeppelinSigns v1.1.4",
+    "url": "https://edge.forgecdn.net/files/9311/651/ZeppelinSigns_v1_1_4.zip",
+    "folders": [
+     "ZeppelinSigns"
+    ]
+   },
+   "locked": false,
+   "requires": []
+  }
+ ]
+}

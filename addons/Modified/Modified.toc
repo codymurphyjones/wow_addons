@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Modified
 ## Notes: Shape what your action buttons do with Shift, Ctrl and Alt. /mod lowers the veil.
-## Version: 1.0.5
+## Version: 1.0.6
 ## SavedVariablesPerCharacter: ModifiedDB
 ## IconTexture: Interface\AddOns\Modified\Textures\Icon.tga
 ## X-Curse-Project-ID: 1728963

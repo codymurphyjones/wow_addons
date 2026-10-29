@@ -15,3 +15,7 @@ tools/curseforge/.profile/
 
 # The navigation bake's working files (tools/Waypoint/nav_*.py, nav_bake.mjs): rebuilt from the game.
 tools/Waypoint/.nav/
+
+# The collection installer's build (tools/curseforge/collection_build.py): rebuilt, handed out by hand.
+tools/curseforge/build/
+tools/curseforge/dist/
