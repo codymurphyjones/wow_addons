@@ -21,6 +21,8 @@ ns.DEFAULTS = {
     window = { point = "RIGHT", x = -40, y = 60 },
     dock = true,        -- sit under Waypoint's arrow (when Waypoint is installed)
     manageTracking = true, -- track the guide's quests, untrack the rest (never the ones you tracked)
+    detourMinutes = 2,  -- Leveling: how far off the route a quick quest may be (minutes of extra walking)
+    questCheck = {},    -- [questID] = whether the server has it, for one game build (Exists.lua)
     wingMaps = {},      -- [uiMapID inside a dungeon] = the wing it belongs to, learned as you play
     -- The field (UI.lua) and what it learned: how long you stay to read (seconds), how often you look
     -- ahead (0-1), and how many times you used each gesture (its whisper stops after a few).
@@ -38,6 +40,8 @@ ns.CHAR_DEFAULTS = {
     lastPick = nil,  -- the zone section Automatic last chose (kept while you travel through others)
     rerun = {},      -- quests whose item didn't drop and you chose to run the dungeon again for
     ran = {},        -- ["dungeon:wing"] = true: that run (or wing) is over on the current route
+    preference = "leveling", -- "leveling": XP and convenience first; "clear": every quest of the zone you're on
+    notOffered = {}, -- quests their giver didn't offer you when you got there (Exists.lua)
 }
 
 -- Quests or level changed: work the route out again (once, next frame: ns:Changed).
@@ -59,6 +63,8 @@ local function Help()
     ns:Print("/fg guide <name> - follow the other faction's guide (/fg guide auto: yours)")
     ns:Print("/fg section <number> - follow a section (/fg section auto: the next one worth doing)")
     ns:Print("/fg settings - pick a zone's guide, and other options")
+    ns:Print("/fg mode leveling, /fg mode clear - XP and convenience first, or finish every quest of the zone you're on")
+    ns:Print("/fg missing - quests left out because the server doesn't have them (/fg recheck: ask the server again)")
     ns:Print("/fg dungeons - dungeons in your level range with quests left (/fg dungeon <n>: guide me there, /fg dungeon stop)")
     ns:Print("/fg skip - skip the current quest (Field Guide stops suggesting it), /fg unskip - bring skipped quests back")
     ns:Print("/fg arrow - point Waypoint's arrow at the current step again")
@@ -90,6 +96,31 @@ SlashCmdList.FIELDGUIDE = function(msg)
         ns.Engine:SkipCurrent()
     elseif cmd == "arrow" then
         ns.Engine:ResumeArrow()
+    elseif cmd == "mode" or cmd == "preference" then
+        local mode = strlower(arg or "")
+        if mode == "" then mode = ns.char.preference == "clear" and "leveling" or "clear" end
+        if mode == "zone" or mode == "zoneclear" then mode = "clear" end
+        if mode == "level" then mode = "leveling" end
+        if mode ~= "leveling" and mode ~= "clear" then
+            ns:Print("/fg mode leveling or /fg mode clear.")
+        else
+            ns:SetOption("char.preference", mode)
+        end
+    elseif cmd == "missing" then
+        local list = ns.Exists:MissingList()
+        if #list == 0 then
+            ns:Print("The server has every quest the guide asked about.")
+        else
+            local names = {}
+            for _, id in ipairs(list) do
+                local q = ns.Quests[id]
+                names[#names + 1] = ("%s [%d]"):format(q and q.n or "?", id)
+            end
+            ns:Print(("Left out, the server doesn't have them (%d): %s"):format(#list, table.concat(names, ", ")))
+        end
+    elseif cmd == "recheck" then
+        ns.Exists:Recheck()
+        ns:Print("Asking the server about the guide's quests again.")
     elseif cmd == "settings" or cmd == "options" or cmd == "config" then
         ns.Settings:Open()
     -- The toggles change the same options as Options > AddOns > Field Guide (ns:SetOption), so the
@@ -109,8 +140,9 @@ SlashCmdList.FIELDGUIDE = function(msg)
         wipe(ns.char.skipped)
         wipe(ns.char.doneByHand)
         wipe(ns.char.ignored)
+        wipe(ns.char.notOffered)
         ns.Engine:Invalidate()
-        ns:Print("Skipped steps, and quests you marked done, are back.")
+        ns:Print("Skipped steps, quests you marked done, and quests their giver didn't offer, are back.")
         ns:Changed()
     elseif cmd == "questie" then
         ns:Print(ns:ToggleOption("db.focusQuestie") and "The current quest goes to the top of Questie's tracker." or "Questie's tracker is left alone.")

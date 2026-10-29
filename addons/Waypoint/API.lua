@@ -5,6 +5,7 @@ local _, ns = ...
 --   Waypoint:Set("MyAddon", {
 --       title = "Turn in: The Defias Brotherhood",  -- the arrow's first line
 --       subtitle = "to Gryan Stoutmantle",          -- optional second line
+--       targetName = "Gryan Stoutmantle",           -- optional: clicking that line runs /target <name>
 --       mapID = 52, x = 0.56, y = 0.47,             -- one place (0-1 on that uiMapID; uiMapID works too)
 --       -- or points = { { mapID = 52, x = 0.5, y = 0.4 }, ... }: the arrow leads to the nearest
 --       -- one you haven't reached yet, then on to the next.

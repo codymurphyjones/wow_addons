@@ -137,8 +137,14 @@ local function Tile(m, t)
         xo[i] = p
         p = p + 3 * ne[i]
     end
+    -- Indoors (nav_areas.py): the place each indoor node is in (its place in m.d.areas).
+    local area = {}
+    local ar = m.d.areaOf and m.d.areaOf[t] and Unpack(m.d.areaOf[t])
+    if ar then
+        for k = 1, #ar - 3, 4 do area[U16(ar, k) + 1] = U16(ar, k + 2) end
+    end
     T = { t = t, ty = floor(t / 64), tx = t % 64, n = n, first = first, cnt = cnt, cell = cellOf, kind = kind,
-        mask = mask, h = h, on = on, ow = ow, xo = xo, ne = ne, raw = raw, nb = {}, rev = {}, busy = busy }
+        mask = mask, h = h, on = on, ow = ow, xo = xo, ne = ne, raw = raw, nb = {}, rev = {}, busy = busy, area = area }
     m.tiles[t], m.used[t] = T, m.clock
     m.count = m.count + 1
     return T
@@ -285,9 +291,24 @@ local function HeightHint(m, n, w)
     return Old:Height(m.continent, n, w)
 end
 
+-- A cave under a hill: a frequented indoor floor (nav_areas.py; creatures stand there) with a floor
+-- that isn't indoors over it in its cell, COVER yards up or more. A target there (its place on the
+-- map, no height) is in the cave: it beats the height guess (the hill's), however far below it is.
+local COVER = 5
+local CAVE_PULL = 1000
+local function Covered(T, j)
+    if not (T.area[j] and T.busy[j]) then return false end
+    local c = T.cell[j]
+    for k = T.first[c], T.first[c] + T.cnt[c] - 1 do
+        if not T.area[k] and T.h[k] > T.h[j] + COVER then return true end
+    end
+    return false
+end
+
 -- The node at a world point: of its cell's floors, the one nearest the height (or a spot's, or the
 -- ground's, Grid.lua's, without one); an empty cell (inside a wall, out at sea) takes the nearest within 3.
-local function Locate(m, n, w, height)
+-- pull: it's a target, so a cave under the hill there wins (Covered).
+local function Locate(m, n, w, height, pull)
     local gr, gc = floor((m.max - n) / m.fine), floor((m.max - w) / m.fine)
     height = height or HeightHint(m, n, w)
     for ring = 0, 3 do
@@ -300,6 +321,7 @@ local function Locate(m, n, w, height)
                         for j = f, f + k - 1 do
                             if T.kind[j] ~= 2 then
                                 local d = (height and abs(T.h[j] - height) or 0) + (abs(dr) + abs(dc)) * m.fine
+                                if pull and Covered(T, j) then d = d - CAVE_PULL end
                                 if not bd or d < bd then best, bd = Id(T.t, j), d end
                             end
                         end
@@ -978,7 +1000,7 @@ function G:Field(key, continent, n, w, opts)
     elseif mine and mine.nav and mine.continent == continent and mine.version == G.version then
         src = LocateReached(mine, n, w)
     else
-        src = Locate(m, n, w)
+        src = Locate(m, n, w, nil, true)
     end
     if not src then return nil end
     local o = Settings(opts)
@@ -1044,7 +1066,8 @@ end
 
 -- The node at a world point the field reaches: of the floors in its cell (or the nearest cells, out
 -- to 3), those the field gets to, the one nearest the ground's height. A town inside a mountain
--- (Ironforge) has the mountainside over it; this picks the floor you can get to. None reached: Locate.
+-- (Ironforge) has the mountainside over it; this picks the floor you can get to. A cave under a hill
+-- wins over the hill (Covered). None reached: Locate.
 LocateReached = function(f, n, w)
     local m = f.m
     -- Where you stand: your tracked floor (or the next likeliest still in play) when the field
@@ -1068,6 +1091,7 @@ LocateReached = function(f, n, w)
                             local id = Id(T.t, j)
                             if T.kind[j] ~= 2 and tf.dist[id] then
                                 local d = (hint and abs(T.h[j] - hint) or 0) + (abs(dr) + abs(dc)) * m.fine
+                                if Covered(T, j) then d = d - CAVE_PULL end
                                 if not bd or d < bd then best, bd = id, d end
                             end
                         end
@@ -1077,7 +1101,7 @@ LocateReached = function(f, n, w)
         end
         if best then return best end
     end
-    return Locate(m, n, w)
+    return Locate(m, n, w, nil, true)
 end
 
 -- Seconds from the field's source to a world point (it's reverse: from the point to the source),
@@ -1085,7 +1109,7 @@ end
 function G:Cost(f, n, w)
     if not (f and f.nav) then return Old:Cost(f, n, w) end
     local m = f.m
-    local p = Locate(m, n, w)
+    local p = Locate(m, n, w, nil, true)
     if not p then return nil end
     local t = floor(p / 65536)
     local tf = f.tilesDone[t]
@@ -1347,6 +1371,21 @@ function G:Height(continent, n, w)
     return (select(3, Where(m, p)))
 end
 
+-- The place indoors at a world point (nav_areas.py: a cave's or a building's, the name the game
+-- discovers as you walk in): name ("" when it has none of its own), area ID; nil outdoors. Your own
+-- floor where you stand; elsewhere a target's (a cave under a hill wins over the hill).
+function G:Place(continent, n, w)
+    local m = Map(continent)
+    if not m then return nil end
+    local p = HereNode(continent, n, w) or Locate(m, n, w, nil, true)
+    if not p then return nil end
+    local t, i = Split(p)
+    local T = Tile(m, t)
+    local row = T and T.area[i] and m.d.areas and m.d.areas[T.area[i]]
+    if not row then return nil end
+    return row[2], row[1]
+end
+
 -- Whether a straight line between two points stays on ground you walk (or water, when it starts
 -- in water) without a drop: cell by cell along the line, each step a link of the map to the floor
 -- nearest the one you're on. Given h2, the end point's floor, it must end on it: a floor under or
@@ -1541,6 +1580,8 @@ function G:WhereText()
     local n = #FloorsAt(m, here.n, here.w)
     local text = ("on the floor at %.0f yd (%d floor%s here; %d still possible%s)"):format(here.h or 0, n, n == 1 and "" or "s",
         #(here.cands or {}), here.z and ("; the game says you're at " .. math.floor(here.z + 0.5)) or "; tracked as you move")
+    local place = G:Place(here.c, here.n, here.w)
+    if place then text = text .. "; indoors" .. (place ~= "" and (": " .. place) or "") end
     -- The flight master the arrow is leading to, when it's one with a climb (Route.lua's R:Lead).
     local lead = ns.Route and ns.Route.leadInfo
     if lead then text = text .. "; " .. lead end

@@ -34,6 +34,26 @@ Field Guide has no window, no buttons and nothing that stays on screen. **Stand 
 - **Nothing to miss.** A quest you need first but never did is put in front, marked "missed earlier", with anything it needs.
 - **Level gates.** Quests above your level show "Needs level N"; starting zones say how far to grind when the route runs short.
 - **Questie:** the current quest goes to the top of Questie's tracker (`/fg questie` turns that off).
+- **Only quests that are really there.** The quest data comes from QuestieDB, which knows quests Forever doesn't have. Before a quest goes on the route, Field Guide asks the server about it. It does this in the background, once per game patch, and remembers the answers. Quests the server doesn't have are left out (`/fg missing` lists them, `/fg recheck` asks again). And when you talk to a quest giver who doesn't offer the quest you came for, that step drops off the route (`/fg unskip` brings it back).
+
+## The next steps, in the quickest order
+
+The guide's route is planned ahead of time, without knowing where you'll be standing. So the next 6 steps left (pick-ups, objectives, hand-ins, loot) are put in the order that walks the least from where you are. Field Guide estimates the walk for every order they can go in and picks the shortest. A quest's own steps stay in order (pick up, do, hand in), and so do a quest and the one that needs it. Zone changes, grinding and dungeons are never moved. When the new order saves time, chat says how much: "about 2 min of walking instead of 5".
+
+The order is only worked out again at login, when you press Play (unpause), when the zone section changes, after a Skip or "Done it", and once you've done every step in it. Until then it stays. Finishing quests on the way doesn't turn the arrow round. A hand-in that comes up meanwhile waits until the planned steps are done.
+
+## In the quest log
+
+Every quest in your quest log has a small Field Guide icon left of its title. Hover it to see where the quest sits on the route ("Turn in: step 4 of 23"). Click it for a popup with the route for the zone you're on: the steps left, in the order the arrow follows them, with this quest's steps in gold. A long route shows its start and the steps around the quest. A quest that isn't on the route says why: it's on another section, you skipped it, or it pays too little XP at your level. Escape or the close button shuts the popup, and you can drag it.
+
+It works with the quest log beside the world map and with a separate Quest Log window, whichever the client has.
+
+## Preference: Leveling or Zone Clear
+
+Pick it under Options > AddOns > Field Guide ("Preference"), or with `/fg mode leveling` / `/fg mode clear`. It's saved per character.
+
+- **Leveling** (the default): experience and convenience come first, as described above. On top of that, it takes **detours**: a quick quest a little off the route, one with nothing to do but hand it in (a delivery, "speak with ...", an auto turn-in), goes on the route when the extra walk fits the **Detour budget** (2 minutes by default, 0 to 5 in the options; 0 turns detours off). The quest also has to pay at least the route's usual XP per minute. A quest like that already in your log just gets its hand-in fitted in. Detour steps are marked "(detour)".
+- **Zone Clear**: finish every quest in the zone you're on that you haven't done, whatever it pays, gray quests included. All of the zone's level bands count as one. Quests these need first are fetched wherever they are, and the zone stays yours while you're away getting them. The zone's hand-off quests count too, and the one that leads on comes last. Quests above your level wait at the end of the trail as "Needs level N". Once only those are left, the zone counts as cleared and the guide moves on the usual way.
 
 ## Dungeon time (instance priority)
 
@@ -61,6 +81,8 @@ Covers the 19 classic 5-player dungeons, Ragefire Chasm to Stratholme, with each
 | `/fg guide <name>` | Follow another faction's guide (`/fg guide auto`: yours) |
 | `/fg section <n>` | Follow a section from `/fg list` (`/fg section auto`: pick for me) |
 | `/fg dungeons` | Dungeons in your level range with quests left (`/fg dungeon <n>`: guide me there, `/fg dungeon stop`) |
+| `/fg mode leveling`, `/fg mode clear` | Preference: XP and convenience first, or finish every quest of the zone |
+| `/fg missing`, `/fg recheck` | Quests left out because the server doesn't have them / ask the server again |
 | `/fg skip`, `/fg unskip` | Skip the current quest (Field Guide stops suggesting it, and what needs it) / bring skipped quests back |
 | `/fg questie` | Focus the current quest in Questie's tracker, or not |
 | `/fg minimap` | Show or hide the minimap button |
@@ -77,4 +99,5 @@ python tools/FieldGuide/build_guides.py   # plans every section, writes Guides\*
 - **Quest data:** the QuestieDB addon's Forever database (`tools/_shared/questiedb.py` reads it straight from the game folder, read-only): every quest, its givers, objectives, prerequisites and race mask, and every NPC and object with spawn points.
 - **Quest XP:** Wowhead's quest lists, as cached by Spyglass's tools, plus QuestieDB's Classic XP table. Wowhead now blocks scripted downloads, so only what's cached is used. Quests with no known XP are estimated from their level and flagged in the report.
 - **The plan:** for each zone (split into level bands where its quests jump by more than 6 levels), a simulated character walks the route, always taking the nearest step. Pick-ups at the same NPC are batched, objectives are done at the busiest spot of their mobs or objects, and a quest only opens up once its prerequisites are turned in and the level allows it. XP is scaled by level the way the game does, and kills along the way count too. Quests paying well under the route's usual XP per minute are dropped when that makes the whole route faster, unless a kept quest needs them. The report lists everything dropped.
+- **Zone Clear's routes:** each section also carries the walk with every quest of its pool (`clear`, written when it differs from the kept route), and the quests that walk never got to (`rest`, mostly level gates). All of them go into `Data.lua`, and so do the quests the planner dropped. A quest with nothing to do but hand it in is flagged `talk` for Leveling's detours.
 - **Hand-offs:** a quest picked up in one zone and turned in in another zone with a guide (not a capital city), with any objectives in one of the two, becomes that zone's way out (`exits` in `Guides\<Faction>.lua`; listed per zone in the report). A small zone (under 12 other quests), or a chain in the same zone that needs it, keeps it as an ordinary quest instead.

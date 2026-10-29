@@ -925,18 +925,23 @@ local function Steer(way, c, n, w, aim)
 end
 
 -- Following the way drawn on the map, from where you are this moment: the point FOLLOW_LOOK yards
--- on along it from its nearest point to you (FOLLOW_STREETS along a city's streets, where corners
--- are tight). Ahead is along the way toward the target, not where you face, so the arrow never
--- points back along it however you turn; it turns where the line turns, a few steps early, and
--- moves along smoothly as you walk. A turn of a zigzag or a way round (a via) is never cut: the
--- arrow points at it until you're within FOLLOW_VIA yards. Only the way's first FOLLOW_SEARCH yards
--- count as where you are (it starts about where you stand), so a way that comes back near itself
--- further on doesn't pull the arrow ahead. false: the way ends within reach (straight at the
--- target); nil: no way to follow.
-local FOLLOW_LOOK, FOLLOW_STREETS, FOLLOW_VIA, FOLLOW_SEARCH = 20, 10, 4, 80
+-- on along it from where you are on it (FOLLOW_STREETS along a city's streets, where corners are
+-- tight). Ahead is along the way toward the target, not where you face, so the arrow never points
+-- back along it however you turn; it turns where the line turns, a few steps early, and moves
+-- along smoothly as you walk. Where you are on it: the farthest point of its first FOLLOW_SEARCH
+-- yards within FOLLOW_ON yards of you (you're already beside that part, so the bit before it is
+-- done, even when the way starts behind you: a street joined where you stood when it was planned),
+-- else its nearest point. Only those first yards count, so a way that comes back near itself
+-- further on doesn't pull the arrow ahead. A turn of a zigzag or a way round (a via) is never cut:
+-- the arrow points at it until you're within FOLLOW_VIA yards of it (FOLLOW_STREET_VIA for a
+-- street's: they're guidance through a town, not a lake's edge), or have walked on past it
+-- (beyond it along the way in). false: the way ends within reach (straight at the target); nil:
+-- no way to follow.
+local FOLLOW_LOOK, FOLLOW_STREETS, FOLLOW_VIA, FOLLOW_STREET_VIA, FOLLOW_SEARCH, FOLLOW_ON = 20, 10, 4, 10, 80, 10
 local function Follow(way, c, n, w)
     if not (way and way[2]) then return nil end
     local bestD, bi, bt, along = nil, 1, 0, 0
+    local onI, onT
     for i = 1, #way - 1 do
         local a, b = way[i], way[i + 1]
         local dn, dw = b.n - a.n, b.w - a.w
@@ -944,9 +949,11 @@ local function Follow(way, c, n, w)
         local t = len2 > 0 and math.max(0, math.min(1, ((n - a.n) * dn + (w - a.w) * dw) / len2)) or 0
         local d = (a.n + dn * t - n) ^ 2 + (a.w + dw * t - w) ^ 2
         if not bestD or d < bestD then bestD, bi, bt = d, i, t end
+        if d <= FOLLOW_ON * FOLLOW_ON then onI, onT = i, t end
         along = along + math.sqrt(len2)
         if along > FOLLOW_SEARCH then break end
     end
+    if onI and onI > bi then bi, bt = onI, onT end
     local left = FOLLOW_LOOK
     for i = bi, math.min(#way, bi + 20) do
         if way[i].street then left = FOLLOW_STREETS break end
@@ -960,7 +967,9 @@ local function Follow(way, c, n, w)
             local t = left / seg
             return { _c = c, _n = cn + (s.n - cn) * t, _w = cw + (s.w - cw) * t, _island = false, label = "the way" }
         end
-        if s.via and Dist(n, w, s.n, s.w) > FOLLOW_VIA then
+        local prev = way[i - 1]
+        local past = prev and ((n - s.n) * (s.n - prev.n) + (w - s.w) * (s.w - prev.w)) > 0
+        if s.via and not past and Dist(n, w, s.n, s.w) > (s.street and FOLLOW_STREET_VIA or FOLLOW_VIA) then
             return { _c = c, _n = s.n, _w = s.w, _island = false, label = "the way" }
         end
         left = left - seg
@@ -1208,6 +1217,28 @@ function R:TerrainText(p)
     if height ~= "" then return height end
 end
 
+-- A steer that turns you more than BACK_TURN radians away from where you're heading (p, or the
+-- climb's start) is checked against the straight line there, at most every BACK_EVERY seconds:
+-- when the land map can walk that line, the arrow points straight along it instead. A way that
+-- starts behind you (a street joined where you stood when it was planned) never turns you round.
+local BACK_TURN, BACK_EVERY = math.rad(110), 0.5
+local backAt, backClear, backFor = 0, false, nil
+
+local function Backward(point, toward)
+    local c, n, w = ns.Nav:Player()
+    local sc, sn, sw = ns.Nav:World(point)
+    local tc, tn, tw = ns.Nav:World(toward)
+    if not (c and sc == c and tc == c) then return false end
+    local turn = math.abs((math.atan2(sw - w, sn - n) - math.atan2(tw - w, tn - n) + math.pi) % (2 * math.pi) - math.pi)
+    if turn <= BACK_TURN then return false end
+    local now = GetTime()
+    if now >= backAt or backFor ~= toward then
+        backAt, backFor = now + BACK_EVERY, toward
+        backClear = G and G.Clear and G:Clear(c, n, w, tn, tw, toward._h) and true or false
+    end
+    return backClear
+end
+
 -- Where to point the arrow on the way to point p, heading for toward (p, or where the climb up to
 -- it starts: R:Lead): around lakes and cliffs (nil: straight at it). A steer worked out for the
 -- other of the two (you got on the climb since the plan) doesn't count.
@@ -1218,15 +1249,17 @@ function R:SteerPoint(p, toward)
     -- Heading for the target along the way drawn on the map: follow that line, worked out from
     -- where you are this moment (a steer picked at the last plan jumps as you walk on). On the way
     -- to a climb's start (the way runs on past it), the steer picked at the plan.
+    local point = s.point
     if (s.toward or p) == p then
         local c, n, w = ns.Nav:Player()
         local way = self.way
         if c and way and way.continent == c then
-            local point = Follow(way.squares, c, n, w)
-            if point ~= nil then return point or nil end
+            local follow = Follow(way.squares, c, n, w)
+            if follow ~= nil then point = follow or nil end
         end
     end
-    return s.point
+    if point and Backward(point, toward or p) then return nil end
+    return point
 end
 
 -- Where the arrow leads on the way to point p (the flight master, or the target itself): where the
@@ -1856,15 +1889,17 @@ local function RoadSteps(c, pts, fn)
     end
 end
 
--- How much more a step off the roads weighs, by your road preference (ns.db.roadMode):
+-- How much more a step off the roads weighs, by your road preference (ns.db.roadMode). A road is
+-- never quicker: it's safer, and the weight is how much longer a walk you'd take to stay on one.
 --   safe      roads first: a way off them has to be far quicker to be taken
---   balanced  roads where they lead your way, left for the last stretch to where you're going
---   speed     the quickest way, roads or not; a road only when it's about as quick (then it's the
+--   balanced  roads where they lead your way, left for the last stretch to where you're going; a
+--             road is worth a walk at most a fifth longer, so one off to the side isn't worth the detour
+--   speed    the quickest way, roads or not; a road only when it's about as quick (then it's the
 --             way you'd walk anyway)
 R.ROAD_MODES = {
     { id = "safe", name = "Safe", offroad = 2.5,
         text = "Keeps to roads. Leaves them only where a way off the road is far quicker, or there's no road." },
-    { id = "balanced", name = "Balanced", offroad = 1.5,
+    { id = "balanced", name = "Balanced", offroad = 1.2,
         text = "Takes the roads that lead your way, and leaves them for the last stretch to where you're going." },
     { id = "speed", name = "Speed", offroad = 1.08,
         text = "The quickest way, roads or not. A road only when it's about as quick." },

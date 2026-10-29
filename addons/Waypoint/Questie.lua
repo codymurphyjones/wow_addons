@@ -205,7 +205,7 @@ local function Build(id, quest, prefer)
         end
         if #points == 0 then return nil end
         return { key = id .. ":done", questID = id, obj = "done", title = "Turn in: " .. name,
-            subtitle = who and ("to " .. who) or nil, points = points, arrive = ARRIVE, byUser = ByUser(id) }
+            subtitle = who and ("to " .. who) or nil, targetName = who, points = points, arrive = ARRIVE, byUser = ByUser(id) }
     end
 
     -- Unfinished objectives, numbered like Questie's focus ("s1".. for special ones).

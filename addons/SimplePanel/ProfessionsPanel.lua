@@ -1301,13 +1301,29 @@ end
 
 local function Money(c) return ns.Compat.Money(c or 0) end
 
+local KINDS = { available = true, unavailable = true, used = true, header = true }
+
+-- One trainer service: name, kind, icon, reqLevel, sub. The game gives it two ways: name, kind,
+-- icon, level (Forever's engine) or name, rank, kind, expanded with header rows between (Classic
+-- Era, Hardcore). Which one is told by where the kind is, so both work.
+local function ServiceInfo(i)
+    local name, a, b, c, d = Read(GetTrainerServiceInfo, i)
+    if not name then return nil end
+    if KINDS[a] then return name, a, b, c, d end
+    if KINDS[b] then
+        local icon = GetTrainerServiceIcon and Read(GetTrainerServiceIcon, i)
+        local level = GetTrainerServiceLevelReq and Read(GetTrainerServiceLevelReq, i)
+        return name, b, icon, level, a
+    end
+end
+
 -- Everything the trainer offers: { index, name, sub, icon, kind = "available" | "unavailable" |
 -- "used", cost, reqLevel, skill = { name, rank, met }, abilities = { { name, met } }, skillLine }
 local function Services()
     local out = {}
     for i = 1, (GetNumTrainerServices and Read(GetNumTrainerServices) or 0) do
-        local name, kind, icon, reqLevel, sub = Read(GetTrainerServiceInfo, i)
-        if name then
+        local name, kind, icon, reqLevel, sub = ServiceInfo(i)
+        if name and kind ~= "header" then
             local s = { index = i, name = name, sub = sub or "", icon = icon, kind = kind, reqLevel = reqLevel,
                 cost = (GetTrainerServiceCost and Read(GetTrainerServiceCost, i)) or 0,
                 skillLine = GetTrainerServiceSkillLine and Read(GetTrainerServiceSkillLine, i), abilities = {} }
@@ -1323,13 +1339,24 @@ local function Services()
     return out
 end
 
+-- Whether you have a skill called name: your professions, else the skills list (a client without
+-- GetProfessions lists them there, with the other skills).
+local function HasSkill(name)
+    for _, p in ipairs(Professions()) do
+        if p.name == name then return true end
+    end
+    if GetProfessions or not GetNumSkillLines then return false end
+    for i = 1, (Read(GetNumSkillLines) or 0) do
+        local skill, isHeader = Read(GetSkillLineInfo, i)
+        if skill == name and not isHeader then return true end
+    end
+    return false
+end
+
 -- Whether learning s starts a profession you don't have (the game asks first).
 local function NewProfession(s)
     if not s.skillLine or s.skillLine == "" then return false end
-    for _, p in ipairs(Professions()) do
-        if p.name == s.skillLine then return false end
-    end
-    return true
+    return not HasSkill(s.skillLine)
 end
 
 function PP:TrainerOpened()
@@ -1337,6 +1364,8 @@ function PP:TrainerOpened()
     if SetTrainerServiceTypeFilter then
         for _, kind in ipairs({ "available", "unavailable", "used" }) do pcall(SetTrainerServiceTypeFilter, kind, 1) end
     end
+    -- A list with headers (Classic Era): a collapsed header hides its services from the list too.
+    if ExpandTrainerSkillLine then pcall(ExpandTrainerSkillLine, 0) end
     trainerPick, trainAll = nil, nil
 end
 

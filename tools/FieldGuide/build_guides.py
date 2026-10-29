@@ -416,6 +416,11 @@ class Quest:
         if self.dungeon:
             self.obj = None
         self.text = ' '.join(lua_list(q.get('objectivesText')))
+        # Nothing to do but hand it in (a delivery, "speak with ..."): no objectives of any kind,
+        # no place to explore, not started from an item. Leveling's detours look for these.
+        objs = q.get('objectives')
+        self.talk = (not (objs and any(lua_list(field(objs, i)) for i in (1, 2, 3, 4, 5)))
+                     and not q.get('triggerEnd') and not self.item and not self.dungeon)
         self.single = [abs(x) for x in lua_list(q.get('preQuestSingle'))]
         self.group = [abs(x) for x in lua_list(q.get('preQuestGroup'))]
         self.exclusive = lua_list(q.get('exclusiveTo'))
@@ -605,6 +610,7 @@ def plan_zone(quests, pool, sim, target, known_done, grind=True):
 
     chosen = set(pool)
     best = trial(chosen)
+    full = best  # every quest in the pool: Zone Clear's route (see write)
     chosen = {qid for qid in chosen if qid in best.done}
     dropped = set()
     for _ in range(4):
@@ -624,6 +630,8 @@ def plan_zone(quests, pool, sim, target, known_done, grind=True):
         best = t
         chosen = {qid for qid in chosen if qid in best.done}
     kept = [qid for qid in chosen if qid in best.done]
+    best.full = full
+    best.rest = sorted(qid for qid in pool if qid not in full.done)  # never finished on the walk (level gates)
     return kept, sorted(dropped), best
 
 
@@ -755,11 +763,22 @@ def build():
         per_zone = collections.Counter(sec[2] for sec in sections)
         sections = [(sid, '%s %d' % (title, start) if per_zone[zone] > 1 else title, zone, start, sim, kept, dropped)
                     for sid, title, zone, start, sim, kept, dropped in sections]
+        # Bands of one zone that start at the same level: number them, so ids (the addon saves
+        # the one you're on) and titles stay apart.
+        seen = collections.Counter()
+        unique = []
+        for sid, title, zone, start, sim, kept, dropped in sections:
+            seen[sid] += 1
+            n = seen[sid]
+            unique.append((sid if n == 1 else '%s-%d' % (sid, n), title if n == 1 else '%s (%d)' % (title, n),
+                           zone, start, sim, kept, dropped))
+        sections = unique
         guided = {sec[2] for sec in sections}
         exits = {qid: e for qid, e in exits.items() if e[0] in guided and e[1] in guided}
         guides.append((faction, faction, faction, sections, quests, exits))
         for sec in sections:
-            for qid in sec[5]:
+            # Kept, and for Zone Clear (and Leveling's detours) the quests dropped or never reached too.
+            for qid in set(sec[5]) | set(sec[6]) | set(sec[4].rest) | {st[1] for st in sec[4].full.steps if st[0] != 'G'}:
                 used[qid] = quests[qid]
                 add_prerequisites(data, quests[qid], used)
         for qid in exits:
@@ -940,7 +959,8 @@ def write(data, used, guides):
              '-- a / t = { uiMapID, x, y, "who" }; o = { { uiMapID, x, y }, ... } (busiest spot first);',
              '-- pre = quests needed first (any one of them if preAny), from the same database;',
              '-- rm = the races that can take it (QuestieDB race mask; none: everyone);',
-             '-- dq = a dungeon\'s quest: only the dungeon routes use it, never the leveling guide.',
+             '-- dq = a dungeon\'s quest: only the dungeon routes use it, never the leveling guide;',
+             '-- talk = nothing to do but hand it in (no objectives, nowhere to explore).',
              'ns.Quests = {']
     for qid in sorted(used):
         q = used[qid]
@@ -958,6 +978,8 @@ def write(data, used, guides):
             parts.append('o = { %s }' % ', '.join('{ %s }' % pt(p) for p in [q.obj[0]] + q.obj[1][:12]))
         if q.text:
             parts.append('ot = %s' % lua_str(q.text[:160]))
+        if q.talk:
+            parts.append('talk = true')
         if q.races:
             parts.append('rm = %d' % q.races)
         if qid in DUNGEON_QUESTS:
@@ -977,19 +999,29 @@ def write(data, used, guides):
                'ns.Guides[#ns.Guides + 1] = {',
                '    key = %s, name = %s, faction = %s,' % (lua_str(key), lua_str(name), lua_str(faction)),
                '    sections = {']
-        for sid, title, zone, start_level, s, kept, dropped in sections:
+        def route(sim_steps, keep, grind=True):
             steps = []
             last_map = None
-            for kind, qid, where, _ in s.steps:
+            for kind, qid, where, _ in sim_steps:
                 if kind == 'G':
-                    steps.append('{ "G", %d }' % qid)
+                    if grind:
+                        steps.append('{ "G", %d }' % qid)
                     continue
-                if qid not in kept:
+                if qid not in keep:
                     continue
                 if where.map != last_map and last_map is not None:
                     steps.append('{ "Z", %d }' % where.map)
                 last_map = where.map
                 steps.append('{ "%s", %d }' % (kind, qid))
+            return steps
+
+        for sid, title, zone, start_level, s, kept, dropped in sections:
+            steps = route(s.steps, set(kept))
+            # Zone Clear's route: every quest of the pool, in the order the full walk took them (no
+            # grinding: quests above your level wait at the end of the route instead).
+            clear = route(s.full.steps, s.full.done, grind=False)
+            if clear == [st for st in steps if not st.startswith('{ "G"')]:
+                clear = None
             out.append('        {')
             top = max(quests[q].level for q in kept)
             out.append('            id = %s, title = %s, zone = %d, from = %d, to = %d, top = %d,' % (
@@ -997,10 +1029,15 @@ def write(data, used, guides):
             out.append('            minutes = %d,%s' % (s.units * SECONDS_PER_UNIT / 60, ' start = true,' if start_level == 1 else ''))
             if dropped:
                 out.append('            skipped = { %s },' % ', '.join(str(d) for d in dropped))
-            out.append('            steps = {')
-            for i in range(0, len(steps), 6):
-                out.append('                ' + ', '.join(steps[i:i + 6]) + ',')
-            out.append('            },')
+            if s.rest:
+                out.append('            rest = { %s },' % ', '.join(str(q) for q in s.rest))
+            for name, lst in (('steps', steps), ('clear', clear)):
+                if lst is None:
+                    continue
+                out.append('            %s = {' % name)
+                for i in range(0, len(lst), 6):
+                    out.append('                ' + ', '.join(lst[i:i + 6]) + ',')
+                out.append('            },')
             out.append('        },')
         out.append('    },')
         # Hand-offs: [zone] = { { quest, zone it takes you to }, ... }, lowest level first.

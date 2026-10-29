@@ -18,6 +18,12 @@ When a zone is done for your level, Field Guide hands you the quest that sends y
 ### Only quests worth your time
 Each quest's XP at your level is weighed against what your next level needs. Gray and nearly gray quests drop out as you outlevel them, unless a better quest needs them first.
 
+### Leveling or Zone Clear
+Choose how you play under **Preference**. **Leveling** goes for XP and convenience, and takes quick detours: an easy hand-in quest a minute or two off the route (you set the detour budget). **Zone Clear** finishes every quest in the zone you're on, gray ones included, and takes you out of the zone for any prerequisite before moving on.
+
+### Only quests that are really there
+Before a quest goes on your route, Field Guide checks with the server that it exists. If a quest giver doesn't offer the quest when you get there, that step drops off the route.
+
 ### Dungeon time
 The fastest leveling on Forever is a dungeon with its quests in your log. When you reach a dungeon's level range, Field Guide tells you it's time and where its quests are, then guides you to pick them all up, run it and turn them in. The minimap button lists every dungeon you're due for until its quests are done.
 

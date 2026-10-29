@@ -39,6 +39,9 @@ places = { { kind, name, north, west }, ... } (nav_places.py) and walks: for eac
   place, uint16 walk, swim, fixed (tenths of a second; 65535 no way)
 zones = { { zone, level, capital }, ... } and zoneOf[ty * 64 + tx]: 256 bytes, the zone (its place
   in zones, 0 none) of each of the tile's 16 x 16 chunks
+areas = { { area, "name" }, ... } (nav_areas.py: the places inside buildings and caves; name "" when
+  it has none of its own) and areaOf[ty * 64 + tx]: for each of the tile's indoor nodes, uint16 node,
+  uint16 its place in areas
 """
 import base64
 import os
@@ -53,6 +56,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import nav_reduce as nr  # noqa: E402
+import nav_areas  # noqa: E402
 import nav_places  # noqa: E402
 
 NAV = nr.NAV
@@ -179,7 +183,7 @@ def b64z(data):
     return base64.b64encode(zlib.compress(bytes(data), 9)).decode("ascii")
 
 
-def encode(mapid, N, L, walk, swim, usable, doors, dn, inner, jumps, places, walks, zone_of, zones):
+def encode(mapid, N, L, walk, swim, usable, doors, dn, inner, jumps, places, walks, zone_of, zones, area_slot, areas):
     """Writes Data/Nav<map>.lua."""
     gr, gc, _, _, h = positions(N)
     tile = N[:, 0] * 64 + N[:, 1]
@@ -215,6 +219,13 @@ def encode(mapid, N, L, walk, swim, usable, doors, dn, inner, jumps, places, wal
         return (ty * 64 + tx) * 4096 + r * 64 + c
 
     HQ = np.clip(np.round(N[:, 5] / 5), -32768, 32767).astype(np.int64)   # heights as stored (half yards)
+    area_blobs = {}
+    for s0, e0 in zip(t_start, t_end):
+        nodes = order[s0:e0]
+        inside = nodes[area_slot[nodes] > 0]
+        if len(inside):
+            area_blobs[int(tile[nodes[0]])] = b64z(b"".join(
+                struct.pack("<HH", int(local[i]), int(area_slot[i])) for i in inside))
     lorder = np.argsort(L[:, 0], kind="stable")
     lstart = np.searchsorted(L[lorder, 0], np.arange(len(N) + 1))
     blobs, raw_total = {}, 0
@@ -326,6 +337,12 @@ def encode(mapid, N, L, walk, swim, usable, doors, dn, inner, jumps, places, wal
     lines.append("}, zoneOf = {")
     for t in sorted(zone_of):
         lines.append('    [%d] = "%s",' % (t, b64z(zone_of[t])))
+    lines.append("}, areas = {")
+    for area, name in areas:
+        lines.append('    { %d, "%s" },' % (area, name.replace("\\", "\\\\").replace('"', '\\"')))
+    lines.append("}, areaOf = {")
+    for t in sorted(area_blobs):
+        lines.append('    [%d] = "%s",' % (t, area_blobs[t]))
     lines.append("} }")
     path = os.path.join(ADDON, "Data", "Nav%d.lua" % mapid)
     with open(path, "w", encoding="utf-8", newline="\n") as f:
@@ -387,8 +404,9 @@ def main(argv):
         tiles = sorted({int(t) for t in np.unique(N[:, 0] * 64 + N[:, 1])})
         from casc import Casc
         zone_of, zones = nav_places.zone_tables(mapid, tiles, Casc.open().version)
-        print("  %d places, %d zones" % (len(places), len(zones)))
-        encode(mapid, N, L, walk, swim, usable, doors, dn, inner, jumps, places, walks, zone_of, zones)
+        area_slot, areas = nav_areas.tables(N, nav_areas.indoor_boxes(mapid))
+        print("  %d places, %d zones, %d indoor floors in %d places" % (len(places), len(zones), (area_slot > 0).sum(), len(areas)))
+        encode(mapid, N, L, walk, swim, usable, doors, dn, inner, jumps, places, walks, zone_of, zones, area_slot, areas)
         print("  done in %.0fs" % (time.time() - t0))
 
 

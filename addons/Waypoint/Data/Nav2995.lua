@@ -102,4 +102,14 @@ ns.NavData[2995] = { fine = 8.333333, max = 17066.666667, tiles = {
     [1573] = "eNpjYBjZAAABAAAB",
     [1574] = "eNpjYBjZAAABAAAB",
     [1575] = "eNpjYBjZAAABAAAB",
+}, areas = {
+    { 0, "" },
+    { 1771, "Shrine of the Deceiver" },
+    { 2256, "Darkwhisper Gorge" },
+}, areaOf = {
+    [1441] = "eNoNw7sKQQEAANDb3RkkgxSLwZ94DGSXlCKSb3GLwiYpeXyJhQWDEFG+wjl1irEwKFm2YtWadUdGjp04debcg0dPnr149eHTRDwMkqZMmzFrzrwFGzZt2bZj1559Bw5duHTl2o1bd+69effl249ff/4BQoUg1w==",
+    [1442] = "eNoNw4EJggAAADCl7slKfEbL0AMKtB4J0rBXLEVviTyjDXZehcHFytqrNx82tj7tfNn79uPg6OTs15+Lm3UYRG7duTc2MTXz4NHck4Wld/95QBOq",
+    [1505] = "eNoNw7GKgQEAAOD/RybxGliuEAMLCw/hhmNSDDZMLIg3uZuY7gYGV15GUpQI5fvqC4NIEDVm3IRJU36YM2/BoiXLVqxas27Djl179h04dOTYiVNnzl249NsfV6799c+NW3f+u/fg0ZNnL169effh05fpMBJkzJozb8Gmn37Zsu0beSwftw==",
+    [1511] = "eNoVzk8rA3AcwOHv9ttmFvM2tLssb0C5sGLRHNa8CUV5B1qTGIcZ21VaXpHyAtCQ/eFxeE6fy2ctn2KdKhv0uKPPPQ8MGDJhxi9RSJEhS519DmjwyBMjnkkLKfIUKdGkxTltOlxyTZcbbunR5413PhjzzQ9TopgiR4Ftdqixyx4NDmlyxIAhq0spKrS54Irssk8WOeaUMz75YsL8v5VTnPDCK5srKbb4A09BLLk=",
+    [1570] = "eNoNw4kJQAAAAEBiA39iMyLvaEoZx7ONu7o7CoPH188kDoPUzNzC0sraxtbO3sHRydnF1c3dw9PLH0i4CrA=",
 } }

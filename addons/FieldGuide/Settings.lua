@@ -30,6 +30,20 @@ S.page = ns.NewOptionsPage({ name = "Field Guide", icon = true, build = function
             .. "are at your level to 2 above. Walking into a zone that doesn't suit you now (under your level, or "
             .. "more than 2 above it) counts as traveling: the zone you were on stays. Nothing changes while you're on a flight. "
             .. "A zone you pick here stays until you pick Automatic again (/fg section auto)." })
+    p:Dropdown({ path = "char.preference", label = "Preference",
+        choices = { { "leveling", "Leveling" }, { "clear", "Zone Clear" } },
+        apply = function() ns.Engine:Invalidate(); ns:Changed() end,
+        tooltip = "Leveling: experience and convenience first. Quests worth too little XP for your level are left out, "
+            .. "and a quick quest a little off the route (one with nothing to do but hand it in) is picked up on the way "
+            .. "when it's within the detour budget below.\n\nZone Clear: every quest of the zone you're on that you "
+            .. "haven't done, gray ones too, and the quests they need first even when those are in another zone (the "
+            .. "zone you're on stays meanwhile). Quests above your level wait at the end as \"Needs level N\"; once "
+            .. "only those are left the zone counts as cleared and the guide moves on. (/fg mode)" })
+    p:Slider({ path = "db.detourMinutes", label = "Detour budget", min = 0, max = 5, step = 0.5,
+        format = function(v) return v == 0 and "Off" or ("%.1f min"):format(v) end,
+        apply = function() ns.Engine:Invalidate(); ns:Changed() end,
+        tooltip = "Leveling only: how many minutes of extra walking a quick quest off the route may cost "
+            .. "(and it has to pay at least the route's usual XP per minute). 0 turns detours off." })
     p:Check({ id = "Tracking", path = "db.manageTracking", label = "Manage quest tracking",
         tooltip = "The guide tracks the quests your next steps are about, and untracks the other quests addons tracked. "
             .. "Quests you track yourself stay tracked until they're done or you untrack them, and come first on the arrow "

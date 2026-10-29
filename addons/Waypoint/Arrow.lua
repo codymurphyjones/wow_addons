@@ -312,17 +312,17 @@ local function RideText(riding)
 end
 
 -- The arrow eases round to where it should point (EASE: how quickly, frame rate aside), rather
--- than snapping: a new heading (a bend in the way, the next step) turns it smoothly.
-local EASE = 18
+-- than snapping. What eases is the way on the ground (a world bearing): a steer point that shifts
+-- as you walk (a bend in the way, the plan made again) turns it gently instead of flicking it from
+-- side to side. Your own turning is applied at once, every frame, so it never lags behind the mouse.
+local EASE = 4
 local IDLE = 0.15       -- seconds without moving or turning before the arrow updates less often
 local IDLE_EVERY = 0.1  -- ...every this many seconds then
-local shownAngle, wantAngle
+local shownAngle, wantAngle, shownRotation -- world bearings (GetPlayerFacing's), and what's drawn
+-- angle: the world bearing to point along.
 function Arrow:Turn(angle)
     wantAngle = angle
-    if not shownAngle then
-        shownAngle = angle
-        f.arrow:SetRotation(angle)
-    end
+    if not shownAngle then shownAngle = angle end
 end
 
 local still, sinceUpdate, lastSpot = 0, 0, nil
@@ -337,15 +337,21 @@ function Arrow:Tick(elapsed)
         sinceUpdate = 0
         self:Update()
         self:Fit()
+        local e = ns.Targets.current
+        self:SetTarget(e and type(e.targetName) == "string" and e.targetName or nil)
     end
     if wantAngle and shownAngle and f.arrow:IsShown() then
         local diff = (wantAngle - shownAngle + math.pi) % (2 * math.pi) - math.pi
         if math.abs(diff) > 0.002 then
-            shownAngle = shownAngle + diff * (1 - math.exp(-EASE * elapsed))
-            f.arrow:SetRotation(shownAngle)
+            shownAngle = (shownAngle + diff * (1 - math.exp(-EASE * elapsed))) % (2 * math.pi)
+        end
+        local rotation = shownAngle - facing
+        if rotation ~= shownRotation then
+            shownRotation = rotation
+            f.arrow:SetRotation(rotation)
         end
     elseif not f.arrow:IsShown() then
-        shownAngle = nil
+        shownAngle, shownRotation = nil, nil
     end
 end
 
@@ -372,6 +378,20 @@ local function AlongWay(p, d)
     return math.max(d, len)
 end
 
+-- Inside a cave or a building (NavGrid.lua's G:Place): "in Fargodeep Mine", "indoors", or nil.
+-- Looked up once a point.
+local placeFor, placeText
+local function PlaceText(p)
+    if p ~= placeFor then
+        placeFor, placeText = p, nil
+        local G = ns.Grid
+        local c, n, w = ns.Nav:World(p)
+        local name = c and G and G.Place and G:Place(c, n, w)
+        if name then placeText = name ~= "" and ("in " .. name) or "indoors" end
+    end
+    return placeText
+end
+
 -- A hearthstone or teleport step: a button over the arrow's icon that uses it (a secure button: set
 -- up out of combat only; in combat the arrow says to wait, R:Action). castFor: what it's set to.
 local castFor
@@ -381,14 +401,47 @@ local HEARTHSTONE = ns.Items and ns.Items.ITEMS and ns.Items.ITEMS.HEARTHSTONE o
 -- protected, and the game then blocks showing or hiding the arrow in combat. So it hangs off the
 -- screen itself, placed over the arrow's icon each time it's set up (out of combat), and hides
 -- with the arrow (after the fight, if the arrow hides during one).
-local function PlaceCast(b)
+-- The arrow's frame keeps moving under it (it widens and narrows to fit its text, from its top
+-- centre; it's dragged; its scale changes), so the arrow checks every update that the button still
+-- sits on the icon's spot, at the icon's size, and lays it again when not. In a fight, where it
+-- can't move, its picture hides until it's back in place: it never shows over the text.
+local function CastSpot()
     local x, y = f.arrow:GetCenter()
     if not x then return end
     local s = f.arrow:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    return x * s, y * s, 36 * s
+end
+
+local function PlaceCast(b)
+    local x, y, size = CastSpot()
+    if not x then return end
     b:ClearAllPoints()
-    b:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x * s, y * s)
+    b:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+    b:SetSize(size, size)
     b:SetFrameStrata(f:GetFrameStrata())
     b:SetFrameLevel(f:GetFrameLevel() + 10)
+end
+
+-- Whether the button sits on the icon's spot (within a pixel), at its size.
+local function CastInPlace(b)
+    local x, y, size = CastSpot()
+    local bx, by = b:GetCenter()
+    if not (x and bx) then return false end
+    local s = b:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    return math.abs(bx * s - x) <= 1 and math.abs(by * s - y) <= 1 and math.abs(b:GetWidth() * s - size) <= 1
+end
+
+-- Every update while the button shows: back on the icon's spot out of combat; in one, its
+-- picture hidden while it's out of place.
+local function KeepCast(b)
+    if CastInPlace(b) then
+        b.icon:SetAlpha(1)
+    elseif InCombatLockdown() then
+        b.icon:SetAlpha(0)
+    else
+        PlaceCast(b)
+        b.icon:SetAlpha(CastInPlace(b) and 1 or 0)
+    end
 end
 
 local function CastButton()
@@ -421,7 +474,7 @@ local function CastButton()
             b:Hide()
             castFor = nil
         elseif b:IsShown() then
-            PlaceCast(b)
+            KeepCast(b)
         end
     end
     f:HookScript("OnHide", Sync)
@@ -459,6 +512,70 @@ function Arrow:SetCast(leg)
     end
     PlaceCast(b)
     b:Show()
+    KeepCast(b)
+end
+
+-- The NPC to talk to (the target's targetName): a click on the third line runs /target <name>, so
+-- you can find them in a crowd. TargetUnit is protected, so it's a secure macro button, and like
+-- the cast button it hangs off the screen itself, laid over that line, and is set up, moved and
+-- hidden out of combat only. targetFor: the name it's set to; targetSpot: where it was laid.
+local targetFor, targetSpot
+local function TargetButton()
+    if f.target then return f.target end
+    local b = CreateFrame("Button", "WaypointArrowTarget", UIParent, "SecureActionButtonTemplate")
+    b:RegisterForClicks("AnyUp", "AnyDown")
+    b:SetAttribute("useOnKeyDown", false)
+    b:SetAttribute("type", "macro")
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints(); hl:SetColorTexture(1, 1, 1, 0.08)
+    b:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(f, "ANCHOR_TOP")
+        GameTooltip:AddLine(targetFor or "")
+        GameTooltip:AddLine("Click: /target " .. (targetFor or ""), 0.6, 1, 0.6)
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", GameTooltip_Hide)
+    b:Hide()
+    -- The arrow hidden (in a fight: once it's over): the button goes too.
+    local function Sync()
+        if not InCombatLockdown() and not f:IsShown() then b:Hide(); targetFor, targetSpot = nil, nil end
+    end
+    f:HookScript("OnHide", Sync)
+    local ev = CreateFrame("Frame")
+    ev:RegisterEvent("PLAYER_REGEN_ENABLED")
+    ev:SetScript("OnEvent", Sync)
+    f.target = b
+    return b
+end
+
+-- Sets the button to name (nil: hides it) and lays it over the third line. Out of combat only;
+-- the arrow calls it every update, so a change made in a fight catches up once it's over.
+function Arrow:SetTarget(name)
+    if InCombatLockdown() then return end
+    if name == "" or not f:IsShown() or (f.sub.shownText or "") == "" then name = nil end
+    if not name then
+        if f.target and f.target:IsShown() then f.target:Hide() end
+        targetFor, targetSpot = nil, nil
+        return
+    end
+    local b = TargetButton()
+    if name ~= targetFor then
+        targetFor = name
+        b:SetAttribute("macrotext", "/target " .. name)
+    end
+    local l, r, t, bt = f.sub:GetLeft(), f.sub:GetRight(), f.sub:GetTop(), f.sub:GetBottom()
+    if not (l and r and t and bt) then return end
+    local sc = f:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    local spot = ("%d:%d:%d:%d"):format(l * sc, r * sc, t * sc, bt * sc)
+    if spot ~= targetSpot then
+        targetSpot = spot
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", l * sc - 2, t * sc + 1)
+        b:SetSize((r - l) * sc + 4, (t - bt) * sc + 2)
+        b:SetFrameStrata(f:GetFrameStrata())
+        b:SetFrameLevel(f:GetFrameLevel() + 10)
+    end
+    if not b:IsShown() then b:Show() end
 end
 
 -- Every frame while shown: turn the arrow and update the distance.
@@ -532,6 +649,7 @@ function Arrow:Update()
         if not route.aim then
             -- Hearthstone or teleport: right where you stand. A button to use it.
             self:SetCast(leg)
+            if f.cast and f.cast:IsShown() then KeepCast(f.cast) end
             f.arrow:Hide(); f.check:SetShown(InCombatLockdown() or not (f.cast and f.cast:IsShown()))
             Text(f.where, "|cff59f28c" .. rt:Action(leg) .. "|r")
             Text(f.sub, sub)
@@ -577,7 +695,7 @@ function Arrow:Update()
         if jump and facing then
             f.check:Hide()
             f.arrow:Show()
-            Arrow:Turn(jump - facing)
+            Arrow:Turn(jump)
             f.arrow:SetVertexColor(JUMP[1], JUMP[2], JUMP[3])
             shownColor = nil -- Paint puts the target's color back once you've jumped
             Text(f.where, "|cff59f28c" .. rt:AtText(leg) .. "|r")
@@ -592,7 +710,7 @@ function Arrow:Update()
     local facing = GetPlayerFacing and C.Num(GetPlayerFacing())
     if facing then
         f.arrow:Show()
-        Arrow:Turn(angle - facing)
+        Arrow:Turn(angle)
     else
         f.arrow:Hide()
     end
@@ -606,7 +724,8 @@ function Arrow:Update()
     elseif up then
         Text(f.where, ("%s to %s  ·  ~%s"):format(ns.Nav.Distance(d), up.label, ns.Nav.ETA(d)))
     else
-        Text(f.where, ("%s  ·  ~%s"):format(ns.Nav.Distance(d), ns.Nav.ETA(d)))
+        local inside = PlaceText(p)
+        Text(f.where, ("%s  ·  ~%s%s"):format(ns.Nav.Distance(d), ns.Nav.ETA(d), inside and ("  ·  " .. inside) or ""))
     end
 end
 

@@ -180,6 +180,8 @@ end
 
 local Hot = {}
 
+local PlaceBlock -- (below) the block of words, clear of the whispers
+
 local function NewHot()
     local g = table.remove(pool)
     if g then return g end
@@ -256,6 +258,7 @@ local function NewHot()
             local on = text ~= ""
             self:SetWidth(on and math.ceil(self.text:GetStringWidth()) + 12 or 1)
             self:EnableMouse(on)
+            if dir == "left" or dir == "right" then PlaceBlock(g) end
             if not on and self.over then
                 self.over, g.overHint = nil, nil
                 self.text:SetTextColor(1, 1, 1)
@@ -308,6 +311,7 @@ local function StepLine(e, withNumber)
     local text = Icon(v[1], 18) .. " " .. e.name
     if e.catchup then text = text .. " " .. Icon("missed", 16) end
     if e.exit then text = text .. " " .. Icon("exit", 16) end
+    if e.detour then text = text .. " |cff8a948e(detour)|r" end
     if e.needs then text = text .. " " .. Icon("locked", 16) .. "|cffeb5a50" .. e.needs .. "|r" end
     if withNumber then text = ("|cff8a948e%d|r  %s"):format(e.n, text) end
     return text
@@ -345,6 +349,24 @@ local function Paint(g)
     for _, d in ipairs(g.ring) do d:SetVertexColor(col[1], col[2], col[3], 1) end
 end
 
+-- Anchors the block beside the light, on the side LayoutBlock picked, clear of the whisper on that
+-- side (pause/resume guide) while it shows: the block never covers a way out of the ring.
+function PlaceBlock(g)
+    local right, low = g.blockRight, g.blockLow
+    if right == nil then return end
+    local hint = g.hint[right and "right" or "left"]
+    local gap = (hint.text:GetText() or "") ~= "" and (10 + hint:GetWidth() + 6) or 4
+    if gap == g.blockGap and g.block:GetNumPoints() > 0 then return end
+    g.blockGap = gap
+    g.block:ClearAllPoints()
+    local v = low and "BOTTOM" or "TOP"
+    if right then
+        g.block:SetPoint(v .. "LEFT", g, v .. "RIGHT", gap, low and -10 or 10)
+    else
+        g.block:SetPoint(v .. "RIGHT", g, v .. "LEFT", -gap, low and -10 or 10)
+    end
+end
+
 -- Lay the block of words beside the light: toward the outside of the field, unless that runs off
 -- the screen; and upward when it would reach below the top 70% of the screen.
 local function LayoutBlock(g)
@@ -378,16 +400,15 @@ local function LayoutBlock(g)
     end
     g.block:SetSize(w, h)
     local right = g.x >= 0
-    if right and g.x + 24 + w > geo.xmax then right = false end
-    if not right and g.x - 24 - w < -geo.xmax then right = true end
-    local low = (g.y + 20 - h) < geo.floor
-    g.block:ClearAllPoints()
-    local v = low and "BOTTOM" or "TOP"
-    if right then
-        g.block:SetPoint(v .. "LEFT", g, v .. "RIGHT", 4, low and -10 or 10)
-    else
-        g.block:SetPoint(v .. "RIGHT", g, v .. "LEFT", -4, low and -10 or 10)
+    local function Room(dir) -- what the whisper on that side takes
+        local hint = g.hint[dir]
+        return (hint.text:GetText() or "") ~= "" and hint:GetWidth() + 12 or 0
     end
+    if right and g.x + 24 + Room("right") + w > geo.xmax then right = false end
+    if not right and g.x - 24 - Room("left") - w < -geo.xmax then right = true end
+    local low = (g.y + 20 - h) < geo.floor
+    g.blockRight, g.blockLow, g.blockGap = right, low, nil
+    PlaceBlock(g)
     local just = right and "LEFT" or "RIGHT"
     g.label:ClearAllPoints(); g.detail:ClearAllPoints()
     g.label:SetJustifyH(just)
@@ -708,7 +729,8 @@ local function Rebuild()
     local n = 0
     for i, s in ipairs(E.steps or {}) do
         local current = i == E.current
-        if current or (E:Counts(s) and not E:StepDone(s) and (not E.current or i > E.current)) then
+        -- (Zone Clear's quests above your level don't count toward the section, but they're listed.)
+        if current or ((E:Counts(s) or s.later) and not E:StepDone(s) and (not E.current or i > E.current)) then
             local verb, name, detail, pts = E:Describe(s)
             local points
             if pts then
@@ -722,7 +744,7 @@ local function Rebuild()
             model[#model + 1] = {
                 n = n, key = StepKey(s), id = s[2], verb = verb, name = name, place = place, how = how,
                 needs = needs, xp = xp, points = points, current = current,
-                catchup = s.catchup, exit = s.exit, here = s[1] == "G",
+                catchup = s.catchup, exit = s.exit, detour = s.detour, here = s[1] == "G",
                 canDone = s[1] ~= "G" and s[1] ~= "Z" and s[1] ~= "I",
             }
         end

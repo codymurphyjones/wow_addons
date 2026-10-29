@@ -12,6 +12,16 @@ local _, ns = ...
 -- nothing left for your level, the guide looks for such a quest here; failing that, it sends you
 -- to the nearest zone that has quests for your level.
 --
+-- Preference (ns.char.preference, the settings' "Preference"):
+--   Leveling  (above) XP and convenience first, and a quick quest a little off the route (nothing to
+--             do but hand it in) is picked up on the way when it pays its walk (see AddDetours).
+--   Zone Clear every quest of the zone you're on that you haven't done, whatever its XP (all of the
+--             zone's sections as one, see ClearSections), and what they need first wherever it is: the
+--             zone stays yours while you fetch it. Quests above your level wait at the end ("later");
+--             with only those left the zone is cleared, and the guide moves on as above.
+-- Either way a quest only goes on the route once the server says it exists, and leaves it when its
+-- giver doesn't offer it (Exists.lua).
+--
 -- Steps (from Guides\*.lua): { "A", quest } pick up, { "O", quest } objectives, { "T", quest }
 -- turn in, { "G", level } grind to a level, { "Z", uiMapID } travel to another zone, and (made
 -- here) { "L", quest } loot the item that starts a quest, { "I", dungeon } run a dungeon.
@@ -96,6 +106,63 @@ end
 
 local function StepKey(step) return step[1] .. ":" .. tostring(step[2]) .. (step.wing and (":" .. step.wing) or "") end
 
+local function Clearing() return ns.char.preference == "clear" end
+
+-- Zone Clear: one section per zone, its sections' routes one after the other (each with every
+-- quest of the zone's pool, its "clear" route, and the quests the planner never got to, "rest"),
+-- by the level they start at. Built once per guide.
+local clearSections = {} -- guide -> { list = { section, ... }, byZone = { [uiMapID] = section } }
+local function ClearSections(guide)
+    local c = clearSections[guide]
+    if c then return c end
+    c = { list = {}, byZone = {} }
+    local seen = {}
+    for _, s in ipairs(guide.sections) do
+        local z = c.byZone[s.zone]
+        if not z then
+            local info = C_Map.GetMapInfo(s.zone)
+            z = { id = "clear-" .. s.zone, zone = s.zone, zoneClear = true, from = s.from, to = s.to, minutes = 0,
+                title = info and info.name or (s.title:gsub("%s+%d+.*$", "")), steps = {} }
+            c.byZone[s.zone] = z
+            c.list[#c.list + 1] = z
+            seen[z] = {}
+        end
+        z.from, z.to = math.min(z.from or 1, s.from or 1), math.max(z.to or 1, s.to or 1)
+        z.minutes = z.minutes + (s.minutes or 0)
+        for _, st in ipairs(s.clear or s.steps) do
+            local key = StepKey(st)
+            if st[1] ~= "G" and not seen[z][key] then
+                seen[z][key] = true
+                z.steps[#z.steps + 1] = st
+            end
+        end
+    end
+    -- The quests no walk got to (most need a level the zone's route never reached), at the end.
+    for _, s in ipairs(guide.sections) do
+        local z = c.byZone[s.zone]
+        for _, id in ipairs(s.rest or {}) do
+            local q = Q(id)
+            if q and not seen[z]["A:" .. id] then
+                seen[z]["A:" .. id] = true
+                z.steps[#z.steps + 1] = { "A", id }
+                if q.o then z.steps[#z.steps + 1] = { "O", id } end
+                z.steps[#z.steps + 1] = { "T", id }
+            end
+        end
+    end
+    clearSections[guide] = c
+    return c
+end
+
+-- The sections Automatic picks from: the guide's, or with Zone Clear one per zone.
+local function Sections(guide)
+    return Clearing() and ClearSections(guide).list or guide.sections
+end
+-- The section to follow for one of the guide's own (a pick in the settings): with Zone Clear, its zone's.
+local function AsPicked(guide, s)
+    return s and Clearing() and ClearSections(guide).byZone[s.zone] or s
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Is a step done?
 -- ---------------------------------------------------------------------------------------------
@@ -120,7 +187,8 @@ end
 -- itself looks for the item, and what needs that quest waits for the next run.
 local function CanFetch(p, pq, depth)
     if P:InLog(p) then return true end
-    if not pq or not P:RaceAllowed(pq.rm) or ns.char.ignored[p] then return false end
+    if not pq or not P:RaceAllowed(pq.rm) or ns.char.ignored[p] or ns.char.notOffered[p] then return false end
+    if ns.Exists:Missing(p) then return false end
     if pq.ia and not pq.d then return false end
     return not E.Unreachable(pq, depth + 1)
 end
@@ -152,11 +220,19 @@ local function Unavailable(id)
     -- it's in your log. It's yours to finish on your own.
     if ns.char.ignored[id] then return true end
     if P:InLog(id) then return false end
+    -- Its giver didn't offer it when you got there, or the server has no such quest (or hasn't
+    -- said yet: it goes on the route once it does).
+    if ns.char.notOffered[id] or ns.Exists:Missing(id) or ns.Exists:Pending(id) then return true end
     if q and Unreachable(q, 0) then return true end
     return q and PrereqsDone(q) and not P:Doable(id)
 end
 
 E.Unavailable = function(_, id) return Unavailable(id) end
+E.PrereqsDone = function(_, id)
+    P = P or ns.Progress
+    local q = Q(id)
+    return not q or PrereqsDone(q)
+end
 
 -- A quest you could still do: not done, and not ruled out.
 function E:QuestOpen(id)
@@ -283,6 +359,19 @@ local function Shown(section, level)
             end
         end
     end
+    if section.zoneClear then
+        -- Zone Clear: every quest, whatever it pays (but not a dungeon's, nor one that needs one, and a
+        -- cloth donation only with the cloth in your bags).
+        for _, s in ipairs(section.steps) do
+            local id = s[2]
+            if s[1] == "A" and not show[id] and not (Q(id) and Q(id).dq) and not NeedsDungeon(id, 0)
+                and (DonationReady(Q(id)) or P:InLog(id)) then
+                show[id] = true
+                Need(id, 0)
+            end
+        end
+        return show
+    end
     for _, s in ipairs(section.steps) do
         local id = s[2]
         -- Within reach: a quest needing more than REACH levels over yours waits (a higher quest pays
@@ -379,7 +468,7 @@ local function Build(section)
             for _, id in ipairs(chain) do
                 if (Q(id).r or 1) > level + CATCHUP then near = false; break end
             end
-            if near then
+            if near or section.zoneClear then -- (Zone Clear fetches them wherever they are)
                 for _, id in ipairs(chain) do
                     seen[id] = true
                     missing[#missing + 1] = id
@@ -404,7 +493,31 @@ local function Build(section)
     -- The zone ends with the hand-off to the next zone for the level you'll have by then.
     if not section.instance then
         local e = PickExit(E.guide, section.zone, math.max(level, section.to or level))
+        -- Zone Clear: they're the zone's quests too: all of them, the one leading on last.
+        if section.zoneClear then
+            for _, other in ipairs(E.guide and E.guide.exits and E.guide.exits[section.zone] or {}) do
+                local q = Q(other[1])
+                if other ~= e and q and not q.dq and not inSection[other[1]] and (P:InLog(other[1]) or E:QuestOpen(other[1])) then
+                    inSection[other[1]] = true
+                    ExitSteps(other, steps)
+                end
+            end
+        end
         if e and not inSection[e[1]] then ExitSteps(e, steps) end
+    end
+    -- Zone Clear: the quests above your level wait at the end ("later": they don't hold the zone).
+    if section.zoneClear then
+        local now, later = {}, {}
+        for _, s in ipairs(steps) do
+            local q = s[1] ~= "G" and s[1] ~= "Z" and s[1] ~= "I" and Q(s[2])
+            if q and (q.r or 1) > level and not P:InLog(s[2]) then
+                later[#later + 1] = { s[1], s[2], later = true, catchup = s.catchup, exit = s.exit }
+            else
+                now[#now + 1] = s
+            end
+        end
+        for _, s in ipairs(later) do now[#now + 1] = s end
+        steps = now
     end
     -- A zone change with nothing after it (its quests were left out at your level) goes too:
     -- otherwise a section of nothing but "Go to ..." would look like it had work left.
@@ -431,7 +544,9 @@ end
 -- The first step left; a zone change counts as done once a step after it is, or once you're there.
 local function FirstLeft(steps)
     for i, s in ipairs(steps) do
-        if s[1] == "Z" then
+        if s.later then
+            -- Zone Clear's quests above your level: listed, but nothing to do yet.
+        elseif s[1] == "Z" then
             local after = steps[i + 1]
             if after and not E:StepDone(after) then
                 if CurrentZone() ~= s[2] and C_Map.GetBestMapForUnit("player") ~= s[2] then return i end
@@ -460,7 +575,7 @@ end
 -- The pick only changes when something it depends on does (zone, level, quests taken or handed
 -- in); objective progress just moves you along the steps.
 local pickDirty = true
-function E:Invalidate() pickDirty = true end
+function E:Invalidate() pickDirty = true; detourCache = nil end
 
 local travel -- the section that hands you off from a zone that's done for your level
 
@@ -468,27 +583,27 @@ function E:PickSection(guide)
     lastPick = lastPick or ns.char.lastPick -- the zone you were on, across a /reload
     if not pickDirty and lastPick then
         if travel and travel.id == lastPick and Remaining(travel) then return travel end
-        for _, s in ipairs(guide.sections) do
+        for _, s in ipairs(Sections(guide)) do
             if s.id == lastPick and Remaining(s) then return s end
         end
     end
     if ns.char.section then
         pickDirty = false
         for _, s in ipairs(guide.sections) do
-            if s.id == ns.char.section then return s end
+            if s.id == ns.char.section then return AsPicked(guide, s) end
         end
     end
     -- On a flight: nothing changes until you land.
     if lastPick and UnitOnTaxi and UnitOnTaxi("player") then
         if travel and travel.id == lastPick then return travel end
-        for _, s in ipairs(guide.sections) do
+        for _, s in ipairs(Sections(guide)) do
             if s.id == lastPick then return s end
         end
     end
     pickDirty = false
     local level, zone = P:Level(), CurrentZone()
     local keep, here, passing
-    for _, s in ipairs(guide.sections) do
+    for _, s in ipairs(Sections(guide)) do
         if s.zone == zone then
             -- The zone you're in takes over when it suits your level now (your level to 2 above);
             -- one under or well over your level you're passing through: the zone you were on stays.
@@ -500,6 +615,9 @@ function E:PickSection(guide)
         end
         if s.id == lastPick and Fits(s, level) then keep = s end
     end
+    -- Zone Clear: the zone you're on stays until it's cleared, even while you're off fetching
+    -- what its quests need first.
+    if keep and Clearing() then return keep end
     if here then return here end
     if keep then return keep end
     -- Nothing left here for your level: a quest that takes you on from here, if there is one
@@ -515,7 +633,7 @@ function E:PickSection(guide)
     end
     -- Otherwise the zone that suits your level best (your level to 2 above), the nearest of those.
     local best, bestScore, bestD
-    for _, s in ipairs(guide.sections) do
+    for _, s in ipairs(Sections(guide)) do
         if Fits(s, level) then
             local score, d = Score(s, level), DistanceTo(s.zone) or math.huge
             if not best or score < bestScore or (score == bestScore and d < bestD) then
@@ -525,6 +643,368 @@ function E:PickSection(guide)
     end
     return best
 end
+
+-- ---------------------------------------------------------------------------------------------
+-- Leveling's detours
+-- ---------------------------------------------------------------------------------------------
+
+-- A quick quest off the route: one with nothing to do but hand it in (a delivery, "talk to ...",
+-- an auto turn-in), taken on the way when the extra walk to its giver and to whoever takes it
+-- costs at most db.detourMinutes, and it pays at least the route's usual XP per minute. One you
+-- carry already only needs the hand-in. Worked out for the section you follow (never for the
+-- sections Automatic weighs), again when the pick changes (see Invalidate).
+local RUN_SPEED = 7     -- yards a second, on foot
+local MAX_DETOURS = 5
+local MIN_DETOUR = 0.25 -- minutes: talking to the giver and whoever takes it costs this much anyway
+local SAME_SPOT = 15    -- yards: a giver who takes the quest back right there
+
+local byMap -- giver's uiMapID -> { questID, ... } (quests with nothing to do but hand them in)
+local function QuestsOn(map)
+    if not byMap then
+        byMap = {}
+        for id, q in pairs(ns.Quests) do
+            if q.talk and q.a and q.t and not q.dq then
+                local list = byMap[q.a[1]]
+                if not list then list = {}; byMap[q.a[1]] = list end
+                list[#list + 1] = id
+            end
+        end
+    end
+    return byMap[map] or {}
+end
+
+-- A quest data point { uiMapID, x, y (0-100) } in the world: { continent, north, west } (cached
+-- on the point), or nil.
+local function World(p)
+    if not p then return nil end
+    if p._c == nil then
+        local c, n, w = ns.WorldMap.World(p[1], p[2] / 100, p[3] / 100)
+        p._c, p._n, p._w = c or false, n, w
+    end
+    if p._c then return { p._c, p._n, p._w } end
+end
+
+local function Yards(a, b)
+    if not (a and b) then return nil end
+    return ns.WorldMap.Distance(a[1], a[2], a[3], b[1], b[2], b[3])
+end
+
+-- Where a step takes you, in the world, or nil.
+local function StepSpot(step)
+    local kind = step[1]
+    local q = kind ~= "G" and kind ~= "Z" and kind ~= "I" and Q(step[2])
+    if not q then return nil end
+    return World((kind == "A" and q.a) or (kind == "T" and q.t) or (kind == "O" and q.o and q.o[1])
+        or (kind == "L" and q.d and q.d[1]) or nil)
+end
+
+-- The cheapest place to fit a stop at spot into the route, at index `from` or later: the index to
+-- put it after, and the yards it adds. route = { { step key (nil: where you stand), spot }, ... }.
+local function Cheapest(route, spot, from)
+    local bestAt, bestCost
+    for i = from, #route do
+        local a, b = route[i], route[i + 1]
+        local cost
+        if not b then
+            cost = Yards(a[2], spot)
+        else
+            local ab, ax, xb = Yards(a[2], b[2]), Yards(a[2], spot), Yards(spot, b[2])
+            cost = ab and ax and xb and (ax + xb - ab)
+        end
+        if cost and (not bestCost or cost < bestCost) then bestAt, bestCost = i, cost end
+    end
+    return bestAt, bestCost
+end
+
+local detourCache -- { key = section id, list = what PlanDetours found }
+
+-- The detours for a section's steps: { { id = quest, a = step key to pick it up after (nil and
+-- aStart: before the next step; nil alone: it's in your log), t, tStart (the same for the hand-in),
+-- minutes }, ... }, best XP per minute first.
+local function PlanDetours(section, steps)
+    local budget = ns.db.detourMinutes or 0
+    if budget <= 0 then return {} end
+    local level = P:Level()
+    local route = {}
+    local c, n, w = ns.WorldMap.Player()
+    if c then route[1] = { nil, { c, n, w } } end
+    local maps, onRoute, xp = { [section.zone] = true }, {}, 0
+    for _, st in ipairs(steps) do
+        local q = st[1] ~= "G" and st[1] ~= "Z" and st[1] ~= "I" and Q(st[2])
+        if q then
+            onRoute[st[2]] = true
+            if st[1] == "A" then xp = xp + QuestXP(q, level) end
+            if q.a then maps[q.a[1]] = true end
+            if q.t then maps[q.t[1]] = true end
+        end
+        if not E:StepDone(st) then
+            local spot = StepSpot(st)
+            if spot then route[#route + 1] = { StepKey(st), spot } end
+        end
+    end
+    if #route < 2 then return {} end
+    local rate = xp / math.max(1, section.minutes or 60) -- the route's usual XP per minute
+    local found = {}
+    for map in pairs(maps) do
+        for _, id in ipairs(QuestsOn(map)) do
+            local q = Q(id)
+            local carried = P:InLog(id)
+            if not onRoute[id] and (q.r or 1) <= level and not DonationCloth(q) and Worth(id, level)
+                and E:QuestOpen(id) and (carried or PrereqsDone(q)) and not NeedsDungeon(id, 0) then
+                local aSpot, tSpot = World(q.a), World(q.t)
+                local aAt, aCost = 1, 0
+                if not carried then aAt, aCost = Cheapest(route, aSpot, 1) end
+                local tAt, tCost
+                local near = not carried and Yards(aSpot, tSpot)
+                if near and near < SAME_SPOT then
+                    tAt, tCost = aAt, 0
+                elseif aAt then
+                    tAt, tCost = Cheapest(route, tSpot, aAt) -- (handed in after it's picked up)
+                end
+                if aAt and aCost and tAt and tCost then
+                    local minutes = math.max(MIN_DETOUR, (aCost + tCost) / RUN_SPEED / 60)
+                    local gain = QuestXP(q, level)
+                    if minutes <= budget and gain / minutes >= rate then
+                        found[#found + 1] = { id = id, minutes = minutes, value = gain / minutes,
+                            a = not carried and route[aAt][1] or nil, aStart = not carried and route[aAt][1] == nil,
+                            t = route[tAt][1], tStart = route[tAt][1] == nil }
+                    end
+                end
+            end
+        end
+    end
+    table.sort(found, function(x, y) return x.value > y.value end)
+    while #found > MAX_DETOURS do table.remove(found) end
+    return found
+end
+
+-- The section's steps with its detours fitted in (each marked detour = its minutes).
+local function AddDetours(section, steps)
+    if Clearing() or section.instance or section.travel then return steps end
+    if not (detourCache and detourCache.key == section.id) then
+        detourCache = { key = section.id, list = PlanDetours(section, steps) }
+    end
+    if #detourCache.list == 0 then return steps end
+    local after, start = {}, {} -- step key -> steps to put after it; start: before the next step left
+    local function Put(key, atStart, step)
+        local list = atStart and start or after[key]
+        if not list then list = {}; after[key] = list end
+        list[#list + 1] = step
+    end
+    for _, d in ipairs(detourCache.list) do
+        if d.a or d.aStart then Put(d.a, d.aStart, { "A", d.id, detour = d.minutes }) end
+        Put(d.t, d.tStart, { "T", d.id, detour = d.minutes })
+    end
+    local out, placed = {}, #start == 0
+    for _, st in ipairs(steps) do
+        if not placed and st[1] ~= "Z" and not E:StepDone(st) then
+            for _, x in ipairs(start) do out[#out + 1] = x end
+            placed = true
+        end
+        out[#out + 1] = st
+        for _, x in ipairs(after[StepKey(st)] or {}) do out[#out + 1] = x end
+    end
+    if not placed then
+        for _, x in ipairs(start) do out[#out + 1] = x end
+    end
+    return out
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- The order of the next steps
+-- ---------------------------------------------------------------------------------------------
+
+-- The guide's order is its route's, planned from nowhere in particular. The next WINDOW steps left
+-- (pick-ups, objectives, hand-ins, loot) go in the order that walks the least from where you stand:
+-- every order they can go in is timed (straight-line yards at RUN_SPEED, from you through each
+-- step), and the quickest wins. A quest's own steps keep their order (pick up, do, hand in), and so
+-- do a quest and one that needs it.
+--
+-- The order is worked out now and then, not on every change: at login, on Play (unpausing), when
+-- the section changes, after Skip or "Done it" (E:Reorder), and once every step it holds is done.
+-- Until then it stays, so finishing four quests on the way doesn't turn the arrow round four
+-- times: a hand-in that comes up meanwhile waits after the planned steps, for the next order.
+local WINDOW = 6
+local MIN_GAIN = 40   -- yards: a new order has to save at least this much on the guide's
+local FAR = 100000    -- yards: a leg to another continent (straight-line yards don't apply)
+local order           -- { section = id, keys = { step key, ... } in the chosen order }
+local orderDirty = true
+
+function E:Reorder() orderDirty = true end
+
+local function Orderable(s)
+    local k = s[1]
+    return (k == "A" or k == "O" or k == "T" or k == "L") and not (s.later or s.before or s.inside)
+end
+
+-- Step b has to come after step a: the same quest, or b's quest needs a's.
+local function After(a, b)
+    if a[2] == b[2] then return true end
+    local q = Q(b[2])
+    for _, p in ipairs(q and q.pre or {}) do
+        if p == a[2] then return true end
+    end
+    return false
+end
+
+-- The next steps left from index `from` that can be put in another order, with their spots: up to
+-- WINDOW, stopping at a step that can't (a zone change, grinding, a dungeon, no place to go) or
+-- that can't be done yet from what's in the list (a hand-in whose objectives are neither done nor
+-- listed, a quest step for a quest you haven't got and won't pick up first).
+local function Window(steps, from)
+    local list, spots, has = {}, {}, {}
+    for i = from or 1, #steps do
+        if #list >= WINDOW then break end
+        local s = steps[i]
+        if not E:StepDone(s) then
+            if not Orderable(s) then break end
+            local id, kind = s[2], s[1]
+            local q = Q(id)
+            if kind == "O" or kind == "T" then
+                if not (P:InLog(id) or has[id .. "A"] or has[id .. "L"]) then break end
+                if kind == "T" and q and q.o and not (P:ReadyToTurnIn(id) or has[id .. "O"]) then break end
+            end
+            local spot = StepSpot(s)
+            if not spot then break end
+            list[#list + 1], spots[#list + 1] = s, spot
+            has[id .. kind] = true
+        end
+    end
+    return list, spots
+end
+
+-- Yards from `start` (nil: anywhere) through the spots in the order given.
+local function Walk(spots, seq, start)
+    local yards, at = 0, start
+    for _, j in ipairs(seq) do
+        if at then yards = yards + (Yards(at, spots[j]) or FAR) end
+        at = spots[j]
+    end
+    return yards
+end
+
+-- The quickest order for list (indexes into it) that keeps what has to come first first, and its
+-- yards. Branch and bound over at most WINDOW! orders; the guide's own order is tried first and
+-- wins ties.
+local function Quickest(list, spots, start)
+    local n = #list
+    local before = {}
+    for j = 1, n do
+        before[j] = {}
+        for i = 1, j - 1 do
+            if After(list[i], list[j]) then before[j][#before[j] + 1] = i end
+        end
+    end
+    local best, bestYards = nil, math.huge
+    local used, path = {}, {}
+    local function Go(depth, at, yards)
+        if yards >= bestYards then return end
+        if depth > n then
+            best, bestYards = { unpack(path, 1, n) }, yards
+            return
+        end
+        for j = 1, n do
+            if not used[j] then
+                local ready = true
+                for _, i in ipairs(before[j]) do
+                    if not used[i] then ready = false; break end
+                end
+                if ready then
+                    used[j], path[depth] = true, j
+                    Go(depth + 1, spots[j], yards + (at and (Yards(at, spots[j]) or FAR) or 0))
+                    used[j] = false
+                end
+            end
+        end
+    end
+    Go(1, start, 0)
+    return best, bestYards
+end
+
+local function Minutes(yards) return math.max(1, math.floor(yards / RUN_SPEED / 60 + 0.5)) end
+
+-- Works out the order of the next steps (see above). Returns the new order, or nil.
+local function PlanOrder(section, steps)
+    local list, spots = Window(steps, FirstLeft(steps))
+    if #list < 2 then return nil end
+    local c, n, w = ns.WorldMap.Player()
+    local start = c and { c, n, w } or nil
+    local guideSeq = {}
+    for j = 1, #list do guideSeq[j] = j end
+    local guideYards = Walk(spots, guideSeq, start)
+    local seq, yards = Quickest(list, spots, start)
+    if not seq or guideYards - yards < MIN_GAIN then seq, yards = guideSeq, guideYards end
+    local keys, moved = {}, false
+    for i, j in ipairs(seq) do
+        keys[i] = StepKey(list[j])
+        if j ~= i then moved = true end
+    end
+    if moved and Minutes(yards) < Minutes(guideYards) then
+        ns:Print(("Next %d steps put in the quickest order: about %d min of walking instead of %d."):format(
+            #list, Minutes(yards), Minutes(guideYards)))
+    end
+    return { section = section.id, keys = keys, minutes = yards / RUN_SPEED / 60 }
+end
+
+-- The steps with the order's steps where its first one is, in its order; the others that were
+-- ahead of them and are left to do (they came up after the order was made) wait after them.
+-- Zone changes, grinding and dungeons stay where they are.
+local function ApplyOrder(steps, keys)
+    local inOrder, byKey, first = {}, {}, nil
+    for _, k in ipairs(keys) do inOrder[k] = true end
+    for i, s in ipairs(steps) do
+        local k = StepKey(s)
+        if inOrder[k] and not byKey[k] then
+            byKey[k] = s
+            first = first or i
+        end
+    end
+    if not first then return steps end
+    local out, waiting = {}, {}
+    for i = 1, first - 1 do
+        local s = steps[i]
+        if Orderable(s) and not E:StepDone(s) then waiting[#waiting + 1] = s else out[#out + 1] = s end
+    end
+    for _, k in ipairs(keys) do
+        if byKey[k] then out[#out + 1] = byKey[k] end
+    end
+    for _, s in ipairs(waiting) do out[#out + 1] = s end
+    for i = first, #steps do
+        local s = steps[i]
+        if not (inOrder[StepKey(s)] and byKey[StepKey(s)] == s) then out[#out + 1] = s end
+    end
+    return out
+end
+
+-- Whether the order still has a step to do on these steps.
+local function OrderLive(steps)
+    local inOrder = {}
+    for _, k in ipairs(order.keys) do inOrder[k] = true end
+    for _, s in ipairs(steps) do
+        if inOrder[StepKey(s)] and not E:StepDone(s) then return true end
+    end
+    return false
+end
+
+-- The section's steps in the order to do them (see above).
+local function Ordered(section, steps)
+    if not section or section.instance or section.travel then
+        order = nil
+        return steps
+    end
+    local keep = order and order.section == section.id and OrderLive(steps)
+    -- Paused: the order isn't worked out again until Play. Still asking the server which quests
+    -- exist: the steps may change in a moment (the guide's order meanwhile).
+    if (orderDirty or not keep) and not ns.char.paused and not ns.Exists:Busy() then
+        orderDirty = false
+        order = PlanOrder(section, steps)
+        keep = order ~= nil
+    end
+    return keep and ApplyOrder(steps, order.keys) or steps
+end
+
+-- About how many minutes of walking the ordered steps take (from where you stood), or nil.
+function E:OrderMinutes() return order and order.minutes end
 
 -- ---------------------------------------------------------------------------------------------
 -- Describing a step
@@ -627,6 +1107,7 @@ function E:Describe(step)
         local xp = QuestXP(q, P:Level())
         if xp > 0 then d = d .. ("  |cff8a948e(%d XP)|r"):format(xp) end
         if (q.r or 1) > P:Level() then d = ("Needs level %d. %s"):format(q.r, d) end
+        if step.detour then d = d .. ("  |cff8a948e(detour, ~%d min)|r"):format(math.max(1, math.floor(step.detour + 0.5))) end
         return "Pick up", name, d, q.a and { { q.a[1], q.a[2] / 100, q.a[3] / 100 } }
     elseif kind == "O" then
         local points = {}
@@ -703,6 +1184,9 @@ local function PointArrow(step)
     local wp = { key = StepKey(step), title = verb .. ": " .. name, subtitle = detail, arrive = target[1] == "O" and 30 or 12,
         color = ns.char.instance and "purple" or "green", -- a dungeon's route, or the leveling guide
         onClick = function() ns.db.shown = true; ns:Changed() end, points = {} }
+    -- Who to talk to (a pick-up or turn-in): Waypoint makes that line a /target button.
+    local giver = (target[1] == "A" or target[1] == "T") and (Q(target[2]) or {})[target[1] == "A" and "a" or "t"]
+    if giver and type(giver[4]) == "string" and giver[4] ~= "?" then wp.targetName = giver[4] end
     -- The step after this one, for the arrow's tooltip.
     for i = (E.current or 0) + 1, #E.steps do
         local s = E.steps[i]
@@ -793,6 +1277,7 @@ function E:SetPaused(paused)
             or "Paused: the guide won't move Waypoint's arrow. Resume from the guide window, Shift+click the minimap button, or /fg resume.")
     else
         stoppedKey = nil
+        orderDirty = true -- Play: the next steps' order is worked out again from where you are
         PointArrow(self.current and self.steps[self.current])
         ns:Print("Resumed: the arrow follows the guide again.")
     end
@@ -851,7 +1336,7 @@ function E:Update()
     self.section = section
     lastPick = section and section.id
     if section and not section.instance and not section.travel then ns.char.lastPick = section.id end
-    self.steps = section and Build(section) or {}
+    self.steps = section and AddDetours(section, Build(section)) or {}
     -- A section in another zone starts with going there.
     local away = section and not section.instance and not section.travel and section.zone ~= CurrentZone()
     if away and self.steps[1] and self.steps[1][1] ~= "Z" then
@@ -859,9 +1344,12 @@ function E:Update()
         for _, s in ipairs(self.steps) do steps[#steps + 1] = s end
         self.steps = steps
     end
+    self.steps = Ordered(section, self.steps)
     NumberParts(self.steps)
     self.current = FirstLeft(self.steps)
-    if section and section.id ~= lastSection then
+    if ns.Exists:Busy() then
+        -- Still asking the server which quests are there: the pick may change in a moment.
+    elseif section and section.id ~= lastSection then
         lastSection = section.id
         if section.note then
             ns:Print(guide.name .. ": " .. section.note)
@@ -897,7 +1385,7 @@ end
 -- Whether a step counts toward the section's total: zone changes don't, and neither do the
 -- turn-ins and follow-ups of an item found inside until you have its quest (or did it).
 function E:Counts(s)
-    if s[1] == "Z" then return false end
+    if s[1] == "Z" or s.later then return false end
     if s.inside and s[1] ~= "L" then
         local id = s[2]
         if P:Done(id) or P:InLog(id) then return true end
@@ -958,14 +1446,14 @@ function E:SkipCurrent()
     -- what needs it first. Yours to do on your own if you want it later (/fg unskip undoes it).
     if step[1] ~= "G" and step[1] ~= "Z" and step[1] ~= "I" then
         ns.char.ignored[step[2]] = true
-        pickDirty = true
+        pickDirty, orderDirty = true, true
         ns:Print(("Skipped %s%s. Field Guide won't suggest it again (/fg unskip brings it back)."):format(
             self:QuestName(step[2]), DonationCloth(Q(step[2])) and ": your cloth stays with you" or ""))
         return ns:Changed()
     end
     -- Grinding, travelling, a dungeon run: just this step.
     ns.char.skipped[StepKey(step)] = true
-    pickDirty = true
+    pickDirty, orderDirty = true, true
     local verb, name = self:Describe(step)
     ns:Print(("Skipped %s: %s. /fg unskip brings skipped steps back."):format(strlower(verb), name))
     ns:Changed()
@@ -978,7 +1466,7 @@ function E:MarkDone()
     if not step or step[1] == "G" or step[1] == "Z" or step[1] == "I" then return end
     local id = step[2]
     ns.char.doneByHand[id] = true
-    pickDirty = true
+    pickDirty, orderDirty = true, true
     ns:Print(("Marked %s as done. /fg unskip brings it back."):format(Q(id) and Q(id).n or ("quest " .. id)))
     ns:Changed()
 end

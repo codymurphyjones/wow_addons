@@ -22,9 +22,11 @@ Guides\Alliance.lua
 Guides\Horde.lua
 Guides\Instances.lua
 Progress.lua
+Exists.lua
 Engine.lua
 Instance.lua
 UI.lua
+QuestLog.lua
 ..\shared\MinimapButton.lua
 Minimap.lua
 ..\shared\OptionsPage.lua
