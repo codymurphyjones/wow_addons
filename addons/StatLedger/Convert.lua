@@ -15,98 +15,40 @@ local API = ns.API
 local Cv = {}
 ns.Convert = Cv
 
--- Roughly what one point of each stat costs an item, with a point of a main stat as 1.
-Cv.BUDGET = {
-    STR = 1, AGI = 1, STA = 1, INT = 1, SPI = 1,
-    AP = 0.5, RAP = 0.4, SP = 0.86, HEAL = 0.45,
-    FIRE = 0.7, FROST = 0.7, SHADOW = 0.7, ARCANE = 0.7, NATURE = 0.7,
-    MP5 = 2.5, DEF = 1.2, BLOCKVALUE = 0.15, ARMOR = 0.04, DPS = 3,
-}
-
--- Stats items give as a percent in classic ("+1% crit"). Their budget is per percent. Values
--- above 5 are taken to be ratings instead (about 14 rating per percent), worth 1 each.
-Cv.PERCENT_BUDGET = { CRIT = 14, SPELLCRIT = 14, HIT = 14, HASTE = 10, DODGE = 12, PARRY = 20, BLOCK = 5 }
-local MAX_PERCENT = 5
+-- The figures are all in Assumptions.lua.
+local A = ns.Assumptions
 
 function Cv:IsPercent(stat, amount)
-    return self.PERCENT_BUDGET[stat] ~= nil and math.abs(amount or 0) <= MAX_PERCENT
+    return A.PERCENT_BUDGET[stat] ~= nil and math.abs(amount or 0) <= A.MAX_PERCENT
 end
 
 -- The flat item budget of one point of stat, for an item that has amount of it.
 function Cv:FlatBudget(stat, amount)
-    if self.PERCENT_BUDGET[stat] then
-        return self:IsPercent(stat, amount) and self.PERCENT_BUDGET[stat] or 1
+    if A.PERCENT_BUDGET[stat] then
+        return self:IsPercent(stat, amount) and A.PercentBudget(stat) or 1
     end
-    return self.BUDGET[stat] or 0
+    return A.Budget(stat)
 end
 
-Cv.DERIVED_SHARE = 0.5
-
--- Agility per 1% melee crit at level 60 (classic). Lower levels need less (see AgiPerCrit).
-local AGI_PER_CRIT_60 = {
-    WARRIOR = 20, PALADIN = 20, HUNTER = 53, ROGUE = 29, PRIEST = 20,
-    SHAMAN = 20, MAGE = 20, WARLOCK = 20, DRUID = 20,
-}
--- Intellect per 1% spell crit at level 60.
-local INT_PER_SPELLCRIT_60 = {
-    PALADIN = 54, PRIEST = 59, SHAMAN = 59, MAGE = 60, WARLOCK = 61, DRUID = 60,
-}
-
--- What one point of a stat also gives, per class: { to stat, amount per point }.
--- Agility: crit (from the class's ratio), attack power, 2 armor. Strength: attack power.
--- Intellect: spell crit for casters.
-local DERIVED = {
-    WARRIOR = { STR = { { "AP", 2 } }, AGI = { { "CRIT", "agi" }, { "ARMOR", 2 } } },
-    PALADIN = { STR = { { "AP", 2 } }, AGI = { { "CRIT", "agi" }, { "ARMOR", 2 } }, INT = { { "SPELLCRIT", "int" } } },
-    HUNTER = { STR = { { "AP", 1 } }, AGI = { { "CRIT", "agi" }, { "RAP", 2 }, { "AP", 1 }, { "ARMOR", 2 } } },
-    ROGUE = { STR = { { "AP", 1 } }, AGI = { { "CRIT", "agi" }, { "AP", 1 }, { "ARMOR", 2 } } },
-    PRIEST = { INT = { { "SPELLCRIT", "int" } } },
-    SHAMAN = { STR = { { "AP", 2 } }, AGI = { { "CRIT", "agi" }, { "ARMOR", 2 } }, INT = { { "SPELLCRIT", "int" } } },
-    MAGE = { INT = { { "SPELLCRIT", "int" } } },
-    WARLOCK = { INT = { { "SPELLCRIT", "int" } } },
-    DRUID = { STR = { { "AP", 2 } }, AGI = { { "CRIT", "agi" }, { "AP", 2 }, { "ARMOR", 2 } }, INT = { { "SPELLCRIT", "int" } } },
-}
-
-local class, level, agiPerCrit, intPerSpellCrit
+local class, agiPerCrit, intPerSpellCrit
 
 -- Forgets the class and level figures (on level-up).
 function Cv:Reset()
-    class, level, agiPerCrit, intPerSpellCrit = nil, nil, nil, nil
+    class, agiPerCrit, intPerSpellCrit = nil, nil, nil
 end
 
 local function Who()
-    if not class then
-        class = select(2, UnitClass("player"))
-        level = UnitLevel("player") or 60
-    end
-    return class, level
+    if not class then class = select(2, UnitClass("player")) end
+    return class
 end
 
--- Ratios grow with level; at level L about L/60 of the level 60 figure, at least a quarter.
-local function Scaled(at60)
-    local _, lvl = Who()
-    return at60 * math.max(0.25, math.min(1, lvl / 60))
-end
-
--- Agility per 1% crit for you: the game's own figure when it gives one, else the table.
 function Cv:AgiPerCrit()
-    if agiPerCrit then return agiPerCrit end
-    local cls = Who()
-    if GetCritChanceFromAgility and UnitStat then
-        local ok, fromAgi = pcall(GetCritChanceFromAgility, "player")
-        local agi = select(2, UnitStat("player", 2))
-        if ok and type(fromAgi) == "number" and fromAgi > 0 and agi and agi > 0 then
-            agiPerCrit = agi / fromAgi
-        end
-    end
-    agiPerCrit = agiPerCrit or Scaled(AGI_PER_CRIT_60[cls] or 20)
+    agiPerCrit = agiPerCrit or A.Get("agi_per_crit")
     return agiPerCrit
 end
 
 function Cv:IntPerSpellCrit()
-    if intPerSpellCrit then return intPerSpellCrit end
-    local cls = Who()
-    intPerSpellCrit = Scaled(INT_PER_SPELLCRIT_60[cls] or 60)
+    intPerSpellCrit = intPerSpellCrit or A.Get("int_per_spellcrit")
     return intPerSpellCrit
 end
 
@@ -126,7 +68,7 @@ end
 function Cv:Value(stat, amount, weights)
     local own = amount * self:Budget(stat, amount) * (weights[stat] or 0)
     local derived = 0
-    local list = DERIVED[(Who())] and DERIVED[(Who())][stat]
+    local list = A.DERIVED[Who()] and A.DERIVED[Who()][stat]
     if list and amount > 0 then
         for _, d in ipairs(list) do
             local to, per = d[1], d[2]
@@ -140,7 +82,7 @@ function Cv:Value(stat, amount, weights)
             end
         end
     end
-    return own + derived * self.DERIVED_SHARE
+    return own + derived * A.Solve(A.DERIVED_SHARE)
 end
 
 -- total, contrib { [stat] = worth } for an item's values { [stat] = amount }. Each stat's
@@ -168,6 +110,11 @@ function API:Score(values, weights) return Cv:Score(values, weights or self:GetW
 function API:Value(stat, amount, weights) return Cv:Value(stat, amount, weights or self:GetWeights()) end
 function API:Budget(stat, amount) return Cv:Budget(stat, amount) end
 function API:IsPercent(stat, amount) return Cv:IsPercent(stat, amount) end
+
+-- Assumptions.lua's conversions, for other addons.
+function API:ToPercent(stat, points) return A.ToPercent(stat, points) end
+function API:ToPoints(stat, percent) return A.ToPoints(stat, percent) end
+function API:EffectRates(kind) return A.EffectRates(kind) end
 
 -- Levelling changes the crit ratios: callbacks get "VALUES_CHANGED".
 ns:On("PLAYER_LEVEL_UP", function()

@@ -149,7 +149,7 @@ function T:SetManager(owner, m)
     if m == nil then
         if manager and manager.owner == owner then manager = nil end
     elseif type(m) == "table" then
-        manager = { owner = owner, name = m.name or owner, restore = m.restore, expected = m.expected, yield = m.yield, pause = m.pause }
+        manager = { owner = owner, name = m.name or owner, restore = m.restore, expected = m.expected, yield = m.yield, pause = m.pause, choices = m.choices }
     end
     ns:Changed()
 end

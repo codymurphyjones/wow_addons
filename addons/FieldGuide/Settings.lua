@@ -49,8 +49,15 @@ S.page = ns.NewOptionsPage({ name = "Field Guide", icon = true, build = function
             .. "Quests you track yourself stay tracked until they're done or you untrack them, and come first on the arrow "
             .. "(over the guide's step while the guide window is closed). A quest you untrack yourself isn't tracked again." })
 
+    p:Check({ path = "db.autoAccept", label = "Auto Accept",
+        tooltip = "Takes a quest when you talk to its giver. Quests you skipped and repeatable quests are left alone, and "
+            .. "gray quests are only taken in Zone Clear. Hold Shift while you talk to the NPC to do it by hand." })
+    p:Check({ path = "db.autoTurnIn", label = "Auto Turn-in",
+        tooltip = "Hands in a finished quest when you talk to the NPC. It stops if there's a reward to choose or the quest "
+            .. "wants gold, so that's yours to decide. Hold Shift while you talk to the NPC to do it by hand." })
+
     p:Header("The field")
-    p:Slider({ path = "db.nextSteps", label = "Steps ahead", min = 0, max = 10, step = 1,
+    p:Slider({ path = "db.nextSteps", label = "Steps ahead", min = 0, max = 5, step = 1,
         format = function(v) return ("%d"):format(v) end,
         tooltip = "How many of the steps after the current one come up around you once you've stood still a while "
             .. "(two more when you often look ahead)." })

@@ -27,6 +27,7 @@ Engine.lua
 Instance.lua
 UI.lua
 QuestLog.lua
+AutoQuest.lua
 ..\shared\MinimapButton.lua
 Minimap.lua
 ..\shared\OptionsPage.lua

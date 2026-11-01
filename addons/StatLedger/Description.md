@@ -9,7 +9,7 @@ Gear scorers, consumable pickers and loot lists all need to know which stats mat
 ## Features
 
 ### A default for every class and spec
-All 27 class and spec combinations (the nine classes, three talent trees each) come with a ready-made priority of 7 to 10 stats. It's in use straight away, with nothing to set up.
+All 28 class and spec combinations (the nine classes, three specs each, and a fourth for Druid: Balance, Feral DPS, Feral Tank and Restoration) come with a ready-made priority of 7 to 10 stats. It's in use straight away, with nothing to set up.
 
 ### Customise by dragging
 Open the settings page and you see one list of every stat:
@@ -22,8 +22,11 @@ Open the settings page and you see one list of every stat:
 ### Starts from the defaults, never from a blank list
 Your first change to a spec starts from that spec's default list, so moving one stat leaves the rest as they were. If you change it back to the default, StatLedger goes back to following the default.
 
+### Weight Designer
+Build your own weight profiles: a weight for every stat, cap tiers that change it past a value, and caps that move with other stats, such as a crit soft cap that rises with your hit chance up to a limit you choose. A chart shows what each stat is worth and where you stand. Item scoring doesn't use these weights yet.
+
 ### Knows your spec
-Your spec is the talent tree you've put the most points into (your class's usual tree before you spend any). When you respec, every addon using StatLedger switches to the matching list.
+Once you have talents, a **Select main spec** window asks which spec each character plays, showing your points in each tree and suggesting one. **Update Mainspec** at the top of the settings page changes it any time, and every addon using StatLedger switches to the matching list. Until you choose, your spec is the talent tree you've put the most points into (your class's usual tree before you spend any).
 
 ### Account-wide
 Customisations are saved by class and spec across your account. Tune Fire Mage once, and every Fire Mage you play uses it.

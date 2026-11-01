@@ -55,7 +55,7 @@ SpyGlass only asks the server about items you can see. Rows load as you scroll, 
 
 ## How to use
 
-1. Install **AtlasLootClassic** and **StatLedger**, then install SpyGlass.
+1. Install **StatLedger**, then install SpyGlass.
 2. Set up your stat priority in StatLedger (`/statledger`), or keep its default for your spec.
 3. Open your Character window and click the **SpyGlass** tab, or type **/sg**.
 4. Click a slot on your character to see the loot for that slot. Click any item to see where it drops.
@@ -106,7 +106,7 @@ With your level as L:
 
 ## Works with
 
-- **AtlasLootClassic** (required): the loot data for every dungeon and raid.
+- **AtlasLootClassic** (optional): opens an item or boss in AtlasLoot. SpyGlass ships its own loot data.
 - **StatLedger** (required): your stat priority for each class and spec.
 - **SpyGlassPluginQuests** (optional): quest reward gear with quest tracking, plus world drops, vendor and crafted gear. It needs **QuestieDB**.
 - **Fanny Pack**: hiding AtlasLoot's minimap button from SpyGlass's settings takes effect in Fanny Pack straight away.

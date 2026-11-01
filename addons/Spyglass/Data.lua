@@ -73,23 +73,22 @@ D.SCHOOLS = ns.GearEngine.SCHOOLS
 
 -- Effects that aren't stats but stand in for one (Effects.lua): matched
 -- against the lower-cased "Equip:" line, first match wins. The captures are
--- (amount) or (spell names, amount); convert is stat points per unit of the
--- amount, rough item-budget numbers (an effect on one spell
--- is worth part of the same amount on every spell). needs: "form" (a
+-- (amount) or (spell names, amount); the type's rates, stat points per unit of
+-- the amount, are StatLedger's (its Assumptions.lua). needs: "form" (a
 -- shapeshift spell), "spell" (one of the named spells in your spellbook) or
 -- "weapon" (a weapon type your class can use). An amount followed by "%" is
 -- a percentage, which these rates don't fit, so it's skipped.
 D.EFFECT_TYPES = {
-    { "mana cost of shapeshifting spells by (%d+)", "SHIFT_COST", { MP5 = 0.05 }, "form" },
-    { "mana cost of your (.-) spells? by (%d+)", "SPELL_COST", { MP5 = 0.04 }, "spell" },
-    { "damage done by your (.-) spells? by up to (%d+)", "SPELL_DAMAGE", { SP = 0.4 }, "spell" },
-    { "damage of your (.-) spells? by up to (%d+)", "SPELL_DAMAGE", { SP = 0.4 }, "spell" },
-    { "damage of your (.-) spells? by (%d+)", "SPELL_DAMAGE", { SP = 0.4 }, "spell" },
-    { "healing done by your (.-) spells? by up to (%d+)", "SPELL_HEAL", { HEAL = 0.4 }, "spell" },
-    { "healing of your (.-) spells? by up to (%d+)", "SPELL_HEAL", { HEAL = 0.4 }, "spell" },
-    { "healing of your (.-) spells? by (%d+)", "SPELL_HEAL", { HEAL = 0.4 }, "spell" },
-    { "casting time of your (.-) spells? by 0?%.(%d) sec", "CAST_TIME", { HASTE = 0.5 }, "spell" },
-    { "^equip: increased (.-) %+(%d+)", "WEAPON_SKILL", { HIT = 0.1 }, "weapon" },
+    { "mana cost of shapeshifting spells by (%d+)", "SHIFT_COST", "form" },
+    { "mana cost of your (.-) spells? by (%d+)", "SPELL_COST", "spell" },
+    { "damage done by your (.-) spells? by up to (%d+)", "SPELL_DAMAGE", "spell" },
+    { "damage of your (.-) spells? by up to (%d+)", "SPELL_DAMAGE", "spell" },
+    { "damage of your (.-) spells? by (%d+)", "SPELL_DAMAGE", "spell" },
+    { "healing done by your (.-) spells? by up to (%d+)", "SPELL_HEAL", "spell" },
+    { "healing of your (.-) spells? by up to (%d+)", "SPELL_HEAL", "spell" },
+    { "healing of your (.-) spells? by (%d+)", "SPELL_HEAL", "spell" },
+    { "casting time of your (.-) spells? by 0?%.(%d) sec", "CAST_TIME", "spell" },
+    { "^equip: increased (.-) %+(%d+)", "WEAPON_SKILL", "weapon" },
 }
 
 -- Weapon skill names on items -> weapon subclasses (see CLASS_PROFICIENCY).
@@ -115,8 +114,6 @@ D.TALENT_BOOST = 0.1
 D.TALENT_BOOST_MAX = 2
 D.FORM_SPELLS = { "bear form", "dire bear form", "cat form", "travel form", "aquatic form", "moonkin form", "ghost wolf" }
 
--- Used when StatLedger is not installed.
-D.FALLBACK_WEIGHTS = ns.GearEngine.FALLBACK_WEIGHTS
 
 -- What each class can learn to wear and wield in Classic, by item subclass:
 -- armor (class 4): 1 cloth, 2 leather, 3 mail, 4 plate, 6 shield, 7 libram,

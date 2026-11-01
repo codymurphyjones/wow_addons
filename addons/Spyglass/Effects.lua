@@ -111,7 +111,7 @@ local function Line(lower)
         local s, e, a, b = lower:find(rule[1])
         if s and lower:sub(e + 1, e + 1) ~= "%" then
             local amount, what = tonumber(b or a), b and a or nil
-            local needs, keywords = rule[4], nil
+            local needs, keywords = rule[3], nil
             if needs == "form" then
                 if not KnowsAny(D.FORM_SPELLS) then return nil end
                 keywords = { "shapeshift", " form" }
@@ -126,7 +126,7 @@ local function Line(lower)
             if not amount then return nil end
             local factor = keywords and TalentFactor(keywords) or 1
             local stats = {}
-            for stat, per in pairs(rule[3]) do stats[stat] = amount * per * factor end
+            for stat, per in pairs(StatLedger:EffectRates(rule[2])) do stats[stat] = amount * per * factor end
             return stats, factor
         end
     end

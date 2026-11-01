@@ -39,7 +39,8 @@ D.CLASS_NAMES = {
 
 -- Talent trees in the game's tab order, with each spec's default priority,
 -- best first. The first five match Bandolier's built-in presets.
--- [class] = { default tab before talents, { name, { stats } } x3 }
+-- [class] = { default tab before talents, { name, { stats } } x3 }. A spec past the third shares a
+-- talent tree (tab = that tree): Feral Tank is spec 4, on Feral's tree. Talents alone can't pick it.
 D.SPECS = {
     WARRIOR = { 1,
         { "Arms", { "STR", "AP", "CRIT", "AGI", "STA", "HIT", "DPS", "ARMOR" } },
@@ -71,8 +72,9 @@ D.SPECS = {
         { "Retribution", { "STR", "AP", "CRIT", "AGI", "INT", "HIT", "STA", "DPS" } } },
     DRUID = { 2,
         { "Balance", { "SP", "ARCANE", "NATURE", "INT", "MP5", "SPELLCRIT", "HIT", "SPI" } },
-        { "Feral", { "AGI", "STR", "AP", "STA", "ARMOR", "CRIT", "HIT", "DODGE" } },
-        { "Restoration", { "HEAL", "INT", "SPI", "MP5", "STA", "SPELLCRIT", "SP" } } },
+        { "Feral DPS", { "AGI", "STR", "AP", "CRIT", "HIT", "STA", "ARMOR", "DODGE" } },
+        { "Restoration", { "HEAL", "INT", "SPI", "MP5", "STA", "SPELLCRIT", "SP" } },
+        { "Feral Tank", { "STA", "ARMOR", "DEF", "AGI", "HIT", "STR", "CRIT", "AP", "DODGE" }, tab = 2 } },
     SHAMAN = { 2,
         { "Elemental", { "SP", "NATURE", "SPELLCRIT", "INT", "MP5", "HIT", "STA", "SPI" } },
         { "Enhancement", { "STR", "AP", "AGI", "CRIT", "INT", "HIT", "DPS", "STA" } },

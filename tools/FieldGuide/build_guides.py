@@ -44,7 +44,7 @@ XP_JSON = os.path.join(HERE, 'data', 'wowhead_quests.json')
 # XP to go from level i to i + 1 (Classic).
 XP_TO_LEVEL = [0, 400, 900, 1400, 2100, 2800, 3600, 4500, 5400, 6500, 7600, 8800, 10100, 11400, 12900, 14400,
                16000, 17700, 19400, 21300, 23200, 25200, 27300, 29400, 31700, 34000, 36400, 38900, 41400,
-               44300, 47400, 50800, 54500, 58600, 62800, 67100, 71600, 76100, 80900, 85700, 90700, 95800,
+               44300, 47400, 50800, 54500, 58600, 62800, 67100, 71600, 76100, 80800, 85700, 90700, 95800,
                101000, 106300, 111800, 117500, 123200, 129100, 135100, 141200, 147500, 153900, 160400,
                167100, 173900, 180800, 187900, 195000, 202300, 209800]
 MAX_LEVEL = 60
@@ -80,6 +80,25 @@ CLUSTER_RADIUS = 7.0  # spawns within this of the busiest spawn make up an objec
 KEEP_EFFICIENCY = 0.3  # quests paying under this share of the section's typical XP/minute are dropped
 LOG_SIZE = 20
 MAX_GRIND_LEVELS = 2   # grind at most this many levels to reach the next quests
+LEVEL_PULL = 8         # units a step counts as farther per level its quest is above you: finish camp before moving on
+STARTER_LEVEL = 5      # a home zone's quests up to this level are never dropped: they're how a new character levels
+# Fights along the way: hostile mobs this near the walk to a quest's objective and hand-in (map units,
+# about 18 yards), of which FIGHT_SHARE end up in a fight. Mobs SAFE_LEVELS under you or more leave you
+# alone (and pay little); mobs far over you, you go round. FIGHT_SHARE is set from a real character's
+# journey log: to level 6, 34% of its XP came from quests, so everything earned is about 3x quest XP.
+
+
+def kill_seconds(level):
+    """A kill, with the walk to the next mob: 18 seconds early on (the journey log's pace: level 6 in 52
+    minutes of real play), 35 by level 60, as fights get longer."""
+    return 18 + 17 * max(0, min(55, level - 5)) / 55
+
+
+PATH_UNITS = 3.5
+FIGHT_SHARE = 0.14
+SAFE_LEVELS = 6
+STEP_UNITS = 2.0       # how often the walk is sampled
+STRETCH = 3            # a quest waits until you're within this many levels of it (Engine.lua has the same rule)
 
 REPEATABLE = 1  # specialFlags
 
@@ -100,6 +119,12 @@ def hidden_quests():
     except OSError as e:
         print('Questie corrections not found (%s): blacklisted and holiday quests may slip in.' % e)
     return out
+
+
+def practical_level(q):
+    """The level a quest is worth taking at: its required level, or STRETCH under the quest's own
+    level. QuestieDB says a level 8 quest needs only level 1 (Sharing the Land), and its mobs are level 8."""
+    return max(q.req, q.level - STRETCH)
 
 
 def can_take(mask, faction_mask):
@@ -199,6 +224,7 @@ class Data:
         self.entrances = [Point(m, x, y) for m, x, y in
                           ((self.zones.map_of(a), x, y) for a, x, y in dungeon_entrances()) if m]
         self._xp_by_level = self._typical_xp()
+        self._grid = None
 
     def _typical_xp(self):
         by = collections.defaultdict(list)
@@ -213,6 +239,41 @@ class Data:
             return row['xp'], 'wowhead'
         level = self.quests[qid].get('questLevel') or 1
         return self._xp_by_level.get(level, int(100 * level ** 1.4)), 'estimate'
+
+    def hostile_grid(self):
+        """{(uiMapID, cell x, cell y): [(x, y, level)]}: every mob that would attack you, by map cell."""
+        if self._grid is None:
+            self._grid = collections.defaultdict(list)
+            for npc_id in self.db.ids('Npc-'):
+                npc = self.db.npc(npc_id)
+                if not npc or npc.get('friendlyToFaction') or not hostile(npc):
+                    continue
+                level = npc_level(npc)
+                for p in self.spawns(npc.get('spawns'), None):
+                    self._grid[(p.map, int(p.x // 5), int(p.y // 5))].append((p.x, p.y, level))
+        return self._grid
+
+    def fights(self, points, level):
+        """(kills, XP) from hostile mobs along a walk through points, for a character of this level."""
+        grid = self.hostile_grid()
+        seen, kills, xp = set(), 0.0, 0.0
+        for a, b in zip(points, points[1:]):
+            if a.map != b.map:
+                continue
+            steps = max(1, int(a.dist(b) / STEP_UNITS))
+            for i in range(steps + 1):
+                x, y = a.x + (b.x - a.x) * i / steps, a.y + (b.y - a.y) * i / steps
+                cx, cy = int(x // 5), int(y // 5)
+                for dx in (-1, 0, 1):
+                    for dy in (-1, 0, 1):
+                        for m in grid.get((a.map, cx + dx, cy + dy), ()):
+                            if m in seen or abs(m[0] - x) * 1.5 > PATH_UNITS or abs(m[1] - y) > PATH_UNITS:
+                                continue
+                            seen.add(m)
+                            if level - SAFE_LEVELS < m[2] <= level + 3:
+                                kills += FIGHT_SHARE
+                                xp += FIGHT_SHARE * kill_xp(round(m[2]), level)
+        return kills, xp
 
     def spawns(self, spawns, maps):
         """Spawn points of an NPC or object inside the given uiMapIDs."""
@@ -356,7 +417,8 @@ class Data:
                 npc = self.db.npc(npc_id)
                 if npc:
                     points += self.spawns(npc.get('spawns'), maps)
-                    if hostile(npc):
+                    # (Whatever drops it gets killed, neutral beasts like Mulgore's plainstriders too.)
+                    if npc_level(npc) > 0:
                         levels.append(npc_level(npc))
             for obj_id in lua_list(item.get('objectDrops')):
                 obj = self.db.object(obj_id)
@@ -369,6 +431,10 @@ class Data:
                 if npc:
                     points += self.spawns(npc.get('spawns'), maps)
             effort += count * KILL_UNITS
+            for npc_id in lua_list(lua_list(entry)[0] if lua_list(entry) else []):
+                npc = self.db.npc(npc_id)
+                if npc and npc_level(npc) > 0:
+                    levels.append(npc_level(npc))
         if not points:
             return INSTANCE
         if prefer and any(p.map == prefer for p in points):
@@ -421,6 +487,16 @@ class Quest:
         objs = q.get('objectives')
         self.talk = (not (objs and any(lua_list(field(objs, i)) for i in (1, 2, 3, 4, 5)))
                      and not q.get('triggerEnd') and not self.item and not self.dungeon)
+        # XP from fighting, at the quest's level: the kills its objectives take, and the mobs along the way.
+        self.kill_xp, self.extra_minutes = 0, 0.0
+        lv = max(1, min(59, self.level))
+        if self.obj and self.obj[3]:
+            self.kill_xp += int(self.obj[2] / KILL_UNITS * kill_xp(round(self.obj[3]), lv))
+        walk = [p for p in ((self.giver and self.giver[0]), (self.obj and self.obj[0]), (self.ender and self.ender[0])) if p]
+        if len(walk) > 1:
+            kills, xp = data.fights(walk, lv)
+            self.kill_xp += int(xp)
+            self.extra_minutes = kills * KILL_UNITS * SECONDS_PER_UNIT / 60
         self.single = [abs(x) for x in lua_list(q.get('preQuestSingle'))]
         self.group = [abs(x) for x in lua_list(q.get('preQuestGroup'))]
         self.exclusive = lua_list(q.get('exclusiveTo'))
@@ -487,6 +563,7 @@ class Sim:
         self.units = 0
         self.grind_units = 0
         self.gained = collections.Counter()  # qid -> xp it brought (turn-in + kills)
+        self.share = collections.Counter()   # qid -> the same, in shares of the level it was earned at
         self.cost = collections.Counter()    # qid -> units spent on it
 
     def add_xp(self, xp):
@@ -495,12 +572,19 @@ class Sim:
             self.xp -= XP_TO_LEVEL[self.level]
             self.level += 1
 
+    def earn(self, qid, xp):
+        """XP from a quest: 170 XP is 42% of level 1, and 2% of level 15."""
+        self.gained[qid] += xp
+        if self.level < MAX_LEVEL:
+            self.share[qid] += xp / XP_TO_LEVEL[self.level]
+        self.add_xp(xp)
+
     def level_float(self):
         return self.level + (self.xp / XP_TO_LEVEL[self.level] if self.level < MAX_LEVEL else 0)
 
 
 def available(q, sim, quests, known_done):
-    if q.req > sim.level:
+    if practical_level(q) > sim.level:
         return False
     return available_ignoring_level(q, sim, known_done)
 
@@ -527,25 +611,26 @@ def run(quests, chosen, sim, target=None, known_done=frozenset(), new_quests=Tru
         taking = new_quests and (target is None or sim.level < target) and len(sim.active) < LOG_SIZE
         for qid in chosen:
             q = quests[qid]
+            pull = max(0, q.level - sim.level) * LEVEL_PULL
             if qid in sim.active:
                 if not sim.active[qid] and q.obj:
                     d = sim.pos.dist(q.obj[0]) if sim.pos else 0
-                    cand = (d + q.obj[2] * 0.15, 2, 'O', q, q.obj[0], d + q.obj[2])
+                    cand = (d + q.obj[2] * 0.15 + pull, 2, 'O', q, q.obj[0], d + q.obj[2])
                 else:
                     d = sim.pos.dist(q.ender[0]) if sim.pos else 0
                     cand = (d, 0, 'T', q, q.ender[0], d)
             elif taking and available(q, sim, quests, known_done):
                 d = sim.pos.dist(q.giver[0]) if sim.pos else 0
-                cand = (d, 1, 'A', q, q.giver[0], d)
+                cand = (d + pull, 1, 'A', q, q.giver[0], d)
             else:
                 continue
             if best is None or cand[:2] < best[:2]:
                 best = cand
         if best is None:
             # Stuck below the next quests' level: grind to it where you stand, if it's close.
-            gate = min((quests[qid].req for qid in chosen if taking is not False and new_quests
+            gate = min((practical_level(quests[qid]) for qid in chosen if taking is not False and new_quests
                         and qid not in sim.done and qid not in sim.active
-                        and quests[qid].req > sim.level and available_ignoring_level(quests[qid], sim, known_done)),
+                        and practical_level(quests[qid]) > sim.level and available_ignoring_level(quests[qid], sim, known_done)),
                        default=None)
             if gate is None or gate > MAX_LEVEL or (target and gate > target):
                 return sim
@@ -572,15 +657,11 @@ def run(quests, chosen, sim, target=None, known_done=frozenset(), new_quests=Tru
             sim.active[q.id] = True
             if q.obj[3]:
                 kills = q.obj[2] / KILL_UNITS
-                gained = int(kills * kill_xp(round(q.obj[3]), sim.level))
-                sim.add_xp(gained)
-                sim.gained[q.id] += gained
+                sim.earn(q.id, int(kills * kill_xp(round(q.obj[3]), sim.level)))
         else:
             del sim.active[q.id]
             sim.done.add(q.id)
-            gained = quest_xp(q.base_xp, q.level, sim.level)
-            sim.add_xp(gained)
-            sim.gained[q.id] += gained
+            sim.earn(q.id, quest_xp(q.base_xp, q.level, sim.level))
         sim.steps.append((kind, q.id, where, units))
 
 
@@ -593,11 +674,13 @@ def needed_by(quests, chosen):
     return need
 
 
-def plan_zone(quests, pool, sim, target, known_done, grind=True):
+def plan_zone(quests, pool, sim, target, known_done, grind=True, keep_to=0):
     """Plans one zone from sim's state: (kept quest ids, dropped quest ids, finished Sim).
 
     Starts from every quest in the pool, then drops the ones paying well under the route's
-    typical XP per unit of time, as long as that makes the whole route pay better."""
+    typical share of a level per unit of time, as long as that makes the whole route pay better.
+    (Shares, not XP: a zone's first quests pay little XP and a lot of a level.) Quests up to
+    level keep_to always stay."""
     import copy
 
     def trial(chosen):
@@ -614,12 +697,13 @@ def plan_zone(quests, pool, sim, target, known_done, grind=True):
     chosen = {qid for qid in chosen if qid in best.done}
     dropped = set()
     for _ in range(4):
-        rates = {qid: best.gained[qid] / max(1.0, best.cost[qid]) for qid in chosen}
+        rates = {qid: best.share[qid] / max(1.0, best.cost[qid]) for qid in chosen}
         if not rates:
             break
         typical = sorted(rates.values())[len(rates) // 2]
         needed = needed_by(quests, chosen)
-        low = {qid for qid, r in rates.items() if r < typical * KEEP_EFFICIENCY and qid not in needed}
+        low = {qid for qid, r in rates.items() if r < typical * KEEP_EFFICIENCY and qid not in needed
+               and quests[qid].level > keep_to}
         if not low:
             break
         t = trial(chosen - low)
@@ -645,6 +729,17 @@ def pt(p):
     return '%d, %.1f, %.1f' % (p.map, p.x, p.y)
 
 
+def starting_point(quests, pool, zone):
+    """Where a new character stands in a home zone: the giver of its lowest-level quest that needs
+    nothing first, among those the one with the most of the zone's quests around it."""
+    free = [quests[q] for q in pool if not (quests[q].single or quests[q].group) and quests[q].giver[0].map == zone]
+    if not free:
+        return None
+    low = min(q.level for q in free)
+    spots = [q.giver[0] for q in free if q.level == low]
+    return max(spots, key=lambda p: sum(1 for q in free if q.giver[0].dist(p) <= CLUSTER_RADIUS))
+
+
 def add_prerequisites(data, q, used, depth=0):
     """Every quest q needs first, anywhere, so the addon can send you back for a missed one."""
     if depth > 30:
@@ -661,12 +756,13 @@ def add_prerequisites(data, q, used, depth=0):
 def hand_offs(quests, zones):
     """Quests that take you from one zone to another: picked up in one zone and turned in in
     another one with a guide (breadcrumbs, "report to ..."), their objectives, if any, in one of
-    the two. A chain in the giver's zone that needs one keeps it as an ordinary quest there.
+    the two. A quest that opens another one, in any zone, stays an ordinary quest of its route: left
+    to the hand-off at a zone's end, the whole chain behind it hangs on making that exact move.
     Returns {qid: (from zone, to zone)}."""
     needed_here = set()
     for q in quests.values():
         for p in q.single + q.group:
-            if p in quests and quests[p].giver[0].map == q.giver[0].map:
+            if p in quests:
                 needed_here.add(p)
     out = {}
     for qid, q in quests.items():
@@ -744,16 +840,19 @@ def build():
         for zone, pool in ((z, b) for z in zones for b in bands(quests, by_zone[z])):
             if len(pool) < MIN_ZONE_QUESTS // 2:
                 continue
-            if zone in HOME_ZONES[faction] and min(quests[q].req for q in pool) <= 2:
+            pos = None
+            if zone in HOME_ZONES[faction] and min(practical_level(quests[q]) for q in pool) <= 2:
                 start_level, known = 1, frozenset()
+                pos = starting_point(quests, pool, zone)
             else:
-                reqs = sorted(quests[q].req for q in pool)
+                reqs = sorted(practical_level(quests[q]) for q in pool)
                 start_level = max(1, reqs[len(reqs) * 15 // 100])
                 # Quests in other zones count as done: the addon sends you back for any a
                 # quest here needs that you missed.
                 known = frozenset(q for q, x in quests.items() if x.giver[0].map != zone)
             home = start_level == 1
-            kept, dropped, sim = plan_zone(quests, pool, Sim(start_level, 0, known), None, known, grind=home)
+            kept, dropped, sim = plan_zone(quests, pool, Sim(start_level, 0, known, pos), None, known, grind=home,
+                                            keep_to=STARTER_LEVEL if home else 0)
             if len(kept) < MIN_ZONE_QUESTS // 2:
                 continue
             sections.append(('%s-%d-%d' % (faction.lower(), zone, start_level), names[zone], zone, start_level, sim, kept, dropped))
@@ -960,7 +1059,9 @@ def write(data, used, guides):
              '-- pre = quests needed first (any one of them if preAny), from the same database;',
              '-- rm = the races that can take it (QuestieDB race mask; none: everyone);',
              '-- dq = a dungeon\'s quest: only the dungeon routes use it, never the leveling guide;',
-             '-- talk = nothing to do but hand it in (no objectives, nowhere to explore).',
+             '-- talk = nothing to do but hand it in (no objectives, nowhere to explore);',
+             '-- m = about how many minutes its objectives and the fights on the way take, walking aside;',
+             '-- k = XP from those kills at the quest\'s level (objectives, and hostile mobs along the walk).',
              'ns.Quests = {']
     for qid in sorted(used):
         q = used[qid]
@@ -976,6 +1077,11 @@ def write(data, used, guides):
         parts.append('t = { %s, %s }' % (pt(q.ender[0]), lua_str(q.ender[1])))
         if q.obj:
             parts.append('o = { %s }' % ', '.join('{ %s }' % pt(p) for p in [q.obj[0]] + q.obj[1][:12]))
+            parts.append('m = %.1f' % ((q.obj[2] * SECONDS_PER_UNIT / 60 + q.extra_minutes) * kill_seconds(q.level) / (KILL_UNITS * SECONDS_PER_UNIT)))
+        elif q.extra_minutes >= 0.2:
+            parts.append('m = %.1f' % (q.extra_minutes * kill_seconds(q.level) / (KILL_UNITS * SECONDS_PER_UNIT)))
+        if q.kill_xp:
+            parts.append('k = %d' % q.kill_xp)
         if q.text:
             parts.append('ot = %s' % lua_str(q.text[:160]))
         if q.talk:
@@ -990,6 +1096,18 @@ def write(data, used, guides):
             if q.single:
                 parts.append('preAny = true')
         lines.append('    [%d] = { %s },' % (qid, ', '.join(parts)))
+    lines.append('}')
+    # Real walking times between zones (tools/FieldGuide/zone_walks.py).
+    lines.append('')
+    lines.append('-- [zone] = { [zone] = minutes on foot over the real map }: none: there\'s no way on foot.')
+    lines.append('ns.ZoneWalks = {')
+    try:
+        with open(os.path.join(HERE, 'data', 'zone_walks.json'), encoding='utf-8') as w:
+            walks = json.load(w)
+    except OSError:
+        walks = {}
+    for a in sorted(walks, key=int):
+        lines.append('    [%s] = { %s },' % (a, ', '.join('[%s] = %s' % (b, walks[a][b]) for b in sorted(walks[a], key=int))))
     lines.append('}')
     with open(os.path.join(GUIDES, 'Data.lua'), 'w', encoding='utf-8', newline='\n') as f:
         f.write('\n'.join(lines) + '\n')

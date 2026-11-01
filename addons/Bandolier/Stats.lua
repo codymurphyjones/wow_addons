@@ -72,7 +72,7 @@ function T.PresetIds()
     local ids = { "auto" }
     local L = Ledger()
     for _, class in ipairs(L and L:GetClasses() or {}) do
-        for tab = 1, 3 do ids[#ids + 1] = class .. ":" .. tab end
+        for tab = 1, #L:GetSpecs(class) do ids[#ids + 1] = class .. ":" .. tab end
     end
     return ids
 end

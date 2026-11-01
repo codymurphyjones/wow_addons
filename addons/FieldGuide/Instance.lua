@@ -419,16 +419,24 @@ StaticPopupDialogs["FIELDGUIDE_DUNGEON"] = {
     timeout = 0, whileDead = 1, hideOnEscape = 1, preferredIndex = 3,
 }
 
--- Shows the popup for a dungeon you've just come into range of (once per dungeon).
+-- Offers the dungeon that pays best, once it beats questing where you are (once per dungeon: Later
+-- leaves it to the minimap tooltip). Until it does, it isn't offered, and stays in the running as
+-- questing dries up. The guide never starts one by itself: it takes a group.
 function I:Check()
-    if not ns.char or StaticPopup_Visible("FIELDGUIDE_DUNGEON") then return end
+    if not ns.char or ns.char.instance or StaticPopup_Visible("FIELDGUIDE_DUNGEON") then return end
     ns.char.dungeonsShown = ns.char.dungeonsShown or {}
+    local questing = ns.Engine:QuestingRate()
+    local best, bestRate
     for _, entry in ipairs(self:Current()) do
-        if not ns.char.dungeonsShown[entry.inst.id] and ns.char.instance ~= entry.inst.id then
-            ns.char.dungeonsShown[entry.inst.id] = true
-            StaticPopup_Show("FIELDGUIDE_DUNGEON", PopupText(entry), nil, entry.inst)
-            return
+        local rate = ns.Engine:DungeonRate(entry)
+        if not ns.char.dungeonsShown[entry.inst.id] and rate > questing and (not best or rate > bestRate) then
+            best, bestRate = entry, rate
         end
+    end
+    if best then
+        ns.char.dungeonsShown[best.inst.id] = true
+        StaticPopup_Show("FIELDGUIDE_DUNGEON", ("%s\n\nRight now this looks like a better use of your time than questing here."):format(
+            PopupText(best)), nil, best.inst)
     end
 end
 
@@ -684,8 +692,8 @@ function I:PrintCurrent()
         return
     end
     for i, entry in ipairs(list) do
-        ns:Print(("%d. %s (levels %d-%d): %d quest%s left%s"):format(i, entry.inst.name, entry.inst.from, entry.inst.to,
-            #entry.open, #entry.open == 1 and "" or "s", ns.char.instance == entry.inst.id and "  |cff8fd16a<- guiding|r" or ""))
+        ns:Print(("%d. %s (levels %d-%d): %d quest%s left, about %d XP a minute%s"):format(i, entry.inst.name, entry.inst.from, entry.inst.to,
+            #entry.open, #entry.open == 1 and "" or "s", math.floor((ns.Engine:DungeonRate(entry))), ns.char.instance == entry.inst.id and "  |cff8fd16a<- guiding|r" or ""))
     end
     ns:Print("/fg dungeon <number> to be guided there, /fg dungeon stop to go back to questing.")
 end

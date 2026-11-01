@@ -3,7 +3,8 @@ local _, ns = ...
 -- Travel over the game's own ground (Data\Nav<map>.lua, baked from the game's files by
 -- tools\Waypoint\nav_*.py): the floors you can stand on in every 8-yard cell of the world, the
 -- buildings, bridges, caves and stairs included, a cell holding as many floors as are stacked in it,
--- and the links between them: a walk, a swim, or a drop with how far you fall.
+-- and the links between them: a walk, a swim, or a drop with how far you fall. Walks and swims are
+-- packed north, south, east and west; the diagonals are worked out from those (Links, below).
 --
 -- It takes Grid.lua's place (the same calls, so Route.lua works with either), for the maps it has
 -- data for; the others stay with Grid.lua. A route is found in two steps:
@@ -144,7 +145,7 @@ local function Tile(m, t)
         for k = 1, #ar - 3, 4 do area[U16(ar, k) + 1] = U16(ar, k + 2) end
     end
     T = { t = t, ty = floor(t / 64), tx = t % 64, n = n, first = first, cnt = cnt, cell = cellOf, kind = kind,
-        mask = mask, h = h, on = on, ow = ow, xo = xo, ne = ne, raw = raw, nb = {}, rev = {}, busy = busy, area = area }
+        mask = mask, h = h, on = on, ow = ow, xo = xo, ne = ne, raw = raw, packed = {}, nb = {}, rev = {}, busy = busy, area = area }
     m.tiles[t], m.used[t] = T, m.clock
     m.count = m.count + 1
     return T
@@ -178,12 +179,13 @@ local function CellNodes(m, gr, gc)
     return T, T.first[c], T.cnt[c]
 end
 
--- A node's links: { to, kind (0 walk, 1 swim, 2 drop), fall } each, worked out once.
-local function Links(m, id)
+-- The links packed for a node: { to, kind (0 walk, 1 swim, 2 drop), fall, direction } each, worked
+-- out once. The direction is STEPS's, from 0; nil for a lift, portal or the tram.
+local function Packed(m, id)
     local t, i = Split(id)
     local T = Tile(m, t)
     if not T then return NONE end
-    local out = T.nb[i]
+    local out = T.packed[i]
     if out then return out end
     out = {}
     local c = T.cell[i]
@@ -199,7 +201,7 @@ local function Links(m, id)
                     local dd = abs(U.h[j] - hi)
                     if not bd or dd < bd then best, bd = j, dd end
                 end
-                out[#out + 1] = { Id(U.t, best), (wet or U.kind[best] == 1) and 1 or 0, 0 }
+                out[#out + 1] = { Id(U.t, best), (wet or U.kind[best] == 1) and 1 or 0, 0, d }
             end
         end
     end
@@ -214,10 +216,51 @@ local function Links(m, id)
             local s = STEPS[dir + 1]
             U, f, cnt = CellNodes(m, gr + s[1], gc + s[2])
         end
-        if U and place < cnt then out[#out + 1] = { Id(U.t, f + place), kind, fall * 0.5 } end
+        if U and place < cnt then out[#out + 1] = { Id(U.t, f + place), kind, fall * 0.5, dir } end
     end
     -- A lift, portal or the tram from here: kind 3, its seconds in place of a fall.
     for _, j in ipairs(Doors(m).jump[id] or NONE) do out[#out + 1] = { j[1], 3, j[2] } end
+    T.packed[i] = out
+    return out
+end
+
+-- A node's links: { to, kind, fall } each (kind 3: a lift, portal or the tram), the packed ones and
+-- the diagonals. Without diagonals open ground is walked in right angles, a third longer than it
+-- is. A diagonal is there when both ways round its corner walk (or both swim) to the same floor, so
+-- it never cuts across a wall's end. nav_pack.py's diagonals() has the same rule for the doors' times.
+local function Links(m, id)
+    local t, i = Split(id)
+    local T = Tile(m, t)
+    if not T then return NONE end
+    local out = T.nb[i]
+    if out then return out end
+    local packed = Packed(m, id)
+    out = {}
+    local have = {}
+    for k, l in ipairs(packed) do
+        out[k] = l
+        have[l[1]] = true
+    end
+    -- Where a step then a step across it leads: the first step's axis (0 north-south, 1 west-east),
+    -- by kind and floor; true once both ways round lead there.
+    local seen = { [0] = {}, [1] = {} }
+    for _, a in ipairs(packed) do
+        if a[4] and a[4] < 4 and a[2] < 2 then
+            local axis, ways = floor(a[4] / 2), seen[a[2]]
+            for _, b in ipairs(Packed(m, a[1])) do
+                if b[4] and b[4] < 4 and b[2] == a[2] and floor(b[4] / 2) ~= axis then
+                    local p = b[1]
+                    local was = ways[p]
+                    if was == nil then
+                        ways[p] = axis
+                    elseif was ~= true and was ~= axis then
+                        ways[p] = true
+                        if not have[p] then out[#out + 1] = { p, a[2], 0 } end
+                    end
+                end
+            end
+        end
+    end
     T.nb[i] = out
     return out
 end
@@ -509,6 +552,33 @@ end
 
 local TileHazard -- below
 
+-- What the search counts a second from door a to door b of a tile as. Steps in a tile weigh your
+-- offroad off the roads (StepCost), so the doors' times must too, or walking across your own tile
+-- looks dearer than the next and a route runs for the nearest edge. The times can't tell road from
+-- grass: they're taken as on a road only when both doors are by one (ROAD_NEAR). With no road in
+-- play every step then weighs the same, so every road preference finds the same way.
+local ROAD_NEAR = 10 -- cells from a door a road may be
+local function DoorOnRoad(m, D, id)
+    local v = m.doorRoad[id]
+    if v ~= nil then return v end
+    local _, _, _, _, gr, gc = Where(m, D.node[id])
+    v = false
+    for r = gr - ROAD_NEAR, gr + ROAD_NEAR do
+        for c = gc - ROAD_NEAR, gc + ROAD_NEAR do
+            if m.roads[CellKey(r, c)] then v = true break end
+        end
+        if v then break end
+    end
+    m.doorRoad[id] = v
+    return v
+end
+local function DoorWeight(f, D, a, b)
+    local m = f.m
+    if not m.roads then return 1 end
+    if DoorOnRoad(m, D, a) and DoorOnRoad(m, D, b) then return 1 end
+    return f.offroad
+end
+
 -- Seconds across a tile from door a to door b (same tile), at the field's speeds; nil: no way.
 local function Inner(D, f, a, b)
     local t = D.tile[a]
@@ -692,6 +762,7 @@ local MARGIN_MIN = 180
 function Advance(f, goal, yieldable, untilTile)
     local D = Doors(f.m)
     local dist, from, done, H = f.door, f.doorFrom, f.doorDone, f.H
+    local secs = f.doorSecs
     local stopAt
     local count, start = 0, debugprofilestop()
     while H.size() > 0 do
@@ -711,9 +782,9 @@ function Advance(f, goal, yieldable, untilTile)
                 if b ~= a and not done[b] then
                     local c = f.reverse and Inner(D, f, b, a) or Inner(D, f, a, b)
                     if c then
-                        local nd = da + c
+                        local nd = da + c * DoorWeight(f, D, a, b)
                         if not dist[b] or nd < dist[b] then
-                            dist[b], from[b] = nd, a
+                            dist[b], from[b], secs[b] = nd, a, secs[a] + c
                             H.push(nd, b)
                         end
                     end
@@ -726,7 +797,7 @@ function Advance(f, goal, yieldable, untilTile)
                     local c = (e[4] or 0) + e[2] * RUN / f.speed + (e[3] > 0 and e[3] * SWIM / f.swim or 0)
                     local nd = da + c
                     if not dist[b] or nd < dist[b] then
-                        dist[b], from[b] = nd, a
+                        dist[b], from[b], secs[b] = nd, a, secs[a] + c
                         H.push(nd, b)
                     end
                 end
@@ -761,12 +832,12 @@ local function Work(f)
     f.home = Search(m, f, t, { [f.src] = 0 }, nil, f.reverse, nil, true)
     -- 2. The doors of the map, from your tile's doors: until the goal's tile is settled and a margin
     -- past it (Advance); the rest when something asks (Ensure).
-    f.door, f.doorFrom, f.doorDone, f.H = {}, {}, {}, Heap()
+    f.door, f.doorSecs, f.doorFrom, f.doorDone, f.H = {}, {}, {}, {}, Heap()
     for j = 1, D.size[t] or 0 do
         local id = D.base[t] + j
         local d = f.home.dist[D.node[id]]
         if d then
-            f.door[id], f.doorFrom[id] = d, 0
+            f.door[id], f.doorSecs[id], f.doorFrom[id] = d, f.home.secs[D.node[id]], 0
             f.H.push(d, id)
         end
     end
@@ -1052,12 +1123,12 @@ TileField = function(f, t)
         tf = f.home
     else
         Ensure(f, t)
-        local seeds = {}
+        local seeds, seedSecs = {}, {}
         for j = 1, D.size[t] or 0 do
             local id = D.base[t] + j
-            if f.door[id] then seeds[D.node[id]] = f.door[id] end
+            if f.door[id] then seeds[D.node[id]], seedSecs[D.node[id]] = f.door[id], f.doorSecs[id] end
         end
-        tf = Search(m, f, t, seeds, nil, f.reverse)
+        tf = Search(m, f, t, seeds, seedSecs, f.reverse)
         tf.seeded = seeds
     end
     f.tilesDone[t] = tf
@@ -1123,7 +1194,7 @@ function G:Cost(f, n, w)
     local best
     for j = 1, D.size[t] or 0 do
         local id = D.base[t] + j
-        local d = f.door[id]
+        local d = f.doorSecs[id]
         if d then
             local dn, dw = Where(m, D.node[id])
             local c = d + sqrt((dn - pn) ^ 2 + (dw - pw) ^ 2) * 1.2 / f.speed
@@ -1236,14 +1307,14 @@ local function Nodes(f, p)
         local way = D.tile[prev] == D.tile[dr] and f.steps[a .. ">" .. b]
         if way then
             -- Back from b to a: b is there already.
-            local ds, dp = f.door[dr] or 0, f.door[prev] or 0
+            local ds, dp = f.doorSecs[dr] or 0, f.doorSecs[prev] or 0
             local nn = #way
             for k = nn - 1, 1, -1 do
                 local id = f.reverse and way[nn - k + 1] or way[k]
                 Add(id, dp + (ds - dp) * (k - 1) / math.max(1, nn - 1))
             end
         else
-            Add(a, f.door[prev])
+            Add(a, f.doorSecs[prev])
         end
     end
     return out
@@ -1297,6 +1368,208 @@ local function Simplify(pts, keep)
     return out
 end
 
+-- The way from node a to node b over any tiles, by the field's settings, a star search that gives up
+-- after MEND_LIMIT nodes: the nodes in order, or nil.
+local MEND_NODES = 40    -- nodes of a path looked at on each side of a tile's edge
+local MEND_LIMIT = 4000  -- nodes one search may go through
+local function Between(m, f, a, b)
+    local bn, bw = Where(m, b)
+    local function Left(id)
+        local n, w = Where(m, id)
+        return sqrt((n - bn) ^ 2 + (w - bw) ^ 2) / f.speed
+    end
+    local dist, from, done, H, count = { [a] = 0 }, {}, {}, Heap(), 0
+    H.push(Left(a), a)
+    while H.size() > 0 do
+        local _, u = H.pop()
+        if not done[u] then
+            done[u] = true
+            if u == b then
+                local way, x = {}, b
+                while x do
+                    table.insert(way, 1, x)
+                    x = from[x]
+                end
+                return way
+            end
+            count = count + 1
+            if count > MEND_LIMIT then return nil end
+            for _, l in ipairs(Links(m, u)) do
+                local v = l[1]
+                if not done[v] then
+                    local wgt = StepCost(m, f, u, v, l[2], l[3])
+                    if wgt and (not dist[v] or dist[u] + wgt < dist[v]) then
+                        dist[v], from[v] = dist[u] + wgt, u
+                        H.push(dist[v] + Left(v), v)
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- A route goes from tile to tile by their doors, which can stand 20 cells apart, so near a tile's
+-- edge it runs along to a door and back. Each stretch around an edge is searched again here without
+-- the tiles, with the same costs (roads, blocked ways and hazards count). Results stay in f.steps.
+local function Mend(f, nodes)
+    local m, n = f.m, #nodes
+    local spans = {}
+    for k = 1, n - 1 do
+        if floor(nodes[k][1] / 65536) ~= floor(nodes[k + 1][1] / 65536) then
+            local lo, hi = math.max(1, k - MEND_NODES), math.min(n, k + 1 + MEND_NODES)
+            local last = spans[#spans]
+            if last and lo <= last[2] then last[2] = hi else spans[#spans + 1] = { lo, hi } end
+        end
+    end
+    if not spans[1] then return nodes end
+    local start = debugprofilestop()
+    local out, i = {}, 1
+    for _, span in ipairs(spans) do
+        local lo, hi = span[1], span[2]
+        -- Only a stretch walked out node by node (a lift's ride, or a tile still waiting for
+        -- QueueRefine, leaves a gap).
+        local whole = true
+        for k = lo, hi - 1 do
+            local _, _, _, _, r1, c1 = Where(m, nodes[k][1])
+            local _, _, _, _, r2, c2 = Where(m, nodes[k + 1][1])
+            if abs(r1 - r2) > 1 or abs(c1 - c2) > 1 then whole = false break end
+        end
+        local way
+        if whole then
+            -- The way you'd walk it: a field to the target lists you first, one from you last.
+            local a, b = nodes[lo][1], nodes[hi][1]
+            if not f.reverse then a, b = b, a end
+            local key = a .. ">" .. b .. ">mend"
+            way = f.steps[key]
+            if way == nil and debugprofilestop() - start < REFINE_BUDGET then
+                way = Between(m, f, a, b) or false
+                f.steps[key] = way
+            end
+        end
+        if way then
+            for k = i, lo - 1 do out[#out + 1] = nodes[k] end
+            local count, s1, s2 = #way, nodes[lo][2] or 0, nodes[hi][2] or 0
+            for k = 1, count do
+                local id = f.reverse and way[k] or way[count - k + 1]
+                out[#out + 1] = { id, s1 + (s2 - s1) * (k - 1) / math.max(1, count - 1) }
+            end
+            i = hi + 1
+        end
+    end
+    for k = i, n do out[#out + 1] = nodes[k] end
+    return out
+end
+
+-- A straight line from node a to node b over walks: the nodes in order and what it weighs, or nil
+-- when a step has no walk (a cliff, water, a blocked way) or it ends on another floor. Where the line
+-- clips a corner with no diagonal it takes the two steps round it. Its weight goes by its true length
+-- and the climb along it: its cells are only there to prove it walks, and step for step they'd
+-- count a diagonal as two sides of a square.
+local function Line(m, f, a, b)
+    local an, aw = Where(m, a)
+    local bn, bw = Where(m, b)
+    local steps = math.ceil(sqrt((bn - an) ^ 2 + (bw - aw) ^ 2) / (m.fine * 0.5))
+    local cur, hc = a, select(3, Where(m, a))
+    local cr, cc = select(5, Where(m, a))
+    local way, weight, secs, climb = { a }, 0, 0, 0
+    local function Go(r, c)
+        local nxt, nh, nd, wt, sc
+        for _, l in ipairs(Links(m, cur)) do
+            local _, _, lh, _, lr, lc = Where(m, l[1])
+            if lr == r and lc == c and l[2] == 0 and (not nd or abs(lh - hc) < nd) then
+                local cost, took = StepCost(m, f, cur, l[1], l[2], l[3])
+                if cost then nxt, nh, nd, wt, sc = l[1], lh, abs(lh - hc), cost, took end
+            end
+        end
+        if not nxt then return false end
+        way[#way + 1], weight, secs = nxt, weight + wt, secs + sc
+        if nh > hc then climb = climb + nh - hc end
+        cur, hc, cr, cc = nxt, nh, r, c
+        return true
+    end
+    for i = 1, steps do
+        local r = floor((m.max - (an + (bn - an) * i / steps)) / m.fine)
+        local c = floor((m.max - (aw + (bw - aw) * i / steps)) / m.fine)
+        if r ~= cr or c ~= cc then
+            local fromR, fromC = cr, cc
+            if not Go(r, c) then
+                if r == fromR or c == fromC or not (Go(fromR, c) and Go(r, c)) then return nil end
+            end
+        end
+    end
+    if cur ~= b or secs <= 0 then return nil end
+    local length = sqrt((bn - an) ^ 2 + (bw - aw) ^ 2)
+    return way, (length + climb * f.climb) / f.speed * weight / secs
+end
+
+-- On a grid of 8 directions "straight on, then diagonal" costs the same as a line between the two,
+-- so a path runs in legs that needn't be there. Each stretch of a path is put on a straight line
+-- when the line walks and weighs no more (PULL_SLACK: a line's cells round up a little). It goes
+-- from the end that doesn't move (the field's source), so what's found stays good as you walk on.
+local PULL_SPANS = { 64, 32, 16, 8, 4 } -- nodes of the path a line may stand in for
+local PULL_SLACK = 1.02
+local function Straighten(f, nodes)
+    local m, n = f.m, #nodes
+    if n < 4 then return nodes end
+    -- In walking order: a field to the target lists you first, one from you last.
+    local walk, index, cost, barrier = {}, {}, { 0 }, { 0 }
+    for k = 1, n do
+        walk[k] = f.reverse and nodes[k] or nodes[n - k + 1]
+        index[walk[k][1]] = k
+    end
+    for k = 2, n do
+        local u, v, wt = walk[k - 1][1], walk[k][1], nil
+        for _, l in ipairs(Links(m, u)) do
+            if l[1] == v then
+                if l[2] == 0 then wt = StepCost(m, f, u, v, l[2], l[3]) end
+                break
+            end
+        end
+        cost[k], barrier[k] = cost[k - 1] + (wt or 0), wt and barrier[k - 1] or k
+    end
+    f.pulled = f.pulled or {}
+    local start = debugprofilestop()
+    local out, e = { walk[n] }, n
+    while e > 1 do
+        local id = walk[e][1]
+        local known, s, way = f.pulled[id], nil, nil
+        if known == false then
+            way = nil -- no line ends here
+        elseif known and index[known[1]] and index[known[1]] < e then
+            s, way = index[known[1]], known
+        elseif debugprofilestop() - start < REFINE_BUDGET then
+            f.pulled[id] = false
+            for _, span in ipairs(PULL_SPANS) do
+                local from = math.max(1, e - span)
+                if e - from >= 2 and barrier[e] < from + 1 then
+                    local line, weight = Line(m, f, walk[from][1], id)
+                    if line and weight <= (cost[e] - cost[from]) * PULL_SLACK then
+                        -- Only its ends: the cells it crossed proved it, they'd only draw a zigzag.
+                        s, way = from, { line[1], id }
+                        f.pulled[id] = way
+                        break
+                    end
+                end
+            end
+        end
+        if way then
+            local t1, t2, count = walk[s][2] or 0, walk[e][2] or 0, #way
+            for k = count - 1, 1, -1 do
+                out[#out + 1] = { way[k], t1 + (t2 - t1) * (k - 1) / math.max(1, count - 1) }
+            end
+            e = s
+        else
+            e = e - 1
+            out[#out + 1] = walk[e]
+        end
+    end
+    -- out runs from the walk's end back to its start.
+    if not f.reverse then return out end
+    local back = {}
+    for k = #out, 1, -1 do back[#back + 1] = out[k] end
+    return back
+end
+
 -- Path(f, n, w): the points from a world point back to the field's source, the way the field reached
 -- it: { { n, w, water, face, h, t = seconds from the source, node } } in that order.
 function G:Path(f, n, w)
@@ -1306,6 +1579,7 @@ function G:Path(f, n, w)
     if not p then return nil end
     local nodes = Nodes(f, p)
     if not nodes then return nil end
+    nodes = Straighten(f, Mend(f, nodes))
     local pts = {}
     for k, e in ipairs(nodes) do
         local pn, pw, h, kind = Where(m, e[1])
@@ -1361,6 +1635,42 @@ function G:Step(continent, n1, w1, n2, w2)
         end
     end
     return nil
+end
+
+-- What's along a straight line from one point to another, however far apart: cell by cell, each
+-- step a link of the map to the floor nearest the one you're on. "walk", or "drop" and how far it
+-- falls in all; nil when a step has no link (too steep, a wall, a blocked way).
+function G:Ahead(continent, n1, w1, n2, w2)
+    local m = Map(continent)
+    if not m then return Old:Ahead(continent, n1, w1, n2, w2) end
+    local cur = HereNode(continent, n1, w1) or Locate(m, n1, w1)
+    if not cur then return nil end
+    local hc = select(3, Where(m, cur))
+    local steps = math.ceil(sqrt((n2 - n1) ^ 2 + (w2 - w1) ^ 2) / (m.fine * 0.5))
+    local cr, cc = floor((m.max - n1) / m.fine), floor((m.max - w1) / m.fine)
+    local total = 0
+    for i = 1, steps do
+        local r = floor((m.max - (n1 + (n2 - n1) * i / steps)) / m.fine)
+        local c = floor((m.max - (w1 + (w2 - w1) * i / steps)) / m.fine)
+        if r ~= cr or c ~= cc then
+            local nxt, nh, nd, fall
+            if not m.block[StepKey(CellKey(cr, cc), CellKey(r, c))] then
+                for _, l in ipairs(Links(m, cur)) do
+                    local _, _, lh, _, lr, lc = Where(m, l[1])
+                    if lr == r and lc == c and l[2] ~= 3 then
+                        -- A walk beats a drop to the same cell.
+                        local dd = abs(lh - hc) + (l[2] == 2 and 1000 or 0)
+                        if not nd or dd < nd then nxt, nh, nd, fall = l[1], lh, dd, l[2] == 2 and l[3] or 0 end
+                    end
+                end
+            end
+            if not nxt then return nil end
+            total = total + fall
+            cur, hc, cr, cc = nxt, nh, r, c
+        end
+    end
+    if total > 0 then return "drop", total end
+    return "walk", 0
 end
 
 function G:Height(continent, n, w)
@@ -1498,6 +1808,7 @@ local function Touch(m, tiles)
             return
         end
         for t in pairs(tiles) do f.tilesDone[t] = nil end
+        f.pulled = nil
         for key in pairs(f.steps) do
             local a = tonumber(key:match("^(%d+)>"))
             if a and tiles[floor(a / 65536)] then f.steps[key] = nil end
@@ -1548,6 +1859,7 @@ function G:SetRoads(continent, keys)
     -- Roads at all or none: every step's weight changes.
     if (m.roads == nil) ~= (count == 0) then G.version = G.version + 1 end
     m.roads, m.roadCount = count > 0 and cells or nil, count
+    m.doorRoad = {}
     Touch(m, tiles)
 end
 

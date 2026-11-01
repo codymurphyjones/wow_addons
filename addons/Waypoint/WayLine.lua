@@ -55,12 +55,12 @@ local function Color(seg)
     local shades = PALETTE[FAMILY[seg.kind] or "cyan"]
     return shades[seg.shade or 1] or shades[1]
 end
-local LINE = 3          -- world map: on-screen thickness
+local LINE = 1.5        -- world map: on-screen thickness
 local DASH, GAP = 6, 3  -- world map: on-screen dash and gap lengths (fine, so the route's bends show)
 local CASING = { 0.04, 0.07, 0.16 } -- the thin dark edge under the dashes (a deep navy, not black)
 local CASING_WIDTH = 1.8            -- times LINE
 local CASING_ALPHA = 0.55
-local CHECK = 0.5      -- seconds between looks at whether the trip changed (a redraw only then)
+local CHECK = 0.2      -- seconds between looks at whether to redraw (only when something changed)
 local DOT = 5          -- minimap: dot size
 local DOTS = 120       -- minimap: dots at most
 local MINI_UPDATE = 0.1
@@ -68,6 +68,25 @@ local MINI_UPDATE = 0.1
 local function Lines()
     if ns.Targets and ns.Targets.inArea then return nil end -- in the quest's area: nothing to follow
     return ns.Route and ns.Route:Lines()
+end
+
+-- A leg's points, starting on you this moment for the leg you're on: the plan's start is where you
+-- stood when it was made, up to a second ago, and its next point the middle of a map cell a few
+-- yards to one side of you.
+local ON_LEG = 60       -- yards from a leg's start you can be for it to be the one you're on
+local NEAR_START = 12   -- points this close to you are left out
+local function FromYou(trip, seg)
+    local pts = seg.pts
+    if seg ~= trip[1] or (seg.kind ~= "walk" and seg.kind ~= "swim") or #pts < 4 then return pts end
+    local c, n, w = ns.Nav:Player()
+    if c ~= seg.continent or (pts[1] - n) ^ 2 + (pts[2] - w) ^ 2 > ON_LEG * ON_LEG then return pts end
+    local first = 3
+    while first + 2 < #pts and (pts[first] - n) ^ 2 + (pts[first + 1] - w) ^ 2 < NEAR_START * NEAR_START do
+        first = first + 2
+    end
+    local out = { n, w }
+    for i = first, #pts do out[#out + 1] = pts[i] end
+    return out
 end
 
 -- What a trip looks like, as a short string: its legs' kinds and shades, their points to the yard.
@@ -111,8 +130,9 @@ local function Refresh(l, mapID)
             end
             run = nil
         end
-        for i = 1, #seg.pts - 1, 2 do
-            local x, y = Project(seg.continent, seg.pts[i], seg.pts[i + 1], mapID)
+        local pts = FromYou(trip, seg)
+        for i = 1, #pts - 1, 2 do
+            local x, y = Project(seg.continent, pts[i], pts[i + 1], mapID)
             if x then
                 run = run or {}
                 run[#run + 1], run[#run + 2] = x, y
@@ -124,13 +144,25 @@ local function Refresh(l, mapID)
     end
 end
 
--- Redrawn when the map, its zoom or its visibility changes, when the trip changes (looked at every
--- CHECK seconds while the map is open: Signature), and when OpenMap switches between its stitched
--- map and Blizzard's (the line, the pins and the town badges go somewhere else, at other levels).
-local drawnSig
+-- Redrawn when the map, its zoom or its visibility changes, when the trip changes or you've moved
+-- MOVED yards (looked at every CHECK seconds while the map is open: Signature), and when OpenMap
+-- switches between its stitched map and Blizzard's (the line, the pins and the town badges go
+-- somewhere else, at other levels).
+local MOVED = 2
+local drawnSig, drawnN, drawnW
+local function Moved()
+    local _, n, w = ns.Nav:Player()
+    if not (n and drawnN) then return n ~= nil end
+    return (n - drawnN) ^ 2 + (w - drawnW) ^ 2 >= MOVED * MOVED
+end
 layer = WM.NewLayer({
-    lines = true, level = 2050, refresh = function(l, mapID) drawnSig = Signature(Lines()); Refresh(l, mapID) end,
-    interval = CHECK, every = function(l) if Signature(Lines()) ~= drawnSig then l:Refresh() end end,
+    lines = true, level = 2050,
+    refresh = function(l, mapID)
+        drawnSig = Signature(Lines())
+        drawnN, drawnW = select(2, ns.Nav:Player())
+        Refresh(l, mapID)
+    end,
+    interval = CHECK, every = function(l) if Signature(Lines()) ~= drawnSig or Moved() then l:Refresh() end end,
     onStitched = function(l) l:Refresh(); ns:Changed() end,
 })
 Way.layer = layer
@@ -190,8 +222,9 @@ local function UpdateMinimap()
             if seg.continent == c then
                 local col = Color(seg)
                 local carry = 0
-                for i = 3, #seg.pts - 1, 2 do
-                    local n0, w0, n1, w1 = seg.pts[i - 2], seg.pts[i - 1], seg.pts[i], seg.pts[i + 1]
+                local pts = FromYou(trip, seg)
+                for i = 3, #pts - 1, 2 do
+                    local n0, w0, n1, w1 = pts[i - 2], pts[i - 1], pts[i], pts[i + 1]
                     local len = math.sqrt((n1 - n0) ^ 2 + (w1 - w0) ^ 2)
                     local at = carry
                     while at < len do

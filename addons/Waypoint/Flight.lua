@@ -293,8 +293,29 @@ function F:Plan(p)
     if self.route then self.held = self.route end
 end
 
+-- After a login or /reload nothing is planned until you move: until then the map's place for you
+-- can't be relied on, and a first route from it starts off in the wrong place. Being carried
+-- counts as moving (a flight, a boat you logged in on).
+local waitingToMove = false
+ns:On("PLAYER_ENTERING_WORLD", function(isLogin, isReload)
+    if isLogin or isReload then waitingToMove = true end
+end)
+ns:On("PLAYER_STARTED_MOVING", function()
+    if waitingToMove then
+        waitingToMove = false
+        ns:Changed()
+    end
+end)
+local function StillWaiting()
+    if not waitingToMove then return false end
+    local speed = C.Num(GetUnitSpeed and C.Call(GetUnitSpeed, "player")) or 0
+    if speed > 0 or C.Readable(C.Call(UnitOnTaxi, "player")) then waitingToMove = false end
+    return waitingToMove
+end
+
 local nextPlan, lastTarget = 0, nil
 function F:Update(p)
+    if StillWaiting() then return end
     local now = GetTime()
     if p == lastTarget and now < nextPlan then return end
     lastTarget, nextPlan = p, now + PLAN_EVERY

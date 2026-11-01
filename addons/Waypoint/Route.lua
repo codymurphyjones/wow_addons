@@ -1018,6 +1018,30 @@ end
 -- The way Waypoint plans to walk from where you are: { continent, squares }.
 function R:Way() return self.way end
 
+-- Yards left along the planned trip from a world position: from the nearest point of it, to its end.
+-- Measured on the path, so going round a cliff isn't going away. nil with no plan on this continent.
+function R:YardsLeft(c, n, w)
+    local best, bestAt, at, pts = nil, nil, 0, {}
+    for _, line in ipairs(self.lines or {}) do
+        if line.continent == c and line.pts then
+            for i = 1, #line.pts - 1, 2 do
+                at = at + 1
+                pts[at * 2 - 1], pts[at * 2] = line.pts[i], line.pts[i + 1]
+                local dn, dw = line.pts[i] - n, line.pts[i + 1] - w
+                local d = dn * dn + dw * dw
+                if not best or d < best then best, bestAt = d, at end
+            end
+        end
+    end
+    if not best then return nil end
+    local left = math.sqrt(best)
+    for i = bestAt, at - 1 do
+        local dn, dw = pts[i * 2 + 1] - pts[i * 2 - 1], pts[i * 2 + 2] - pts[i * 2]
+        left = left + math.sqrt(dn * dn + dw * dw)
+    end
+    return left
+end
+
 -- The whole planned trip as lines, for the world map and the minimap (WayLine.lua):
 -- { { kind = "walk" | "swim" | "drop" | "fly" | "ride", continent, pts = { n1, w1, n2, w2, ... } } }.
 function R:Lines() return self.lines end
@@ -1186,7 +1210,7 @@ function R:AheadText()
     end
     for _, yards in ipairs(AHEAD) do
         local an, aw = n + dn * yards, w + dw * yards
-        local how, down = G:Step(c, pn, pw, an, aw)
+        local how, down = G:Ahead(c, pn, pw, an, aw)
         if how == "drop" then
             total = total + down
         elseif total > G.HARMLESS then

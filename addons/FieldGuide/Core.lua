@@ -21,6 +21,8 @@ ns.DEFAULTS = {
     window = { point = "RIGHT", x = -40, y = 60 },
     dock = true,        -- sit under Waypoint's arrow (when Waypoint is installed)
     manageTracking = true, -- track the guide's quests, untrack the rest (never the ones you tracked)
+    autoAccept = true,  -- take quests when you talk to their givers (AutoQuest.lua)
+    autoTurnIn = true,  -- hand quests in, unless there's a reward to pick
     detourMinutes = 2,  -- Leveling: how far off the route a quick quest may be (minutes of extra walking)
     questCheck = {},    -- [questID] = whether the server has it, for one game build (Exists.lua)
     wingMaps = {},      -- [uiMapID inside a dungeon] = the wing it belongs to, learned as you play
@@ -42,6 +44,8 @@ ns.CHAR_DEFAULTS = {
     ran = {},        -- ["dungeon:wing"] = true: that run (or wing) is over on the current route
     preference = "leveling", -- "leveling": XP and convenience first; "clear": every quest of the zone you're on
     notOffered = {}, -- quests their giver didn't offer you when you got there (Exists.lua)
+    waitZone = nil,  -- paused until you leave this zone (a skipped trip with nothing left here)
+    whyLog = {},     -- the last few picks of a section outside your zone, and why (Engine.lua, E:Why)
 }
 
 -- Quests or level changed: work the route out again (once, next frame: ns:Changed).
@@ -67,6 +71,7 @@ local function Help()
     ns:Print("/fg missing - quests left out because the server doesn't have them (/fg recheck: ask the server again)")
     ns:Print("/fg dungeons - dungeons in your level range with quests left (/fg dungeon <n>: guide me there, /fg dungeon stop)")
     ns:Print("/fg skip - skip the current quest (Field Guide stops suggesting it), /fg unskip - bring skipped quests back")
+    ns:Print("/fg why - why the guide picked this section, and what it sees in your zone's quests")
     ns:Print("/fg arrow - point Waypoint's arrow at the current step again")
     ns:Print("/fg pause, /fg resume - hide the guide and leave Waypoint's arrow alone (Play on the arrow brings it back)")
     ns:Print("/fg questing - leave a dungeon's route and go back to the leveling guide")
@@ -92,6 +97,8 @@ SlashCmdList.FIELDGUIDE = function(msg)
         ns.Engine:ChooseSection(arg)
     elseif cmd == "dungeon" or cmd == "dungeons" then
         ns.Instance:Command(arg)
+    elseif cmd == "why" then
+        for _, line in ipairs(ns.Engine:Why()) do ns:Print(line) end
     elseif cmd == "skip" then
         ns.Engine:SkipCurrent()
     elseif cmd == "arrow" then
@@ -104,7 +111,7 @@ SlashCmdList.FIELDGUIDE = function(msg)
         if mode ~= "leveling" and mode ~= "clear" then
             ns:Print("/fg mode leveling or /fg mode clear.")
         else
-            ns:SetOption("char.preference", mode)
+            ns.Engine:SetPreference(mode)
         end
     elseif cmd == "missing" then
         local list = ns.Exists:MissingList()

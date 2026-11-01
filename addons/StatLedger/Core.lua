@@ -5,12 +5,13 @@ local D = ns.Data
 -- see README.md. Getters return copies, so callers can change what they get.
 -- class is a class token ("MAGE") and spec a talent tab index (1-3); both
 -- default to the player's when left out.
-local API, Fire = ns.NewAPI("StatLedger", 1)
+local API, Fire = ns.NewAPI("StatLedger", 2)
 
 -- Events and saved variables: the shared Core.lua (addons/shared).
 ns.SAVED = { db = "StatLedgerDB" }
 ns.DEFAULTS = {
     custom = {}, -- ["CLASS:spec"] = your own stat list for that spec
+    chars = {},  -- ["Given Family"] = { main_spec = spec number, profiles (Profiles.lua) }
 }
 
 StatPriority = API -- the old name, for addons not yet updated
@@ -59,22 +60,40 @@ ns.Fire = Fire
 -- Spec detection
 ---------------------------------------------------------------------------
 
--- Points spent in a talent tab (shared Player.lua: both GetTalentTabInfo shapes, 0 without the
--- API). Not ns.Player.ActiveSpec: that asks StatLedger:GetActiveSpec, which is this.
-local TabPoints = ns.Player.TabPoints
+-- This character's saved entry, nil before the game tells your name.
+function ns.Character()
+    local key = ns.db and ns.Units.CharKey()
+    if not key then return nil end
+    local entry = ns.db.chars[key]
+    if not entry then
+        entry = {}
+        ns.db.chars[key] = entry
+    end
+    return entry
+end
 
--- The player's class and the talent tab with the most points (the class's
--- default tab before any talents are spent).
+-- The talent tab with the most points (the class's default tab before any talents are spent).
+local function FromTalents(class)
+    local specs = D.SPECS[class]
+    if not specs then return nil end
+    local best, bestPoints = specs[1], 0
+    local points = ns.Player.TalentPoints()
+    for tab = 1, 3 do
+        local spent = points[tab] or 0
+        if spent > bestPoints then best, bestPoints = tab, spent end
+    end
+    return best
+end
+
+function ns.DetectSpec() return FromTalents(select(2, UnitClass("player"))) end
+
+-- The player's class and spec: the main spec you chose, else what your talents say.
 local function Detect()
     local _, class = UnitClass("player")
-    local specs = D.SPECS[class]
-    if not specs then return class, nil end
-    local best, bestPoints = specs[1], 0
-    for tab = 1, 3 do
-        local points = TabPoints(tab)
-        if points > bestPoints then best, bestPoints = tab, points end
-    end
-    return class, best
+    local entry = ns.Character()
+    local main = entry and entry.main_spec
+    if main and D.SPECS[class] and D.SPECS[class][main + 1] then return class, main end
+    return class, FromTalents(class)
 end
 
 local activeClass, activeSpec
@@ -119,11 +138,13 @@ function API:GetClassName(class)
     return D.CLASS_NAMES[class] or class
 end
 
--- { "Arms", "Fury", "Protection" }
+-- { "Arms", "Fury", "Protection" }; Druid has four.
 function API:GetSpecs(class)
     local specs = D.SPECS[class]
     if not specs then return {} end
-    return { specs[2][1], specs[3][1], specs[4][1] }
+    local names = {}
+    for i = 2, #specs do names[i - 1] = specs[i][1] end
+    return names
 end
 
 function API:GetSpecName(class, spec)
@@ -168,7 +189,7 @@ function API:GetWeights(class, spec)
     local list = self:GetPriority(class, spec)
     local weights, n = {}, #list
     for i, stat in ipairs(list) do
-        weights[stat] = n > 1 and (1 - 0.9 * (i - 1) / (n - 1)) or 1
+        weights[stat] = ns.Assumptions.Get("rank_weight", i, n)
     end
     return weights
 end
@@ -298,10 +319,30 @@ local function Redetect()
     Fire("SPEC_CHANGED", class, spec)
 end
 
+-- The spec you chose for this character, nil before you choose.
+function API:GetMainSpec()
+    local entry = ns.Character()
+    return entry and entry.main_spec
+end
+
+-- Saves your main spec (nil: follow your talents again). Priorities and scores move to it.
+function API:SetMainSpec(spec)
+    local entry = ns.Character()
+    if not entry then return end
+    local _, class = UnitClass("player")
+    if spec ~= nil and not (D.SPECS[class] and D.SPECS[class][spec + 1]) then return end
+    entry.main_spec = spec
+    Redetect()
+    if spec then ns.Profiles.FollowMainSpec(class, spec) end
+    ns.Settings:Refresh()
+end
+
+function API:PromptMainSpec() ns.MainSpec:Open() end
+
 -- StatLedgerDB is set up by the shared Core.lua (ns.SAVED above); then this.
 ns:OnLoad(function()
     local db = ns.db
-    db.version = 1
+    db.version = 2
     for key, list in pairs(db.custom) do
         if type(list) == "table" then
             db.custom[key] = Clean(list)
@@ -312,9 +353,17 @@ ns:OnLoad(function()
     ns.Settings:Register()
 end)
 
-for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "CHARACTER_POINTS_CHANGED", "PLAYER_TALENT_UPDATE",
-    "ACTIVE_TALENT_GROUP_CHANGED" }) do
-    ns:On(event, function() Redetect() end)
+-- Forever applies talents through C_Traits, so TRAIT_CONFIG_UPDATED only where the client has it.
+local talentEvents = { "PLAYER_ENTERING_WORLD", "CHARACTER_POINTS_CHANGED", "PLAYER_TALENT_UPDATE",
+    "ACTIVE_TALENT_GROUP_CHANGED" }
+if C_EventUtils and C_EventUtils.IsEventValid and C_EventUtils.IsEventValid("TRAIT_CONFIG_UPDATED") then
+    talentEvents[#talentEvents + 1] = "TRAIT_CONFIG_UPDATED"
+end
+for _, event in ipairs(talentEvents) do
+    ns:On(event, function()
+        Redetect()
+        ns.MainSpec:Check()
+    end)
 end
 
 ---------------------------------------------------------------------------
@@ -337,6 +386,9 @@ Help = ns:Slash({ "/statledger", "/statprio", "/statpriority" }, {
         ns:Print(label .. " reset to default: " .. API:Describe())
     end, "reset your current spec to its default" },
     { "options", function() ns.Settings:Open() end, "open settings (also just /statledger)" },
+    { "mainspec", function() ns.MainSpec:Open() end, "choose your main spec" },
+    { { "designer", "weights" }, function() ns.Designer:Open() end, "open the Weight Designer" },
+    { "probe", function() ns.Probe:Run() end, "record what this client gives for talents and stats" },
     -- No command: the settings; one not listed: the help.
     default = function(msg)
         if msg == "" then return ns.Settings:Open() end

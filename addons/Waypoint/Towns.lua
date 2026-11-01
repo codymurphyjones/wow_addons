@@ -19,6 +19,12 @@ ns.TownPins = Towns
 local SIZE = 16
 local ICON = "Interface\\AddOns\\Waypoint\\Media\\Town"
 local ICON_NEUTRAL = "Interface\\AddOns\\Waypoint\\Media\\TownNeutral"
+-- On a badge: what it covers (Questie's own icons: they're only there with Questie).
+local MARK = 11
+local TOWN_REACH = 0.06  -- of a map's height: a hand-in this near a town's badge counts as at the town
+local GIVERS_EVERY = 3   -- seconds between asking Questie who has quests for you
+local MARK_AVAILABLE = "Interface\\AddOns\\Questie\\Icons\\available.blp"
+local MARK_TURN_IN = "Interface\\AddOns\\Questie\\Icons\\complete.blp"
 local NO_FLIGHT = { 1, 0.55, 0.2 }
 local MAX_ICON = 48  -- on-screen pixels: anything bigger on the canvas isn't an icon (overlays, art)
 local PAD = 2        -- pixels around a badge that count as touching it
@@ -112,6 +118,72 @@ function Towns:RestoreAll()
     for frame in pairs(hidden) do Restore(frame) end
 end
 
+-- Where a quest is handed in: { { uiMapID, x, y (0-1) }, ... }, from Questie's data. Kept: it doesn't change.
+local enders = {}
+local function EndersOf(id)
+    if enders[id] then return enders[id] end
+    local out = {}
+    local db, zones = K.Mod("QuestieDB"), K.Mod("ZoneDB")
+    local by = db and db.QueryQuestSingle and K.Call(db.QueryQuestSingle, id, "finishedBy")
+    for _, npc in ipairs(type(by) == "table" and type(by[1]) == "table" and by[1] or {}) do
+        local spawns = db.QueryNPCSingle and K.Call(db.QueryNPCSingle, npc, "spawns")
+        for area, points in pairs(type(spawns) == "table" and spawns or {}) do
+            local map = zones and K.Call(zones.GetUiMapIdByAreaId, zones, area)
+            for _, p in ipairs(type(points) == "table" and map and points or {}) do
+                if type(p) == "table" and type(p[1]) == "number" and p[1] >= 0 then
+                    out[#out + 1] = { map, p[1] / 100, p[2] / 100 }
+                end
+            end
+        end
+    end
+    enders[id] = out
+    return out
+end
+
+-- A badge says what's at the town: a ! on top when a quest giver there has something for you (the
+-- count its tooltip shows), or it covers an available quest; a ? at the top right when a quest in your
+-- log is handed in there, or it covers one that's ready.
+local givers = {}
+local function GiversNow(t)
+    local now = GetTime()
+    local c = givers[t]
+    if not c or now - c.at > GIVERS_EVERY then
+        c = { at = now, n = Towns:Givers(t) or 0 }
+        givers[t] = c
+    end
+    return c.n
+end
+
+local function ShowMarks()
+    local pins, used = layer.pins, layer.used
+    local ready = {}
+    for _, id in ipairs(used > 0 and K.ReadyQuests() or {}) do
+        for _, e in ipairs(EndersOf(id)) do ready[#ready + 1] = e end
+    end
+    for i = 1, used do
+        local pin, t = pins[i], pins[i].town
+        pin.wpAvailable, pin.wpTurnIn = t ~= nil and GiversNow(t) > 0, false
+        for _, e in ipairs(t and ready or {}) do
+            if e[1] == t[2] and ((e[2] - t[3]) * 1.5) ^ 2 + (e[3] - t[4]) ^ 2 <= TOWN_REACH * TOWN_REACH then
+                pin.wpTurnIn = true
+                break
+            end
+        end
+    end
+    for frame, h in pairs(hidden) do
+        local d = Questie ~= nil and frame.data
+        if type(d) == "table" and h.pin then
+            if d.Type == "available" then h.pin.wpAvailable = true end
+            if d.Type == "complete" then h.pin.wpTurnIn = true end
+        end
+    end
+    for i = 1, used do
+        local pin = pins[i]
+        pin.available:SetShown(pin.wpAvailable)
+        pin.turnIn:SetShown(pin.wpTurnIn)
+    end
+end
+
 -- Hides every other icon touching a shown badge, and gives back the ones that stopped touching.
 function Towns:Cover()
     for _, h in pairs(hidden) do h.seen = false end
@@ -151,6 +223,7 @@ function Towns:Cover()
     for i = 1, used do
         if pins[i]:GetAlpha() < 1 then pins[i]:SetAlpha(1) end
     end
+    ShowMarks()
 end
 
 -- What a hidden icon's own tooltip says: { { left, right, r, g, b } }, or {}. Its addon fills
@@ -511,6 +584,16 @@ local function CreatePin(pin)
     pin.wpTown = true
     pin:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     pin.icon = pin:CreateTexture(nil, "ARTWORK"); pin.icon:SetAllPoints()
+    pin.available = pin:CreateTexture(nil, "OVERLAY")
+    pin.available:SetSize(MARK, MARK)
+    pin.available:SetPoint("CENTER", pin, "TOP", 0, 1)
+    pin.available:SetTexture(MARK_AVAILABLE)
+    pin.available:Hide()
+    pin.turnIn = pin:CreateTexture(nil, "OVERLAY")
+    pin.turnIn:SetSize(MARK, MARK)
+    pin.turnIn:SetPoint("CENTER", pin, "TOPRIGHT", 0, 0)
+    pin.turnIn:SetTexture(MARK_TURN_IN)
+    pin.turnIn:Hide()
     pin:SetScript("OnEnter", OnEnter)
     pin:SetScript("OnLeave", OnLeave)
     pin:SetScript("OnClick", OnClick)

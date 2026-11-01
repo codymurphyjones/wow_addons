@@ -208,8 +208,7 @@ The level window sizes are at the top of `Data.lua` (`LEVELS_ABOVE`, `LEVELS_BEL
 
 ## Notes
 
-- **Requirements:** AtlasLootClassic is required, and its dungeon and raid module loads the
-  first time you open the list. StatLedger is required too: it
+- **Requirements:** StatLedger is required: SpyGlass won't load without it. It
   holds the stat priority that items are ranked by.
 - **Stats** come from the game's item stats plus the item's "Equip:" lines (spell damage,
   healing, school damage, crit, hit, mp5, defense and so on). The "Equip:" lines are read in

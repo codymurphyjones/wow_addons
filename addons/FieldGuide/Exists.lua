@@ -102,11 +102,15 @@ function X:Pending(id)
     if asked[id] then
         if GetTime() - asked[id] < TIMEOUT then return true end
         timedOut[id], urgent[id] = true, nil
+        Changed() -- (no answer is coming to trigger the new pick)
         return false
     end
     Enqueue(id, true)
     return true
 end
+
+-- The lookup was switched off this session: it didn't answer reliably.
+function X:Broken() return broken end
 
 -- Still asking about quests the route is waiting on.
 function X:Busy()
@@ -115,6 +119,7 @@ function X:Busy()
     for id in pairs(urgent) do
         if Cache()[id] ~= nil or (asked[id] and now - asked[id] >= TIMEOUT) then
             urgent[id] = nil
+            Changed()
         else
             return true
         end

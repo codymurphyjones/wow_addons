@@ -97,6 +97,39 @@ def edge_costs(N, L):
     return walk.astype(np.float32), swim.astype(np.float32), usable
 
 
+def diagonals(N, L):
+    """The diagonal steps, as links (from, to, kind, 0): walks and swims are packed north, south, east
+    and west, and the game works these out from them (NavGrid.lua's Links, the same rule): both ways
+    round the corner are the same kind and reach the same floor, and no link goes there already.
+    Only the doors' times and the walks need them; they aren't packed."""
+    gr, gc, _, _, _ = positions(N)
+    a, b, k = L[:, 0], L[:, 1], L[:, 2]
+    dr, dc = gr[b] - gr[a], gc[b] - gc[a]
+    size = len(N)
+    packed = np.unique(a * size + b)
+
+    def then(first, second):
+        """from * size + to of every first step followed by a second."""
+        order = np.argsort(second[:, 0], kind="stable")
+        s = second[order]
+        lo = np.searchsorted(s[:, 0], first[:, 1], "left")
+        n = np.searchsorted(s[:, 0], first[:, 1], "right") - lo
+        at = np.repeat(np.arange(len(first)), n)
+        ends = np.cumsum(n)
+        into = np.arange(ends[-1] if len(ends) else 0) - np.repeat(ends - n, n)
+        return first[at, 0] * size + s[np.repeat(lo, n) + into, 1]
+
+    out = []
+    for kind in (0, 1):
+        for sr in (-1, 1):
+            for sc in (-1, 1):
+                ns = L[(k == kind) & (dr == sr) & (dc == 0)][:, :2]
+                we = L[(k == kind) & (dr == 0) & (dc == sc)][:, :2]
+                keys = np.setdiff1d(np.intersect1d(then(ns, we), then(we, ns)), packed)
+                out.append(np.stack([keys // size, keys % size, np.full(len(keys), kind), np.zeros(len(keys), dtype=np.int64)], axis=1))
+    return np.concatenate(out)
+
+
 def find_doors(N, L, usable):
     """The doors: [(low node, high node, way)] for each run of links between two tiles; low is the
     node in the lower-numbered tile, way 0 both ways, 1 only low to high, 2 only high to low."""
@@ -395,12 +428,15 @@ def main(argv):
         N, L = z["nodes"].astype(np.int64), z["links"].astype(np.int64)
         walk, swim, usable = edge_costs(N, L)
         doors = find_doors(N, L, usable)
+        # The times go by the diagonals too: they stay out of the doors and the packed links.
+        LD = np.concatenate([L, diagonals(N, L)])
+        walkD, swimD, usableD = edge_costs(N, LD)
         jumps = np.nonzero(L[:, 2] == 3)[0]
         ends = {int(x) for li in jumps for x in L[li, :2]}
-        print("map %d: %d nodes, %d links, %d doors, %d lifts, portals and trams (%.0fs)" % (
-            mapid, len(N), len(L), len(doors), len(jumps), time.time() - t0))
-        dn, inner = crossings(N, L, walk, swim, usable, doors, mapid, ends)
-        places, walks = walk_table(N, L, walk, swim, usable, jumps, mapid)
+        print("map %d: %d nodes, %d links, %d diagonals, %d doors, %d lifts, portals and trams (%.0fs)" % (
+            mapid, len(N), len(L), len(LD) - len(L), len(doors), len(jumps), time.time() - t0))
+        dn, inner = crossings(N, LD, walkD, swimD, usableD, doors, mapid, ends)
+        places, walks = walk_table(N, LD, walkD, swimD, usableD, jumps, mapid)
         tiles = sorted({int(t) for t in np.unique(N[:, 0] * 64 + N[:, 1])})
         from casc import Casc
         zone_of, zones = nav_places.zone_tables(mapid, tiles, Casc.open().version)

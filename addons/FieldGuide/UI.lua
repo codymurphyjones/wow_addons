@@ -99,9 +99,32 @@ local function EndEpisode()
     episode = nil
 end
 
+-- A tiny wheel at the top left of the screen while a route is being worked out.
+local spinner
+function UI:Planning(on)
+    if not spinner then
+        if not on then return end
+        spinner = CreateFrame("Frame", nil, UIParent)
+        spinner:SetSize(14, 14)
+        spinner:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 6, -6)
+        spinner:SetFrameStrata("HIGH")
+        spinner:EnableMouse(false)
+        local t = spinner:CreateTexture(nil, "OVERLAY")
+        t:SetAllPoints()
+        t:SetTexture("Interface\\Buttons\\UI-RefreshButton")
+        local angle = 0
+        spinner:SetScript("OnUpdate", function(_, elapsed)
+            angle = (angle - elapsed * 6) % (2 * math.pi)
+            t:SetRotation(angle)
+        end)
+    end
+    spinner:SetShown(on)
+end
+
+local MAX_AHEAD = 5 -- with the step to do now, six at most (/fg trail shows them all)
 local function Ahead()
     local f = L()
-    return (ns.db.nextSteps or 4) + ((f.learn and (f.peek or 0) > 0.45) and 2 or 0)
+    return math.min(MAX_AHEAD, (ns.db.nextSteps or 4) + ((f.learn and (f.peek or 0) > 0.45) and 2 or 0))
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -1026,6 +1049,11 @@ function UI:Tick(elapsed)
             title = "|cff8a948eNothing worth doing here at your level. Head to a zone for your level.|r"
         elseif not E.current then
             title = Icon("done", 18) .. " |cff8fd16a" .. E.section.title .. "|r"
+        end
+        -- Zone Clear, on the whole trail: how much of the zone is finished.
+        local done, total = E:ZoneProgress()
+        if done and forcedTrail then
+            title = ("%s |cff8fd16a%s: %d of %d quests|r"):format(title, E.section.title, done, total)
         end
         if (L().episodes or 0) < 4 then
             whisper = "Stand still to read.  Move to let go.  Rest the cursor on a light."

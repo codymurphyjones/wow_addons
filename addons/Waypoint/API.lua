@@ -162,6 +162,11 @@ function API:GetCurrent()
     return ns.Targets.current, ns.Targets.point
 end
 
+-- Yards left along the arrow's planned trip from a world position (continent, north, west), or nil.
+function API:RouteYards(c, n, w)
+    return ns.Route and ns.Route:YardsLeft(c, n, w) or nil
+end
+
 -- Waypoint:RegisterCallback(owner, fn) (the shared API.lua): fn(event, entry): "CHANGED" (the arrow
 -- follows something else; entry may be nil), "ARRIVED" (you reached a single-place target) and
 -- "CLEARED" (you stopped a target from the arrow: entry.owner says whose). Before version 2 they

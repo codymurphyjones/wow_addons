@@ -797,6 +797,15 @@ function Arrow:ShowMenu()
             if m.pause then
                 root:CreateButton("Pause " .. m.name, function() ns.Targets:PauseManager() end)
             end
+            -- The owner's own choice, if it has one: { title, { { label, selected(), select() }, ... } }.
+            if m.choices then
+                root:CreateDivider()
+                root:CreateTitle(m.choices.title)
+                for _, c in ipairs(m.choices) do
+                    root:CreateRadio(c.label, c.selected, c.select)
+                end
+                root:CreateDivider()
+            end
         end
         -- The map shows a way that isn't there: block it, plan around it.
         if ns.Route and (ns.Flight.route or ns.Route:Way()) then

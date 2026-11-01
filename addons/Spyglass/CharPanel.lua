@@ -357,12 +357,10 @@ local function Build(parent)
     local gear = CreateFrame("Button", nil, panel)
     gear:SetSize(18, 18)
     gear:SetPoint("TOPRIGHT", -8, -6)
-    -- StatLedger's own logo when it's installed, else a cog.
-    gear:SetNormalTexture(StatLedger and "Interface\\AddOns\\StatLedger\\Media\\Icon"
-        or "Interface\\Buttons\\UI-OptionsButton")
+    gear:SetNormalTexture("Interface\\AddOns\\StatLedger\\Media\\Icon")
     gear:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
     gear:SetScript("OnClick", function()
-        if SlashCmdList.STATLEDGER then SlashCmdList.STATLEDGER("") end
+        SlashCmdList.STATLEDGER("")
     end)
     gear:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")

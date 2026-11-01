@@ -207,17 +207,21 @@ sorting functions, version 3 or later).
 ### StatLedger (and StatPriority)
 
 Provider: StatLedger (`StatLedger\Core.lua`, `Convert.lua`; StatLedger's README.md). `StatPriority`
-is the same table under its old name (no callers left). Built with `NewAPI`: `VERSION` 1 (`API_VERSION`
+is the same table under its old name (no callers left). Built with `NewAPI`: `VERSION` 2 (`API_VERSION`
 the same), `MAX_SLOTS`. Call its functions with a colon (`StatLedger:GetPriority()`); the registry
-takes dot or colon. `class` is a class token (`"MAGE"`), `spec` a talent tab (1-3); both
-default to the player's. Getters return copies.
+takes dot or colon. `class` is a class token (`"MAGE"`), `spec` a spec number (1-3, the talent tab;
+Druid also has 4, Feral Tank, on the Feral tree); both default to the player's. Getters return copies.
 
 | Function | Returns |
 |---|---|
-| `GetActiveSpec()` | `class, spec, specName`. |
+| `GetActiveSpec()` | `class, spec, specName`: your main spec if you chose one, else your talents' top tree. |
+| `GetActiveProfile()` / `GetAllWeights()` | Version 2. A copy of this character's active weight profile / `{ [stat] = weight }` with caps worked out. Scoring doesn't use these weights yet. |
+| `GetWeight(stat)` / `GetWeightRaw(stat)` / `GetCapInfo(stat)` | One stat's weight after caps / `base_weight, cap_tiers` / its tiers in order, each with `at` (threshold after offsets) and `reached`. `stat` is `"HIT"` or `"melee_hit"`. |
+| `OnProfileChanged(fn)` | Old-style hook: `fn(label)` on each `PROFILE_CHANGED`. |
+| `GetMainSpec()` / `SetMainSpec(spec)` / `PromptMainSpec()` | Version 2. The spec you chose for this character (nil: none) / saves it / opens the "Select main spec" window. |
 | `GetStats()` / `GetStatLabel(stat)` | Every stat key / a stat's label. |
 | `GetClasses()` / `GetClassName(class)` | Class tokens / a class's name. |
-| `GetSpecs(class)` / `GetSpecName(class, spec)` | `{ "Arms", "Fury", "Protection" }` / one name. |
+| `GetSpecs(class)` / `GetSpecName(class, spec)` | `{ "Arms", "Fury", "Protection" }` (four names for Druid) / one name. |
 | `GetDefaultPriority(class, spec)` | The default ranked list of stats. |
 | `GetPriority(class, spec)` | Your list if you changed it, else the default. |
 | `IsCustom(class, spec)` | Whether you changed it. |
@@ -230,16 +234,19 @@ default to the player's. Getters return copies.
 | `Describe(class, spec)` | `"Strength > Stamina > ..."`. |
 | `Score(values [, weights])` | `total, contrib` for `{ [stat] = amount }`; weights default to `GetWeights()`. |
 | `Value(stat, amount [, weights])` / `Budget(stat, amount)` / `IsPercent(stat, amount)` | One stat's worth / its item budget / whether it's a percent stat. |
+| `ToPercent(stat, points)` / `ToPoints(stat, percent)` / `EffectRates(kind)` | Version 2. Assumptions.lua's conversions: item points of a stat to a percent and back (nil for a stat without one) / `{ [stat] = rate }` for an effect type. |
 | `RegisterCallback(owner, fn)` / `UnregisterCallback(owner)` | The shared registry: one callback per owner, `fn(event, class, spec)`. |
 
 | Event | Args | Fired |
 |---|---|---|
 | `PRIORITY_CHANGED` | `class, spec` | A spec's list was changed or reset. |
-| `SPEC_CHANGED` | `class, spec` | Your detected spec changed. |
+| `SPEC_CHANGED` | `class, spec` | Your main spec, or the spec your talents give, changed. |
 | `VALUES_CHANGED` | none | Level-up: what stats are worth changed. |
+| `PROFILE_CHANGED` | `label` | Your active weight profile changed. |
+| `WEIGHTS_CHANGED` | none | A profile was edited. |
 
 
-Callers: Bandolier (`Core.lua`, `Stats.lua`; Dependencies StatLedger), Spyglass (`Scoring.lua`,
+Callers: Bandolier (`Core.lua`, `Stats.lua`; Dependencies StatLedger), Spyglass (`Scoring.lua`, `Effects.lua`,
 `Journal\Professions.lua`; Dependencies StatLedger), TapeMeasure (`Core.lua`, `Stats.lua`, `UI.lua`;
 Dependencies StatLedger), Wally (`Gear.lua`; OptionalDeps StatLedger), `shared\GearEngine.lua`
 (Spyglass, TapeMeasure, Wally), `shared\Player.lua` (`GetActiveSpec`; Bandolier, MrMiyagi,

@@ -175,6 +175,34 @@ function K.CompletedIDs(out)
     return out
 end
 
+-- The quests in your log that are ready to hand in: the game's word, or every objective done.
+function K.ReadyQuests()
+    local out = {}
+    if not C_QuestLog then return out end
+    for i = 1, Call(C_QuestLog.GetNumQuestLogEntries) or 0 do
+        local info = C_QuestLog.GetInfo and Call(C_QuestLog.GetInfo, i)
+        local id = type(info) == "table" and not info.isHeader and info.questID
+        if not id and GetQuestLogTitle then
+            local _, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(i)
+            id = not isHeader and questID
+        end
+        if id and id > 0 then
+            local ready = Call(C_QuestLog.IsComplete, id)
+            if not ready then
+                local objectives = C_QuestLog.GetQuestObjectives and Call(C_QuestLog.GetQuestObjectives, id)
+                if type(objectives) == "table" and #objectives > 0 then
+                    ready = true
+                    for _, o in ipairs(objectives) do
+                        if not o.finished then ready = false end
+                    end
+                end
+            end
+            if ready then out[#out + 1] = id end
+        end
+    end
+    return out
+end
+
 -- One field of a quest in Questie's database ("name", "exclusiveTo", "breadcrumbForQuestId"...),
 -- or nil.
 function K.Query(id, field)

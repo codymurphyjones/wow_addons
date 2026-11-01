@@ -58,9 +58,12 @@ local function Dependents(id)
     if not needs then
         needs = {}
         for qid, q in pairs(ns.Quests or {}) do
-            for _, p in ipairs(q.pre or {}) do
-                needs[p] = needs[p] or {}
-                table.insert(needs[p], qid)
+            -- ("Any one of these" says nothing about each of them: one was done, not all.)
+            if not (q.preAny and q.pre and #q.pre > 1) then
+                for _, p in ipairs(q.pre or {}) do
+                    needs[p] = needs[p] or {}
+                    table.insert(needs[p], qid)
+                end
             end
         end
     end
@@ -81,7 +84,8 @@ function P:Done(id)
         if Flagged(other) or self:InLog(other) then inferred = true; break end
     end
     local leadsTo = not inferred and Questie_(id, "breadcrumbForQuestId")
-    if type(leadsTo) == "number" and (Flagged(leadsTo) or self:InLog(leadsTo)) then inferred = true end
+    -- (0 is Questie for "no breadcrumb": not a quest to look up.)
+    if type(leadsTo) == "number" and leadsTo > 0 and (Flagged(leadsTo) or self:InLog(leadsTo)) then inferred = true end
     if not inferred then
         for _, later in ipairs(Dependents(id) or {}) do
             if Flagged(later) or self:InLog(later) then inferred = true; break end
@@ -137,7 +141,14 @@ end
 
 function P:ReadyToTurnIn(id)
     if not self:InLog(id) then return false end
-    return Call(C_QuestLog.IsComplete, id) and true or false
+    if Call(C_QuestLog.IsComplete, id) then return true end
+    -- Every objective done counts too (what the quest tracker shows as ready).
+    local objectives = C_QuestLog.GetQuestObjectives and Call(C_QuestLog.GetQuestObjectives, id)
+    if type(objectives) ~= "table" or #objectives == 0 then return false end
+    for _, o in ipairs(objectives) do
+        if not o.finished then return false end
+    end
+    return true
 end
 
 -- Questie's verdict on whether you could take the quest at all (ignores level). True when

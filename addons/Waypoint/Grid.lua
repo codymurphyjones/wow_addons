@@ -667,6 +667,9 @@ end
 
 -- How a step between two neighbouring squares (world points) goes, the way you'd walk it:
 -- "walk", "drop" (and how many yards down), or nil when you can't take it.
+-- What's along a straight line (NavGrid.lua's walks it cell by cell; here squares are big enough).
+function G:Ahead(continent, n1, w1, n2, w2) return self:Step(continent, n1, w1, n2, w2) end
+
 function G:Step(continent, n1, w1, n2, w2)
     local m = Map(continent)
     if not m then return "walk", 0 end

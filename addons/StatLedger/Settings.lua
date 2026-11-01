@@ -118,7 +118,7 @@ end
 function S:BuildSpecRow(page, anchor)
     self.specButtons = {}
     local prev
-    for spec = 1, 3 do
+    for spec = 1, 4 do
         local button = CreateFrame("Button", nil, page, "UIPanelButtonTemplate")
         button:SetSize(150, 24)
         if prev then
@@ -202,6 +202,21 @@ function S:Build()
     hint:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
     hint:SetText("Pick a class and spec, then drag stats into order (best first). "
         .. "X removes a stat; drag it back up, or press +, to use it again.")
+
+    local update = CreateFrame("Button", nil, page, "UIPanelButtonTemplate")
+    update:SetSize(140, 26)
+    update:SetPoint("TOPRIGHT", -32, -14)
+    update:SetText("Update Mainspec")
+    update:SetScript("OnClick", function() ns.MainSpec:Open() end)
+    Tooltip(update, "Choose the spec your priority and gear scores follow on this character.")
+    local designer = CreateFrame("Button", nil, page, "UIPanelButtonTemplate")
+    designer:SetSize(140, 26)
+    designer:SetPoint("TOP", update, "BOTTOM", 0, -4)
+    designer:SetText("Weight Designer")
+    designer:SetScript("OnClick", function() ns.Designer:Open() end)
+    Tooltip(designer, "Build your own weight profiles: stat weights, cap tiers, and caps that move with other stats.")
+    self.mainLabel = Text(page, "StatLedgerGameFontNormal")
+    self.mainLabel:SetPoint("RIGHT", update, "LEFT", -10, 0)
 
     local classRow = self:BuildClassRow(page, hint)
     local specRow = self:BuildSpecRow(page, self.classButtons[ns.API:GetClasses()[1]])
@@ -305,11 +320,16 @@ function S:Refresh()
     self.classLabel:SetText(class and API:GetClassName(class) or "")
     local specs = class and API:GetSpecs(class) or {}
     for s, button in ipairs(self.specButtons) do
+        button:SetShown(specs[s] ~= nil)
+        button:SetWidth(#specs > 3 and 116 or 150)
         local name = specs[s] or "?"
         if class == activeClass and s == activeSpec then name = name .. " (you)" end
         button:SetText(name)
         if s == spec then button:LockHighlight() else button:UnlockHighlight() end
     end
+    local main = API:GetMainSpec()
+    self.mainLabel:SetText("Main spec: " .. (main and API:GetSpecName(activeClass, main)
+        or "|cffff9933not set|r"))
     if API:IsCustom(class, spec) then
         self.status:SetText("|cff66bbffCustomised|r (saved for all your characters)")
     else

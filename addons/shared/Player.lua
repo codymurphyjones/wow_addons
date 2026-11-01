@@ -366,6 +366,36 @@ end
 
 function P.TabPoints(tab) return select(2, P.TalentTab(tab)) end
 
+-- Points spent in each talent tree, from the talent system the way the game's own talent window
+-- reads its tree headers (C_Traits), in the tree's order; nil when it can't tell.
+local function TraitPoints()
+    if not (C_ClassTalents and C_ClassTalents.GetActiveConfigID and C_Traits and C_Traits.GetConfigInfo
+        and C_Traits.GetGroupDisplayInfoByTreeID and C_Traits.GetGroupCurrencyInfo) then return nil end
+    local config = Read(C_ClassTalents.GetActiveConfigID)
+    local info = config and Read(C_Traits.GetConfigInfo, config)
+    local tree = type(info) == "table" and type(info.treeIDs) == "table" and info.treeIDs[1]
+    local shown = tree and Read(C_Traits.GetGroupDisplayInfoByTreeID, tree)
+    if type(shown) ~= "table" or #shown == 0 then return nil end
+    local ids = {}
+    for i, d in ipairs(shown) do ids[i] = d.groupID end
+    local groups = Read(C_Traits.GetGroupCurrencyInfo, config, ids)
+    if type(groups) ~= "table" then return nil end
+    local out = {}
+    for i, d in ipairs(shown) do
+        out[i] = 0
+        for _, g in ipairs(groups) do
+            local c = g.traitNodeGroupID == d.groupID and g.currencyInfos and g.currencyInfos[1]
+            if c then out[i] = tonumber(Readable(c.spent)) or 0 end
+        end
+    end
+    return out
+end
+
+-- { points in tree 1, tree 2, tree 3 }: the talent system's answer, else the older call's.
+function P.TalentPoints()
+    return TraitPoints() or { P.TabPoints(1), P.TabPoints(2), P.TabPoints(3) }
+end
+
 -- { { name, points } ... } per talent tab ("Tree n" when a tab has no readable name).
 function P.Talents()
     local out = {}

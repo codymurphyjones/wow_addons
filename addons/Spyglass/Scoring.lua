@@ -19,12 +19,10 @@ local NO_TOP = {}
 local weights
 
 function S:Init()
-    if StatLedger and StatLedger.RegisterCallback then
-        StatLedger:RegisterCallback("SpyGlass", function()
-            S:Reset()
-            ns:RequestRefresh()
-        end)
-    end
+    StatLedger:RegisterCallback("SpyGlass", function()
+        S:Reset()
+        ns:RequestRefresh()
+    end)
 end
 
 function S:Reset()
@@ -154,23 +152,17 @@ function S:Beats(itemID, score, equipLoc)
     return verdict == "upgrade" or verdict == "new", verdict, base, empty
 end
 
-function S:HasStatLedger() return GE.HasStatLedger() end
-
 function S:Weights()
     if not weights then weights = GE.Weights() end
     return weights
 end
 
 function S:Label(stat)
-    if StatLedger and StatLedger.GetStatLabel then return StatLedger:GetStatLabel(stat) end
-    return stat
+    return StatLedger:GetStatLabel(stat)
 end
 
 -- "Mage: Fire  Spell Power > Fire Spell Power > ..."
 function S:Describe()
-    if not self:HasStatLedger() then
-        return "Install StatLedger to rank items by your spec's stats."
-    end
     local class, _, specName = StatLedger:GetActiveSpec()
     local who = StatLedger:GetClassName(class or "?") .. ": " .. (specName or "?")
     return "|cffffd100" .. who .. "|r  " .. StatLedger:Describe()

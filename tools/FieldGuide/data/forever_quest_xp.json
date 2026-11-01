@@ -1,0 +1,904 @@
+{
+"1013": {
+"comments": [],
+"dungeon": true,
+"level": 26,
+"listed": 2100,
+"name": "The Book of Ur"
+},
+"1014": {
+"comments": [],
+"dungeon": true,
+"level": 27,
+"listed": 3300,
+"name": "Arugal Must Die"
+},
+"1049": {
+"comments": [],
+"dungeon": true,
+"level": 38,
+"listed": 3550,
+"name": "Compendium of the Fallen"
+},
+"1050": {
+"comments": [],
+"dungeon": true,
+"level": 38,
+"listed": 3550,
+"name": "Mythology of the Titans"
+},
+"1053": {
+"comments": [],
+"dungeon": true,
+"level": 40,
+"listed": 4700,
+"name": "In the Name of the Light"
+},
+"1101": {
+"comments": [],
+"dungeon": true,
+"level": 34,
+"listed": 3350,
+"name": "The Crone of the Kraul"
+},
+"1102": {
+"comments": [],
+"dungeon": true,
+"level": 34,
+"listed": 4050,
+"name": "A Vengeful Fate"
+},
+"1109": {
+"comments": [],
+"dungeon": true,
+"level": 33,
+"listed": 3300,
+"name": "Going, Going, Guano!"
+},
+"1113": {
+"comments": [],
+"dungeon": true,
+"level": 33,
+"listed": 3300,
+"name": "Hearts of Zeal"
+},
+"1139": {
+"comments": [],
+"dungeon": true,
+"level": 45,
+"listed": 5850,
+"name": "The Lost Tablets of Will"
+},
+"1160": {
+"comments": [],
+"dungeon": true,
+"level": 36,
+"listed": 2100,
+"name": "Test of Lore"
+},
+"1199": {
+"comments": [],
+"dungeon": true,
+"level": 25,
+"listed": 2550,
+"name": "Twilight Falls"
+},
+"1221": {
+"comments": [],
+"dungeon": true,
+"level": 26,
+"listed": 2100,
+"name": "Blueleaf Tubers"
+},
+"1275": {
+"comments": [],
+"dungeon": true,
+"level": 24,
+"listed": 2400,
+"name": "Researching the Corruption"
+},
+"1360": {
+"comments": [],
+"dungeon": true,
+"level": 43,
+"listed": 3600,
+"name": "Reclaimed Treasures"
+},
+"1445": {
+"comments": [],
+"dungeon": true,
+"level": 50,
+"listed": 5900,
+"name": "The Temple of Atal'Hakkar"
+},
+"1446": {
+"comments": [],
+"dungeon": true,
+"level": 53,
+"listed": 6550,
+"name": "Jammal'an the Prophet"
+},
+"1475": {
+"comments": [],
+"dungeon": true,
+"level": 50,
+"listed": 7100,
+"name": "Into The Temple of Atal'Hakkar"
+},
+"1486": {
+"comments": [],
+"dungeon": true,
+"level": 17,
+"listed": 1600,
+"name": "Deviate Hides"
+},
+"1487": {
+"comments": [],
+"dungeon": true,
+"level": 21,
+"listed": 2050,
+"name": "Deviate Eradication"
+},
+"1489": {
+"comments": [],
+"dungeon": true,
+"level": 16,
+"listed": 290,
+"name": "Hamuul Runetotem"
+},
+"1490": {
+"comments": [],
+"dungeon": true,
+"level": 16,
+"listed": 115,
+"name": "Nara Wildmane"
+},
+"1491": {
+"comments": [],
+"dungeon": true,
+"level": 18,
+"listed": 1350,
+"name": "Smart Drinks"
+},
+"166": {
+"comments": [
+{
+"date": "2026-09-23",
+"text": "This quest currently gives 9,750 experience in the beta.",
+"user": "Bloodydemize",
+"xp": [
+9750
+]
+}
+],
+"dungeon": true,
+"level": 22,
+"listed": 2600,
+"name": "The Defias Brotherhood"
+},
+"167": {
+"comments": [],
+"dungeon": true,
+"level": 20,
+"listed": 1550,
+"name": "Oh Brother. . ."
+},
+"168": {
+"comments": [],
+"dungeon": true,
+"level": 18,
+"listed": 1350,
+"name": "Collecting Memories"
+},
+"17": {
+"comments": [],
+"dungeon": true,
+"level": 42,
+"listed": 3450,
+"name": "Uldaman Reagent Run"
+},
+"2040": {
+"comments": [
+{
+"date": "2026-09-23",
+"text": "This quest currently gives 5,813 experience in the beta.",
+"user": "Bloodydemize",
+"xp": [
+5813
+]
+}
+],
+"dungeon": true,
+"level": 20,
+"listed": 1550,
+"name": "Underground Assault"
+},
+"214": {
+"comments": [
+{
+"date": "2026-09-23",
+"text": "This quest currently gives 4,688 experience in the beta.",
+"user": "Bloodydemize",
+"xp": [
+4688
+]
+}
+],
+"dungeon": true,
+"level": 17,
+"listed": 1250,
+"name": "Red Silk Bandanas"
+},
+"2198": {
+"comments": [],
+"dungeon": true,
+"level": 41,
+"listed": 3300,
+"name": "The Shattered Necklace"
+},
+"2199": {
+"comments": [],
+"dungeon": true,
+"level": 41,
+"listed": 2450,
+"name": "Lore for a Price"
+},
+"2202": {
+"comments": [],
+"dungeon": true,
+"level": 42,
+"listed": 3450,
+"name": "Uldaman Reagent Run"
+},
+"2283": {
+"comments": [],
+"dungeon": true,
+"level": 41,
+"listed": 2450,
+"name": "Necklace Recovery"
+},
+"2338": {
+"comments": [],
+"dungeon": true,
+"level": 42,
+"listed": 345,
+"name": "Translating the Journal"
+},
+"2339": {
+"comments": [],
+"dungeon": true,
+"level": 44,
+"listed": 3750,
+"name": "Find the Gems and Power Source"
+},
+"2340": {
+"comments": [],
+"dungeon": true,
+"level": 44,
+"listed": 1850,
+"name": "Deliver the Gems"
+},
+"2341": {
+"comments": [],
+"dungeon": true,
+"level": 44,
+"listed": 5600,
+"name": "Necklace Recovery, Take 3"
+},
+"2342": {
+"comments": [],
+"dungeon": true,
+"level": 43,
+"listed": 3600,
+"name": "Reclaimed Treasures"
+},
+"2361": {
+"comments": [],
+"dungeon": true,
+"level": 44,
+"listed": 5600,
+"name": "Restoring the Necklace"
+},
+"2418": {
+"comments": [],
+"dungeon": true,
+"level": 36,
+"listed": 3500,
+"name": "Power Stones"
+},
+"2768": {
+"comments": [],
+"dungeon": true,
+"level": 47,
+"listed": 6300,
+"name": "Divino-matic Rod"
+},
+"2770": {
+"comments": [],
+"dungeon": true,
+"level": 50,
+"listed": 7100,
+"name": "Gahz'rilla"
+},
+"2841": {
+"comments": [],
+"dungeon": true,
+"level": 35,
+"listed": 2750,
+"name": "Rig Wars"
+},
+"2842": {
+"comments": [],
+"dungeon": true,
+"level": 35,
+"listed": 275,
+"name": "Chief Engineer Scooty"
+},
+"2846": {
+"comments": [],
+"dungeon": true,
+"level": 46,
+"listed": 6050,
+"name": "Tiara of the Deep"
+},
+"2861": {
+"comments": [],
+"dungeon": true,
+"level": 46,
+"listed": 405,
+"name": "Tabetha's Task"
+},
+"2864": {
+"comments": [],
+"dungeon": true,
+"level": 45,
+"listed": 390,
+"name": "Tran'rek"
+},
+"2865": {
+"comments": [],
+"dungeon": true,
+"level": 45,
+"listed": 3900,
+"name": "Scarab Shells"
+},
+"2922": {
+"comments": [],
+"dungeon": true,
+"level": 26,
+"listed": 2650,
+"name": "Save Techbot's Brain!"
+},
+"2923": {
+"comments": [],
+"dungeon": true,
+"level": 26,
+"listed": 210,
+"name": "Tinkmaster Overspark"
+},
+"2924": {
+"comments": [],
+"dungeon": true,
+"level": 30,
+"listed": 3050,
+"name": "Essential Artificials"
+},
+"2925": {
+"comments": [],
+"dungeon": true,
+"level": 30,
+"listed": 245,
+"name": "Klockmort's Essentials"
+},
+"2926": {
+"comments": [],
+"dungeon": true,
+"level": 27,
+"listed": 2200,
+"name": "Gnogaine"
+},
+"2927": {
+"comments": [],
+"dungeon": true,
+"level": 27,
+"listed": 220,
+"name": "The Day After"
+},
+"2928": {
+"comments": [],
+"dungeon": true,
+"level": 30,
+"listed": 2450,
+"name": "Gyrodrillmatic Excavationators"
+},
+"2929": {
+"comments": [],
+"dungeon": true,
+"level": 35,
+"listed": 2750,
+"name": "The Grand Betrayal"
+},
+"2930": {
+"comments": [],
+"dungeon": true,
+"level": 30,
+"listed": 3650,
+"name": "Data Rescue"
+},
+"2931": {
+"comments": [],
+"dungeon": true,
+"level": 28,
+"listed": 230,
+"name": "Castpipe's Task"
+},
+"2936": {
+"comments": [],
+"dungeon": true,
+"level": 45,
+"listed": 4850,
+"name": "The Spider God"
+},
+"2962": {
+"comments": [],
+"dungeon": true,
+"level": 30,
+"listed": 2450,
+"name": "The Only Cure is More Green Glow"
+},
+"2991": {
+"comments": [],
+"dungeon": true,
+"level": 47,
+"listed": 5250,
+"name": "Nekrum's Medallion"
+},
+"3042": {
+"comments": [],
+"dungeon": true,
+"level": 45,
+"listed": 3900,
+"name": "Troll Temper"
+},
+"3341": {
+"comments": [],
+"dungeon": true,
+"level": 42,
+"listed": 4300,
+"name": "Bring the End"
+},
+"3369": {
+"comments": [],
+"dungeon": true,
+"level": 25,
+"listed": 2000,
+"name": "In Nightmares"
+},
+"3380": {
+"comments": [],
+"dungeon": true,
+"level": 51,
+"listed": 3650,
+"name": "The Sunken Temple"
+},
+"3527": {
+"comments": [],
+"dungeon": true,
+"level": 47,
+"listed": 5250,
+"name": "The Prophecy of Mosh'aru"
+},
+"3528": {
+"comments": [],
+"dungeon": true,
+"level": 53,
+"listed": 7900,
+"name": "The God Hakkar"
+},
+"3636": {
+"comments": [],
+"dungeon": true,
+"level": 42,
+"listed": 4300,
+"name": "Bring the Light"
+},
+"377": {
+"comments": [],
+"dungeon": true,
+"level": 26,
+"listed": 2100,
+"name": "Crime and Punishment"
+},
+"378": {
+"comments": [],
+"dungeon": true,
+"level": 27,
+"listed": 2750,
+"name": "The Fury Runs Deep"
+},
+"3801": {
+"comments": [],
+"dungeon": true,
+"level": 52,
+"listed": 510,
+"name": "Dark Iron Legacy"
+},
+"386": {
+"comments": [],
+"dungeon": true,
+"level": 25,
+"listed": 2000,
+"name": "What Comes Around..."
+},
+"387": {
+"comments": [],
+"dungeon": true,
+"level": 26,
+"listed": 2650,
+"name": "Quell The Uprising"
+},
+"388": {
+"comments": [],
+"dungeon": true,
+"level": 26,
+"listed": 2650,
+"name": "The Color of Blood"
+},
+"3907": {
+"comments": [],
+"dungeon": true,
+"level": 56,
+"listed": 7300,
+"name": "Disharmony of Fire"
+},
+"391": {
+"comments": [],
+"dungeon": true,
+"level": 29,
+"listed": 2350,
+"name": "The Stockade Riots"
+},
+"4002": {
+"comments": [],
+"dungeon": true,
+"level": 54,
+"listed": 540,
+"name": "The Eastern Kingdom"
+},
+"4024": {
+"comments": [],
+"dungeon": true,
+"level": 58,
+"listed": 6200,
+"name": "A Taste of Flame"
+},
+"4063": {
+"comments": [],
+"dungeon": true,
+"level": 58,
+"listed": 6200,
+"name": "The Rise of the Machines"
+},
+"4081": {
+"comments": [],
+"dungeon": true,
+"level": 52,
+"listed": 5100,
+"name": "KILL ON SIGHT: Dark Iron Dwarves"
+},
+"4082": {
+"comments": [],
+"dungeon": true,
+"level": 54,
+"listed": 5450,
+"name": "KILL ON SIGHT: High Ranking Dark Iron Officials"
+},
+"4121": {
+"comments": [],
+"dungeon": true,
+"level": 58,
+"listed": 7750,
+"name": "Precarious Predicament"
+},
+"4122": {
+"comments": [],
+"dungeon": true,
+"level": 58,
+"listed": 6200,
+"name": "Grark Lorkrub"
+},
+"4123": {
+"comments": [],
+"dungeon": true,
+"level": 55,
+"listed": 5650,
+"name": "The Heart of the Mountain"
+},
+"4126": {
+"comments": [],
+"dungeon": true,
+"level": 55,
+"listed": 7050,
+"name": "Hurley Blackbreath"
+},
+"4128": {
+"comments": [],
+"dungeon": true,
+"level": 55,
+"listed": 560,
+"name": "Ragnar Thunderbrew"
+},
+"4132": {
+"comments": [],
+"dungeon": true,
+"level": 58,
+"listed": 7750,
+"name": "Operation: Death to Angerforge"
+},
+"4133": {
+"comments": [],
+"dungeon": true,
+"level": 55,
+"listed": 560,
+"name": "Vivian Lagrave"
+},
+"4134": {
+"comments": [],
+"dungeon": true,
+"level": 55,
+"listed": 5650,
+"name": "Lost Thunderbrew Recipe"
+},
+"4136": {
+"comments": [],
+"dungeon": true,
+"level": 53,
+"listed": 2650,
+"name": "Ribbly Screwspigot"
+},
+"4263": {
+"comments": [],
+"dungeon": true,
+"level": 56,
+"listed": 5800,
+"name": "Incendius!"
+},
+"4286": {
+"comments": [],
+"dungeon": true,
+"level": 56,
+"listed": 5800,
+"name": "The Good Stuff"
+},
+"4324": {
+"comments": [],
+"dungeon": true,
+"level": 53,
+"listed": 2650,
+"name": "Yuka Screwspigot"
+},
+"4701": {
+"comments": [],
+"dungeon": true,
+"level": 59,
+"listed": 6400,
+"name": "Put Her Down"
+},
+"4724": {
+"comments": [],
+"dungeon": true,
+"level": 59,
+"listed": 6400,
+"name": "The Pack Mistress"
+},
+"4729": {
+"comments": [],
+"dungeon": true,
+"level": 59,
+"listed": 6400,
+"name": "Kibler's Exotic Pets"
+},
+"4734": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 8300,
+"name": "Egg Freezing"
+},
+"4735": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 9950,
+"name": "Egg Collection"
+},
+"4764": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 1650,
+"name": "Doomrigger's Clasp"
+},
+"4765": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 6600,
+"name": "Delivery to Ridgewell"
+},
+"4766": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 660,
+"name": "Mayara Brightwing"
+},
+"4768": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 8300,
+"name": "The Darkstone Tablet"
+},
+"4769": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 660,
+"name": "Vivian Lagrave and the Darkstone Tablet"
+},
+"4771": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 9950,
+"name": "Dawn's Gambit"
+},
+"4788": {
+"comments": [],
+"dungeon": true,
+"level": 58,
+"listed": 7750,
+"name": "The Final Tablets"
+},
+"4862": {
+"comments": [],
+"dungeon": true,
+"level": 59,
+"listed": 6400,
+"name": "En-Ay-Es-Tee-Why"
+},
+"4866": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 9950,
+"name": "Mother's Milk"
+},
+"4903": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 8300,
+"name": "Warlord's Command"
+},
+"4907": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 660,
+"name": "Tinkee Steamboil"
+},
+"4974": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 9950,
+"name": "For The Horde!"
+},
+"5081": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 8300,
+"name": "Maxwell's Mission"
+},
+"5089": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 6600,
+"name": "General Drakkisath's Command"
+},
+"5102": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 9950,
+"name": "General Drakkisath's Demise"
+},
+"5212": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 6600,
+"name": "The Flesh Does Not Lie"
+},
+"5213": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 6600,
+"name": "The Active Agent"
+},
+"5214": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 8300,
+"name": "The Great Ezra Grimm"
+},
+"5243": {
+"comments": [],
+"dungeon": true,
+"level": 60,
+"listed": 6600,
+"name": "Houses of the Holy"
+},
+"704": {
+"comments": [],
+"dungeon": true,
+"level": 38,
+"listed": 2850,
+"name": "Agmond's Fate"
+},
+"709": {
+"comments": [],
+"dungeon": true,
+"level": 40,
+"listed": 3150,
+"name": "Solution to Doom"
+},
+"721": {
+"comments": [],
+"dungeon": true,
+"level": 35,
+"listed": 2750,
+"name": "A Sign of Hope"
+},
+"722": {
+"comments": [],
+"dungeon": true,
+"level": 40,
+"listed": 3150,
+"name": "Amulet of Secrets"
+},
+"914": {
+"comments": [],
+"dungeon": true,
+"level": 22,
+"listed": 2200,
+"name": "Leaders of the Fang"
+},
+"959": {
+"comments": [],
+"dungeon": true,
+"level": 18,
+"listed": 1350,
+"name": "Trouble at the Docks"
+},
+"962": {
+"comments": [],
+"dungeon": true,
+"level": 18,
+"listed": 1700,
+"name": "Serpentbloom"
+},
+"971": {
+"comments": [],
+"dungeon": true,
+"level": 23,
+"listed": 2750,
+"name": "Knowledge in the Deeps"
+}
+}
