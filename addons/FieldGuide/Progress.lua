@@ -139,6 +139,20 @@ function P:NoObjectives(id)
     return #objectives == 0
 end
 
+-- One objective of a quest in your log, found by the name in its text ("Prowler slain: 3/8"): whether
+-- it's finished, how many you have and how many it takes. Nil when it isn't in the log.
+function P:Objective(id, name)
+    if not (name and self:InLog(id) and C_QuestLog and C_QuestLog.GetQuestObjectives) then return nil end
+    local objectives = Call(C_QuestLog.GetQuestObjectives, id)
+    if type(objectives) ~= "table" then return nil end
+    local want = strlower(name)
+    for _, o in ipairs(objectives) do
+        if type(o.text) == "string" and strlower(o.text):find(want, 1, true) then
+            return o.finished and true or false, o.numFulfilled, o.numRequired
+        end
+    end
+end
+
 function P:ReadyToTurnIn(id)
     if not self:InLog(id) then return false end
     if Call(C_QuestLog.IsComplete, id) then return true end

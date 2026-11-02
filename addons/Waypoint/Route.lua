@@ -1119,6 +1119,98 @@ local function StageLines(lines, current, opts)
     end
 end
 
+-- The legs after the target, for the world map only: an addon's `ahead` stops, each from the one
+-- before it, along the land map. They're apart from R:Lines, which is the trip you're on (the arrow's
+-- distance, the minimap). Worked out in the background, only while the world map asks, a leg shows
+-- when it's ready, and one new path a call. Fields go by where they lead to, not their place in the
+-- list, so finishing a step keeps the legs after it, and a leg to a stop that's still on the plan only
+-- needs joining to the stop before it. When the stops change, the line that's up stays up, and what's
+-- behind it is kept, until every new leg is ready: nothing goes until the new plan has replaced it.
+local aheadLegs = {}  -- field key -> { f, from, pts = { { kind, pts }, ... } }
+-- Each leg its own colour, in order, so you can tell which way the line goes where legs cross. All
+-- clear of the trip you're on (teal) and of the map's greens and tans.
+local AHEAD_COLORS = {
+    { 1.0, 0.35, 0.8 },   -- pink
+    { 1.0, 0.55, 0.1 },   -- orange
+    { 0.7, 0.5, 1.0 },    -- violet
+    { 1.0, 0.25, 0.25 },  -- red
+    { 0.95, 0.95, 0.95 }, -- white
+}
+local aheadKeys = {}  -- field key -> true: the fields asked for
+local aheadWhole      -- the last complete set of legs: what stays up while a new one is worked out
+local function ForgetAhead(wanted)
+    for key in pairs(aheadKeys) do
+        if not (wanted and wanted[key]) then
+            G:Forget(key)
+            aheadKeys[key], aheadLegs[key] = nil, nil
+        end
+    end
+end
+
+function R:AheadLines()
+    local e = ns.Targets and ns.Targets.current
+    local stops = e and e.ahead
+    local opts = self.aheadOpts
+    local prev = ns.Targets and ns.Targets.point
+    if not (G and ns.db.showAhead and ns.db.useGrid and opts and prev and type(stops) == "table" and stops[1]) then
+        ForgetAhead(nil)
+        aheadWhole = nil
+        return nil
+    end
+    local out, wanted, built, whole = {}, {}, false, true
+    for number, q in ipairs(stops) do
+        local pc, pn, pw = ns.Nav:World(prev)
+        local qc, qn, qw = ns.Nav:World(q)
+        if not pc or pc ~= qc then break end
+        local key = ("ahead:%d:%d:%d"):format(qc, math.floor(qn), math.floor(qw))
+        wanted[key], aheadKeys[key] = true, true
+        local from = math.floor(pn) .. ":" .. math.floor(pw)
+        local leg = aheadLegs[key]
+        -- (A leg that's done stays done, until the ground or your settings change: asking again costs.)
+        if not (leg and leg.from == from and leg.f.version == G.version and leg.offroad == opts.offroad) then
+            leg = nil
+            local o = {}
+            for k, v in pairs(opts) do o[k] = v end
+            o.toward, o.later = { pn, pw }, true
+            local f = G:Field(key, qc, qn, qw, o)
+            local path = f and not built and G:Path(f, pn, pw)
+            if path then
+                built = true
+                leg = { f = f, from = from, offroad = opts.offroad, pts = {} }
+                local kind, pts = nil, { pn, pw }
+                for _, sq in ipairs(G:Detail(qc, path)) do
+                    local k = sq.water and "swim" or "walk"
+                    if kind and k ~= kind then
+                        pts[#pts + 1], pts[#pts + 2] = sq.n, sq.w
+                        leg.pts[#leg.pts + 1] = { kind, pts }
+                        pts = { sq.n, sq.w }
+                    end
+                    kind = k
+                    pts[#pts + 1], pts[#pts + 2] = sq.n, sq.w
+                end
+                pts[#pts + 1], pts[#pts + 2] = qn, qw
+                leg.pts[#leg.pts + 1] = { kind or "walk", pts }
+                aheadLegs[key] = leg
+            end
+        end
+        if leg then
+            for _, part in ipairs(leg.pts) do
+                out[#out + 1] = { kind = part[1], continent = qc, pts = part[2], shade = number,
+                    color = AHEAD_COLORS[(number - 1) % #AHEAD_COLORS + 1], stop = q, number = number }
+            end
+        else
+            whole = false
+        end
+        prev = q
+    end
+    if whole then
+        ForgetAhead(wanted)
+        aheadWhole = out
+    end
+    -- (The first time there's nothing to keep up: legs show as they're ready.)
+    return aheadWhole or out
+end
+
 -- The trip's lines: each leg along the land map where a field covers it, else straight.
 local function BuildLines(route, way, hereField, targetField, target, c, n, w)
     local lines = {}
@@ -1231,14 +1323,20 @@ function R:AheadText()
     if total > G.HARMLESS then return Cliff() end
 end
 
--- The arrow's terrain line: what's ahead, and how far up or down where it leads is. nil: nothing to say.
-function R:TerrainText(p)
+-- The arrow's bottom row: what's ahead as an icon { icon, r, g, b, text } (the text shows on hovering
+-- it), or nil, and how far up or down where it leads is, as words ("" when level).
+local STEEP, CLIFF = "Interface\\Icons\\Spell_Nature_Earthquake", "Interface\\Icons\\Spell_Magic_FeatherFall"
+function R:TerrainNotes(p)
+    local note
     local ahead = self:AheadText()
+    if ahead then
+        -- Each message its own icon; a fall that kills you in red.
+        local lethal = ahead:find("lethal", 1, true)
+        local icon = ahead:find("Too steep", 1, true) and STEEP or CLIFF
+        note = { icon, 1, lethal and 0.3 or 1, lethal and 0.3 or 1, ahead }
+    end
     local height = self:HeightText(p):gsub("^  %-  ", "")
-    if height ~= "" then height = (height:gsub("^(%d)", "Target %1")) end
-    if ahead and height ~= "" then return ahead .. "  -  " .. height end
-    if ahead then return ahead end
-    if height ~= "" then return height end
+    return note, (height:gsub("^(%d)", "Target %1"))
 end
 
 -- A steer that turns you more than BACK_TURN radians away from where you're heading (p, or the
@@ -1400,6 +1498,7 @@ function R:Plan(p, last)
     local targetOpts = { speed = speed, swim = swim, safe = fall, once = once, maxDrop = maxDrop, climb = climb,
         offroad = offroad, slack = 0, reverse = true, toward = target.c == c and { n, w } or nil }
     local targetField = grid and G:Field("target", target.c, target.n, target.w, targetOpts) or nil
+    self.aheadOpts = grid and targetOpts or nil
     G.rush = false
     if grid and ((not hereField and G:Working("here")) or (not targetField and G:Working("target"))) then
         -- The plan made before still stands while the new one is worked out, unless its next step
@@ -1438,9 +1537,11 @@ function R:Plan(p, last)
             self.steer = SteerFor(way, c, n, w, p)
             return nil, true
         end
-        -- Nothing to follow at all: the fields get more time each frame until there is.
+        -- Nothing to follow at all: the fields get more time each frame until there is. The line that's
+        -- up stays until the new one replaces it.
         G.rush = true
         self.way = nil
+        self.lines = kept.lines
         return nil, true
     end
     self.plannedFor = p
@@ -1916,16 +2017,16 @@ end
 -- How much more a step off the roads weighs, by your road preference (ns.db.roadMode). A road is
 -- never quicker: it's safer, and the weight is how much longer a walk you'd take to stay on one.
 --   safe      roads first: a way off them has to be far quicker to be taken
---   balanced  roads where they lead your way, left for the last stretch to where you're going; a
---             road is worth a walk at most a fifth longer, so one off to the side isn't worth the detour
+--   balanced  roads when one runs your way: a road is worth a walk up to two fifths longer, so it
+--             gets onto a road nearby and follows it, but a road off to the side isn't worth the detour
 --   speed    the quickest way, roads or not; a road only when it's about as quick (then it's the
 --             way you'd walk anyway)
 R.ROAD_MODES = {
-    { id = "safe", name = "Safe", offroad = 2.5,
+    { id = "safe", name = "Safe", icon = "Interface\\Icons\\INV_Shield_06", offroad = 2.5,
         text = "Keeps to roads. Leaves them only where a way off the road is far quicker, or there's no road." },
-    { id = "balanced", name = "Balanced", offroad = 1.2,
-        text = "Takes the roads that lead your way, and leaves them for the last stretch to where you're going." },
-    { id = "speed", name = "Speed", offroad = 1.08,
+    { id = "balanced", name = "Balanced", icon = "Interface\\Icons\\INV_Misc_Map02", offroad = 1.4,
+        text = "Uses a road when one runs your way, and cuts across open ground when none does." },
+    { id = "speed", name = "Speed", icon = "Interface\\Icons\\Ability_Rogue_Sprint", offroad = 1.08,
         text = "The quickest way, roads or not. A road only when it's about as quick." },
 }
 function R:RoadMode()
@@ -1936,6 +2037,10 @@ function R:RoadMode()
     return self.ROAD_MODES[2]
 end
 function R:Offroad() return self:RoadMode().offroad end
+-- A mode's icon and name, for a menu: the icon cropped of its border, as the button shows it.
+function R:ModeLabel(mode)
+    return ("|T%s:16:16:0:0:64:64:5:59:5:59|t  %s"):format(mode.icon, mode.name)
+end
 
 -- Through ns:SetOption, so Options > AddOns > Waypoint shows it; the option drops the planned flight.
 function R:SetRoadMode(id)

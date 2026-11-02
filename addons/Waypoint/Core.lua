@@ -10,6 +10,7 @@ ns.PREFIX = ns.IconMarkup(14) .. " |cffffc94dWaypoint|r"
 ns.SAVED = { db = "WaypointDB", char = "WaypointCharDB" }
 
 ns.DEFAULTS = {
+    secondaryOpen = true, -- the box of secondary tasks under the arrow is unfolded (Secondary.lua)
     dockAlign = "CENTER", -- windows docked under the arrow (Field Guide): "LEFT", "CENTER" or "RIGHT"
     quests = true,   -- point at Questie quests when nothing else asks
     share = true,    -- share your waypoint path with your group
@@ -35,6 +36,7 @@ ns.DEFAULTS = {
     showHeight = true, -- the arrow says how far above or below you the target is
     showWay = true,    -- draw the planned trip as a dashed line on the world map (WayLine.lua)
     showWayMinimap = true, -- ...and as a trail of dots on the minimap
+    showAhead = true,  -- the legs after the target on the world map, when an addon says where they go
     learned = {},      -- steps you walked that the land map said you couldn't: [continent] = { [link key] = true }
     blocked = {},      -- steps you said are blocked ("This way is blocked"): [continent] = { [link key] = true }
     rides = {},      -- rides you've taken: [dock key] = { secs (waiting included), n, m, x, y (where it landed) }

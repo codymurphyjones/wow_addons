@@ -21,7 +21,8 @@ local _, ns = ...
 --   Zone Clear every quest of the zone you're on that you haven't done, whatever its XP (all of the
 --             zone's sections as one, see ClearSections), and what they need first wherever it is: the
 --             zone stays yours while you fetch it. Quests above your level wait at the end ("later");
---             with only those left the zone is cleared, and the guide moves on as above.
+--             with only those left the zone is cleared, and the guide moves on as above. A quest you
+--             skip goes after the rest of the zone (ns.char.deferred); skipped again, it's gone.
 -- Either way a quest only goes on the route once the server says it exists, and leaves it when its
 -- giver doesn't offer it (Exists.lua).
 --
@@ -30,6 +31,7 @@ local _, ns = ...
 -- here) { "L", quest } loot the item that starts a quest, { "I", dungeon } run a dungeon.
 local E = {}
 ns.Engine = E
+E.hunting = {} -- [questID] = { [step key] = true }: hunting areas you've moved on from
 
 local P
 local MIN_SHARE = 0.015 -- a quest is shown when it pays at least this share of your next level
@@ -132,6 +134,17 @@ local function QuestEarns(q, level)
 end
 E.QuestEarns = function(_, id) return QuestEarns(Q(id), P:Level()) end
 
+-- A death is a big chunk of time, so a quest above your level is worth less than its XP says. The
+-- deaths it can be expected to cost grow with the square of the levels it's above you (DEATH_RISK a
+-- level), and fade as you level. Only with something to fight: a quest with no objectives is a walk.
+local DEATH_RISK = 0.25
+local DEATH_MINUTES = 3 -- the run back, and getting going again
+local function ExpectedDeaths(q, level)
+    local over = (q and q.l or level) - level
+    if over <= 0 or not (q and q.o) then return 0 end
+    return DEATH_RISK * over * over
+end
+
 -- Worth doing at your level: it pays a fair share of what your next level needs.
 local function Worth(id, level)
     local need = XP_TO_LEVEL[level]
@@ -156,7 +169,9 @@ function E:Guide()
     return GuideByKey(ns.char.guide) or GuideByKey((UnitFactionGroup("player")))
 end
 
-local function StepKey(step) return step[1] .. ":" .. tostring(step[2]) .. (step.wing and (":" .. step.wing) or "") end
+local function StepKey(step)
+    return step[1] .. ":" .. tostring(step[2]) .. (step.wing and (":" .. step.wing) or "") .. (step.part and ("#" .. step.part) or "")
+end
 
 local function Clearing() return ns.char.preference == "clear" end
 
@@ -319,6 +334,7 @@ function E:StepDone(step)
         local part = inst and inst.before and inst.before[id] == "part"
         if part and ns.Instance:Entered(inst) or ns.Instance:InRun(inst) then return true end
     end
+    if kind == "O" and step.part then return P:ReadyToTurnIn(id) or self:ActionDone(id, step.part) end
     if kind == "O" then return P:ReadyToTurnIn(id) or not (Q(id) and Q(id).o) and P:InLog(id) end
     return false
 end
@@ -727,15 +743,29 @@ local function Build(section)
         if e and not inSection[e[1]] then ExitSteps(e, steps) end
     end
     -- Zone Clear: the quests above your level wait at the end ("later": they don't hold the zone).
+    -- Before them, what you skipped once ("last"): to do, but after everything else. With nothing
+    -- else left they're an ordinary route, in the order that walks best.
     if section.zoneClear then
-        local now, later = {}, {}
+        local now, last, later, others = {}, {}, {}, false
         for _, s in ipairs(steps) do
             local q = s[1] ~= "G" and s[1] ~= "Z" and s[1] ~= "I" and Q(s[2])
             if q and Practical(q) > level and not P:InLog(s[2]) then
                 later[#later + 1] = { s[1], s[2], later = true, catchup = s.catchup, exit = s.exit }
+            elseif q and ns.char.deferred[s[2]] then
+                last[#last + 1] = s
             else
                 now[#now + 1] = s
+                others = others or (q and not E:StepDone(s))
             end
+        end
+        for _, s in ipairs(last) do
+            if others then
+                local copy = {}
+                for k, v in pairs(s) do copy[k] = v end
+                copy.last = true
+                s = copy
+            end
+            now[#now + 1] = s
         end
         for _, s in ipairs(later) do now[#now + 1] = s end
         steps = now
@@ -747,7 +777,7 @@ local function Build(section)
         local nxt = steps[i + 1]
         if s[1] ~= "Z" or (nxt and nxt[1] ~= "Z") then kept[#kept + 1] = s end
     end
-    return kept
+    return E.SplitParts(kept)
 end
 
 -- The zone you're in (a city or cave counts as the zone around it).
@@ -766,6 +796,7 @@ end
 -- needs first isn't done. A dungeon's route keeps its own order.
 local function Waits(s)
     if ns.char.instance or s[1] == "G" or s[1] == "Z" or s[1] == "I" then return false end
+    if s[1] == "T" and E.hunting[s[2]] and not P:ReadyToTurnIn(s[2]) then return true end
     local q = Q(s[2])
     if not q or P:InLog(s[2]) or P:Done(s[2]) then return false end
     return Practical(q) > P:Level() or not PrereqsDone(q)
@@ -777,8 +808,9 @@ E.Waits = function(_, s) return Waits(s) end
 -- a step after it is, or once you're there.
 local function FirstLeft(steps)
     local waiting
+    E.farming = nil
     for i, s in ipairs(steps) do
-        if s.later then
+        if s.later or E:MovedOn(s) then
             -- Zone Clear's quests above your level: listed, but nothing to do yet.
         elseif s[1] == "Z" then
             local after = steps[i + 1]
@@ -814,6 +846,7 @@ local pickDirty = true
 function E:Invalidate() pickDirty = true; detourCache = nil end
 
 local relocate = true -- you may be anywhere (login, Play): the next choices start from where you stand
+local logReady = false -- the game has given us your quest log since login (LogIsIn)
 local holdKey         -- the step you're on: it stays yours until it's done or you skip it
 local holdStep        -- that step
 
@@ -1227,6 +1260,72 @@ local function Yards(a, b)
     return ns.WorldMap.Distance(a[1], a[2], a[3], b[1], b[2], b[3])
 end
 
+-- The way from a to b through the exits of the areas it leaves and enters, when one of them has only
+-- one or two ways in (Guides\Gates.lua), or nil.
+local function ThroughExits(a, b)
+    local map = ns.QuestGates and ns.QuestGates[a[1]]
+    if not map then return nil end
+    local function Area(p)
+        return map.of[math.floor((map.max - p[2]) / map.cell) * 1024 + math.floor((map.max - p[3]) / map.cell)]
+    end
+    local from, to = Area(a), Area(b)
+    if from == to then return nil end
+    local best
+    local function Try(yards)
+        if yards and (not best or yards < best) then best = yards end
+    end
+    local function Point(e) return { a[1], e[1], e[2] } end
+    for _, x in ipairs(from and map.exits[from] or { false }) do
+        for _, y in ipairs(to and map.exits[to] or { false }) do
+            local px, py = x and Point(x), y and Point(y)
+            if px and py then
+                Try(Yards(a, px) + Yards(px, py) + Yards(py, b))
+            elseif px then
+                Try(Yards(a, px) + Yards(px, b))
+            elseif py then
+                Try(Yards(a, py) + Yards(py, b))
+            end
+        end
+    end
+    return best
+end
+
+-- The walk from a to b, for putting a route in order: the real one where a straight line is badly
+-- wrong (the only way down from a mesa, Guides\Walks.lua), else through the exits between them
+-- (ThroughExits), else the straight line. You aren't on a quest point: a stands in for the nearest
+-- one within WALK_RING squares.
+local WALK_RING = 3
+local function Walked(a, b)
+    local straight = Yards(a, b)
+    local map = straight and a[1] == b[1] and ns.QuestWalks and ns.QuestWalks[a[1]]
+    if not map then return straight end
+    local cell, max = map.cell, map.max
+    -- (The quest points around a spot, nearest first, found once: a plan asks thousands of times.)
+    local near = a.walks
+    if not near then
+        near = {}
+        local rows = map.rows
+        local r0, c0 = math.floor((max - a[2]) / cell), math.floor((max - a[3]) / cell)
+        for ring = 0, WALK_RING do
+            for dr = -ring, ring do
+                for dc = -ring, ring do
+                    if ring == 0 or math.abs(dr) == ring or math.abs(dc) == ring then
+                        local row = rows[(r0 + dr) * 1024 + c0 + dc]
+                        if row then near[#near + 1] = row end
+                    end
+                end
+            end
+        end
+        a.walks = near
+    end
+    local to = math.floor((max - b[2]) / cell) * 1024 + math.floor((max - b[3]) / cell)
+    for i = 1, #near do
+        local real = near[i][to]
+        if real then return math.max(real, straight) end
+    end
+    return math.max(ThroughExits(a, b) or 0, straight)
+end
+
 -- Where a step takes you, in the world, or nil.
 local function StepSpot(step)
     local kind = step[1]
@@ -1237,7 +1336,7 @@ local function StepSpot(step)
     end
     local q = kind ~= "G" and kind ~= "Z" and kind ~= "I" and Q(step[2])
     if not q then return nil end
-    return World((kind == "A" and q.a) or (kind == "T" and q.t) or (kind == "O" and q.o and q.o[1])
+    return World((kind == "A" and q.a) or (kind == "T" and q.t) or (kind == "O" and E.ObjectivePoint(step, q))
         or (kind == "L" and q.d and q.d[1]) or nil)
 end
 
@@ -1292,7 +1391,7 @@ local function PlanDetours(section, steps)
         for _, id in ipairs(QuestsOn(map)) do
             local q = Q(id)
             local carried = P:InLog(id)
-            if not onRoute[id] and Practical(q) <= level and not DonationCloth(q) and Worth(id, level)
+            if not onRoute[id] and not q.pvp and Practical(q) <= level and not DonationCloth(q) and Worth(id, level)
                 and E:QuestOpen(id) and (carried or PrereqsDone(q)) and not NeedsDungeon(id, 0) then
                 local aSpot, tSpot = World(q.a), World(q.t)
                 local aAt, aCost = 1, 0
@@ -1359,8 +1458,8 @@ end
 
 -- The guide's order is its route's, planned from nowhere in particular. The next WINDOW steps left
 -- (pick-ups, objectives, hand-ins, loot) go in the order that walks the least from where you stand:
--- every order they can go in is timed (straight-line yards at RUN_SPEED, from you through each
--- step), and the quickest wins. A quest's own steps keep their order (pick up, do, hand in), and so
+-- every order they can go in is timed (Walked's yards at RUN_SPEED, from you through each step),
+-- and the quickest wins. A quest's own steps keep their order (pick up, do, hand in), and so
 -- do a quest and one that needs it.
 --
 -- The order is worked out now and then, not on every change: at login, on Play (unpausing), when
@@ -1368,8 +1467,9 @@ end
 -- Until then it stays, so finishing four quests on the way doesn't turn the arrow round four
 -- times: a hand-in that comes up meanwhile waits after the planned steps, for the next order.
 local WINDOW = 8     -- steps: up to this many, every order is tried
+local BESIDE_WORK = 75 -- yards: a giver this close to a step of a quest you have goes with it (see Improved)
 local LOOKAHEAD = 30 -- quests planned at once: the ones paying the most of a level an hour (see QuestRate)
-local PLAN_MS = 200    -- a plan's working time, at most: spread over frames (see StartPlan)
+local PLAN_MS = 1000   -- a plan's working time, at most: spread over frames (see StartPlan)
 local SLICE_MS = 4     -- of it, in any one frame
 local OFF_COURSE_SECONDS = 30 -- moving this long without getting closer: the route is worked out again
 local AT_WORK_YARDS = 150     -- this near an objective you're working on it, not off course
@@ -1380,25 +1480,29 @@ local order           -- { section = id, keys = { step key, ... } in the chosen 
 local orderDirty = true
 
 function E:Reorder() orderDirty = true end
+function E:ReleaseHold() holdKey, holdStep = nil, nil end
 
 local function Orderable(s)
     local k = s[1]
     -- (A dungeon's route: what's done outside before the run is planned too. The run itself stops
     -- the plan, so nothing crosses it: what comes before stays before, the hand-ins after.)
-    return (k == "A" or k == "O" or k == "T" or k == "L") and not (s.later or s.inside)
+    return (k == "A" or k == "O" or k == "T" or k == "L") and not (s.later or s.last or s.inside)
         and (not s.before or ns.char.instance ~= nil)
 end
 
 -- Step b has to come after step a: the same quest, or b's quest needs a's.
+function E.After(a, b) return E.AfterStep(a, b) end
 local function After(a, b)
     if b[1] == "I" then return true end -- the run is where a route's plan ends
-    if a[2] == b[2] then return true end
+    if a[2] == b[2] then return not (a.part and b.part) end -- (a quest's objectives: in any order)
     local q = Q(b[2])
     for _, p in ipairs(q and q.pre or {}) do
         if p == a[2] then return true end
     end
     return false
 end
+
+E.AfterStep = After
 
 -- The next steps left from index `from` that can be put in another order, with their spots: up to
 -- WINDOW, stopping at a step that can't (a zone change, grinding, a dungeon, no place to go) or
@@ -1418,7 +1522,7 @@ local function QuestRate(id, start)
     local yards, at = 0, start
     local function To(point)
         local spot = point and World(point)
-        if at and spot then yards = yards + (Yards(at, spot) or FAR) end
+        if at and spot then yards = yards + (Walked(at, spot) or FAR) end
         at = spot or at
     end
     local carried = P:InLog(id)
@@ -1427,6 +1531,7 @@ local function QuestRate(id, start)
     if q.o and not ready then To(q.o[1]) end
     To(q.t)
     local minutes = math.max(0.25, yards / RUN_SPEED / 60 + (ready and 0 or (q.m or 0)))
+    if not ready then minutes = minutes + ExpectedDeaths(q, level) * DEATH_MINUTES end
     return xp / need / minutes * 60, xp, minutes
 end
 
@@ -1462,6 +1567,11 @@ local function BestQuests(ids, start, keep)
         if not chosen[id] and count < LOOKAHEAD then chosen[id], count = true, count + 1 end
     end
     if keep and ids[keep] then Take(keep, 0) end
+    -- The quests you have are always in: left out, their steps wait behind everything planned, and the
+    -- route walks away from work you've started because a town's new quests pay more an hour.
+    for _, id in ipairs(order) do
+        if P:InLog(id) then Take(id, 0) end
+    end
     for _, id in ipairs(order) do
         if count >= LOOKAHEAD then break end
         Take(id, 0)
@@ -1576,19 +1686,19 @@ end
 local function Walk(spots, seq, start)
     local yards, at = 0, start
     for _, j in ipairs(seq) do
-        if at then yards = yards + (Yards(at, spots[j]) or FAR) end
+        if at then yards = yards + (Walked(at, spots[j]) or FAR) end
         at = spots[j]
     end
     return yards
 end
 
--- What getting to a step early is worth: the quest's XP at your level, shared over its pick-up (a
--- quarter), objectives (a quarter) and hand-in (the rest), and a little for any step at all, so the
--- walk counts when nothing pays.
+-- What getting to a step early is worth: the quest's XP at your level, less for the deaths it's likely
+-- to cost, shared over its pick-up (a quarter), objectives (a quarter) and hand-in (the rest), and a
+-- little for any step at all, so the walk counts when nothing pays.
 local function StepWeight(s)
     -- (A dungeon's run counts for its kills, at least: it's what the route is for.)
     if s[1] == "I" then return 1 + (45 + 5 * P:Level()) * RUN_KILL_XP end
-    local xp = QuestXP(Q(s[2]), P:Level())
+    local xp = QuestXP(Q(s[2]), P:Level()) / (1 + ExpectedDeaths(Q(s[2]), P:Level()))
     return 1 + xp * (s[1] == "T" and 0.5 or 0.25)
 end
 
@@ -1597,7 +1707,7 @@ end
 local function Delay(list, spots, seq, start)
     local total, yards, at = 0, 0, start
     for _, j in ipairs(seq) do
-        if at then yards = yards + (Yards(at, spots[j]) or FAR) end
+        if at then yards = yards + (Walked(at, spots[j]) or FAR) end
         at = spots[j]
         total = total + yards * StepWeight(list[j])
     end
@@ -1622,10 +1732,10 @@ local function OutOfTime()
     return sliceStart and spent + debugprofilestop() - sliceStart > PLAN_MS
 end
 
--- A good order for a list too long to try every one: from the guide's, move each step, and each run
--- of two or three (a quest's steps at one stop), to wherever it brings the XP in soonest, until
--- nothing moves. Keeps what has to come first first, and the opening step first.
-local function Improved(list, spots, start, opening, before, weight)
+-- A good order for a list too long to try every one: from the guide's, move each quest's steps as a
+-- block, each step, and each run of two or three (a quest's steps at one stop), to wherever it brings
+-- the XP in soonest, until nothing moves. Keeps what has to come first first, and the opening step first.
+local function Improved(list, spots, start, opening, before, weight, fromWork)
     local n = #list
     local seq, pos = {}, {}
     if opening then seq[1] = opening end
@@ -1635,31 +1745,59 @@ local function Improved(list, spots, start, opening, before, weight)
     local legs = {}
     for a = 1, n do
         legs[a] = {}
-        for b = 1, n do legs[a][b] = a ~= b and (Yards(spots[a], spots[b]) or FAR) or 0 end
+        for b = 1, n do legs[a][b] = a ~= b and (Walked(spots[a], spots[b]) or FAR) or 0 end
     end
     local first = {}
-    for j = 1, n do first[j] = start and (Yards(start, spots[j]) or FAR) or 0 end
-    -- The Delay of an order, or nil when something comes before what it needs.
-    local function Cost(order)
-        for i = 1, n do pos[order[i]] = i end
-        for j = 1, n do
-            for _, b in ipairs(before[j]) do
-                if pos[b] > pos[j] then return nil end
-            end
-        end
+    for j = 1, n do first[j] = start and (Walked(start, spots[j]) or FAR) or 0 end
+    -- The Delay of an order, or nil when something comes before what it needs, or it's already past
+    -- limit: a total only grows, so most of the orders tried stop early. (Most of a plan's time is here.)
+    local function Cost(order, limit)
         local total, yards, at = 0, 0, nil
         for i = 1, n do
             local j = order[i]
             yards = yards + (at and legs[at][j] or first[j])
             at = j
             total = total + yards * weight[j]
+            if limit and total >= limit then return nil end
+        end
+        for i = 1, n do pos[order[i]] = i end
+        for j = 1, n do
+            for _, b in ipairs(before[j]) do
+                if pos[b] > pos[j] then return nil end
+            end
         end
         return total
     end
     local best = Cost(seq)
     if not best then return nil, math.huge end
     local low = opening and 2 or 1
-    for _ = 1, 4 do
+    -- Small moves can't take a whole town's steps behind a far-off trip, so where a search starts decides
+    -- what it can find. One search (see Quickest) starts from the quests you have. That's only a place
+    -- to start from: nothing favours it, the order that scores better is the one kept.
+    if fromWork then
+        -- (With the quests whose giver is beside that work: you'd take them as you go by.)
+        local mine = {}
+        for j = 1, n do
+            if P:InLog(list[j][2]) then mine[list[j][2]] = true end
+        end
+        for a = 1, n do
+            if list[a][1] == "A" and not mine[list[a][2]] then
+                for b = 1, n do
+                    if P:InLog(list[b][2]) and legs[a][b] <= BESIDE_WORK then mine[list[a][2]] = true end
+                end
+            end
+        end
+        local seed = {}
+        for j = 1, n do
+            if mine[list[j][2]] then seed[#seed + 1] = j end
+        end
+        for j = 1, n do
+            if not mine[list[j][2]] then seed[#seed + 1] = j end
+        end
+        local cost = Cost(seed)
+        if cost then seq, best = seed, cost end
+    end
+    for _ = 1, 6 do
         local moved = false
         for run = 1, 3 do
             for from = low, n - run + 1 do
@@ -1676,11 +1814,38 @@ local function Improved(list, spots, start, opening, before, weight)
                         for i = 1, at - 1 do order[#order + 1] = rest[i] end
                         for i = 1, run do order[#order + 1] = part[i] end
                         for i = at, #rest do order[#order + 1] = rest[i] end
-                        local cost = Cost(order)
+                        local cost = Cost(order, bestCost)
                         if cost and cost < bestCost then bestAt, bestCost, bestSeq = at, cost, order end
                     end
                 end
                 if bestAt then seq, best, moved = bestSeq, bestCost, true end
+            end
+        end
+        -- A quest's steps as one block: a run can't take a pick-up later without its far-off hand-in,
+        -- so an errand would stay wherever it landed. Whole, it can slide to when the route goes by.
+        local quests = {}
+        for i = low, n do
+            local id = list[seq[i]][2]
+            if not quests[id] then quests[id] = true; quests[#quests + 1] = id end
+        end
+        for _, id in ipairs(quests) do
+            if OutOfTime() then return seq, best end
+            Breathe()
+            local rest, part = {}, {}
+            for i = 1, n do
+                if i >= low and list[seq[i]][2] == id then part[#part + 1] = seq[i] else rest[#rest + 1] = seq[i] end
+            end
+            if #part >= 2 then
+                local bestCost, bestSeq = best, nil
+                for at = low, #rest + 1 do
+                    local order = {}
+                    for i = 1, at - 1 do order[#order + 1] = rest[i] end
+                    for _, j in ipairs(part) do order[#order + 1] = j end
+                    for i = at, #rest do order[#order + 1] = rest[i] end
+                    local cost = Cost(order, bestCost)
+                    if cost and cost < bestCost then bestCost, bestSeq = cost, order end
+                end
+                if bestSeq then seq, best, moved = bestSeq, bestCost, true end
             end
         end
         if not moved then break end
@@ -1701,7 +1866,15 @@ local function Quickest(list, spots, start, opening)
             if After(list[i], list[j]) or Gated(list[i], list[j]) then before[j][#before[j] + 1] = i end
         end
     end
-    if n > WINDOW then return Improved(list, spots, start, opening, before, weight) end
+    if n > WINDOW then
+        if opening then return Improved(list, spots, start, opening, before, weight) end
+        -- From the quests you have first: if time runs out, that's the one worth having.
+        local best, cost = Improved(list, spots, start, nil, before, weight, true)
+        if OutOfTime() then return best, cost end
+        local other, otherCost = Improved(list, spots, start, nil, before, weight)
+        if other and otherCost < cost then return other, otherCost end
+        return best, cost
+    end
     local best, bestDelay = nil, math.huge
     local used, path = {}, {}
     local function Go(depth, at, yards, delay)
@@ -1718,7 +1891,7 @@ local function Quickest(list, spots, start, opening)
                     if not used[i] then ready = false; break end
                 end
                 if ready then
-                    local reach = yards + (at and (Yards(at, spots[j]) or FAR) or 0)
+                    local reach = yards + (at and (Walked(at, spots[j]) or FAR) or 0)
                     used[j], path[depth] = true, j
                     Go(depth + 1, spots[j], reach, delay + reach * weight[j])
                     used[j] = false
@@ -1730,17 +1903,145 @@ local function Quickest(list, spots, start, opening)
     return best, bestDelay
 end
 
+-- The last look over a finished order: where along the whole route a pick-up adds the least walking,
+-- anywhere before what needs it and after what it needs. 480 yards there now against 130 when the
+-- route goes by it later, and later it goes. A move has to save more than SAVE_YARDS. Pick-ups pay
+-- nothing by themselves, so all that matters is what they cost to fetch. The step the order opens
+-- with stays. seq is changed in place.
+local SAVE_YARDS = 40
+local STEP_RANK = { A = 1, L = 1, O = 2, T = 3 }
+local function Tuck(list, spots, seq, start, opening)
+    local n = #seq
+    local function Leg(a, b) -- (seq indexes into list; a nil: where you stand)
+        if not a then return start and (Walked(start, spots[b]) or FAR) or 0 end
+        return Walked(spots[a], spots[b]) or FAR
+    end
+    local function Added(prev, j, nxt)
+        local added = Leg(prev, j)
+        if nxt then added = added + Leg(j, nxt) - Leg(prev, nxt) end
+        return added
+    end
+    -- (seq as it stands; an errand's steps are looked for in it below.)
+    for _ = 1, 3 do
+        local moved = false
+        for _, j in ipairs({ unpack(seq) }) do
+            if list[j][1] == "A" and j ~= opening then
+                local from
+                for i = 1, n do
+                    if seq[i] == j then from = i end
+                end
+                local now = Added(seq[from - 1], j, seq[from + 1])
+                table.remove(seq, from)
+                local lo, hi = (opening and j ~= opening) and 2 or 1, n
+                for i = 1, n - 1 do
+                    local a, b = list[seq[i]], list[j]
+                    -- (After says a quest's steps go together both ways: their kinds say which way.)
+                    local mine = a[2] == b[2]
+                    if mine and STEP_RANK[a[1]] > STEP_RANK[b[1]] or (not mine and (After(b, a) or Gated(b, a))) then
+                        hi = math.min(hi, i)
+                    end
+                    if mine and STEP_RANK[a[1]] < STEP_RANK[b[1]] or (not mine and (After(a, b) or Gated(a, b))) then
+                        lo = math.max(lo, i + 1)
+                    end
+                end
+                local at, best = from, now - SAVE_YARDS
+                for i = lo, hi do
+                    local added = Added(seq[i - 1], j, seq[i])
+                    if added < best then at, best = i, added end
+                end
+                table.insert(seq, at, j)
+                if at ~= from then moved = true end
+            end
+        end
+        if not moved then break end
+    end
+    -- An errand: a quest that's a pick-up and a hand-in, nothing to do between them. Each is tied to
+    -- the other, so moving either alone gets nowhere and one placed badly can pull the whole route out
+    -- of its way. Taken out together, each goes where it adds the least, the hand-in after the pick-up.
+    local function Total(order)
+        local yards, at = 0, nil
+        for _, j in ipairs(order) do
+            yards = yards + Leg(at, j)
+            at = j
+        end
+        return yards
+    end
+    for _, pick in ipairs({ unpack(seq) }) do
+        local id, give, other = list[pick][2], nil, false
+        if list[pick][1] == "A" and pick ~= opening then
+            for _, j in ipairs(seq) do
+                if j ~= pick and list[j][2] == id then
+                    if list[j][1] == "T" then give = j else other = true end
+                end
+            end
+        end
+        if give and give ~= opening and not other then
+            local before = Total(seq)
+            local rest = {}
+            for _, j in ipairs(seq) do
+                if j ~= pick and j ~= give then rest[#rest + 1] = j end
+            end
+            local count = #rest
+            -- After what the quest needs, before what needs it.
+            local lo, hi = opening and 2 or 1, count + 1
+            for i = 1, count do
+                local a = list[rest[i]]
+                if After(a, list[pick]) or Gated(a, list[pick]) then lo = math.max(lo, i + 1) end
+                if After(list[give], a) or Gated(list[give], a) then hi = math.min(hi, i) end
+            end
+            -- Least added: the pick-up at i, the hand-in at k >= i. From the end, the best hand-in so far.
+            local bestPick, bestGive, bestAdded
+            local tail, tailAt
+            for i = hi, lo, -1 do
+                local added = Added(rest[i - 1], give, rest[i])
+                if not tail or added < tail then tail, tailAt = added, i end
+                local together = Added(rest[i - 1], pick, give) + Leg(give, rest[i] or give)
+                    - (rest[i] and rest[i - 1] and Leg(rest[i - 1], rest[i]) or 0)
+                local apart = i < tailAt and Added(rest[i - 1], pick, rest[i]) + tail or nil
+                if apart and (not bestAdded or apart < bestAdded) then bestPick, bestGive, bestAdded = i, tailAt, apart end
+                if not bestAdded or together < bestAdded then bestPick, bestGive, bestAdded = i, i, together end
+            end
+            if bestPick then
+                local trial = {}
+                for i = 1, count + 1 do
+                    if i == bestPick then trial[#trial + 1] = pick end
+                    if i == bestGive then trial[#trial + 1] = give end
+                    if rest[i] then trial[#trial + 1] = rest[i] end
+                end
+                if before - Total(trial) > SAVE_YARDS then
+                    for i = 1, #trial do seq[i] = trial[i] end
+                end
+            end
+        end
+    end
+end
+
 local function Minutes(yards) return math.max(1, math.floor(yards / RUN_SPEED / 60 + 0.5)) end
 
--- Where to start from after you've been away (at login, on Play, in a new section), when the route's
--- next step is over a minute's walk off: the step nearest you that you can do now. You may have gone
--- anywhere since it was last followed; the steps before it wait (see ApplyOrder).
+-- Where to start from after you've been away (at login, on Play, in a new section): the step you were
+-- on, if you're still around it; nil while the route is around you, for the plan to choose freely;
+-- else, when its next step is over a minute's walk off, the step nearest you that you can do now.
+-- You may have gone anywhere since it was last followed; the steps before it wait (see ApplyOrder).
 local function NearestStep(steps, start)
     local at, best = FirstLeft(steps), math.huge
     if not start then return at end
-    -- Still where the route is: it goes on from there, and the order below sorts out what's around you.
+    -- The step you were on when you logged out, while you're still around it: finished quests and
+    -- unfinished ones alike, it stays yours.
+    local saved = ns.char.onStep
+    for i, s in ipairs(steps) do
+        if saved and StepKey(s) == saved and Orderable(s) and not E:StepDone(s) and not Waits(s) then
+            local q = Q(s[2])
+            local yards = Yards(start, StepSpot(s))
+            if yards and yards <= RUN_SPEED * 60
+                and (s[1] ~= "T" or P:ReadyToTurnIn(s[2]) or not (q and q.o)) then
+                return i
+            end
+            break
+        end
+    end
+    -- Still where the route is: no step has to come first, the plan sorts out what's around you.
     local ahead = at and Yards(start, StepSpot(steps[at]))
-    if ahead and ahead <= RUN_SPEED * 60 then return at end
+    if ahead and ahead <= RUN_SPEED * 60 then return nil end
     for i, s in ipairs(steps) do
         if Orderable(s) and not E:StepDone(s) and not Waits(s) then
             local id, kind = s[2], s[1]
@@ -1755,6 +2056,64 @@ local function NearestStep(steps, start)
 end
 
 -- Works out the order of the next steps (see above). Returns the new order, or nil.
+-- What's at the place you've reached is done on that visit. Doing a step where you already stand can
+-- never add a yard, and leaving and coming back always does, so this holds for every plan, whatever
+-- the search found: anything at the same place (BESIDE_YARDS) moves up to the first visit, as long as
+-- what it needs comes first. The first step stays first.
+function E.Gather(list, spots, seq)
+    local out, placed, left = {}, {}, {}
+    for i, j in ipairs(seq) do left[i] = j end
+    local function Free(j)
+        for i = 1, j - 1 do
+            if not placed[i] and (E.AfterStep(list[i], list[j]) or Gated(list[i], list[j])) then return false end
+        end
+        return true
+    end
+    while #left > 0 do
+        local here = spots[left[1]]
+        local moved = true
+        while moved do
+            moved = false
+            for i, j in ipairs(left) do
+                local yards = i == 1 and 0 or Yards(here, spots[j])
+                if yards and yards <= E.BESIDE_YARDS and Free(j) then
+                    out[#out + 1], placed[j] = j, true
+                    table.remove(left, i)
+                    moved = true
+                    break
+                end
+            end
+        end
+        -- (A first step that has to wait for something: what it waits for goes first.)
+        if left[1] and spots[left[1]] == here then
+            local j = table.remove(left, 1)
+            out[#out + 1], placed[j] = j, true
+        end
+    end
+    -- Before a long walk away, what's still to do close by: leaving it means coming all the way back.
+    wipe(placed)
+    local i = 1
+    while i < #out do
+        placed[out[i]] = true
+        local at = spots[out[i]]
+        local leg = Yards(at, spots[out[i + 1]])
+        if leg and leg > E.LEAVE_YARDS then
+            for k = i + 2, #out do
+                local j = out[k]
+                local yards = Yards(at, spots[j])
+                if yards and yards <= E.CLOSE_YARDS and Free(j) then
+                    table.remove(out, k)
+                    table.insert(out, i + 1, j)
+                    break
+                end
+            end
+        end
+        i = i + 1
+    end
+    return out
+end
+E.LEAVE_YARDS, E.CLOSE_YARDS = 400, 300 -- a walk this long leaves what's this close behind
+
 local function PlanOrder(section, steps, away)
     local c, n, w = ns.WorldMap.Player()
     local start = c and { c, n, w } or nil
@@ -1782,6 +2141,10 @@ local function PlanOrder(section, steps, away)
     local guideDelay = Delay(list, spots, guideSeq, start)
     local weights = 0
     for _, s in ipairs(list) do weights = weights + StepWeight(s) end
+    -- The one search has no step held first: the step you're on is weighed against what it finds, below.
+    -- (A dungeon's route starts where it starts.)
+    local held = opening
+    if held and not section.instance then opening = nil end
     local seq, delay = Quickest(list, spots, start, opening)
     -- (A new order has to bring the XP in MIN_GAIN yards sooner, on average.)
     if not seq or (not opening and guideDelay - delay < MIN_GAIN * weights) then seq, delay = guideSeq, guideDelay end
@@ -1795,10 +2158,37 @@ local function PlanOrder(section, steps, away)
         local yards = free and Yards(start, spots[j])
         if yards and (not nearestYards or yards < nearestYards) then nearest, nearestYards = j, yards end
     end
-    if nearest and seq[1] ~= nearest and not opening then
+    if nearest and seq[1] ~= nearest and not opening and not held then
         local beside, besideDelay = Quickest(list, spots, start, nearest)
         if beside and besideDelay - delay < MIN_GAIN * weights then seq = beside end
     end
+    if not section.instance then
+        Tuck(list, spots, seq, start, opening)
+        -- The step you're on stays first, unless that walks more than SAVE_YARDS further than this route.
+        -- The same route with it first, against the route: what it costs to do it now and not when
+        -- the route comes to it.
+        if held then
+            local first = { held }
+            for _, j in ipairs(seq) do
+                if j ~= held then first[#first + 1] = j end
+            end
+            local legal = true
+            for i = 2, #first do
+                if After(list[first[i]], list[held]) and list[first[i]][2] ~= list[held][2] then legal = false end
+            end
+            local saves = legal and Walk(spots, first, start) - Walk(spots, seq, start) or 0
+            E.lastBump = ("%s: %d yd saved by moving it"):format(StepKey(list[held]), saves)
+            if saves > SAVE_YARDS then
+                ns:Print(("Moved %s later: saves %d yd."):format(E:QuestName(list[held][2]), saves))
+            else
+                Tuck(list, spots, first, start, held)
+                seq, opening = first, held
+            end
+        end
+    end
+    -- (Nothing held it, or it moved: the step you're on is whatever comes first now.)
+    if not opening then holdKey, holdStep = nil, nil end
+    seq = E.Gather(list, spots, seq)
     local yards = Walk(spots, seq, start)
     local keys, moved = {}, false
     for i, j in ipairs(seq) do
@@ -1881,7 +2271,7 @@ end
 local function StepMap(s)
     local kind = s[1]
     local q = kind ~= "G" and kind ~= "Z" and kind ~= "I" and Q(s[2])
-    local p = q and ((kind == "A" and q.a) or (kind == "T" and q.t) or (kind == "O" and q.o and q.o[1])
+    local p = q and ((kind == "A" and q.a) or (kind == "T" and q.t) or (kind == "O" and E.ObjectivePoint(s, q))
         or (kind == "L" and q.d and q.d[1]))
     return p and p[1] or nil
 end
@@ -1925,6 +2315,7 @@ end
 -- a quest in often opens the next one at the same person.) Stops at a dungeon's run: hand-ins after
 -- it stay after it. The step you were on carries on after them.
 local BESIDE_YARDS = 75
+E.BESIDE_YARDS = BESIDE_YARDS
 local inArea = {} -- step key -> true: up front only because it's close (it doesn't become the step you're on)
 
 local function BesideYou(steps)
@@ -1933,14 +2324,29 @@ local function BesideYou(steps)
     if not c then return steps end
     local at, first, rest = { c, n, w }, {}, {}
     local past = false
+    -- Where you're headed. A hand-in that's ready beside it is done there first, even when the plan has
+    -- it further on (you finished the quest sooner than it expected): it pays, and it's on your way.
+    local stop
+    for _, s in ipairs(steps) do
+        if s[1] == "I" then break end
+        if Orderable(s) and not E:StepDone(s) and not Waits(s) then
+            stop = StepSpot(s)
+            break
+        end
+    end
     for _, s in ipairs(steps) do
         if s[1] == "I" then past = true end
         local here = false
-        if not past and (s[1] == "A" or s[1] == "T") and not s.later and not E:StepDone(s) and not Waits(s) then
+        if not past and (s[1] == "A" or s[1] == "T") and not (s.later or s.last) and not E:StepDone(s) and not Waits(s) then
             local q = Q(s[2])
             local doable = s[1] == "A" or (P:InLog(s[2]) and (P:ReadyToTurnIn(s[2]) or not (q and q.o)))
-            local yards = doable and Yards(at, StepSpot(s))
+            local spot = doable and StepSpot(s)
+            local yards = spot and Yards(at, spot)
             here = yards and yards <= BESIDE_YARDS
+            if not here and s[1] == "T" and spot and stop then
+                local fromStop = Yards(stop, spot)
+                here = fromStop and fromStop <= BESIDE_YARDS
+            end
         end
         if here then
             first[#first + 1] = s
@@ -1966,10 +2372,31 @@ local function BesideYou(steps)
             break
         end
     end
-    if held and not relocate then first[#first + 1] = table.remove(rest, held) end
-    if #first == 0 then return rest end
-    for _, s in ipairs(rest) do first[#first + 1] = s end
-    return first
+    if not (held and not relocate) then
+        if #first == 0 then return rest end
+        for _, s in ipairs(rest) do first[#first + 1] = s end
+        return first
+    end
+    -- What's beside you comes before the step you're on only if that saves real walking: going to the
+    -- step first and back has to be over SAVE_YARDS longer than taking this first. Else straight after.
+    local mine = table.remove(rest, held)
+    local spot = StepSpot(mine)
+    local out, later = {}, {}
+    for _, s in ipairs(first) do
+        local here = StepSpot(s)
+        local there, back = spot and Yards(at, spot), spot and here and Yards(spot, here)
+        local near = here and Yards(at, here)
+        if there and back and near and there + back - (near + back) > SAVE_YARDS then
+            out[#out + 1] = s
+        else
+            later[#later + 1] = s
+            inArea[StepKey(s)] = nil
+        end
+    end
+    out[#out + 1] = mine
+    for _, s in ipairs(later) do out[#out + 1] = s end
+    for _, s in ipairs(rest) do out[#out + 1] = s end
+    return out
 end
 
 local function Ordered(section, steps)
@@ -2022,7 +2449,7 @@ local MIN_LEG = 150  -- yards: a walk shorter than this has no "on the way"
 local group
 
 local function OpenObjective(s)
-    local q = s[1] == "O" and not (s.before or s.inside or s.later) and Q(s[2])
+    local q = s[1] == "O" and not (s.before or s.inside or s.later or E:MovedOn(s)) and Q(s[2])
     return q and q.o and P:InLog(s[2]) and not E:StepDone(s) or false
 end
 
@@ -2150,6 +2577,235 @@ end
 -- About how many minutes of walking the ordered steps take (from where you stood), or nil.
 function E:OrderMinutes() return order and order.minutes end
 
+do -- (in a block: this file is at Lua's limit of 200 locals)
+-- ---------------------------------------------------------------------------------------------
+-- What a quest asks, one action at a time (q.g, from tools\FieldGuide\build_guides.py)
+-- ---------------------------------------------------------------------------------------------
+
+-- Where a "Do" step is: its own objective's spot when the quest is split into stops (see SplitParts).
+function E.ObjectivePoint(step, q)
+    if step.part then return q.g[step.part].p[1] end
+    return q.o and q.o[1]
+end
+
+-- The objectives done at the same place as number i: one stop for all of them.
+local function SamePlace(q, i, j)
+    local a, b = q.g[i].p, q.g[j].p
+    if i == j then return true end
+    if not (a and b) then return false end
+    return a[1][1] == b[1][1] and a[1][2] == b[1][2] and a[1][3] == b[1][3]
+end
+
+function E:ActionDone(id, i)
+    local q = Q(id)
+    for j, a in ipairs(q.g) do
+        if SamePlace(q, i, j) and a.n and (P:Objective(id, a.n)) ~= true then return false end
+    end
+    return true
+end
+
+local CALLOUT = { use = "|cffffd100%s|r", keep = "|cffff9933%s|r" }
+
+-- The actions still to do, in order, with your progress from the quest log ("Kill 8 Prowlers (3/8)"),
+-- and an item to use or someone to keep alive in colour. With part: that stop's actions, and those
+-- with no place of their own go with the first stop.
+function E:ActionsLeft(id, part)
+    local out = {}
+    local q = Q(id)
+    for i, a in ipairs(q and q.g or {}) do
+        local mine = not part or SamePlace(q, part, i) or (not a.p and part == q.firstPart)
+        if mine then
+            local done, have, need = P:Objective(id, a.n)
+            if not done then
+                local text = a.l
+                if need and need > 1 then text = ("%s (%d/%d)"):format(text, have or 0, need) end
+                if CALLOUT[a.k] then text = CALLOUT[a.k]:format(text) end
+                out[#out + 1] = { text = text, action = a }
+            end
+        end
+    end
+    return out
+end
+
+-- A quest whose objectives are far apart (q.sp) is a stop for each: the route picks up each one when
+-- it goes by, instead of doing them all in one trip. Before a dungeon or inside one, it stays whole.
+function E.SplitParts(steps)
+    local out = {}
+    for _, s in ipairs(steps) do
+        local q = s[1] == "O" and not (s.before or s.inside or s.part or s.later) and Q(s[2])
+        if q and q.sp and q.g then
+            for i, a in ipairs(q.g) do
+                local lead = a.p ~= nil
+                for j = 1, i - 1 do
+                    if q.g[j].p and SamePlace(q, i, j) then lead = false end
+                end
+                if lead then
+                    q.firstPart = q.firstPart or i
+                    local copy = {}
+                    for k, v in pairs(s) do copy[k] = v end
+                    copy.part = i
+                    out[#out + 1] = copy
+                end
+            end
+        else
+            out[#out + 1] = s
+        end
+    end
+    return out
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Hunting areas (q.g[i].z) and farm routes
+-- ---------------------------------------------------------------------------------------------
+-- Several quests' objectives share an area (tools\FieldGuide\quest_areas.py). A short while after you
+-- walk in the arrow moves on: mobs here may be dead, and what's left comes up on the way. What you're
+-- still after stays listed under the arrow, and its hand-in waits. When there's nothing else close by,
+-- the next step is the farm: a walk through the spots of everything you're still hunting, round and
+-- round (Waypoint starts its points over), until it's done. A place with few spawns (no z) isn't
+-- moved on from: the arrow stays on it.
+local MOVE_ON_SECONDS = 5
+local AREA_YARDS = 90 -- yards from the center of an area that count as being in it
+local FARM_NEAR = 500 -- yards: anything further than this from the hunt, and you farm first
+
+local function InArea(step)
+    local q = step[1] == "O" and not (step.before or step.inside) and Q(step[2])
+    if not (q and q.g and P:InLog(step[2])) then return false end
+    for i, a in ipairs(q.g) do
+        if a.z and (not step.part or SamePlace(q, step.part, i)) then return true end
+    end
+    return false
+end
+
+function E:MovedOn(s)
+    local hunt = s[1] == "O" and self.hunting[s[2]]
+    return hunt and hunt[StepKey(s)] and not s.farm and not self:StepDone(s) or false
+end
+
+-- What you can get done right where you are: every objective of the quests in your log with a spawn
+-- close to you, nearest first. Not only the step you're on: this is what's worth stopping for.
+local NEAR_YARDS = 150
+function E:NearbyActions()
+    local out, seen = {}, {}
+    local c, n, w = ns.WorldMap.Player()
+    if not c then return out end
+    local me = { c, n, w }
+    for _, s in ipairs(self.steps) do
+        if s[1] == "O" and not seen[s[2]] and not s.later and P:InLog(s[2]) then
+            seen[s[2]] = true
+            for _, left in ipairs(self:ActionsLeft(s[2])) do
+                local best
+                for _, p in ipairs(left.action.w or left.action.p or {}) do
+                    local spot = World(p)
+                    local yards = spot and spot[1] == c and Yards(me, spot)
+                    if yards and yards <= NEAR_YARDS and (not best or yards < best) then best = yards end
+                end
+                if best then out[#out + 1] = { text = left.text, title = self:QuestName(s[2]), yards = best } end
+            end
+        end
+    end
+    table.sort(out, function(a, b) return a.yards < b.yards end)
+    return out
+end
+
+-- Every spot of what you're still hunting.
+function E:FarmSpots()
+    local spots, seen = {}, {}
+    for id in pairs(self.hunting) do
+        local q = Q(id)
+        for i, a in ipairs(q and q.g or {}) do
+            if a.p and not (a.n and (P:Objective(id, a.n)) == true) then
+                for _, p in ipairs(a.p) do
+                    local key = p[1] .. ":" .. p[2] .. ":" .. p[3]
+                    if not seen[key] then
+                        seen[key] = true
+                        spots[#spots + 1] = p
+                    end
+                end
+            end
+        end
+    end
+    return spots
+end
+
+-- Quests finished, or no longer in the log, stop being hunted.
+function E:TidyHunt()
+    local changed = false
+    for id in pairs(self.hunting) do
+        if P:ReadyToTurnIn(id) or not P:InLog(id) then
+            self.hunting[id] = nil
+            changed = true
+        end
+    end
+    return changed
+end
+
+function E:CheckHunt()
+    if self:TidyHunt() then
+        self.farmStep = nil
+        self:Invalidate()
+    end
+    local step = self.current and self.steps[self.current]
+    local c, n, w = ns.WorldMap.Player()
+    -- The hunts you're standing in: the step's own, or those of a task of several ("on the way").
+    local here = {}
+    if step and not step.farm and c then
+        for _, s in ipairs(step.with or { step.plain or step }) do
+            local spot = InArea(s) and not self:StepDone(s) and StepSpot(s)
+            local yards = spot and Yards({ c, n, w }, spot)
+            if yards and yards <= AREA_YARDS then here[#here + 1] = s end
+        end
+    end
+    if #here == 0 then
+        self.enteredAt, self.enteredKey = nil, nil
+        return
+    end
+    local key = StepKey(here[1])
+    if self.enteredKey ~= key then
+        self.enteredKey, self.enteredAt = key, GetTime()
+    elseif GetTime() - self.enteredAt >= MOVE_ON_SECONDS then
+        for _, s in ipairs(here) do
+            self.hunting[s[2]] = self.hunting[s[2]] or {}
+            self.hunting[s[2]][StepKey(s)] = true
+        end
+        self.enteredAt, self.enteredKey = nil, nil
+        self:ReleaseHold()
+        self:Invalidate()
+        self.secondaryDirty = true
+        ns:Changed()
+    end
+end
+
+-- With nothing close by to do, the hunt comes first: a step that farms what's left.
+function E:FarmFirst(index)
+    if not next(self.hunting) then return index end
+    local nextStep = index and self.steps[index]
+    if nextStep and nextStep.with then return index end -- the task isn't over: farming is for its end
+    local spots = self:FarmSpots()
+    if #spots == 0 then return index end
+    local near = false
+    if nextStep and nextStep[1] ~= "Z" then
+        local there = StepSpot(nextStep.plain or nextStep)
+        for _, p in ipairs(spots) do
+            local yards = Yards(there, World(p))
+            if yards and yards <= FARM_NEAR then near = true end
+        end
+    end
+    if near then return index end
+    for i, s in ipairs(self.steps) do
+        local hunt = s[1] == "O" and self.hunting[s[2]]
+        if hunt and hunt[StepKey(s)] and not self:StepDone(s) then
+            local copy = {}
+            for k, v in pairs(s) do copy[k] = v end
+            copy.plain, copy.farm = s, true
+            self.steps[i] = copy
+            return i
+        end
+    end
+    return index
+end
+
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Describing a step
 -- ---------------------------------------------------------------------------------------------
@@ -2203,15 +2859,20 @@ function E:Describe(step)
     -- A task: everything that goes with this step. The arrow leads to the place it's on the way to,
     -- or, finishing them, to any of their spots.
     if step.with then
-        local names, points = {}, {}
+        local names, points, named = {}, {}, {}
         for _, s in ipairs(step.with) do
-            names[#names + 1] = E:QuestName(s[2])
-            for _, o in ipairs(Q(s[2]).o or {}) do points[#points + 1] = { o[1], o[2] / 100, o[3] / 100 } end
+            if not named[s[2]] then
+                named[s[2]] = true
+                names[#names + 1] = E:QuestName(s[2])
+            end
+            for _, o in ipairs(s.part and Q(s[2]).g[s.part].p or Q(s[2]).o or {}) do
+                points[#points + 1] = { o[1], o[2] / 100, o[3] / 100 }
+            end
         end
         local list = table.concat(names, ", ")
         if step.going then
             local verb, name, detail, spot = E:Describe(step.plain)
-            return "On the way", list, ("Focus on these. You're heading to: %s %s. %s"):format(strlower(verb), name, detail), spot
+            return "On the way", list, ("You're heading to: %s %s. %s"):format(strlower(verb), name, detail), spot
         end
         return "Finish", list, "Still to do from your way here.", points
     end
@@ -2273,8 +2934,11 @@ function E:Describe(step)
         return "Pick up", name, d, q.a and { { q.a[1], q.a[2] / 100, q.a[3] / 100 } }
     elseif kind == "O" then
         local points = {}
-        for _, o in ipairs(q.o or {}) do points[#points + 1] = { o[1], o[2] / 100, o[3] / 100 } end
-        local detail = q.ot or ""
+        for _, o in ipairs(step.farm and self:FarmSpots() or step.part and q.g[step.part].p or q.o or {}) do
+            points[#points + 1] = { o[1], o[2] / 100, o[3] / 100 }
+        end
+        local left = self:ActionsLeft(id, step.part)
+        local detail = left[1] and left[1].text or q.ot or ""
         if step.before and q.o then
             local inst = ns.Instance:Get(step.inst)
             local e, o = inst and inst.entrance, q.o[1]
@@ -2300,6 +2964,7 @@ local stoppedKey -- the step you told the arrow to stop pointing at (right-click
 
 -- Sends the step to Waypoint's arrow. False when it has nowhere to point.
 local lastPlan -- the plan last handed to Waypoint, joined
+local lastStops -- the stops after it last handed over (NextStops), joined
 
 -- The guide's plan for the arrow: the keys of the current step and the next unfinished ones (up to
 -- 5). Waypoint compares it with the target it holds to know whether you changed the arrow, and
@@ -2325,10 +2990,170 @@ function E:Plan()
     return out
 end
 
+-- The places you'll go after the step you're on, for Waypoint to draw on the world map: steps at one
+-- place are one stop. Up to AHEAD_STOPS; a dungeon's run ends them, nothing's planned past it.
+local AHEAD_STOPS = 5
+local SAME_STOP = 75 -- yards (as BESIDE_YARDS: what the guide calls one place)
+
+-- A step in words, for hovering the line on the map: what to do, where, and what it's for.
+local function StepInfo(s)
+    local verb, name, detail = E:Describe(s)
+    local q = s[2] and Q(s[2])
+    local why
+    if q and s[1] == "A" then
+        local giver = q.t and type(q.t[4]) == "string" and q.t[4] ~= "?" and q.t[4]
+        why = ("Worth about %d XP%s."):format(QuestEarns(q, P:Level()), giver and (", handed in to " .. giver) or "")
+    elseif q and s[1] == "O" then
+        why = q.ot
+    elseif q and s[1] == "T" then
+        why = ("Hand in for about %d XP."):format(QuestEarns(q, P:Level()))
+    end
+    return { title = verb .. ": " .. name, detail = detail, why = why }
+end
+
+local function NextStops()
+    local out, last, here_info = {}, nil, {}
+    local step = E.current and E.steps[E.current]
+    local here = step and step[1] ~= "Z" and step[1] ~= "G" and StepSpot(step) or nil
+    last = here
+    for i = (E.current or 0) + 1, #E.steps do
+        if #out >= AHEAD_STOPS then break end
+        local s = E.steps[i]
+        if s[1] == "I" then break end
+        if s[1] ~= "Z" and s[1] ~= "G" and not s.later and not E:StepDone(s) and not Waits(s) then
+            local q = Q(s[2])
+            local p = q and ((s[1] == "A" and q.a) or (s[1] == "T" and q.t) or (s[1] == "O" and E.ObjectivePoint(s, q))
+                or (s[1] == "L" and q.d and q.d[1]))
+            local spot = p and World(p)
+            if spot then
+                local yards = last and Yards(last, spot)
+                if not (yards and yards <= SAME_STOP) then
+                    out[#out + 1] = { mapID = p[1], x = p[2] / 100, y = p[3] / 100, info = {} }
+                    last = spot
+                end
+                local stop = out[#out]
+                table.insert(stop and stop.info or here_info, StepInfo(s))
+            end
+        end
+    end
+    return out, here_info
+end
+
+local function StopsKey(stops)
+    local parts = {}
+    for i, p in ipairs(stops) do parts[i] = p.mapID .. ":" .. p.x .. ":" .. p.y end
+    return table.concat(parts, "|")
+end
+
+-- What else you can get done on the walk to the current step: quests you have, or an item that starts
+-- one, with a place of theirs within ON_THE_WAY yards of the straight line there. Waypoint lists them
+-- under the arrow ("keep an eye out"). Up to MAX_SECONDARY, in route order; a quest once.
+do -- (in a block: this file is at Lua's limit of 200 locals)
+local ON_THE_WAY = 60
+local MAX_SECONDARY = 6
+
+local function FromLine(p, a, b)
+    local dn, dw = b[2] - a[2], b[3] - a[3]
+    local len = dn * dn + dw * dw
+    local t = len > 0 and math.max(0, math.min(1, ((p[2] - a[2]) * dn + (p[3] - a[3]) * dw) / len)) or 0
+    local n, w = a[2] + t * dn - p[2], a[3] + t * dw - p[3]
+    return math.sqrt(n * n + w * w)
+end
+
+function E:SecondaryTasks()
+    local out = {}
+    local step = self.current and self.steps[self.current]
+    if not step or ns.char.paused then return out end
+    -- What you can do right here comes first, wherever the arrow is pointing.
+    local listed = {}
+    for _, t in ipairs(self:NearbyActions()) do
+        if #out < MAX_SECONDARY then
+            out[#out + 1], listed[t.text] = t, true
+        end
+    end
+    -- The rest of what the step you're on asks: the first of it is on the arrow.
+    if step[1] == "O" then
+        local left = self:ActionsLeft(step[2], step.part)
+        for i = 2, #left do
+            if #out < MAX_SECONDARY and not listed[left[i].text] then
+                out[#out + 1], listed[left[i].text] = { text = left[i].text, title = self:QuestName(step[2]) }, true
+            end
+        end
+    end
+    -- A task of several: everything it's after.
+    for _, s in ipairs(step.with or {}) do
+        for _, a in ipairs(self:ActionsLeft(s[2], s.part)) do
+            if #out < MAX_SECONDARY and not listed[a.text] then
+                out[#out + 1], listed[a.text] = { text = a.text, title = self:QuestName(s[2]) }, true
+            end
+        end
+    end
+    -- What you're still hunting from the areas you've moved on from.
+    for id in pairs(self.hunting) do
+        if id ~= step[2] then
+            for _, a in ipairs(self:ActionsLeft(id)) do
+                if #out < MAX_SECONDARY and not listed[a.text] then
+                    out[#out + 1], listed[a.text] = { text = a.text, title = self:QuestName(id) }, true
+                end
+            end
+        end
+    end
+    local target = step
+    if step[1] == "Z" then
+        for i = self.current + 1, #self.steps do
+            if self.steps[i][1] ~= "Z" and self.steps[i][1] ~= "G" then target = self.steps[i]; break end
+        end
+    end
+    local c, n, w = ns.WorldMap.Player()
+    local to = StepSpot(target)
+    if not (c and to) or to[1] ~= c then return out end
+    local from, seen = { c, n, w }, { [target[2]] = true }
+    for _, s in ipairs(self.steps) do
+        if #out >= MAX_SECONDARY then break end
+        local q = (s[1] == "O" or s[1] == "L") and not s.later and not s.last and not seen[s[2]] and Q(s[2])
+        if q and (s[1] == "L" or P:InLog(s[2])) and not self:StepDone(s) and not Waits(s) then
+            for _, p in ipairs((s[1] == "O" and q.o) or q.d or {}) do
+                local spot = World(p)
+                if spot and spot[1] == c and FromLine(spot, from, to) <= ON_THE_WAY then
+                    seen[s[2]] = true
+                    -- One line an objective, the same lines as everywhere else; the quest's own text
+                    -- only when it has none, or it says the same thing twice.
+                    local left = self:ActionsLeft(s[2], s.part)
+                    if #left == 0 and not q.g then left = { { text = q.ot or q.n } } end
+                    for _, a in ipairs(left) do
+                        if #out < MAX_SECONDARY and not listed[a.text] then
+                            out[#out + 1], listed[a.text] = { text = a.text, title = self:QuestName(s[2]) }, true
+                        end
+                    end
+                    break
+                end
+            end
+        end
+    end
+    return out
+end
+
+local lastSecondary
+function E:SendSecondary(clear)
+    if not (Waypoint and Waypoint.SetSecondary) then return end
+    local tasks = clear and {} or E:SecondaryTasks()
+    local parts = {}
+    for i, t in ipairs(tasks) do parts[i] = t.text end
+    local key = table.concat(parts, "|")
+    if key == lastSecondary then return end
+    lastSecondary = key
+    Waypoint:SetSecondary("FieldGuide", tasks)
+end
+
+-- What's on the way changes with what you finish, between one step and the next.
+ns:On("QUEST_LOG_UPDATE", function() E.secondaryDirty = true end)
+end
+
 local function PointArrow(step)
     if not (Waypoint and Waypoint.Set) then return false end
     if not step or ns.char.paused then
         Waypoint:Clear("FieldGuide")
+        E:SendSecondary(true)
         return false
     end
     -- A zone change aims at where the next step is.
@@ -2341,8 +3166,10 @@ local function PointArrow(step)
     local verb, name, detail, points = E:Describe(target)
     if not points then
         Waypoint:Clear("FieldGuide")
+        E:SendSecondary(true)
         return false
     end
+    if step.farm then verb, name = "Farm", "what you're still after" end
     local wp = { key = StepKey(step), title = verb .. ": " .. name, subtitle = detail, arrive = target[1] == "O" and 30 or 12,
         color = ns.char.instance and "purple" or "green", -- a dungeon's route, or the leveling guide
         onClick = function() ns.db.shown = true; ns:Changed() end, points = {} }
@@ -2361,7 +3188,14 @@ local function PointArrow(step)
     -- What Waypoint compares against to tell whether you changed the arrow (see Plan).
     wp.plan = E:Plan()
     lastPlan = table.concat(wp.plan, "|")
+    local hereInfo
+    wp.ahead, hereInfo = NextStops()
+    lastStops = StopsKey(wp.ahead)
+    -- What the line up to here is for: this step, and the others done at the same place.
+    wp.info = { StepInfo(target) }
+    for _, line in ipairs(hereInfo) do wp.info[#wp.info + 1] = line end
     for _, p in ipairs(points) do wp.points[#wp.points + 1] = { mapID = p[1], x = p[2], y = p[3] } end
+    E:SendSecondary()
     return Waypoint:Set("FieldGuide", wp) and true or false
 end
 
@@ -2474,15 +3308,118 @@ local function OnWaypoint(event, entry)
     end
 end
 
+-- Just after login the game may not have your quest log yet, and a finished quest reads as unfinished,
+-- so its hand-in is left out of the plan. When the log is in, the plan is made again.
+local function LogIsIn()
+    if logReady then return end
+    logReady = true
+    orderDirty, pickDirty, relocate, holdKey = true, true, true, nil
+    ns:Changed()
+end
+ns:On("QUEST_LOG_UPDATE", LogIsIn)
+
+-- After a run of hand-ins and pick-ups the route is worked out again, to see that it's still the best
+-- one: what you've done and the level you've reached change it. Not in the middle of the run, while the
+-- quest log is still changing, but when it's over: LOG_CHANGES changes at least, none for QUIET_SECONDS,
+-- no quest window open, and the step you're on isn't one more pick-up or hand-in right here. The step
+-- you're on stays, unless a route without it first saves real walking (PlanOrder).
+local LOG_CHANGES = 2
+local QUIET_SECONDS = 3
+local logChanges, lastChange = 0, 0
+local function LogChanged()
+    logChanges, lastChange = logChanges + 1, GetTime()
+end
+ns:On("QUEST_TURNED_IN", LogChanged)
+-- A quest whose next part is offered right where you handed it in: the list has to have it now, or
+-- you walk off and come back for it. Every other hand-in leaves the list as it is.
+ns:On("QUEST_TURNED_IN", function(id)
+    local done = Q(id)
+    local at = done and done.t and World(done.t)
+    if not at then return end
+    for _, q in pairs(ns.Quests) do
+        local spot = q.pre and q.a and World(q.a)
+        if spot and Yards(at, spot) and Yards(at, spot) <= BESIDE_YARDS then
+            for _, p in ipairs(q.pre) do
+                if p == id then pickDirty, orderDirty = true, true; return end
+            end
+        end
+    end
+end)
+ns:On("QUEST_ACCEPTED", LogChanged)
+
+-- You took a quest you'd skipped: that's a change of mind, so it's back on the list while it's still
+-- within RANGE levels of yours (Zone Clear takes the low ones too, as it takes every quest). Otherwise
+-- it stays yours to do on your own. The one pick-up that works the route out again by itself.
+local function QuestTaken(a, b)
+    local id = b or a
+    P = P or ns.Progress
+    local deferred, ignored = ns.char.deferred[id], ns.char.ignored[id]
+    if not (deferred or ignored) then return end
+    local q, level = Q(id), P:Level()
+    if ignored then
+        local over = (q and q.l or level) - level
+        if over > RANGE or (over < -RANGE and not Clearing()) then return end
+    end
+    ns.char.deferred[id], ns.char.ignored[id] = nil, nil
+    pickDirty, orderDirty = true, true
+    if ignored then ns:Print(("%s is back on your list."):format(E:QuestName(id))) end
+    ns:Changed()
+end
+ns:On("QUEST_ACCEPTED", QuestTaken)
+
+-- The step you're on is a pick-up or a hand-in you can do where you stand.
+local function AtQuestGiver()
+    local step = E.current and E.steps[E.current]
+    if not step or (step[1] ~= "A" and step[1] ~= "T") then return false end
+    local q = Q(step[2])
+    if step[1] == "T" and not (P:ReadyToTurnIn(step[2]) or not (q and q.o)) then return false end
+    local c, n, w = ns.WorldMap.Player()
+    local yards = c and Yards({ c, n, w }, StepSpot(step))
+    return yards ~= nil and yards <= BESIDE_YARDS
+end
+
+local function RunOver()
+    if logChanges < LOG_CHANGES or GetTime() - lastChange < QUIET_SECONDS then return false end
+    for _, frame in ipairs({ QuestFrame or false, GossipFrame or false }) do
+        if frame and frame:IsShown() then return false end
+    end
+    return not AtQuestGiver()
+end
+
+local function CheckRun()
+    if not (ns.db and RunOver()) then return end
+    logChanges = 0
+    orderDirty = true
+    ns:Changed()
+end
+
 ns:On("PLAYER_LOGIN", function()
     if Waypoint and Waypoint.RegisterCallback then Waypoint:RegisterCallback("FieldGuide", OnWaypoint) end
     PlayButton()
     Own()
+    C_Timer.After(5, LogIsIn) -- (should the game have nothing to update)
     C_Timer.NewTicker(2, function() if ns.db then E:CheckArrow() end end)
     C_Timer.NewTicker(1, function() if ns.db then E:CheckCourse(1) end end)
+    C_Timer.NewTicker(1, CheckRun)
 end)
 
 function E:Update()
+    -- (What's near you changes as you walk.)
+    if GetTime() - (self.nearAt or 0) >= 2 then
+        self.nearAt = GetTime()
+        self.secondaryDirty = true
+    end
+    if self.secondaryDirty then
+        self.secondaryDirty = false
+        self:SendSecondary()
+        -- (A farm route loses the spots of what you've finished; left alone otherwise, so it keeps going round.)
+        local farm = self.current and self.steps[self.current]
+        if farm and farm.farm and #self:FarmSpots() ~= self.farmSpots then
+            self.farmSpots = #self:FarmSpots()
+            PointArrow(farm)
+        end
+    end
+    self:CheckHunt()
     if not ns.db then return end
     P = P or ns.Progress
     local guide = self:Guide()
@@ -2547,6 +3484,7 @@ function E:Update()
     self.steps = Ordered(section, self.steps)
     NumberParts(self.steps)
     self.current = section and Consolidate(section, self.steps, FirstLeft(self.steps)) or FirstLeft(self.steps)
+    self.current = self:FarmFirst(self.current)
     if stay and not stay.asked then
         local left = false
         for _, s in ipairs(self.steps) do
@@ -2587,6 +3525,8 @@ function E:Update()
         C_Timer.After(0.5, function() ns.Instance:AskAgain(inst, step.wing or wings[#wings]) end)
     end
     local key = step and StepKey(step)
+    -- (Not before the quest log is in: a plan made without it isn't where you left off.)
+    if logReady then ns.char.onStep = key end
     -- (A task doesn't take over: the step you were on stays yours underneath it, and comes back after.)
     if not (key and inArea[key]) and not (step and step.with) then holdKey, holdStep = key, step end
     if not (step and step[1] == "Z") then
@@ -2614,7 +3554,7 @@ function E:Update()
         if key == lastKey then PointArrow(step) end
     end
     if key == lastKey and key ~= stoppedKey and not ns.char.paused and lastPlan
-        and table.concat(self:Plan(), "|") ~= lastPlan then
+        and (table.concat(self:Plan(), "|") ~= lastPlan or StopsKey(NextStops()) ~= lastStops) then
         local mine = Waypoint and Waypoint.Get and Waypoint:Get("FieldGuide")
         if mine and mine.key == key then PointArrow(step) end
     end
@@ -2718,7 +3658,7 @@ local function NearestObjective(step, at)
     local best
     for _, s in ipairs(step.with or { step }) do
         local q = s[1] == "O" and Q(s[2])
-        for _, o in ipairs(q and q.o or {}) do
+        for _, o in ipairs(q and (s.part and q.g[s.part].p or q.o) or {}) do
             local yards = Yards(at, World(o))
             if yards and (not best or yards < best) then best = yards end
         end
@@ -2821,6 +3761,14 @@ function E:SkipCurrent()
     -- A quest goes whole (pick up, objectives, hand in): Field Guide doesn't suggest it again, nor
     -- what needs it first. Yours to do on your own if you want it later (/fg unskip undoes it).
     if step[1] ~= "G" and step[1] ~= "Z" and step[1] ~= "I" then
+        -- Zone Clear means every quest: the first skip only puts it off until the rest are done.
+        if Clearing() and not ns.char.instance and not ns.char.deferred[step[2]] then
+            ns.char.deferred[step[2]] = true
+            pickDirty, orderDirty, holdKey = true, true, nil
+            ns:Print(("%s moved to the end of the list. Skip it again to drop it."):format(self:QuestName(step[2])))
+            return ns:Changed()
+        end
+        ns.char.deferred[step[2]] = nil
         ns.char.ignored[step[2]] = true
         pickDirty, orderDirty = true, true
         ns:Print(("Skipped %s%s. Field Guide won't suggest it again (/fg unskip brings it back)."):format(

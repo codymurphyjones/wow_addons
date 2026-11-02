@@ -24,7 +24,7 @@ local MINE = { 1, 0.79, 0.3 }
 local THEIRS = { 0.4, 0.75, 1 }
 local DOT = "Interface\\COMMON\\Indicator-Gray"
 local GLOW = "Interface\\Cooldown\\star4"
-local TARGET_ICON = "Interface\\GossipFrame\\AvailableQuestIcon"
+local TARGET_ICON = "Interface\\AddOns\\Waypoint\\Media\\Target" -- a place, not a quest (make_target_icon.py)
 
 local keys
 
@@ -143,9 +143,10 @@ local function Refresh(layer, mapID)
             local pin = layer:Pin()
             pin.point, pin.index, pin.isTarget, pin.preview = current, nil, true, nil
             -- A request ("Navigate to") gets Waypoint's own icon, so it stands out from other targets.
-            pin.icon:SetTexture(e.request and ns.ICON or TARGET_ICON); pin.icon:SetVertexColor(1, 1, 1)
-            pin.num:SetText("")
             local col = ns:ColorOf(e)
+            pin.icon:SetTexture(e.request and ns.ICON or TARGET_ICON)
+            if e.request then pin.icon:SetVertexColor(1, 1, 1) else pin.icon:SetVertexColor(col[1], col[2], col[3]) end
+            pin.num:SetText("")
             pin.glow:Show(); pin.glow:SetSize(TARGET * 1.8, TARGET * 1.8); pin.glow:SetVertexColor(col[1], col[2], col[3], 0.8)
             layer:Place(pin, px, py, TARGET)
         end

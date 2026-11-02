@@ -16,6 +16,7 @@ end)
 
 TS.MAX_TABS = 10
 TS.MAX_SADDLES = 10
+TS.DOCK = TS.MAX_TABS + 1 -- each Saddle's Bottom Dock: a tab of its own with no button (Panel.lua)
 TS.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon"
 TS.saddles = {}    -- [id] = Saddle object (Panel.lua)
 TS.captured = {}   -- [frame] = { name, saddle, tab, parent, points }
@@ -46,6 +47,7 @@ local saddleDefaults = {
 	activeTab = 1,
 	tabCount = 2,
 	tabs = {},
+	dockOpen = false,
 }
 
 -- Its own Print: the icon, and several values like print(). A trailing true is the shared Core's
@@ -110,6 +112,15 @@ function TS:EnsureTabs(sd)
 		end
 	end
 	if sd.activeTab > sd.tabCount then sd.activeTab = 1 end
+	sd.tabs[self.DOCK] = sd.tabs[self.DOCK] or { name = "Bottom Dock", frames = {} }
+end
+
+-- Every tab that can hold windows: the ones with buttons, then the Bottom Dock.
+function TS.Tabs(saddle)
+	local list = {}
+	for i = 1, saddle.db.tabCount do list[i] = i end
+	list[#list + 1] = TS.DOCK
+	return list
 end
 
 -- Saddles ---------------------------------------------------------------------
@@ -168,7 +179,7 @@ function TS:DeleteSaddle(saddle)
 		self:Print("Can't remove a Saddle during combat.")
 		return
 	end
-	for i = saddle.db.tabCount, 1, -1 do saddle:DetachTab(i) end
+	for _, i in ipairs(TS.Tabs(saddle)) do saddle:DetachTab(i) end
 	for k, sd in ipairs(db.saddles) do
 		if sd == saddle.db then table.remove(db.saddles, k) break end
 	end
@@ -221,7 +232,7 @@ end
 -- The Saddle and tab a frame is saved in.
 function TS:FindTab(name)
 	for saddle in self:EachSaddle() do
-		for i = 1, saddle.db.tabCount do
+		for _, i in ipairs(TS.Tabs(saddle)) do
 			for _, v in ipairs(saddle.db.tabs[i].frames) do
 				if v == name then return saddle, i end
 			end
@@ -290,7 +301,7 @@ end
 -- Only one tab of one Saddle may own a frame.
 local function RemoveEverywhere(name, keepSaddle, keepTab)
 	for saddle in TS:EachSaddle() do
-		for i, t in ipairs(saddle.db.tabs) do
+		for i, t in pairs(saddle.db.tabs) do
 			if not (saddle == keepSaddle and i == keepTab) then RemoveName(t.frames, name) end
 		end
 	end
@@ -570,7 +581,7 @@ end
 function TS:RestoreAll()
 	if not self.ready then return end
 	for saddle in self:EachSaddle() do
-		for i = 1, saddle.db.tabCount do
+		for _, i in ipairs(TS.Tabs(saddle)) do
 			local list = saddle.db.tabs[i].frames
 			-- In saved order, so a window's base frame (saved first when dropped)
 			-- is captured before the frames anchored to it. Copied, since a
@@ -814,7 +825,11 @@ TS:On("PLAYER_REGEN_ENABLED", function()
 			saddle.pendingTab = nil
 			saddle:SelectTab(i)
 		end
-		for i = 1, saddle.db.tabCount do saddle:Layout(i) end
+		for _, i in ipairs(TS.Tabs(saddle)) do saddle:Layout(i) end
+		if saddle.pendingDock then
+			saddle.pendingDock = nil
+			saddle:ToggleDock()
+		end
 	end
 end)
 

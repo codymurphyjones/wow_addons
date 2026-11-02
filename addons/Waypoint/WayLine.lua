@@ -52,6 +52,7 @@ Way.PALETTE = PALETTE
 
 -- A line's colour: its kind's family, at its stage's shade.
 local function Color(seg)
+    if seg.color then return seg.color end -- (a leg after the target: Route.lua's AHEAD_COLORS)
     local shades = PALETTE[FAMILY[seg.kind] or "cyan"]
     return shades[seg.shade or 1] or shades[1]
 end
@@ -115,18 +116,96 @@ local layer -- the shared WorldMap.lua layer (below)
 local function Project(continent, n, w, mapID) return WM.WorldOnCanvas(continent, n, w, mapID, 0.05) end
 
 -- The trip as dashes (fine, so the route's bends show), on the layer's line frame at +2050.
-local function Refresh(l, mapID)
-    local trip = ns.db and ns.db.showWay and Lines()
-    if not (trip and l:CanDrawLines()) then return end
+-- Hovering the line: what that stretch is for. An addon's entry says, in info (its target's) and in
+-- each `ahead` stop's: { { title, detail, why }, ... }. Without them, the target's own title.
+local HOVER_MAP = 7      -- pixels from the line on the world map
+local HOVER_MINI = 8     -- pixels from a dot on the minimap
+local HOVER_EVERY = 0.1  -- seconds between looks, while the cursor is over a map
+local tipOwner, tipSeg
+
+local function Length(pts)
+    local yards = 0
+    for i = 3, #pts - 1, 2 do
+        yards = yards + math.sqrt((pts[i] - pts[i - 2]) ^ 2 + (pts[i + 1] - pts[i - 1]) ^ 2)
+    end
+    return yards
+end
+
+local function ShowTip(owner, seg)
+    if tipOwner == owner and tipSeg == seg then return end
+    -- (Someone else's tooltip, a quest pin's say, comes first.)
+    if GameTooltip:IsShown() and not GameTooltip:IsOwned(owner) then return end
+    local e = ns.Targets and ns.Targets.current
+    local info = seg.stop and seg.stop.info or (e and e.info)
+    local col = seg.color or { 0.4, 0.9, 0.9 }
+    GameTooltip:SetOwner(owner, "ANCHOR_CURSOR")
+    GameTooltip:ClearLines()
+    GameTooltip:AddLine(seg.number and ("Then, stop " .. seg.number) or "On your way now", col[1], col[2], col[3])
+    if type(info) == "table" and info[1] then
+        for _, line in ipairs(info) do
+            GameTooltip:AddLine(line.title, 1, 1, 1, true)
+            if line.detail and line.detail ~= "" then GameTooltip:AddLine(line.detail, 0.75, 0.8, 0.85, true) end
+            if line.why then GameTooltip:AddLine(line.why, 0.6, 0.85, 0.6, true) end
+        end
+    elseif e and e.title then
+        GameTooltip:AddLine(e.title, 1, 1, 1, true)
+        if e.subtitle then GameTooltip:AddLine(e.subtitle, 0.75, 0.8, 0.85, true) end
+    end
+    local yards = Length(seg.pts)
+    GameTooltip:AddLine(("%s, about %s on foot"):format(ns.Nav.Distance(yards), ns.Nav.ETA(yards)), 0.75, 0.8, 0.85)
+    GameTooltip:Show()
+    tipOwner, tipSeg = owner, seg
+end
+
+local function HideTip()
+    if tipOwner and GameTooltip:IsOwned(tipOwner) then GameTooltip:Hide() end
+    tipOwner, tipSeg = nil, nil
+end
+
+-- The stretch of line nearest x, y (runs: { { seg, { x, y, ... } }, ... }, in the same units) within
+-- reach, or nil.
+local function NearestLine(runs, x, y, reach)
+    local best, bestD = nil, reach * reach
+    for _, run in ipairs(runs) do
+        local xy = run[2]
+        for i = 3, #xy - 1, 2 do
+            local x0, y0, x1, y1 = xy[i - 2], xy[i - 1], xy[i], xy[i + 1]
+            local dx, dy = x1 - x0, y1 - y0
+            local len = dx * dx + dy * dy
+            local t = len > 0 and math.max(0, math.min(1, ((x - x0) * dx + (y - y0) * dy) / len)) or 0
+            local px, py = x0 + t * dx - x, y0 + t * dy - y
+            local d = px * px + py * py
+            if d < bestD then best, bestD = run[1], d end
+        end
+    end
+    return best
+end
+Way.NearestLine = NearestLine -- (for tests)
+
+local mapRuns = {} -- what's drawn on the world map: { { seg, { x, y, ... } in canvas fractions }, ... }
+
+local AHEAD_ALPHA = 0.85 -- the legs after the target: a little fainter, what's expected, not what's on
+
+local function Refresh(l, mapID, ahead)
+    wipe(mapRuns)
+    if not (ns.db and ns.db.showWay and l:CanDrawLines()) then return end
+    local trip, faint = {}, {}
+    for _, seg in ipairs(Lines() or {}) do trip[#trip + 1] = seg end
+    for _, seg in ipairs(ahead or {}) do
+        faint[seg] = true
+        trip[#trip + 1] = seg
+    end
     for _, seg in ipairs(trip) do
         local run
         local function Flush()
             if run and #run >= 4 then
                 -- The edge at ARTWORK sublevel 0, the dashes at 1: always under them.
                 for i = 3, #run - 1, 2 do
-                    l:Line(run[i - 2], run[i - 1], run[i], run[i + 1], CASING, LINE * CASING_WIDTH, CASING_ALPHA, 0)
+                    l:Line(run[i - 2], run[i - 1], run[i], run[i + 1], CASING, LINE * CASING_WIDTH,
+                        CASING_ALPHA * (faint[seg] and AHEAD_ALPHA or 1), 0)
                 end
-                l:Dashed(run, Color(seg), LINE, DASH, GAP, 1, 1)
+                l:Dashed(run, Color(seg), LINE, DASH, GAP, faint[seg] and AHEAD_ALPHA or 1, 1)
+                mapRuns[#mapRuns + 1] = { seg, run }
             end
             run = nil
         end
@@ -149,7 +228,8 @@ end
 -- switches between its stitched map and Blizzard's (the line, the pins and the town badges go
 -- somewhere else, at other levels).
 local MOVED = 2
-local drawnSig, drawnN, drawnW
+local drawnSig, drawnAhead, drawnN, drawnW
+local function Ahead() return ns.Route and ns.db and ns.db.showWay and ns.Route:AheadLines() or nil end
 local function Moved()
     local _, n, w = ns.Nav:Player()
     if not (n and drawnN) then return n ~= nil end
@@ -159,10 +239,15 @@ layer = WM.NewLayer({
     lines = true, level = 2050,
     refresh = function(l, mapID)
         drawnSig = Signature(Lines())
+        local ahead = Ahead()
+        drawnAhead = Signature(ahead)
         drawnN, drawnW = select(2, ns.Nav:Player())
-        Refresh(l, mapID)
+        Refresh(l, mapID, ahead)
     end,
-    interval = CHECK, every = function(l) if Signature(Lines()) ~= drawnSig or Moved() then l:Refresh() end end,
+    interval = CHECK,
+    every = function(l)
+        if Signature(Lines()) ~= drawnSig or Signature(Ahead()) ~= drawnAhead or Moved() then l:Refresh() end
+    end,
     onStitched = function(l) l:Refresh(); ns:Changed() end,
 })
 Way.layer = layer
@@ -207,12 +292,14 @@ local function UpdateMinimap()
     placedKey = key
     if trip and c then
         local spacing = v.radius / 10
+        local placing
         local edge = v.radius * 0.95
         local function Place(pn, pw, col)
             local px, py, inside = v:PlaceWorld(c, pn, pw, nil, edge)
             if not inside or count >= DOTS then return end
             count = count + 1
             local dot = GetDot(count)
+            dot.at = { seg = placing, x = px, y = py }
             dot:SetVertexColor(col[1], col[2], col[3], 0.95)
             dot:ClearAllPoints()
             dot:SetPoint("CENTER", Minimap, "CENTER", px, py)
@@ -221,6 +308,7 @@ local function UpdateMinimap()
         for _, seg in ipairs(trip) do
             if seg.continent == c then
                 local col = Color(seg)
+                placing = seg
                 local carry = 0
                 local pts = FromYou(trip, seg)
                 for i = 3, #pts - 1, 2 do
@@ -241,10 +329,56 @@ local function UpdateMinimap()
     shownDots = count
 end
 
+-- Hovering: the nearest stretch of line under the cursor, on either map.
+local function HoverMinimap()
+    local mx, my = GetCursorPosition()
+    local scale = Minimap:GetEffectiveScale()
+    local cx, cy = Minimap:GetCenter()
+    if not (cx and scale and scale > 0) then return nil end
+    local x, y = mx / scale - cx, my / scale - cy
+    local best, bestD = nil, HOVER_MINI * HOVER_MINI
+    for i = 1, shownDots do
+        local at = dots[i].at
+        local d = at and (at.x - x) ^ 2 + (at.y - y) ^ 2
+        if d and d < bestD then best, bestD = at.seg, d end
+    end
+    return best
+end
+
+local function HoverMap()
+    local l = layer
+    local x, y = WorldMapFrame:GetNormalizedCursorPosition()
+    if not (x and l.w and l.w > 0 and mapRuns[1]) then return nil end
+    -- (In pixels of the map, so a tall map reaches as far up as across.)
+    local runs = {}
+    for k, run in ipairs(mapRuns) do
+        local xy, out = run[2], {}
+        for i = 1, #xy - 1, 2 do out[i], out[i + 1] = xy[i] * l.w, xy[i + 1] * l.h end
+        runs[k] = { run[1], out }
+    end
+    return NearestLine(runs, x * l.w, y * l.h, HOVER_MAP * (l.scale or 1))
+end
+
+local function UpdateHover()
+    if Minimap and Minimap:IsShown() and Minimap:IsMouseOver() then
+        local seg = HoverMinimap()
+        if seg then return ShowTip(Minimap, seg) end
+    elseif WorldMapFrame and WorldMapFrame:IsShown() and layer.frame and WorldMapFrame:IsMouseOver() then
+        local seg = HoverMap()
+        if seg then return ShowTip(layer.frame, seg) end
+    end
+    if tipOwner then HideTip() end
+end
+
 -- The minimap's dots follow you; the world map's line has its own layer (above).
 ns:On("PLAYER_LOGIN", function()
-    local miniAcc = 0
+    local miniAcc, hoverAcc = 0, 0
     CreateFrame("Frame"):SetScript("OnUpdate", function(_, elapsed)
+        hoverAcc = hoverAcc + elapsed
+        if hoverAcc >= HOVER_EVERY then
+            hoverAcc = 0
+            UpdateHover()
+        end
         miniAcc = miniAcc + elapsed
         if miniAcc >= MINI_UPDATE then
             miniAcc = 0

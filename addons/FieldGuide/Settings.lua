@@ -20,6 +20,7 @@ end
 -- Built once you're logged in (the guide depends on your faction).
 S.page = ns.NewOptionsPage({ name = "Field Guide", icon = true, build = function(p)
     p:Header(ns.IconMarkup(28) .. "  Field Guide: Leveling guide")
+    p:Button({ label = "Setup wizard", text = "Run setup", fn = function() ns.setup:Open() end })
     -- "Automatic" is no section of your own (char.section nil).
     p:Dropdown({ id = "Section", label = "Zone guide", default = AUTO, choices = SectionChoices,
         get = function() return ns.char.section or AUTO end,

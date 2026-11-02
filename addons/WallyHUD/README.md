@@ -32,13 +32,7 @@ It loads last: its TOC lists every addon of ours as an optional dependency. It r
   - `/whud report`;
   - the **Report** button on the error notice. That notice shows in the bottom right only when an addon error actually happens, at most once a minute, and fades after 10 seconds. Errors still go wherever they went before.
 - **Flag carriers** (RightColumn.lua): the battleground flag carrier frames sit in the column the game stacks down the right of the screen (`RightManagedFrameContainer`), which Edit Mode can't move. `/whud flags` shows a box over that column to drag; `/whud flags` again locks it (remembered), `/whud flags reset` puts it back. The column moves as one: the flag carriers are protected buttons the game won't let addons move in a fight, so the column is moved out of combat and keeps its place through fights. If the game lays it out again in a fight, it goes back where you put it when the fight ends.
-- **Density** (Density.lua):
-
-| | Status rail | Minimap buttons |
-|---|---|---|
-| Minimal | clock and performance | hidden |
-| Standard (default) | everything you've set up except memory | shown |
-| Expanded | everything | shown |
+- **Density** (Density.lua): Minimal hides the minimap buttons, Standard (the default) shows them. SimplePanel's plugins are left alone.
 
 ## Vitals (Vitals.lua)
 
@@ -78,7 +72,7 @@ Options > AddOns > WallyHUD, or `/whud`:
 - keeping the Issue Reporter out of the way;
 - the error notice.
 
-`/whud minimal | standard | expanded` switches density.
+`/whud minimal | standard` switches density.
 
 ## For our addons
 

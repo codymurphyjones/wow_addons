@@ -81,3 +81,5 @@ Plugins\Honor.lua
 Plugins\Timers.lua
 Plugins\Speed.lua
 Plugins\Quests.lua
+..\shared\Wizard.lua
+Setup.lua

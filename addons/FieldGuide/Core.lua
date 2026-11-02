@@ -38,6 +38,7 @@ ns.CHAR_DEFAULTS = {
     skipped = {},    -- step keys you skipped by hand
     paused = false,  -- the guide keeps its hands off Waypoint's arrow
     ignored = {},    -- quests you skipped (or left because their item didn't drop): never suggested, nor what needs them
+    deferred = {},   -- Zone Clear: quests you skipped once. They wait until the rest of the zone is done
     doneByHand = {}, -- quests you marked done ("Done it"), whatever the game's record says
     lastPick = nil,  -- the zone section Automatic last chose (kept while you travel through others)
     rerun = {},      -- quests whose item didn't drop and you chose to run the dungeon again for
@@ -147,6 +148,7 @@ SlashCmdList.FIELDGUIDE = function(msg)
         wipe(ns.char.skipped)
         wipe(ns.char.doneByHand)
         wipe(ns.char.ignored)
+        wipe(ns.char.deferred)
         wipe(ns.char.notOffered)
         ns.Engine:Invalidate()
         ns:Print("Skipped steps, quests you marked done, and quests their giver didn't offer, are back.")

@@ -501,11 +501,11 @@ end
 -- ---------------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------------
--- Clocks: a strip under the square with the server time (left) and your computer's time (right),
--- in the game's 12/24-hour setting. Click: the game's stopwatch and alarm.
+-- Clock: a strip under the square with the time you picked, your computer's or the server's, in the
+-- game's 12/24-hour setting. With the mouse on it, it shows the other one. Click: stopwatch and alarm.
 -- ---------------------------------------------------------------------------
 
-local clocks
+local clocks, clockPlugin
 local CLOCKS_H = 20
 
 local function Clock(h, m)
@@ -525,8 +525,9 @@ end
 
 local function UpdateClocks()
     if not (clocks and clocks:IsShown()) then return end
-    clocks.server:SetText(T.hex.muted .. "SERVER|r  " .. ServerTime())
-    clocks.localTime:SetText(T.hex.muted .. "LOCAL|r  " .. LocalTime())
+    local server = clockPlugin:Get("clockShows") == "server"
+    if clocks:IsMouseOver() then server = not server end
+    clocks.text:SetText(T.hex.muted .. (server and "SERVER|r  " or "LOCAL|r  ") .. (server and ServerTime() or LocalTime()))
 end
 
 local function PaintClocks(hover)
@@ -534,7 +535,7 @@ local function PaintClocks(hover)
     local edge = hover and T.accent or T.border
     clocks:SetBackdropColor(T.base[1], T.base[2], T.base[3], ns.Clamp(ns.db.options.alpha or 1, 0, 1))
     clocks:SetBackdropBorderColor(edge[1], edge[2], edge[3], 1)
-    for _, fs in ipairs({ clocks.server, clocks.localTime }) do fs:SetTextColor(T.text[1], T.text[2], T.text[3]) end
+    clocks.text:SetTextColor(T.text[1], T.text[2], T.text[3])
 end
 
 local function OpenTimeManager()
@@ -549,22 +550,12 @@ local function MakeClocks()
     -- shares the square's bottom border line
     clocks:SetPoint("TOPLEFT", box, "BOTTOMLEFT", 0, 1)
     clocks:SetPoint("TOPRIGHT", box, "BOTTOMRIGHT", 0, 1)
-    clocks.server = clocks:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall")
-    clocks.server:SetPoint("LEFT", 7, 0)
-    clocks.localTime = clocks:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall")
-    clocks.localTime:SetPoint("RIGHT", -7, 0)
+    clocks.text = clocks:CreateFontString(nil, "OVERLAY", "SimplePanelFontSmall")
+    clocks.text:SetPoint("CENTER")
     clocks:RegisterForClicks("AnyUp")
-    clocks:SetScript("OnClick", function() ns.Tooltip:Hide(); OpenTimeManager() end)
-    clocks:SetScript("OnEnter", function(self)
-        PaintClocks(true)
-        local tt = ns.Tooltip:Begin(self)
-        tt:SetTitle("Time")
-        tt:AddDouble("Server", ServerTime())
-        tt:AddDouble("Local", LocalTime())
-        tt:AddHint("Click: stopwatch and alarm")
-        tt:Show()
-    end)
-    clocks:SetScript("OnLeave", function() PaintClocks(false); ns.Tooltip:Hide() end)
+    clocks:SetScript("OnClick", OpenTimeManager)
+    clocks:SetScript("OnEnter", function() PaintClocks(true); UpdateClocks() end)
+    clocks:SetScript("OnLeave", function() PaintClocks(false); UpdateClocks() end)
     local acc = 1
     clocks:SetScript("OnUpdate", function(_, elapsed)
         acc = acc + elapsed
@@ -833,10 +824,11 @@ SimplePanel.RegisterPlugin({
     icon = "Interface\\Icons\\INV_Misc_Map02",
     zone = "right",
     defaultEnabled = false,
-    defaults = { alignBuffs = true, scale = 0.92, collapsed = false, clocks = true },
+    defaults = { alignBuffs = true, scale = 0.92, collapsed = false, clocks = true, clockShows = "local" },
     events = { "PLAYER_ENTERING_WORLD", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED", "CALENDAR_UPDATE_PENDING_INVITES" },
 
     onInit = function(p)
+        clockPlugin = p
         -- The default size went from 80% to 92% (15% larger): move a saved 80% (the old default) up
         -- once. A size picked on the slider afterwards is left alone.
         local settings = p:Settings()
@@ -868,9 +860,14 @@ SimplePanel.RegisterPlugin({
                 Layout(p)
             end,
             tooltip = "Buffs and debuffs sit to the left of the square, level with its top, below the bar." })
-        m:Checkbox({ text = "Server and local time under the minimap", get = function() return p:Get("clocks") ~= false end,
+        m:Checkbox({ text = "Clock under the minimap", get = function() return p:Get("clocks") ~= false end,
             set = function(v) p:Set("clocks", v); Layout(p) end,
-            tooltip = "Two digital clocks under the square: the server's time and your computer's. Click them for the stopwatch and alarm." })
+            tooltip = "Shows the time you pick below. Point at it to see the other one. Click it for the stopwatch and alarm." })
+        m:Header("Clock shows")
+        for _, o in ipairs({ { "local", "Local time" }, { "server", "Server time" } }) do
+            m:Radio({ text = o[2], value = o[1], get = function() return p:Get("clockShows") end,
+                set = function(v) p:Set("clockShows", v); UpdateClocks() end })
+        end
     end,
 
     onClick = function(p, button)

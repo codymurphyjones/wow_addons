@@ -1,0 +1,36 @@
+map 0: 2 exit(s), 6276 nodes, around 3949, -3517: 3677,-3831 31 yd wide; 3713,-3258 16 yd wide
+map 0: 2 exit(s), 2175 nodes, around 3616, -3474: 3677,-3831 31 yd wide; 3713,-3258 16 yd wide
+map 0: 2 exit(s), 6078 nodes, around 1998, 2210: 2414,1833 106 yd wide; 2518,1854 41 yd wide
+map 0: 1 exit(s), 4761 nodes, around 1921, 1562: 2162,1304 8 yd wide
+map 0: 2 exit(s), 1522 nodes, around 598, 73: 958,-158 31 yd wide; 289,63 39 yd wide
+map 0: 1 exit(s), 2689 nodes, around -387, -4545: -192,-4408 16 yd wide
+map 0: 1 exit(s), 7319 nodes, around -1977, 2252: -2262,1807 114 yd wide
+map 0: 1 exit(s), 3359 nodes, around -4002, -3771: -3515,-3842 79 yd wide
+map 0: 1 exit(s), 6744 nodes, around -4813, -1047: -5190,-1235 31 yd wide
+map 0: 1 exit(s), 3753 nodes, around -4593, -2151: -4350,-1821 48 yd wide
+map 0: 2 exit(s), 1581 nodes, around -4923, 1341: -4738,1074 115 yd wide; -4795,1109 14 yd wide
+map 0: 2 exit(s), 2562 nodes, around -6022, 823: -5667,708 33 yd wide; -5689,858 32 yd wide
+map 0: 2 exit(s), 1925 nodes, around -6729, -4050: -6858,-3900 32 yd wide; -6444,-3886 23 yd wide
+map 0: 1 exit(s), 1922 nodes, around -12252, 1542: -12484,1379 80 yd wide
+map 0: 1 exit(s), 4482 nodes, around -12690, 1010: -12484,1379 80 yd wide
+map 1: 2 exit(s), 4316 nodes, around 5454, -3555: 5240,-3341 41 yd wide; 5221,-3267 31 yd wide
+map 1: 2 exit(s), 6486 nodes, around 5074, -1970: 5396,-2283 16 yd wide; 4648,-1655 94 yd wide
+map 1: 2 exit(s), 13238 nodes, around 4552, -2883: 4648,-1655 94 yd wide; 4552,-4251 39 yd wide
+map 1: 2 exit(s), 3086 nodes, around 3668, 1458: 3457,1585 49 yd wide; 3363,1690 72 yd wide
+map 1: 2 exit(s), 1548 nodes, around 3459, 1866: 3457,1585 49 yd wide; 3363,1690 72 yd wide
+map 1: 1 exit(s), 1936 nodes, around 2003, -4679: 1940,-4429 75 yd wide
+map 1: 2 exit(s), 612 nodes, around 1937, -4249: 1822,-4170 69 yd wide; 1940,-4429 75 yd wide
+map 1: 1 exit(s), 10431 nodes, around -2692, 972: -2298,1281 66 yd wide
+map 1: 1 exit(s), 10619 nodes, around -3129, -601: -3057,99 34 yd wide
+map 1: 1 exit(s), 3640 nodes, around -4706, 3965: -3916,3712 80 yd wide
+map 1: 1 exit(s), 1792 nodes, around -3961, 3485: -3916,3712 80 yd wide
+map 1: 1 exit(s), 1372 nodes, around -3916, 2901: -4048,2713 35 yd wide
+map 1: 2 exit(s), 8623 nodes, around -5524, -4323: -5302,-3389 64 yd wide; -6417,-4414 73 yd wide
+map 1: 2 exit(s), 3832 nodes, around -6015, 3340: -6455,3196 49 yd wide; -5993,3071 74 yd wide
+map 1: 2 exit(s), 7620 nodes, around -6032, 3353: -6455,3196 49 yd wide; -5993,3071 74 yd wide
+map 1: 2 exit(s), 1322 nodes, around -6371, -310: -6295,-571 22 yd wide; -6528,-144 66 yd wide
+map 1: 2 exit(s), 101798 nodes, around -8116, -3494: -6885,-3765 50 yd wide; -8087,-2112 24 yd wide
+map 1: 1 exit(s), 1645 nodes, around -6644, -4199: -6417,-4414 73 yd wide
+map 1: 2 exit(s), 5597 nodes, around -7970, 2333: -8451,2233 33 yd wide; -8471,2475 32 yd wide
+map 1: 2 exit(s), 888 nodes, around -7685, 225: -7560,292 80 yd wide; -7904,254 38 yd wide
+map 1: 2 exit(s), 1134 nodes, around -9356, 1116: -9608,1157 80 yd wide; -9418,1233 33 yd wide

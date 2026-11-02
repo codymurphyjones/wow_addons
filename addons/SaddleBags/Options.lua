@@ -180,7 +180,7 @@ end
 local function WindowCount(sd)
 	local n = 0
 	for i = 1, sd.tabCount do n = n + #sd.tabs[i].frames end
-	return n
+	return n + #sd.tabs[TS.DOCK].frames
 end
 
 function TS:RefreshOptions()

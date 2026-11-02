@@ -1,11 +1,13 @@
-"""Real walking times between zones with quests, over Waypoint's land and water map.
+"""Real walking times between zones with quests, over Waypoint's navigation graph.
 
 Straight lines lie: Elwynn Forest and Dun Morogh look a few minutes apart, and there's a mountain
 range between them. This walks the map (Waypoint/Data/Water.lua, built from the game's tiles: the
 steps you can really take, cliffs you can drop but not climb, tunnels) from each zone's quest area
-to the others. Zones it can't reach on foot aren't listed.
+to the others, taking only the drops that do no damage (a walk that jumps off a mesa isn't a walk).
+Zones it can't reach on foot aren't listed.
 
-Writes tools/FieldGuide/data/zone_walks.json: { "from uiMapID": { "to uiMapID": minutes } }.
+Writes tools/FieldGuide/data/zone_walks.json: { "from uiMapID": { "to uiMapID": minutes } }, and the
+same into addons/FieldGuide/Guides/Data.lua (build_guides.py reads the file on its next run).
 
     python -I tools/FieldGuide/zone_walks.py
 """
@@ -15,16 +17,20 @@ import io
 import json
 import os
 import re
+import site
 import statistics
 import sys
 import tarfile
 
-import numpy as np
-from scipy.sparse import csr_matrix
-from scipy.sparse.csgraph import dijkstra
+sys.path.append(site.getusersitepackages())  # (scipy: build_all.py runs the scripts with -I)
+
+import numpy as np  # noqa: E402
+from scipy.sparse import csr_matrix  # noqa: E402
+from scipy.sparse.csgraph import dijkstra  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(ROOT, "tools", "_shared"))
 sys.path.insert(0, os.path.join(ROOT, "tools", "Waypoint"))
 import check_water as C  # noqa: E402
@@ -85,38 +91,56 @@ def build_graph(m):
     return csr_matrix((np.concatenate(cost), (np.concatenate(src), np.concatenate(dst))), shape=(nr * nc, nr * nc))
 
 
+def write_data(out):
+    """The table in Data.lua, as build_guides.py writes it."""
+    path = os.path.join(ROOT, "addons", "FieldGuide", "Guides", "Data.lua")
+    text = open(path, encoding="utf-8").read()
+    head = text.index("ns.ZoneWalks = {")
+    end = text.index("\n}", head)
+    rows = ["    [%s] = { %s }," % (a, ", ".join("[%s] = %s" % (b, out[a][b]) for b in sorted(out[a], key=int)))
+            for a in sorted(out, key=int)]
+    text = text[:head] + "ns.ZoneWalks = {\n" + "\n".join(rows) + text[end:]
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+
+
 def main():
+    import quest_walks as W
+    from scipy.spatial import cKDTree
     assign = assignments()
-    maps = C.load(WATER)
     areas = quest_areas(assign)
+    old = json.load(open(OUT, encoding="utf-8")) if os.path.exists(OUT) else {}
     out = {}
     for cont, zones in areas.items():
-        if cont not in maps:
-            print("continent", cont, "not on the map:", sorted(zones))
+        if not os.path.exists(os.path.join(W.NP.NAV, "%d.graph.npz" % cont)):
+            print("continent", cont, "not on the graph:", sorted(zones))
             continue
-        m = maps[cont]
-        m["max"] = m.get("max")
-        g = build_graph(m)
-        squares = {}
+        at, size, g, ground = W.graph(cont)
+        ids = np.nonzero(ground)[0]
+        tree = cKDTree(at[ground])
+        nodes = {}
         for ui, (n, w) in zones.items():
-            sq = C.square(m, n, w)
-            if sq is None:
-                print("no square for", ui)
-            else:
-                squares[ui] = sq
-        uis = sorted(squares)
+            near = tree.query_ball_point([n, w], 40) or [int(tree.query([n, w])[1])]
+            nodes[ui] = int(ids[max(near, key=lambda i: size[ids[i]])])
+        uis = sorted(nodes)
         print("continent", cont, len(uis), "zones", flush=True)
-        dist = dijkstra(g, directed=True, indices=[squares[u] for u in uis])
+        dist = dijkstra(g, directed=True, indices=[nodes[u] for u in uis])
         for i, a in enumerate(uis):
             row = {}
             for b in uis:
-                d = dist[i, squares[b]]
+                d = dist[i, nodes[b]]
                 if a != b and np.isfinite(d):
                     row[str(b)] = round(float(d) / YARDS_A_MINUTE, 1)
             out[str(a)] = row
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, indent=0, sort_keys=True)
-    print("wrote", len(out), "zones")
+    write_data(out)
+    changes = sorted(((round(out[a][b] - old[a][b], 1), a, b, old[a][b], out[a][b])
+                      for a in out for b in out[a] if a in old and b in old[a]), reverse=True)
+    print("wrote", len(out), "zones;", sum(abs(c[0]) >= 1 for c in changes), "of", len(changes),
+          "walks changed by a minute or more; biggest:", changes[:4])
+    lost = [(a, b) for a in old for b in old[a] if a not in out or b not in out.get(a, {})]
+    print(len(lost), "walks no longer found on foot:", lost[:6])
 
 
 if __name__ == "__main__":

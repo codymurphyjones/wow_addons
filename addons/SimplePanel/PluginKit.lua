@@ -499,10 +499,5 @@ SimplePanel.ListPlugins = function()
     for id in pairs(PK.plugins) do out[#out + 1] = id end
     return out
 end
--- Plugins to hide for now, { [id] = true } (WallyHUD's density presets); the saved layout stays.
-SimplePanel.SetDensityHidden = function(set)
-    SimplePanel.densityHidden = set
-    if ns.Bar and ns.Bar.Layout then ns.Bar:Layout() end
-end
 SimplePanel.GetPlugin = function(id) return PK:Find(id) end
 SimplePanel.UnregisterPlugin = function(id) return PK:Unregister(id) end

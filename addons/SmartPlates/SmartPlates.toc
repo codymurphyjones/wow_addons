@@ -51,3 +51,5 @@ UI.lua
 ..\shared\MinimapButton.lua
 Minimap.lua
 TestMode.lua
+..\shared\Wizard.lua
+Setup.lua

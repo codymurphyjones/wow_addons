@@ -97,6 +97,7 @@ end
 -- talents can't be read still asks).
 function M:Check()
     if later or not ns.db or ns.API:GetMainSpec() ~= nil or not ns.Character() then return end
+    if ns.setup and ns.setup:Pending() then return end -- the setup wizard asks first
     local points = ns.Player.TalentPoints()
     local spent = (points[1] or 0) + (points[2] or 0) + (points[3] or 0)
     if spent > 0 or (UnitLevel("player") or 0) >= MIN_LEVEL then self:Open() end

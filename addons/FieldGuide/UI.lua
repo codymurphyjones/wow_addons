@@ -613,7 +613,10 @@ local function Restore(e)
     if e.thrownAs == "skip" then
         -- A quest's step skips the whole quest (Engine:SkipCurrent); a grind or travel step, itself.
         ns.char.skipped[e.key] = nil
-        if e.canDone then ns.char.ignored[e.id] = nil end
+        if e.canDone then
+            ns.char.ignored[e.id] = nil
+            ns.char.deferred[e.id] = nil
+        end
     elseif e.thrownAs == "done" then
         ns.char.doneByHand[e.id] = nil
     end

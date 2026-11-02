@@ -21,10 +21,13 @@ Guides/<Race>.lua (each race's sections), plus tools/FieldGuide/guides_report.tx
     python tools/FieldGuide/build_guides.py
 """
 import collections
+import csv
+import io
 import json
 import math
 import os
 import re
+import tarfile
 
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # sibling modules, also under python -I
@@ -34,6 +37,8 @@ import paths  # noqa: E402
 from questiedb import QuestieDB, lua_list  # noqa: E402
 from instances import LEVELS, OUTSIDE_FIRST, WINGS, dungeon_areas, dungeon_entrances, dungeon_of, load_dungeons  # noqa: E402
 from zones import Zones
+from quest_areas import assign as assign_areas
+from quest_text import action_line, callout, goal, prose_actions
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ADDON = os.path.join(os.path.dirname(os.path.dirname(HERE)), "addons", "FieldGuide")  # tools/FieldGuide/ builds addons/FieldGuide/
@@ -77,6 +82,12 @@ DROP_RATE = 0.45      # items looted from mobs: kills per item = 1 / rate
 ZONE_CHANGE_UNITS = 120
 NEAR = 2.0            # steps this close together count as one stop
 CLUSTER_RADIUS = 7.0  # spawns within this of the busiest spawn make up an objective's area
+GROUP_SHARE = 0.4     # a group this dense, of the densest one, is a place to do the objective
+MAX_GROUPS = 8        # groups looked at for a quest
+PLACE_RADIUS = 10.0   # map units: what's this close to a group is around it (place_objectives)
+PLACE_WEIGHT = 0.15   # what each thing around a group counts for: a densest group is worth 1
+PLACE_LEVELS = 4      # other quests up to this many levels above are ones you'd do on the same trip
+PLACE_ROUNDS = 3
 KEEP_EFFICIENCY = 0.3  # quests paying under this share of the section's typical XP/minute are dropped
 LOG_SIZE = 20
 MAX_GRIND_LEVELS = 2   # grind at most this many levels to reach the next quests
@@ -119,6 +130,27 @@ def hidden_quests():
     except OSError as e:
         print('Questie corrections not found (%s): blacklisted and holiday quests may slip in.' % e)
     return out
+
+
+def battleground_areas():
+    """The area IDs of the battlegrounds, from the game's tables: a quest filed under one is a PvP quest.
+    Waypoint's cached Map table says which maps are battlegrounds (InstanceType 3); not all of them
+    give their area, so it's matched by name in AreaTable too."""
+    with tarfile.open(os.path.join(os.path.dirname(HERE), 'Waypoint', '.cache.tar.xz'), 'r:xz') as t:
+        names = [m.name for m in t.getmembers()]
+        def table(name):
+            found = sorted(n for n in names if os.path.basename(n).startswith(name))[-1]
+            return list(csv.DictReader(io.StringIO(t.extractfile(found).read().decode('utf-8'))))
+        maps = [r for r in table('Map-') if r.get('InstanceType') == '3']
+        areas = table('AreaTable')
+    wanted = {r.get('MapName_lang') for r in maps}
+    out = {int(r['AreaTableID']) for r in maps if int(r['AreaTableID'] or 0)}
+    # (Top-level areas only: a zone's own place of the same name isn't the battleground.)
+    out |= {int(r['ID']) for r in areas if r.get('AreaName_lang') in wanted and not int(r.get('ParentAreaID') or 0)}
+    return out
+
+
+PVP_AREAS = battleground_areas()
 
 
 def practical_level(q):
@@ -439,18 +471,52 @@ class Data:
             return INSTANCE
         if prefer and any(p.map == prefer for p in points):
             points = [p for p in points if p.map == prefer]
-        # The busiest spot: the spawn with the most others nearby, and those around it.
-        best, best_n = points[0], -1
+        # Every dense group of what it needs, densest first: place_objectives picks between them.
+        counted = []
         for p in points if len(points) <= 400 else points[::len(points) // 400 + 1]:
-            n = sum(1 for o in points if p.dist(o) <= CLUSTER_RADIUS)
-            if n > best_n:
-                best, best_n = p, n
-        near = sorted((o for o in points if best.dist(o) <= CLUSTER_RADIUS * 1.5), key=best.dist)[:24]
-        cx = sum(o.x for o in near) / len(near)
-        cy = sum(o.y for o in near) / len(near)
-        center = Point(best.map, cx, cy)
+            counted.append((sum(1 for o in points if p.dist(o) <= CLUSTER_RADIUS), p))
+        counted.sort(key=lambda c: -c[0])
+        top = counted[0][0]
+        groups = []
+        for n, p in counted:
+            if n < top * GROUP_SHARE or len(groups) >= MAX_GROUPS:
+                break
+            if all(p.dist(g[2]) > CLUSTER_RADIUS * 2 for g in groups):
+                near = sorted((o for o in points if p.dist(o) <= CLUSTER_RADIUS * 1.5), key=p.dist)[:24]
+                cx = sum(o.x for o in near) / len(near)
+                cy = sum(o.y for o in near) / len(near)
+                groups.append((Point(p.map, cx, cy), near, p, n / top))
         mob_level = sum(levels) / len(levels) if levels else None
-        return center, near, effort, mob_level
+        return groups[0][0], groups[0][1], effort, mob_level, groups
+
+
+def place_objectives(quests):
+    """Where each quest's objective is done, of its dense groups: the one that's densest and has the
+    most of the other quests around it (their objectives, givers and hand-ins), of its level or just above.
+    Quests done in one place are one trip: a group off on its own means walking there and back. Each
+    quest's pick moves the others', so it's gone over a few times."""
+    by_map = collections.defaultdict(list)
+    for q in quests:
+        if q.obj:
+            by_map[q.obj[0].map].append(q)
+    for group in by_map.values():
+        for _ in range(PLACE_ROUNDS):
+            for q in group:
+                choices = q.obj[4]
+                if len(choices) < 2:
+                    continue
+                others = []
+                for o in group:
+                    # (Not quests below it: by then they're behind you, and it's no trip to go back.)
+                    if o is not q and 0 <= o.level - q.level <= PLACE_LEVELS:
+                        others.append(o.obj[0])
+                        others += [x[0] for x in (o.giver, o.ender) if x and x[0].map == q.obj[0].map]
+                others += [x[0] for x in (q.giver, q.ender) if x and x[0].map == q.obj[0].map]
+
+                def score(g):
+                    return g[3] + PLACE_WEIGHT * sum(1 for p in others if g[0].dist(p) <= PLACE_RADIUS)
+                best = max(choices, key=score)
+                q.obj = (best[0], best[1], q.obj[2], q.obj[3], choices)
 
 
 INSTANCE = 'instance'
@@ -462,6 +528,7 @@ class Quest:
     def __init__(self, data, qid, maps):
         q = data.quests[qid]
         self.id, self.row = qid, q
+        self.pvp = q.get('zoneOrSort') in PVP_AREAS  # Zone Clear's, not a leveling route's
         self.name = q.get('name') or ('Quest %d' % qid)
         self.level = q.get('questLevel') or 1
         if self.level < 0:
@@ -552,6 +619,150 @@ def candidates(data, bit, maps, dungeons=None):
 
 
 # --- the route simulation ---------------------------------------------------------------------
+
+SPLIT_DISTANCE = 6.0  # map % (about 350 yd): a quest whose objectives are further apart gets one route stop each
+
+
+def densest(points, limit=6):
+    """The spots of the densest group of these, densest first."""
+    if not points:
+        return []
+    sample = points if len(points) <= 200 else points[::len(points) // 200 + 1]
+    best = max(sample, key=lambda p: sum(1 for o in sample if p.dist(o) <= CLUSTER_RADIUS))
+    near = [p for p in sample if p.dist(best) <= CLUSTER_RADIUS]
+    return [best] + [p for p in near if p is not best][:limit - 1]
+
+
+def quest_actions(data, qid, text, talk, prefer=None):
+    """What a quest asks, one thing at a time: [{line, name, kind, points}]. Built from the game's own
+    objectives (what to kill, what drops where), so it says what the prose runs together. The prose
+    adds what the data doesn't know: an item to use first, someone to keep alive. Quests with no
+    objectives in the data fall back on the prose alone."""
+    q = data.db.quest(qid) or {}
+    objs = q.get('objectives')
+    maps = None
+    out = []
+
+    def add(line, name, points):
+        if not any(a['line'] == line for a in out):
+            out.append({'line': line, 'name': name, 'kind': None, 'points': points})
+
+    for entry in lua_list(field(objs, 1)) if objs else []:
+        npc = data.db.npc(lua_list(entry)[0])
+        if not npc or not npc.get('name'):
+            continue
+        name = npc['name']
+        add(action_line('Kill' if hostile(npc) else 'Talk to', name, text), name, data.spawns(npc.get('spawns'), maps))
+    for entry in lua_list(field(objs, 2)) if objs else []:
+        obj = data.db.object(lua_list(entry)[0])
+        if obj and obj.get('name'):
+            # (The quest's own word when it has one: "burn the Highvale Records".)
+            verb = re.search(r'\b(burn|destroy|douse|mark|deface|open|search|examine|read|inspect)\b', text, re.I)
+            add(action_line(verb.group(1).capitalize() if verb else 'Use', obj['name'], text), obj['name'],
+                data.spawns(obj.get('spawns'), maps))
+    for entry in lua_list(field(objs, 3)) if objs else []:
+        item = data.db.item(lua_list(entry)[0])
+        if not item or not item.get('name'):
+            continue
+        name = item['name']
+        drops = [data.db.object(i) for i in lua_list(item.get('objectDrops'))]
+        drops = [d for d in drops if d and d.get('name')]
+        mobs = [data.db.npc(i) for i in lua_list(item.get('npcDrops'))]
+        mobs = [m for m in mobs if m and m.get('name')]
+        points = []
+        for d in drops:
+            points += data.spawns(d.get('spawns'), maps)
+        for m in mobs:
+            points += data.spawns(m.get('spawns'), maps)
+        if drops:
+            same = drops[0]['name'].lower() in (name.lower(), 'a ' + name.lower())
+            add(action_line('Pick up', name, text, None if same else drops[0]['name']), name, points)
+        elif len(mobs) == 1:
+            add(action_line('Loot', name, text, mobs[0]['name']), name, points)
+        elif mobs:
+            add(action_line('Loot', name, text), name, points)
+        else:
+            add(action_line('Get', name, text), name, points)
+    if prefer:
+        for a in out:
+            here = [p for p in a['points'] if p.map == prefer]
+            a['points'] = here or a['points']
+    prose = prose_actions(text)
+    if not out:
+        keep = len(prose) > 1 or any(k for _, k in prose)
+        return [{'line': c, 'name': None, 'kind': k, 'points': []} for c, k in prose] if keep else []
+    # The first thing to do if it's an item to use; someone to keep alive at the top too.
+    first = [{'line': c, 'name': None, 'kind': k, 'points': []} for c, k in prose if k]
+    return first + out
+
+
+def area_actions(data, quests):
+    """quests: [(qid, Quest)]. Every quest's actions, with the hunting areas of the zones worked out
+    together (quest_areas.py): {qid: actions}, an action in an area having 'area' = (center, [spots])."""
+    actions, objectives = {}, []
+    for qid, q in quests:
+        if not q.text:
+            continue
+        actions[qid] = quest_actions(data, qid, q.text, q.talk, q.giver and q.giver[0].map)
+        for i, a in enumerate(actions[qid]):
+            if a['points']:
+                objectives.append({'key': (qid, i), 'level': q.level, 'points': a['points']})
+    for (qid, i), area in assign_areas(objectives, Point).items():
+        actions[qid][i]['area'] = area
+    return actions
+
+
+def spread(points, cell=2.0, limit=40):
+    """Where something is across a zone, thinned to one spot a cell: enough to tell what's near you."""
+    if not points:
+        return []
+    zone = collections.Counter(p.map for p in points).most_common(1)[0][0]
+    seen, out = set(), []
+    for p in points:
+        key = (int(p.x / cell), int(p.y / cell))
+        if p.map == zone and key not in seen:
+            seen.add(key)
+            out.append(p)
+    return out[:: max(1, len(out) // limit + 1)] if len(out) > limit else out
+
+
+def action_spots(a):
+    area = a.get('area')
+    return [area[0]] + area[1] if area else densest(a['points'])
+
+
+def action_fields(actions):
+    """The quest's `g` and `sp` for Data.lua, and `o` when it's in a hunting area (or None)."""
+    if not actions:
+        return [], None
+    rows = []
+    centres = []
+    for a in actions:
+        spots = action_spots(a)
+        if spots:
+            centres.append(spots[0])
+        bits = ['l = %s' % lua_str(a['line'])]
+        if a['name']:
+            bits.append('n = %s' % lua_str(a['name']))
+        if a['kind']:
+            bits.append('k = %s' % lua_str(a['kind']))
+        if a.get('area'):
+            bits.append('z = true')
+        if spots:
+            bits.append('p = { %s }' % ', '.join('{ %s }' % pt(p) for p in spots))
+        everywhere = spread(a['points'])
+        if len(everywhere) > 1:
+            bits.append('w = { %s }' % ', '.join('{ %s }' % pt(p) for p in everywhere))
+        rows.append('{ %s }' % ', '.join(bits))
+    parts = ['g = { %s }' % ', '.join(rows)]
+    if any(a.dist(b) > SPLIT_DISTANCE for a in centres for b in centres if a is not b and a.map == b.map):
+        parts.append('sp = true')
+    objective = None
+    if any(a.get('area') for a in actions):
+        spots = [p for a in actions for p in action_spots(a)[:4]]
+        objective = 'o = { %s }' % ', '.join('{ %s }' % pt(p) for p in spots[:13])
+    return parts, objective
+
 
 class Sim:
     def __init__(self, level=1, xp=0, done=None, pos=None):
@@ -821,6 +1032,7 @@ def build():
     for faction in (ALLIANCE, HORDE):
         fmask = FACTION_MASK[faction]
         quests = candidates(data, fmask, None)
+        place_objectives(quests.values())
         by_zone = collections.defaultdict(list)
         for qid, q in quests.items():
             by_zone[q.giver[0].map].append(qid)
@@ -853,7 +1065,8 @@ def build():
             home = start_level == 1
             kept, dropped, sim = plan_zone(quests, pool, Sim(start_level, 0, known, pos), None, known, grind=home,
                                             keep_to=STARTER_LEVEL if home else 0)
-            if len(kept) < MIN_ZONE_QUESTS // 2:
+            # (PvP quests aren't leveling, but Zone Clear still needs their section.)
+            if len(kept) < MIN_ZONE_QUESTS // 2 and not any(quests[q].pvp for q in pool):
                 continue
             sections.append(('%s-%d-%d' % (faction.lower(), zone, start_level), names[zone], zone, start_level, sim, kept, dropped))
         sections.sort(key=lambda sec: (sec[3], sec[1]))
@@ -884,6 +1097,8 @@ def build():
             used[qid] = quests[qid]
             add_prerequisites(data, quests[qid], used)
 
+        pvp = sorted(q for q in quests if quests[q].pvp)
+        print('%s: %d PvP quests, Zone Clear only: %s' % (faction, len(pvp), ', '.join(quests[q].name for q in pvp[:8])))
         report.append('== %s (%d zones)' % (faction, len(sections)))
         for sid, title, zone, start_level, s, k, d in sections:
             grinds = [st for st in s.steps if st[0] == 'G']
@@ -1062,10 +1277,13 @@ def write(data, used, guides):
              '-- talk = nothing to do but hand it in (no objectives, nowhere to explore);',
              '-- m = about how many minutes its objectives and the fights on the way take, walking aside;',
              '-- k = XP from those kills at the quest\'s level (objectives, and hostile mobs along the walk).',
+             '-- ot = what to do, shortened (quest_text.py); g = the same one action at a time: l = the line, n = the name in the',
+             '-- game\'s objective text, k = "use" or "keep" (shown in colour), p = where; sp = objectives far apart: one stop each.',
              'ns.Quests = {']
+    everything = area_actions(data, sorted(used.items()))
     for qid in sorted(used):
         q = used[qid]
-        parts = ['n = %s' % lua_str(q.name), 'l = %d' % q.level, 'r = %d' % q.req, 'xp = %d' % q.base_xp]
+        parts = ['n = %s' % lua_str(q.name)] + (['pvp = true'] if q.pvp else []) + ['l = %d' % q.level, 'r = %d' % q.req, 'xp = %d' % q.base_xp]
         if q.giver:
             parts.append('a = { %s, %s }' % (pt(q.giver[0]), lua_str(q.giver[1])))
         if q.item:
@@ -1076,14 +1294,16 @@ def write(data, used, guides):
                     parts.append('de = true')
         parts.append('t = { %s, %s }' % (pt(q.ender[0]), lua_str(q.ender[1])))
         if q.obj:
-            parts.append('o = { %s }' % ', '.join('{ %s }' % pt(p) for p in [q.obj[0]] + q.obj[1][:12]))
+            parts.append(action_fields(everything.get(qid))[1]
+                         or 'o = { %s }' % ', '.join('{ %s }' % pt(p) for p in [q.obj[0]] + q.obj[1][:12]))
             parts.append('m = %.1f' % ((q.obj[2] * SECONDS_PER_UNIT / 60 + q.extra_minutes) * kill_seconds(q.level) / (KILL_UNITS * SECONDS_PER_UNIT)))
         elif q.extra_minutes >= 0.2:
             parts.append('m = %.1f' % (q.extra_minutes * kill_seconds(q.level) / (KILL_UNITS * SECONDS_PER_UNIT)))
         if q.kill_xp:
             parts.append('k = %d' % q.kill_xp)
         if q.text:
-            parts.append('ot = %s' % lua_str(q.text[:160]))
+            parts.append('ot = %s' % lua_str(goal(q.text, q.talk)))
+            parts += action_fields(everything.get(qid))[0]
         if q.talk:
             parts.append('talk = true')
         if q.races:
@@ -1134,7 +1354,7 @@ def write(data, used, guides):
             return steps
 
         for sid, title, zone, start_level, s, kept, dropped in sections:
-            steps = route(s.steps, set(kept))
+            steps = route(s.steps, {q for q in kept if not quests[q].pvp})
             # Zone Clear's route: every quest of the pool, in the order the full walk took them (no
             # grinding: quests above your level wait at the end of the route instead).
             clear = route(s.full.steps, s.full.done, grind=False)

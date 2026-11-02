@@ -37,7 +37,7 @@ ns.DEFAULT_LAYOUT = {
     Appearance = { enabled = true, zone = "right", order = 6, showIcon = false, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140 },
     Performance = { enabled = true, zone = "right", order = 7, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { show = "both" } },
     Currencies = { enabled = false, zone = "right", order = 8, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { ids = { 3402, 1792 }, showMax = false } },
-    Memory = { enabled = true, zone = "right", order = 8, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { count = 15, mode = "memory" } },
+    Memory = { enabled = false, zone = "right", order = 8, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140, settings = { count = 15, mode = "memory" } },
     Launchers = { enabled = true, zone = "right", order = 9, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140 },
     Volume = { enabled = false, zone = "right", order = 14, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140 },
     Timers = { enabled = false, zone = "right", order = 16, showIcon = true, showLabel = false, colored = true, spark = false, progress = true, progressStyle = "fill", progressWidth = 140 },

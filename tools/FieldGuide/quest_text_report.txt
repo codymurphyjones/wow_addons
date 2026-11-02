@@ -1,0 +1,2675 @@
+7
+  was Kill 10 Kobold Vermin, then return to Marshal McBride.
+  now Kill 10 Kobold Vermin.
+
+12
+  was Gryan Stoutmantle wants you to kill 15 Defias Trappers and 15 Defias Smugglers then return to him on Sentinel Hill.
+  now Gryan Stoutmantle wants you to kill 15 Defias Trappers and 15 Defias Smugglers.
+
+13
+  was Gryan Stoutmantle wants you to kill 15 Defias Pillagers and 15 Defias Looters and return to him on Sentinel Hill.
+  now Gryan Stoutmantle wants you to kill 15 Defias Pillagers and 15 Defias Looters.
+
+14
+  was Gryan Stoutmantle wants you to kill 15 Defias Highwaymen, 5 Defias Pathstalkers and 5 Defias Knuckledusters then return to him on Sentinel Hill.
+  now Gryan Stoutmantle wants you to kill 15 Defias Highwaymen, 5 Defias Pathstalkers and 5 Defias Knuckledusters.
+
+15
+  was Kill 10 Kobold Workers, then report back to Marshal McBride.
+  now Kill 10 Kobold Workers.
+
+21
+  was Kill 12 Kobold Laborers, then return to Marshal McBride at Northshire Abbey.
+  now Kill 12 Kobold Laborers.
+
+25
+  was Dispatch 12 Befouled Water Elementals at Mystral Lake, due east of the Talondeep Path and southwest of Splintertree Post.  Scout the gazebo on Mystral Lake that
+  now Dispatch 12 Befouled Water Elementals at Mystral Lake, near the Talondeep Path and near Splintertree Post. Scout the gazebo on Mystral Lake that
+
+37
+  was Guard Thomas wants you to travel north up the river and search for the two lost guards, Rolf and Malakai.
+  now Guard Thomas wants you to travel up the river and search for the two lost guards, Rolf and Malakai.
+
+46
+  was Bring 8 Torn Murloc Fins to Guard Thomas at the east Elwynn bridge.
+  now Bring 8 Torn Murloc Fins to Guard Thomas at the Elwynn bridge.
+
+52
+  was Kill 8 Prowlers and 5 Young Forest Bears, and then return to Guard Thomas at the east Elwynn bridge.
+  now Kill 8 Prowlers and 5 Young Forest Bears.
+
+55
+  was Use Morbent's Bane on Morbent Fel, kill Morbent Fel, then return Morbent's Bane to Sven at his camp.
+  now Use Morbent's Bane on Morbent Fel, kill Morbent Fel.
+
+58
+  was Commander Althea Ebonlocke of Darkshire wants you to kill 20 Plague Spreaders in the eastern Raven Hill mausoleum.
+  now Commander Althea Ebonlocke of Darkshire wants you to kill 20 Plague Spreaders in the Raven Hill mausoleum.
+
+62
+  was Explore the Fargodeep Mine, then return to Marshal Dughan in Goldshire.
+  now Explore the Fargodeep Mine.
+
+70
+  was Retrieve Stalvan's Undelivered Letter from the chest and deliver it to the Canal District in Stormwind.
+  now Retrieve Stalvan's Undelivered Letter from the chest.
+
+71
+  was Deliver Rolf and Malakai's Medallions to Guard Thomas at the eastern Elwynn bridge.
+  now Deliver Rolf and Malakai's Medallions to Guard Thomas at the Elwynn bridge.
+
+76
+  was Explore the Jasperlode Mine, then report back to Marshal Dughan in Goldshire.
+  now Explore the Jasperlode Mine.
+
+88
+  was Kill Princess, grab her collar, then bring it back to Ma Stonefield at the Stonefield Farm.
+  now Kill Princess, grab her collar.
+
+93
+  was Gather 6 Gooey Spider Legs and bring them to Chef Grual in Darkshire.
+  now Gather 6 Gooey Spider Legs.
+
+119
+  was Return to Verner Osgood in Redridge. Give him the Crate of Horseshoes.
+  now Give him the Crate of Horseshoes.
+
+122
+  was Gather 6 Underbelly Whelp Scales from Black Dragon Whelps, and bring them to Verner Osgood in Redridge.
+  now Gather 6 Underbelly Whelp Scales from Black Dragon Whelps.
+
+124
+  was Kill 10 Redridge Brutes and 8 Redridge Mystics, then return to Verner Osgood.
+  now Kill 10 Redridge Brutes and 8 Redridge Mystics.
+
+133
+  was Gather 7 Ghoul Ribs and bring them to Abercrombie at his shack.
+  now Gather 7 Ghoul Ribs.
+
+147
+  was Find and kill "the Collector" then return to Marshal Dughan with The Collector's Ring.
+  now Find and kill "the Collector".
+
+152
+  was Kill 7 Tidehunters, 7 Warriors, 7 Oracles and 7 Coastrunners and return to Captain Grayson at the Westfall Lighthouse.
+  now Kill 7 Tidehunters, 7 Warriors, 7 Oracles and 7 Coastrunners.
+
+155
+  was Escort the Defias Traitor to the secret hideout of the Defias Brotherhood. Once the Defias Traitor shows you where VanCleef and his men are hiding out, return t
+  now Escort the Defias Traitor to the secret hideout of the Defias Brotherhood.
+
+156
+  was Gather 8 Rot Blossoms and bring them to Tavernkeep Smitts in Darkshire.
+  now Gather 8 Rot Blossoms.
+
+157
+  was Bring the Ghost Hair Thread to Abercrombie, in his shack north of the Raven Hill Cemetery.
+  now Bring the Ghost Hair Thread to Abercrombie, in his shack near the Raven Hill Cemetery.
+
+168
+  was Retrieve 4 Miners' Union Cards and return them to Wilder Thistlenettle in Stormwind.
+  now Retrieve 4 Miners' Union Cards.
+
+177
+  was Retrieve Blind Mary's Looking Glass from the Insane Ghoul and give it to Viktori in Darkshire.
+  now Retrieve Blind Mary's Looking Glass from the Insane Ghoul.
+
+180
+  was Kill Lieutenant Fangore and return to Magistrate Solomon in Lakeshire with his paw.
+  now Kill Lieutenant Fangore.
+
+181
+  was Locate Zzarc'Vul in the southern ogre mound in Duskwood and return his monocle to Viktori in Darkshire.
+  now Locate Zzarc'Vul in the ogre mound in Duskwood.
+
+188
+  was Ajeck Rouack of Nesingwary's Expedition wants you to kill Sin'Dall and return with her paw.
+  now Ajeck Rouack of Nesingwary's Expedition wants you to kill Sin'Dall.
+
+189
+  was Acquire 15 Bloodscalp Ears and return them to Kebok in Booty Bay.
+  now Acquire 15 Bloodscalp Ears.
+
+201
+  was Find the hunters' camp and report its location to Krazek in Booty Bay.
+  now Find the hunters' camp.
+
+203
+  was Kill 15 Kurzen Jungle Fighters.  Return to Sergeant Yohwa at the Rebel Camp.
+  now Kill 15 Kurzen Jungle Fighters.
+
+209
+  was Acquire 18 Skullsplitter Tusks and return them to Kebok.
+  now Acquire 18 Skullsplitter Tusks.
+
+212
+  was Kill a Cold Eye Basilisk, get a Chilled Basilisk Haunch, and return it to Angus Stern in the Blue Recluse.
+  now Kill a Cold Eye Basilisk, get a Chilled Basilisk Haunch.
+
+213
+  was Retrieve 8 Tumbled Crystals and return them to Kebok in Booty Bay.
+  now Retrieve 8 Tumbled Crystals.
+
+216
+  was Take down 8 Thistlefur Avengers and 8 Thistlefur Shaman; most are located east of Zoram Strand in Thistlefur Village. Once completed, return to Karang Amakkar a
+  now Take down 8 Thistlefur Avengers and 8 Thistlefur Shaman; most are located near Zoram Strand in Thistlefur Village.
+
+217
+  was Kill the Trogg leader, Grawmug, and his two guards, Gnasher and Brawler then report back to Captain Rugelfuss in the southern guard tower.
+  now Kill the Trogg leader, Grawmug, and his two guards, Gnasher and Brawler.
+
+224
+  was Mountaineer Cobbleflint of the southern guard tower wants you to kill 10 Stonesplinter Troggs and 10 Stonesplinter Scouts.
+  now Mountaineer Cobbleflint of the guard tower wants you to kill 10 Stonesplinter Troggs and 10 Stonesplinter Scouts.
+
+226
+  was Kill 12 Starving Dire Wolves and 8 Rabid Dire Wolves, then return to Lars at Sven's Camp on the western border of Duskwood.
+  now Kill 12 Starving Dire Wolves and 8 Rabid Dire Wolves.
+
+228
+  was Kill Mor'Ladim, then return his skull to Commander Althea Ebonlocke in Darkshire.
+  now Kill Mor'Ladim.
+
+237
+  was Mountaineer Gravelgaw in the southern guard tower wants you to kill 10 Stonesplinter Skullthumpers and 10 Stonesplinter Seers and report back to him.
+  now Mountaineer Gravelgaw in the guard tower wants you to kill 10 Stonesplinter Skullthumpers and 10 Stonesplinter Seers.
+
+245
+  was Kill 15 Pygmy Venom Web Spiders, and then report back to Watcher Dodds in Duskwood.
+  now Kill 15 Pygmy Venom Web Spiders.
+
+246
+  was Kill 10 Redridge Mongrels and 6 Redridge Poachers, then report back to Deputy Feldon in Lakeshire.
+  now Kill 10 Redridge Mongrels and 6 Redridge Poachers.
+
+248
+  was Climb the intact watch tower beside Stonewatch Keep.  Find a suitable container to place the Glyph of Azora.
+  now Climb the intact watch tower beside Stonewatch Keep. Find a suitable container to place the Glyph of Azora.
+
+249
+  was Defeat Morganth.  Bring his Pendant of Shadow to Theocritus at the Tower of Azora in Elwynn Forest.
+  now Defeat Morganth. Bring his Pendant of Shadow to Theocritus at the Tower of Azora in Elwynn Forest.
+
+250
+  was Investigate the area near the eastern ramp of the Dam and bring Chief Engineer Hinderweir a clue that might reveal what the Dark Iron Dwarves are up to.
+  now Investigate the area near the ramp of the Dam and bring Chief Engineer Hinderweir a clue that might reveal what the Dark Iron Dwarves are up to.
+
+253
+  was Find Eliza's grave. Retrieve the Embalmer's Heart from her, then return to Ello Ebonlocke.
+  now Find Eliza's grave. Retrieve the Embalmer's Heart from her.
+
+257
+  was Kill 6 Mountain Buzzards and return to Daryl the Youngling in the Farstrider Lodge within 15 minutes.
+  now Kill 6 Mountain Buzzards.
+
+258
+  was Kill 5 Elder Mountain Boars and return to Daryl the Youngling in the Farstrider Lodge within 12 minutes.
+  now Kill 5 Elder Mountain Boars.
+
+261
+  was Destroy 30 Undead Ravagers, then return to Brother Anton at Nijel's Point.
+  now Destroy 30 Undead Ravagers.
+
+263
+  was Mountaineer Wallbang in the southern guard tower wants you to kill 10 Stonesplinter Shaman and 10 Stonesplinter Bonesnappers.
+  now Mountaineer Wallbang in the guard tower wants you to kill 10 Stonesplinter Shaman and 10 Stonesplinter Bonesnappers.
+
+267
+  was Bring 8 Trogg Stone Teeth to Captain Rugelfuss in the southern guard tower.
+  now Bring 8 Trogg Stone Teeth to Captain Rugelfuss in the guard tower.
+
+275
+  was Kill 12 Fen Creepers, then return to Rethiel the Greenwarden in the Wetlands.
+  now Kill 12 Fen Creepers.
+
+276
+  was Kill 15 Mosshide Gnolls and 10 Mosshide Mongrels, then return to Rethiel the Greenwarden in the Wetlands.
+  now Kill 15 Mosshide Gnolls and 10 Mosshide Mongrels.
+
+279
+  was Kill 12 Bluegill Murlocs.  Slay Gobbler and take his head.  Bring Gobbler's Head to Karl Boran in Menethil Harbor.
+  now Kill 12 Bluegill Murlocs. Slay Gobbler and take his head. Bring Gobbler's Head to Karl Boran in Menethil Harbor.
+
+283
+  was The Disarming Mixture seemed to take effect. Return to Chief Engineer Hinderweir to report the good news.
+  now The Disarming Mixture seemed to take effect.
+
+290
+  was Get the Intrepid Strongbox Key from Captain Halyndor.  Use the key to open the Intrepid's Locked Strongbox.
+  now Get the Intrepid Strongbox Key from Captain Halyndor. Use the key to open the Intrepid's Locked Strongbox.
+
+295
+  was Ormer Ironbraid wants you to kill 10 Mottled Scytheclaw raptors and 10 Mottled Razormaw raptors then return to him at the Whelgar Excavation Site.
+  now Ormer Ironbraid wants you to kill 10 Mottled Scytheclaw raptors and 10 Mottled Razormaw raptors.
+
+296
+  was Ormer Ironbraid at the Whelgar Excavation Site wants you to kill Sarltooth and return to him with one of his talons once the task is fulfilled.
+  now Ormer Ironbraid at the Whelgar Excavation Site wants you to kill Sarltooth.
+
+307
+  was Go to the Silver Stream Mine and collect 4 loads of Miners' Gear.  Return to Mountaineer Stormpike.
+  now Go to the Silver Stream Mine and collect 4 loads of Miners' Gear.
+
+313
+  was Gather 8 Wendigo Manes and bring them to Pilot Stonegear.
+  now Gather 8 Wendigo Manes.
+
+317
+  was Gather 4 Chunks of Boar Meat and 2 Thick Bear Furs, and deliver them to Pilot Bellowfiz at Steelgrill's Depot.
+  now Gather 4 Chunks of Boar Meat and 2 Thick Bear Furs.
+
+319
+  was Kill 6 Ice Claw Bears, 8 Elder Crag Boars, and 8 Snow Leopards, and then return to Rejold Barleybrew in Brewnall Village.
+  now Kill 6 Ice Claw Bears, 8 Elder Crag Boars, and 8 Snow Leopards.
+
+323
+  was Kill 15 Skeletal Raiders, 3 Skeletal Healers and 3 Skeletal Warders, and then return to Sven.
+  now Kill 15 Skeletal Raiders, 3 Skeletal Healers and 3 Skeletal Warders.
+
+324
+  was Gather 5 Lightforge Ingots, then return to Glorin Steelbrow in the Wetlands.
+  now Gather 5 Lightforge Ingots.
+
+346
+  was Return to Brother Kristoff in the Cathedral Square. Give him the book The Stresses of Iron.
+  now Give him the book The Stresses of Iron.
+
+347
+  was Gather 5 loads of Rethban Ore and bring it to Brother Paxton in the Northshire Library.
+  now Gather 5 loads of Rethban Ore.
+
+356
+  was Kill 8 Bleeding Horrors and 8 Wandering Spirits, then report back to Linnea at her camp.
+  now Kill 8 Bleeding Horrors and 8 Wandering Spirits.
+
+358
+  was Kill Rot Hide Graverobbers and Rot Hide Mongrels.   Bring 8 Embalming Ichors to Magistrate Sevren in Brill.
+  now Kill Rot Hide Graverobbers and Rot Hide Mongrels. Bring 8 Embalming Ichors to Magistrate Sevren in Brill.
+
+365
+  was Steal 10 pumpkins from the farm to the west, just north of Deathknell and take them to Apothecary Johaan in Brill.
+  now Steal 10 pumpkins from the farm, near Deathknell.
+
+382
+  was Kill Meven Korgal, the messenger, at the Crusader camp, then return any information you find to Executor Arren.
+  now Kill Meven Korgal, the messenger, at the Crusader camp.
+
+398
+  was Kill Maggot Eye and return to Executor Zygand in Brill with his paw for a reward.
+  now Kill Maggot Eye.
+
+399
+  was Go to Baros Alexston's house in Westfall and search for his compass, then return it to him in Cathedral Square of Stormwind.
+  now Go to Baros Alexston's house in Westfall and search for his compass.
+
+408
+  was Kill 8 Wailing Ancestors and 8 Rotting Ancestors.  Kill Captain Dargol, and bring his skull to Magistrate Sevren in Brill.
+  now Kill 8 Wailing Ancestors and 8 Rotting Ancestors. Kill Captain Dargol, and bring his skull to Magistrate Sevren in Brill.
+
+409
+  was Obtain a Candle of Beckoning.  Summon Lillith Nefara and kill her.  Return to Gunther on his island.
+  now Obtain a Candle of Beckoning. Summon Lillith Nefara and kill her.
+
+417
+  was Kill Mangeclaw.  Bring his Mangy Claw and Hildelve's Journal to Pilot Hammerfoot.
+  now Kill Mangeclaw. Bring his Mangy Claw and Hildelve's Journal to Pilot Hammerfoot.
+
+426
+  was Gather 5 Notched Ribs and 3 Blackened Skulls, then return to Deathguard Dillinger in Brill.
+  now Gather 5 Notched Ribs and 3 Blackened Skulls.
+
+429
+  was Gather 6 discolored worg hearts and bring them to Apothecary Renferrel at the Sepulcher.
+  now Gather 6 discolored worg hearts.
+
+430
+  was Bring Quinn's potion to Quinn Yorick at the Ivar Patch, north of the Sepulcher.
+  now Bring Quinn's potion to Quinn Yorick at the Ivar Patch, near the Sepulcher.
+
+437
+  was Kill rot hide gnolls at the Dead Fields.  When Nightlash appears, kill her.  Bring the Essence of Nightlash to High Executor Hadrec at the Sepulcher.
+  now Kill rot hide gnolls at the Dead Fields. When Nightlash appears, kill her. Bring the Essence of Nightlash to High Executor Hadrec at the Sepulcher.
+
+438
+  was Go to the Decrepit Ferry.  Search for the reason the Scourge are there.
+  now Go to the Decrepit Ferry. Search for the reason the Scourge are there.
+
+447
+  was Collect 6 Grizzled Bear Hearts and 6 samples of Skittering Blood and deliver them to Master Apothecary Faranell in the Undercity.
+  now Collect 6 Grizzled Bear Hearts and 6 samples of Skittering Blood.
+
+450
+  was Retrieve Apothecary Berard's journal from Pyrewood Village and take it to Apothecary Renferrel at the Sepulcher.
+  now Retrieve Apothecary Berard's journal from Pyrewood Village.
+
+453
+  was Find the Shadowy Figure. Your clues:  He is not native to Darkshire.  He is a nervous, jittery person.  He left Darkshire and headed west.
+  now Find the Shadowy Figure. Your clues: He is not native to Darkshire. He is a nervous, jittery person. He left Darkshire and headed west.
+
+455
+  was Traverse Dun Algaz.  Kill 8 Dragonmaw Scouts and 6 Dragonmaw Grunts.  Report to Valstag Ironjaw in Menethil Harbor.
+  now Traverse Dun Algaz. Kill 8 Dragonmaw Scouts and 6 Dragonmaw Grunts.
+
+456
+  was Kill 7 Young Nightsabers and 4 Young Thistle Boars and return to Conservator Ilthalaine.
+  now Kill 7 Young Nightsabers and 4 Young Thistle Boars.
+
+459
+  was Collect 8 Fel Moss and bring them to Tarindrella.
+  now Collect 8 Fel Moss.
+
+470
+  was One of the oozes at Ironbeard's Tomb has Sida's bag, retrieve it and bring it back to her in Menethil Harbor.
+  now One of the oozes at Ironbeard's Tomb has Sida's bag, retrieve it.
+
+471
+  was Collect 6 Giant Crocolisk Skins and bring them to James Halloran in Menethil Harbor.
+  now Collect 6 Giant Crocolisk Skins.
+
+474
+  was Kill Chieftain Nek'rosh  Bring Nek'rosh's Head to Captain Stoutfist.
+  now Kill Chieftain Nek'rosh Bring Nek'rosh's Head to Captain Stoutfist.
+
+475
+  was Seek out Gaerolas Talvethren in Starbreeze Village. 
+  now Seek out Gaerolas Talvethren in Starbreeze Village.
+
+477
+  was Retrieve the contents of one of the Dalaran wizards' crates. You will find Pyrewood Village to the south.
+  now Retrieve the contents of one of the Dalaran wizards' crates. You will find Pyrewood Village.
+
+483
+  was Retrieve the Relics of Wakening and bring them to Athridas Bearmantle in Dolanaar.
+  now Retrieve the Relics of Wakening.
+
+486
+  was Kill Ursal the Mauler and return to Athridas Bearmantle in Dolanaar.
+  now Kill Ursal the Mauler.
+
+487
+  was Slay 6 Gnarlpine Ambushers and return to Sentinel Amara Nightwalker outside of Dolanaar.
+  now Slay 6 Gnarlpine Ambushers.
+
+489
+  was Collect 3 Fel Cones and give them to Zenn Foulhoof outside of Dolanaar.
+  now Collect 3 Fel Cones.
+
+500
+  was Gather 9 Dirty Knucklebones from Crushridge ogres in the Alterac Mountains. Bring them to Marshal Redpath in Southshore.
+  now Gather 9 Dirty Knucklebones from Crushridge ogres in the Alterac Mountains.
+
+503
+  was Free Gol'dir then return to Krusk in Tarren Mill.
+  now Free Gol'dir.
+
+504
+  was Slay 15 Crushridge Warmongers, then return to Marshal Redpath in Southshore.
+  now Slay 15 Crushridge Warmongers.
+
+505
+  was Kill 12 Syndicate Footpads and 8 Syndicate Thieves, then return to Magistrate Henry Maleb in Southshore.
+  now Kill 12 Syndicate Footpads and 8 Syndicate Thieves.
+
+516
+  was Locate Beren's Peril, then kill 6 Ravenclaw Drudgers and 6 Ravenclaw Guardians, then return to Shadow Priest Allister at the Sepulcher.
+  now Locate Beren's Peril, then kill 6 Ravenclaw Drudgers and 6 Ravenclaw Guardians.
+
+520
+  was Kill Mug'Thol, and return his head with the Crown of Will to Melisara in Tarren Mill.
+  now Kill Mug'Thol.
+
+526
+  was Gather 5 lightforge ingots, then return to Glorin Steelbrow in the Wetlands.
+  now Gather 5 lightforge ingots.
+
+527
+  was Kill 6 Hillsbrad Farmhands, 6 Hillsbrad Farmers, Farmer Ray and Farmer Getz and report back to Darthalia in Tarren Mill.
+  now Kill 6 Hillsbrad Farmhands, 6 Hillsbrad Farmers, Farmer Ray and Farmer Getz.
+
+528
+  was Kill 15 Hillsbrad Peasants and report back to Darthalia in Tarren Mill.
+  now Kill 15 Hillsbrad Peasants.
+
+529
+  was Kill Blacksmith Verringtan and 4 Hillsbrad Apprentice Blacksmiths.  Retrieve a shipment of iron and report back to Darthalia in Tarren Mill.
+  now Kill Blacksmith Verringtan and 4 Hillsbrad Apprentice Blacksmiths. Retrieve a shipment of iron.
+
+530
+  was Kill Valdred Moray.  Bring his hands to Raleigh Andrean in the Undercity.
+  now Kill Valdred Moray. Bring his hands to Raleigh Andrean in the Undercity.
+
+532
+  was Kill Magistrate Burnside and 5 Hillsbrad Councilmen. Destroy the Hillsbrad Proclamation. Steal the Hillsbrad Town Registry. Report back to Darthalia in Tarren M
+  now Kill Magistrate Burnside and 5 Hillsbrad Councilmen. Destroy the Hillsbrad Proclamation. Steal the Hillsbrad Town Registry.
+
+537
+  was Kill 4 Argus Shadow Mages.  Bring the Head of Nagaz to Magistrate Maleb in Southshore.
+  now Kill 4 Argus Shadow Mages. Bring the Head of Nagaz to Magistrate Maleb in Southshore.
+
+539
+  was Kill Foreman Bonds and 10 Hillsbrad Miners and report back to Darthalia in Tarren Mill.
+  now Kill Foreman Bonds and 10 Hillsbrad Miners.
+
+541
+  was Travel to Dun Garok and kill 8 Mountaineers, 4 Riflemen, 2 Priests and Captain Ironhill and report back to Darthalia in Tarren Mill.
+  now Travel to Dun Garok and kill 8 Mountaineers, 4 Riflemen, 2 Priests and Captain Ironhill.
+
+544
+  was Find the traitors and recover their artifacts, then return to Magus Voidglare in Tarren Mill.
+  now Find the traitors and recover their artifacts.
+
+545
+  was Kill 6 Dalaran Summoners and 12 Elemental Slaves, then return to Magus Voidglare in Tarren Mill.
+  now Kill 6 Dalaran Summoners and 12 Elemental Slaves.
+
+547
+  was Retrieve Deathguard Humbert's sword from Dun Garok and return it to him in Tarren Mill.
+  now Retrieve Deathguard Humbert's sword from Dun Garok.
+
+549
+  was Kill 10 Syndicate Rogues and 10 Syndicate Watchmen. Return to High Executor Darthalia in Tarren Mill for your reward.
+  now Kill 10 Syndicate Rogues and 10 Syndicate Watchmen.
+
+552
+  was Retrieve Helcular's Rod from the Yeti and bring it back to Novice Thaivand in Tarren Mill.
+  now Retrieve Helcular's Rod from the Yeti.
+
+553
+  was Charge the Rod of Helcular with the powers of the Flame of Azel, Flame of Veraz and the Flame of Uzel.  Drive the charged rod into Helcular's grave in Southshor
+  now Charge the Rod of Helcular with the powers of the Flame of Azel, Flame of Veraz and the Flame of Uzel. Drive the charged rod into Helcular's grave in Southshor
+
+574
+  was Kill 10 Kurzen Commandoes and 6 Kurzen Headshrinkers.  Report to Lieutenant Doren at the Rebel Camp.
+  now Kill 10 Kurzen Commandoes and 6 Kurzen Headshrinkers.
+
+586
+  was Kill 8 Skullsplitter Hunters, 6 Skullsplitter Headhunters, and 4 Skullsplitter Berserkers.  Bring the Broken Armor of Ana'thek to the Bubbling Cauldron at the G
+  now Kill 8 Skullsplitter Hunters, 6 Skullsplitter Headhunters, and 4 Skullsplitter Berserkers. Bring the Broken Armor of Ana'thek to the Bubbling Cauldron at the G
+
+595
+  was First Mate Crazz wants you to check the cove north of Booty Bay.
+  now First Mate Crazz wants you to check the cove near Booty Bay.
+
+630
+  was Slay King Mukla and return to Princess Poobah with the Key to free her.
+  now Slay King Mukla.
+
+640
+  was Retrieve the 11 Sigil Fragments from the defenders in Stromgarde, and bring them to Tor'gan in Hammerfall.
+  now Retrieve the 11 Sigil Fragments from the defenders in Stromgarde.
+
+642
+  was Gather 12 Motes of Myzrael, then bring them to the Iridescent Shards in Drywhisker Gorge.
+  now Gather 12 Motes of Myzrael.
+
+643
+  was Retrieve the Sigil of Arathor and return it to Zengu in Hammerfall.
+  now Retrieve the Sigil of Arathor.
+
+648
+  was Escort OOX-17/TN to Steamwheedle Port, then report to Oglethorpe Obnoticus in Booty Bay.
+  now Escort OOX-17/TN to Steamwheedle Port.
+
+651
+  was Gather the Burning Key, the Cresting Key and the Thundering Key from the Stone of West Binding, the Stone of East Binding and the Stone of Outer Binding.  Bring
+  now Gather the Burning Key, the Cresting Key and the Thundering Key from the Stone of West Binding, the Stone of East Binding and the Stone of Outer Binding. Bring
+
+656
+  was Go to the Shards of Myzrael, summon her and defeat her.  Gather her Eldritch Shackles and bind them to the Shards of Myzrael.
+  now Go to the Shards of Myzrael, summon her and defeat her. Gather her Eldritch Shackles and bind them to the Shards of Myzrael.
+
+666
+  was Doctor Draxlegauge in Faldir's Cove wants you to collect 10 Elven Gems and return the Goggles of Gem Hunting once you are done.
+  now Doctor Draxlegauge in Faldir's Cove wants you to collect 10 Elven Gems.
+
+673
+  was Retrieve Marez Cowl's Bloodstone Orb and bring it to Tor'gan in Hammerfall.
+  now Retrieve Marez Cowl's Bloodstone Orb.
+
+677
+  was Slay 10 Witherbark Axe Throwers, 10 Headhunters and 8 Witch Doctors, and return to Drum Fel in the Hammerfall outpost.
+  now Slay 10 Witherbark Axe Throwers, 10 Headhunters and 8 Witch Doctors.
+
+678
+  was Kill 10 Boulderfist Brutes and 4 Boulderfist Magi, and return to Drum Fel in the Hammerfall outpost.
+  now Kill 10 Boulderfist Brutes and 4 Boulderfist Magi.
+
+679
+  was Kill 7 Boulderfist Shaman and 3 Boulderfist Lords and return to Drum Fel in the Hammerfall outpost.
+  now Kill 7 Boulderfist Shaman and 3 Boulderfist Lords.
+
+681
+  was Kill 10 Syndicate Highwaymen and 6 Syndicate Mercenaries.  Return to Captain Nials at Refuge Pointe.
+  now Kill 10 Syndicate Highwaymen and 6 Syndicate Mercenaries.
+
+693
+  was Find Trelane's Wand of Invocation and return it to Skuerto at Refuge Pointe.
+  now Find Trelane's Wand of Invocation.
+
+694
+  was Find an Azure Agate and bring it to Apprentice Kryten at Refuge Pointe.
+  now Find an Azure Agate.
+
+696
+  was Find Trelane's Phylactery, Trelane's Orb, and Trelane's Ember Agate, and return them to Skuerto at Refuge Pointe.
+  now Find Trelane's Phylactery, Trelane's Orb, and Trelane's Ember Agate.
+
+710
+  was Find 10 Small Stone Shards and bring them to Lotwil Veriatus in the Badlands.
+  now Find 10 Small Stone Shards.
+
+713
+  was Find Frost Oil and bring it to Lotwil Veriatus in Badlands.
+  now Find Frost Oil.
+
+717
+  was Use the Sign of the Earth to activate the Pillars of Amethyst, Opal, and Diamond and obtain the Runestones.  Place the runestones in the Seal of the Earth to fr
+  now Use the Sign of the Earth to activate the Pillars of Amethyst, Opal, and Diamond and obtain the Runestones. Place the runestones in the Seal of the Earth to fr
+
+719
+  was Find Ryedol's Lucky Pick and return it to Prospector Ryedol south of Hammertoe's Dig Site.
+  now Find Ryedol's Lucky Pick.
+
+722
+  was Find Hammertoe's Amulet and return it to him in Uldaman.
+  now Find Hammertoe's Amulet.
+
+729
+  was Travel south and check on Prospector Remtravel.
+  now Travel and check on Prospector Remtravel.
+
+731
+  was Protect Prospector Remtravel as he searches for the mysterious fossil, then return to Archaeologist Hollee in Auberdine.
+  now Protect Prospector Remtravel as he searches for the mysterious fossil.
+
+739
+  was Slay Agmond's killer, Murdaloc.  Slay 12 Stonevault Bonesnappers.  Report to Prospector Ironband in Loch Modan.
+  now Slay Agmond's killer, Murdaloc. Slay 12 Stonevault Bonesnappers.
+
+744
+  was Collect 6 Azure Feathers and 6 Bronze Feathers, and bring them to Eyahn Eagletalon in Thunder Bluff.
+  now Collect 6 Azure Feathers and 6 Bronze Feathers.
+
+745
+  was Kill 10 Palemane Tanners, 8 Palemane Skinners, and 5 Palemane Poachers, then return to Baine Bloodhoof in Bloodhoof Village.
+  now Kill 10 Palemane Tanners, 8 Palemane Skinners, and 5 Palemane Poachers.
+
+746
+  was Collect 5 Prospector's Picks.  At a forge, smash the Prospector's Picks to create Broken Tools.  Bring 5 Broken Tools to Baine Bloodhoof in Bloodhoof Village.
+  now Collect 5 Prospector's Picks. At a forge, smash the Prospector's Picks to create Broken Tools. Bring 5 Broken Tools to Baine Bloodhoof in Bloodhoof Village.
+
+751
+  was Return the Venture Co. Documents to Morin Cloudstalker near Bloodhoof Village.
+  now Documents to Morin Cloudstalker near Bloodhoof Village.
+
+752
+  was Chief Hawkwind wants you to search for his mother near the water well to the southeast of Camp Narache.
+  now Chief Hawkwind wants you to search for his mother near the water well near Camp Narache.
+
+753
+  was Take a Water Pitcher from the water well.  Return the pitcher to Chief Hawkwind in Camp Narache which is northwest from the water well.
+  now Take a Water Pitcher from the water well.
+
+754
+  was Use the Winterhoof Cleansing Totem at the Winterhoof Water Well, then return to Mull Thunderhorn.
+  now Use the Winterhoof Cleansing Totem at the Winterhoof Water Well.
+
+755
+  was Travel to Seer Graytongue who lives in the hills directly south of Camp Narache.
+  now Travel to Seer Graytongue who lives in the hills near Camp Narache.
+
+758
+  was Use the Thunderhorn Cleansing Totem at the Thunderhorn Water Well, then return to Mull.
+  now Use the Thunderhorn Cleansing Totem at the Thunderhorn Water Well.
+
+760
+  was Use the Wildmane Cleansing Totem at the Wildmane Water Well, then return to Mull Thunderhorn.
+  now Use the Wildmane Cleansing Totem at the Wildmane Water Well.
+
+765
+  was Kill Supervisor Fizsprocket and return his clipboard to Morin Cloudstalker at Bloodhoof Village.
+  now Kill Supervisor Fizsprocket.
+
+771
+  was Collect 2 Well Stones and 2 Ambercorn and bring them back to Zarlman Two-Moons in Bloodhoof Village.
+  now Collect 2 Well Stones and 2 Ambercorn.
+
+773
+  was Travel to Red Rocks east of Thunder Bluff and speak with the Ancestral Spirit.
+  now Travel to Red Rocks near Thunder Bluff and speak with the Ancestral Spirit.
+
+784
+  was Kill 10 Kul Tiras Sailors, 8 Kul Tiras Marines and Lieutenant Benedict and return to Gar'Thok in Razor Hill.
+  now Kill 10 Kul Tiras Sailors, 8 Kul Tiras Marines and Lieutenant Benedict.
+
+788
+  was Kill 10 Mottled Boars then return to Gornek at the Den.
+  now Kill 10 Mottled Boars.
+
+792
+  was Kill 12 Vile Familiars.  Return to Zureetha Fargaze outside the Den.
+  now Kill 12 Vile Familiars.
+
+793
+  was Use the Sign of the Earth to activate the Pillars of Diamond, Opal, and Amethyst and obtain the Runestones.  Place the runestones in the Seal of the Earth to fr
+  now Use the Sign of the Earth to activate the Pillars of Diamond, Opal, and Amethyst and obtain the Runestones. Place the runestones in the Seal of the Earth to fr
+
+808
+  was Retrieve Minshina's skull from the circle of power on the Echo Isles.  Bring it to Master Gadrin in Sen'jin Village.
+  now Retrieve Minshina's skull from the circle of power on the Echo Isles.
+
+812
+  was Find Kor'ghan in Orgrimmar and get the Venomtail Antidote. Then bring the antidote to Rhinag near the northwestern border of Durotar.
+  now Find Kor'ghan in Orgrimmar and get the Venomtail Antidote. Then bring the antidote to Rhinag near the border of Durotar.
+
+816
+  was Bring a sign of Kron's fate to Misha Tor'kren at the farmstead northwest of Razor Hill.
+  now Bring a sign of Kron's fate to Misha Tor'kren at the farmstead near Razor Hill.
+
+826
+  was Defeat Zalazane.  Kill 8 Voodoo Trolls and 8 Hexed Trolls.  Bring Zalazane's Head to Gadrin.
+  now Defeat Zalazane. Kill 8 Voodoo Trolls and 8 Hexed Trolls. Bring Zalazane's Head to Gadrin.
+
+827
+  was Gather Searing Collars from the cultists in Skull Rock.  Bring them to Margoz at his camp.
+  now Gather Searing Collars from the cultists in Skull Rock.
+
+834
+  was Retrieve 5 Sacks of Supplies and return them to Rezlak near Orgrimmar.
+  now Retrieve 5 Sacks of Supplies.
+
+836
+  was Escort OOX-09/HL to the shoreline beyond Overlook Cliff, then report to Oglethorpe Obnoticus in Booty Bay.
+  now Escort OOX-09/HL to the shoreline beyond Overlook Cliff.
+
+840
+  was Follow the western road from Razor Hill to the Barrens over a bridge.  Stop at the orc outpost across the bridge.  Give Kargal Battlescar at the Barrens outpost
+  now Follow the road from Razor Hill to the Barrens over a bridge. Stop at the orc outpost across the bridge. Give Kargal Battlescar at the Barrens outpost
+
+842
+  was Follow the western road from Kargal's Far Watch Outpost.  At the T intersection, turn left and follow the road south.   Find Sergra Darkthorn at the crossing of
+  now Follow the road from Kargal's Far Watch Outpost. At the T intersection, turn left and follow the road south. Find Sergra Darkthorn at the crossing of
+
+843
+  was Gann Stonespire wants you to kill 15 Bael'dun Excavators and 5 Bael'dun Foremen.  Bring Khazgorm's Journal to Gann Stonespire.
+  now Gann Stonespire wants you to kill 15 Bael'dun Excavators and 5 Bael'dun Foremen. Bring Khazgorm's Journal to Gann Stonespire.
+
+844
+  was Collect 7 Plainstrider Beaks and return them to Sergra Darkthorn in the Crossroads.
+  now Collect 7 Plainstrider Beaks.
+
+849
+  was Destroy the flying machine at Bael Modan and return to Gann Stonespire.
+  now Destroy the flying machine at Bael Modan.
+
+850
+  was Bring Barak's Head to Regthar Deathgate, west of the Crossroads.
+  now Bring Barak's Head to Regthar Deathgate, near the Crossroads.
+
+851
+  was Bring Verog's Head to Regthar Deathgate, west of the Crossroads.
+  now Bring Verog's Head to Regthar Deathgate, near the Crossroads.
+
+852
+  was Bring Hezrul's Head to Regthar Deathgate, west of the Crossroads.
+  now Bring Hezrul's Head to Regthar Deathgate, near the Crossroads.
+
+855
+  was Bring 15 Centaur Bracers to Regthar Deathgate, west of the Crossroads.
+  now Bring 15 Centaur Bracers to Regthar Deathgate, near the Crossroads.
+
+858
+  was Get the Ignition Key and bring it to Wizzlecrank.
+  now Get the Ignition Key.
+
+865
+  was Gather 5 Intact Raptor Horns from Sunscale Scytheclaws, and bring them to Mebok Mizzyrix in Ratchet.
+  now Gather 5 Intact Raptor Horns from Sunscale Scytheclaws.
+
+867
+  was Collect 8 Witchwing talons.  Return them to Darsok Swiftdagger at the Crossroads.
+  now Collect 8 Witchwing talons.
+
+871
+  was Of the Razormane tribe, kill 8 Water Seekers, 8 Thornweavers and 3 Hunters, and then return to Thork in the Crossroads.
+  now Of the Razormane tribe, kill 8 Water Seekers, 8 Thornweavers and 3 Hunters.
+
+872
+  was Kill 8 Razormane Geomancers, 8 Razormane Defenders, and Kreenig Snarlsnout.  Then bring Kreenig Snarlsnout's Tusk to Thork at the Crossroads.
+  now Kill 8 Razormane Geomancers, 8 Razormane Defenders, and Kreenig Snarlsnout. Then bring Kreenig Snarlsnout's Tusk to Thork at the Crossroads.
+
+875
+  was Collect 6 Harpy Lieutenant Rings from Witchwing Slayers and return them to Darsok Swiftdagger at the Crossroads.
+  now Collect 6 Harpy Lieutenant Rings from Witchwing Slayers.
+
+876
+  was Slay Serena Bloodfeather and return her head to Darsok Swiftdagger at the Crossroads.
+  now Slay Serena Bloodfeather.
+
+878
+  was Kill 6 Bristleback Water Seekers, 12 Bristleback Thornweavers and 12 Bristleback Geomancers and return to Mangletooth at Camp Taurajo in the Barrens.
+  now Kill 6 Bristleback Water Seekers, 12 Bristleback Thornweavers and 12 Bristleback Geomancers.
+
+905
+  was Kill Sunscale raptors and collect their feathers. Use the feathers on the 3 Scytheclaw nests. Return to Sergra Darkthorn in the Crossroads.
+  now Kill Sunscale raptors and collect their feathers. Use the feathers on the 3 Scytheclaw nests.
+
+913
+  was Find and slay a Thunderhawk, return its wings to Jorn Skyseer at Camp Taurajo.
+  now Find and slay a Thunderhawk.
+
+921
+  was Fill the Crystal Phial and bring it back to Tenaron Stormgrip atop Aldrassil.
+  now Fill the Crystal Phial.
+
+924
+  was Grab a Flawed Power Stone. Bring it to the Altar of Fire before the stone expires, then return to Ak'Zeloth.
+  now Grab a Flawed Power Stone.
+
+929
+  was Fill the Jade Phial and bring it back to Corithras Moonrage in Dolanaar.
+  now Fill the Jade Phial.
+
+933
+  was Fill the Tourmaline Phial and bring it back to Corithras Moonrage in Dolanaar.
+  now Fill the Tourmaline Phial.
+
+937
+  was Acquire 6 Bloodfeather Belts and bring them to Sentinel Arynia Cloudsbreak in the Oracle Glade.
+  now Acquire 6 Bloodfeather Belts.
+
+939
+  was Bring the Flute of Xavaric and 5 Jadefire Felbind samples to Eridan Bluewind in southern Felwood.
+  now Bring the Flute of Xavaric and 5 Jadefire Felbind samples to Eridan Bluewind in Felwood.
+
+952
+  was Deliver Fandral's message to Onu in the Grove of the Ancients in Darkshore, south of Auberdine.
+  now Deliver Fandral's message to Onu in the Grove of the Ancients in Darkshore, near Auberdine.
+
+953
+  was Study the tablets which tell of Ameth'Aran and of its fall, then return to Sentinel Tysha Moonblade in Darkshore.
+  now Study the tablets which tell of Ameth'Aran and of its fall.
+
+956
+  was Obtain the Ancient Moonstone Seal and bring it to Asterion in Bashal'Aran.
+  now Obtain the Ancient Moonstone Seal.
+
+957
+  was Destroy the Ancient Moonstone Seal at the ancient flame in Ameth'Aran, then return to Asterion in Bashal'Aran.
+  now Destroy the Ancient Moonstone Seal at the ancient flame in Ameth'Aran.
+
+970
+  was Collect a Glowing Soul Gem and return it to Delgren the Purifier at Maestra's Post.
+  now Collect a Glowing Soul Gem.
+
+974
+  was Krakle in Un'Goro Crater wants you to find the hottest area of Fire Plume Ridge.  Whenever you find a hot spot, right click the thermometer to check the tempera
+  now Krakle in Un'Goro Crater wants you to find the hottest area of Fire Plume Ridge. Whenever you find a hot spot, right click the thermometer to check the tempera
+
+978
+  was Collect 10 Moontouched Feathers from Winterspring, then return to Erelas Ambersky in Rut'theran Village.
+  now Collect 10 Moontouched Feathers from Winterspring.
+
+979
+  was Find Ranshalla in eastern Winterspring.
+  now Find Ranshalla in Winterspring.
+
+984
+  was Find a corrupt furbolg camp in Darkshore and return to Terenthis in Auberdine.
+  now Find a corrupt furbolg camp in Darkshore.
+
+985
+  was Kill 8 Blackwood Pathfinders and 5 Windtalkers and return to Terenthis in Auberdine.
+  now Kill 8 Blackwood Pathfinders and 5 Windtalkers.
+
+986
+  was Find 5 Fine Moonstalker Pelts and return them to Terenthis in Auberdine.
+  now Find 5 Fine Moonstalker Pelts.
+
+992
+  was Use the untapped dowsing widget near the pool of water by Sandsorrow Watch. Once you have collected the sample, return the tapped dowsing widget to Senior Surve
+  now Use the untapped dowsing widget near the pool of water by Sandsorrow Watch.
+
+1003
+  was Collect 4 Grizzled Scalps from Grizzled Thistle Bears to the south of Auberdine and place them in Buzzbox 525.
+  now Collect 4 Grizzled Scalps from Grizzled Thistle Bears near Auberdine and place them in Buzzbox 525.
+
+1012
+  was Kill the druids: Taneel Darkwood, Uthil Mooncall, Mavoris Cloudsbreak; then return to Kayneth Stillwind in Forest Song.
+  now Kill the druids: Taneel Darkwood, Uthil Mooncall, Mavoris Cloudsbreak;.
+
+1022
+  was Go to the Howling Vale and study the Tome of Mel'Thandris, then return to Sentinel Melyria Frostshadow at Forest Song.
+  now Go to the Howling Vale and study the Tome of Mel'Thandris.
+
+1023
+  was Find the Glowing Gem and return to Raene Wolfrunner in Astranaar with Teronis' Journal.
+  now Find the Glowing Gem.
+
+1024
+  was Find Shael'dryn at the moonwell to the northeast.
+  now Find Shael'dryn at the moonwell.
+
+1025
+  was Kill 1 Den Watcher, 2 Ursas, 10 Totemics, and 12 Warriors of the Foulweald tribe, and then return to Raene Wolfrunner in Astranaar.
+  now Kill 1 Den Watcher, 2 Ursas, 10 Totemics, and 12 Warriors of the Foulweald tribe.
+
+1027
+  was Find the final piece of Dartol's Rod and return to Shael'dryn at the moonwell.
+  now Find the final piece of Dartol's Rod.
+
+1031
+  was Kill Geltharis and return the Branch of Cenarius to Illiyana at Forest Song.
+  now Kill Geltharis.
+
+1035
+  was Retrieve a Fallen Moonstone from the Shadethicket Oracle, then bring it to Pelturas in Astranaar.
+  now Retrieve a Fallen Moonstone from the Shadethicket Oracle.
+
+1038
+  was Search through Velinde's chest for her journal, then return it along with the key to Thyn'tel Bladeweaver in Darnassus.
+  now Search through Velinde's chest for her journal.
+
+1043
+  was Look for signs of the Scythe of Elune then return to Jonathan Carevin in Darkshire.
+  now Look for signs of the Scythe of Elune.
+
+1045
+  was Kill Ran Bloodtooth and 4 Bloodtooth Guards and return to Krolg near Lake Mystral.
+  now Kill Ran Bloodtooth and 4 Bloodtooth Guards.
+
+1049
+  was Retrieve the Compendium of the Fallen from the Monastery in Tirisfal Glades and return to Sage Truthseeker in Thunder Bluff.
+  now Retrieve the Compendium of the Fallen from the Monastery in Tirisfal Glades.
+
+1050
+  was Retrieve Mythology of the Titans from the Monastery and bring it to Librarian Mae Paledust in Ironforge.
+  now Retrieve Mythology of the Titans from the Monastery.
+
+1053
+  was Kill High Inquisitor Whitemane, Scarlet Commander Mograine, Herod, the Scarlet Champion and Houndmaster Loksey and then report back to Raleigh the Devout in Sou
+  now Kill High Inquisitor Whitemane, Scarlet Commander Mograine, Herod, the Scarlet Champion and Houndmaster Loksey.
+
+1062
+  was Kill 15 Venture Co. Loggers, then return to Seereth Stonebreak on the border of Stonetalon and the Barrens.
+  now Kill 15 Venture Co. Loggers.
+
+1068
+  was Kill the shredders XT:4 and XT:9, then return to Seereth Stonebreak at the border of the Stonetalon Mountains and the Barrens.
+  now Kill the shredders XT:4 and XT:9.
+
+1071
+  was Kill 10 Venture Co. Loggers, and 10 Venture Co. Deforesters and return to Gaxim Rustfizzle in Stonetalon.
+  now Kill 10 Venture Co. Loggers, and 10 Venture Co. Deforesters.
+
+1080
+  was Retrieve the Venture Co. Letters from Windshear Mine at the east end of Windshear Crag.
+  now Retrieve the Venture Co. Letters from Windshear Mine at Windshear Crag.
+
+1086
+  was Bring the Toxic Fogger to the Venture Co. sky port, then return to Apothecary Zamah.
+  now Bring the Toxic Fogger to the Venture Co. sky port.
+
+1125
+  was Free the spirits of 8 Tortured Druids and 8 Tortured Sentinels in Southwind Village, and then return to Layo Starstrike at the Valor's Rest graveyard of Silithu
+  now Free the spirits of 8 Tortured Druids and 8 Tortured Sentinels in Southwind Village.
+
+1139
+  was Find the Tablet of Will, and return them to Advisor Belgrum in Ironforge.
+  now Find the Tablet of Will.
+
+1140
+  was Free the trapped Highborne souls in Night Run and Satyrnaar, then return to Delgren the Purifier at Maestra's Post.
+  now Free the trapped Highborne souls in Night Run and Satyrnaar.
+
+1147
+  was Kill 5 Silithid Searchers, 5 Silithid Hive Drones, and 5 Silithid Invaders and return to Moktar Krin in Thousand Needles.
+  now Kill 5 Silithid Searchers, 5 Silithid Hive Drones, and 5 Silithid Invaders.
+
+1153
+  was Find an Unrefined Ore Sample on a Gravelsnout Digger or Surveyor and bring it to Tatternack Steelforge at Camp Taurajo in the Barrens.
+  now Find an Unrefined Ore Sample on a Gravelsnout Digger or Surveyor.
+
+1154
+  was Find the Legacy of the Aspects and return it to Braug Dimspirit near the entrance to Talondeep Path in Stonetalon Mountains.
+  now Find the Legacy of the Aspects.
+
+1160
+  was Find The Beginnings of the Undead Threat, and return it to Parqual Fintallas in Undercity.
+  now Find The Beginnings of the Undead Threat.
+
+1173
+  was Defeat Mok'Morokk and report the news to Draz'Zilb in Brackenwall Village.
+  now Defeat Mok'Morokk.
+
+1177
+  was Mudcrush Durtfeet in northern Dustwallow wants 12 Mirefin Heads.
+  now Mudcrush Durtfeet in Dustwallow wants 12 Mirefin Heads.
+
+1201
+  was Kill 9 Theramore Infiltrators, then return to Nazeer Bloodpike in Brackenwall Village.
+  now Kill 9 Theramore Infiltrators.
+
+1221
+  was Grab a Crate with Holes. Grab a Snufflenose Command Stick. Grab and read the Snufflenose Owner's Manual.  In Razorfen Kraul, use the Crate with Holes to summon 
+  now Grab a Crate with Holes. Grab a Snufflenose Command Stick. Grab and read the Snufflenose Owner's Manual. In Razorfen Kraul, use the Crate with Holes to summon
+
+1244
+  was Find the Defias Docket and return it to Watcher Backus in Duskwood.
+  now Find the Defias Docket.
+
+1249
+  was Subdue Tapoke Jahn before he escapes, and then return to Mikhail in Menethil.
+  now Subdue Tapoke Jahn before he escapes.
+
+1273
+  was Go with Ogron to speak with Reethe, then return to Krog in Brackenwall Village.
+  now Go with Ogron to speak with Reethe.
+
+1360
+  was Get Krom Stoutarm's treasured possession from his chest in the North Common Hall of Uldaman, and bring it to him in Ironforge.
+  now Get Krom Stoutarm's treasured possession from his chest in the North Common Hall of Uldaman.
+
+1364
+  was Retrieve Khadgar's Essays on Dimensional Convergence and deliver them to Watcher Mahar Ba in Nethergarde Keep.
+  now Retrieve Khadgar's Essays on Dimensional Convergence.
+
+1396
+  was Kill 8 Young Sawtooth Crocolisks, 10 Sorrow Spinners and 10 Swamp Jaguars then return to Watcher Biggs in the Swamp of Sorrows.
+  now Kill 8 Young Sawtooth Crocolisks, 10 Sorrow Spinners and 10 Swamp Jaguars.
+
+1426
+  was Kill 10 Marsh Murlocs, 10 Marsh Inkspewer, and 10 Marsh Flesheater, then return to Katar in the Swamp of Sorrows.
+  now Kill 10 Marsh Murlocs, 10 Marsh Inkspewer, and 10 Marsh Flesheater.
+
+1428
+  was Kill 10 Marsh Inkspewers, 10 Marsh Flesheaters, and 10 Marsh Oracles, then return to Katar in the Swamp of Sorrows.
+  now Kill 10 Marsh Inkspewers, 10 Marsh Flesheaters, and 10 Marsh Oracles.
+
+1434
+  was Slay 7 Hatefury Rogues, 7 Hatefury Felsworn, 7 Hatefury Betrayers, and 7 Hatefury Hellcallers, and return to Takata Steelblade in Desolace.
+  now Slay 7 Hatefury Rogues, 7 Hatefury Felsworn, 7 Hatefury Betrayers, and 7 Hatefury Hellcallers.
+
+1440
+  was Escort Dalinda Malem from Thunder Axe Fortress and then return to Vahlarriel Demonslayer in Desolace.
+  now Escort Dalinda Malem from Thunder Axe Fortress.
+
+1445
+  was Collect 20 Fetishes of Hakkar and bring them to Fel'Zerul in Stonard.
+  now Collect 20 Fetishes of Hakkar.
+
+1456
+  was Find Karnitol's Satchel and return it to Kreldig Ungor in Desolace.
+  now Find Karnitol's Satchel.
+
+1488
+  was Slay Lord Azrethoc and Jugkar Grim'rod and return to Takata Steelblade in Desolace.
+  now Slay Lord Azrethoc and Jugkar Grim'rod.
+
+1690
+  was Take down 10 Wastewander Bandits and Thieves east of Gadgetzan, then report back to Chief Engineer Bilgewhizzle.
+  now Take down 10 Wastewander Bandits and Thieves near Gadgetzan.
+
+1691
+  was Take down 10 Wastewander Shadow Mages, 8 Wastewander Rogues, and 6 Wastewander Assassins for Chief Engineer Bilgewhizzle in Gadgetzan. 
+  now Take down 10 Wastewander Shadow Mages, 8 Wastewander Rogues, and 6 Wastewander Assassins for Chief Engineer Bilgewhizzle in Gadgetzan.
+
+2038
+  was Find and return Bingles' supplies:  Bingles' Wrench, Bingles' Screwdriver, Bingles' Hammer, and Bingles' Blastencapper.
+  now Find.
+
+2040
+  was Retrieve the Gnoam Sprecklesprocket from the Deadmines and return it to Shoni the Shilent in Stormwind.
+  now Retrieve the Gnoam Sprecklesprocket from the Deadmines.
+
+2098
+  was Find and return the three pieces of Gelkak's Key to Gelkak Gyromast.
+  now Find.
+
+2118
+  was Capture a living Rabid Thistle Bear and bring it back to Tharnariun.  Should you fail to capture a Rabid Thistle Bear and lose your trap, return to Tharnariun T
+  now Capture a living Rabid Thistle Bear. Should you fail to capture a Rabid Thistle Bear and lose your trap.
+
+2138
+  was Cleanse the forest of 20 Rabid Thistle Bears and return to Tharnariun Treetender in Darkshore.
+  now Cleanse the forest of 20 Rabid Thistle Bears.
+
+2283
+  was Look for a valuable necklace within the Uldaman dig site and bring it back to Dran Droffers in Orgrimmar. The necklace may be damaged.
+  now Look for a valuable necklace within the Uldaman dig site. The necklace may be damaged.
+
+2339
+  was Recover all three gems and a power source for the necklace from Uldaman, and then bring them to Jarkal Mossmeld in Kargath. Jarkal believes a power source might
+  now Recover all three gems and a power source for the necklace from Uldaman. Jarkal believes a power source might
+
+2342
+  was Get Patrick Garrett's family treasure from their family chest in the South Common Hall of Uldaman, and bring it to him in the Undercity.
+  now Get Patrick Garrett's family treasure from their family chest in the South Common Hall of Uldaman.
+
+2500
+  was Acquire the reagents Ghak Healtouch needs from the Badlands, then return to him in Thelsamar.
+  now Acquire the reagents Ghak Healtouch needs from the Badlands.
+
+2520
+  was Priestess A'moora wants you to place Lady Sathrah's silvery spinnerets at the fountain inside the temple, and then return to her.
+  now Priestess A'moora wants you to place Lady Sathrah's silvery spinnerets at the fountain inside the temple.
+
+2521
+  was In your journeys throughout the Blasted Lands, should you ever come across a Flawless Draenethyst Sphere, take the item back to Kum'isha the Collector.  Be warn
+  now In your journeys throughout the Blasted Lands, should you ever come across a Flawless Draenethyst Sphere, take the item back to Kum'isha the Collector. Be warn
+
+2583
+  was Bring three Blasted Boar Lungs, two Scorpok Pincers, and one Basilisk Brain to Bloodmage Drazial. 
+  now Bring three Blasted Boar Lungs, two Scorpok Pincers, and one Basilisk Brain to Bloodmage Drazial.
+
+2585
+  was Bring three Scorpok Pincers, two Vulture Gizzards, and one Blasted Boar Lung to Bloodmage Drazial. 
+  now Bring three Scorpok Pincers, two Vulture Gizzards, and one Blasted Boar Lung to Bloodmage Drazial.
+
+2601
+  was Bring ten Basilisk Brains and two Vulture Gizzards to Bloodmage Lynnore. 
+  now Bring ten Basilisk Brains and two Vulture Gizzards to Bloodmage Lynnore.
+
+2603
+  was Bring ten Vulture Gizzards and two Snickerfang Jowls to Bloodmage Lynnore. 
+  now Bring ten Vulture Gizzards and two Snickerfang Jowls to Bloodmage Lynnore.
+
+2605
+  was Collect a Laden Dew Gland and bring it to Marin Noggenfogger in Gadgetzan.
+  now Collect a Laden Dew Gland.
+
+2623
+  was Retrieve the Warchief's Orders and return them to the Fallen Hero of the Horde.
+  now Retrieve the Warchief's Orders.
+
+2641
+  was Sprinkle in Gadgetzan wants you to collect a Violet Tragan and return it to her.
+  now Sprinkle in Gadgetzan wants you to collect a Violet Tragan.
+
+2681
+  was Free nine Servants of Razelikh, three Servants of Sevine, three Servants of Allistarj, and three Servants of Grol. Return to the Fallen Hero when your task is c
+  now Free nine Servants of Razelikh, three Servants of Sevine, three Servants of Allistarj, and three Servants of Grol.
+
+2742
+  was Escort Rin'ji out of the Quel'Danil Lodge, then find his hidden secret at the Overlook Cliffs to the east.
+  now Escort Rin'ji out of the Quel'Danil Lodge, then find his hidden secret at the Overlook Cliffs.
+
+2767
+  was Escort OOX-22/FE to the dock along the Forgotten Coast, then report to Oglethorpe Obnoticus in Booty Bay.
+  now Escort OOX-22/FE to the dock along the Forgotten Coast.
+
+2782
+  was Oran Snakewrithe, a well known scholar on matters concerning the Witherbark trolls, may be able to decipher the tablet. She is known to reside within the Magic 
+  now Oran Snakewrithe, a well known scholar on matters concerning the Witherbark trolls, may be able to decipher the tablet. She is known to reside within the Magic
+
+2841
+  was Retrieve the Rig Blueprints and Thermaplugg's Safe Combination from Gnomeregan and bring them to Nogg in Orgrimmar. 
+  now Retrieve the Rig Blueprints and Thermaplugg's Safe Combination from Gnomeregan.
+
+2845
+  was Pick up Shay's Bell from the chest.  Escort Shay Leafrunner to Rockbiter's camp.
+  now Pick up Shay's Bell from the chest. Escort Shay Leafrunner to Rockbiter's camp.
+
+2863
+  was Kill 5 Woodpaw Alphas and return to Hadoken Swiftstrider within one hour.
+  now Kill 5 Woodpaw Alphas.
+
+2877
+  was Kill 10 Green Sludges and 10 Jade Oozes, and then report back to Fraggar Thundermantle in Aerie Peak.
+  now Kill 10 Green Sludges and 10 Jade Oozes.
+
+2902
+  was Find the gnoll battle plans somewhere in the gnoll camps to the south of Camp Mojache.
+  now Find the gnoll battle plans somewhere in the gnoll camps near Camp Mojache.
+
+2926
+  was Use the Empty Leaden Collection Phial on Irradiated Invaders or Irradiated Pillagers to collect radioactive fallout. Once it is full, take it back to Ozzie Togg
+  now Use the Empty Leaden Collection Phial on Irradiated Invaders or Irradiated Pillagers to collect radioactive fallout.
+
+2929
+  was Venture to Gnomeregan and kill Mekgineer Thermaplugg. Return to High Tinker Mekkatorque when the task is complete.
+  now Venture to Gnomeregan and kill Mekgineer Thermaplugg.
+
+2932
+  was Gather Witherbark Skulls and place on Nimboya's Pike. Place Nimboya's Laden Pike at one of the Witherbark Villages in the Hinterlands, then return to Nimboya in
+  now Gather Witherbark Skulls and place on Nimboya's Pike. Place Nimboya's Laden Pike at one of the Witherbark Villages in the Hinterlands.
+
+2936
+  was Read from the Tablet of Theka to learn the name of the Witherbark spider god, then return to Master Gadrin.
+  now Read from the Tablet of Theka to learn the name of the Witherbark spider god.
+
+2944
+  was Use the Super Snapper FX to take a snapshot of Gammerita, then return to Daryn Lightwind in Rut'theran Village.
+  now Use the Super Snapper FX to take a snapshot of Gammerita.
+
+2962
+  was Travel to Gnomeregan and bring back High Potency Radioactive Fallout. Be warned, the fallout is unstable and will collapse rather quickly.  Ozzie will also requ
+  now Travel to Gnomeregan and bring back High Potency Radioactive Fallout. Be warned, the fallout is unstable and will collapse rather quickly. Ozzie will also requ
+
+2969
+  was Using the Bamboo Cage Key, free the Sprite Darters from the pen in the Grimtotem camp. At least 6 Sprite Darters and Kindal Moonweaver must survive.  You have 6
+  now Using the Bamboo Cage Key, free the Sprite Darters from the pen in the Grimtotem camp. At least 6 Sprite Darters and Kindal Moonweaver must survive. You have 6
+
+2988
+  was Check the cages at the two Witherbark villages, then return to Gryphon Master Talonaxe.
+  now Check the cages at the two Witherbark villages.
+
+2989
+  was Check the top of the Altar of Zul, then return to Gryphon Master Talonaxe.
+  now Check the top of the Altar of Zul.
+
+3123
+  was Travel to the Hinterlands, and locate the Wildkin. Kill 10, and use the Muisek Vessel to shrink and capture the fallen Wildkin.  Bring 10 Wildkin Muiseks and th
+  now Travel to the Hinterlands, and locate the Wildkin. Kill 10, and use the Muisek Vessel to shrink and capture the fallen Wildkin. Bring 10 Wildkin Muiseks and th
+
+3181
+  was Take Margol's Gigantic Horn to Mountaineer Pebblebitty. 
+  now Take Margol's Gigantic Horn to Mountaineer Pebblebitty.
+
+3341
+  was Andrew Brownell wants you to kill Amnennar the Coldbringer and return his skull.
+  now Andrew Brownell wants you to kill Amnennar the Coldbringer.
+
+3367
+  was Help Dorius get back to Ironforge. 
+  now Help Dorius get back to Ironforge.
+
+3372
+  was Find the Mysterious Artifact being guarded by the Twilight's Hammer Idolaters in the northwest quadrant of the Searing Gorge and bring it to the Altar of Suntar
+  now Find the Mysterious Artifact being guarded by the Twilight's Hammer Idolaters quadrant of the Searing Gorge.
+
+3374
+  was Bring the Oathstone of Ysera's Dragonflight and the Chained Essence of Eranikus to Itharius in the Swamp of Sorrows. It is there that you will make your choice 
+  now Bring the Oathstone of Ysera's Dragonflight and the Chained Essence of Eranikus to Itharius in the Swamp of Sorrows. It is there that you will make your choice
+
+3378
+  was Find the Prayer to Elune and take it to Astarii Starseeker in Darnassus. 
+  now Find the Prayer to Elune.
+
+3442
+  was Collect 4 Hearts of Flame and 4 globes of Golem Oil and return the items to Kalaran Windblade.
+  now Collect 4 Hearts of Flame and 4 globes of Golem Oil.
+
+3452
+  was Find and return a Symbol of Ragnaros to Kalaran Windblade.
+  now Find.
+
+3453
+  was Wait for Kalaran Windblade to complete the Torch of Retribution. 
+  now Wait for Kalaran Windblade to complete the Torch of Retribution.
+
+3463
+  was Set the North, South, East, and West Sentry Towers on fire by using the Torch of Retribution inside each of the buildings.  
+  now Set the North, South, East, and West Sentry Towers on fire by using the Torch of Retribution inside each of the buildings.
+
+3501
+  was Bring Kum'isha Imperfect Draenethyst Fragments and be rewarded for each one you turn in. 
+  now Bring Kum'isha Imperfect Draenethyst Fragments and be rewarded for each one you turn in.
+
+3511
+  was Take the temper back to Loramus Thalipedes. 
+  now Take the temper back to Loramus Thalipedes.
+
+3512
+  was Travel to the eastern part of Winterspring and speak with Umbranse the Spiritspeaker.
+  now Travel to Winterspring and speak with Umbranse the Spiritspeaker.
+
+3513
+  was Take the Runed Scroll to the northern guard tower in the Barrens.
+  now Take the Runed Scroll to the guard tower in the Barrens.
+
+3520
+  was Capture the spirits of 3 screechers in Feralas, then return to Yeh'kinya in Steamwheedle Port.
+  now Capture the spirits of 3 screechers in Feralas.
+
+3522
+  was Bring Iverron's Antidote to Iverron before the time limit is up. Iverron can be found by the cave to the north.
+  now Bring Iverron's Antidote to Iverron before the time limit is up. Iverron can be found by the cave.
+
+3524
+  was Recover Sea Creature Bones from the beached sea creature just south of Auberdine, and then return with it to Gwennyth Bly'Leggonde in Auberdine.
+  now Recover Sea Creature Bones from the beached sea creature near Auberdine.
+
+3566
+  was Slay Lathoric the Black and Obsidion, and return to Thorius in Ironforge with the Head of Lathoric the Black and the Heart of Obsidion.
+  now Slay Lathoric the Black and Obsidion.
+
+3601
+  was Search the Thalassian Base Camp for Kim'jael's Compass, Scope, Stuffed Chicken and Wizzlegoober, then return them to him in Azshara.
+  now Search the Thalassian Base Camp for Kim'jael's Compass, Scope, Stuffed Chicken and Wizzlegoober.
+
+3602
+  was Recover twenty Crystallized Azsharite from southern Azshara. You may use the Felhound to assist you in 'sniffing' out the location of cleverly hidden deposits. 
+  now Recover twenty Crystallized Azsharite from Azshara. You may use the Felhound to assist you in 'sniffing' out the location of cleverly hidden deposits.
+
+3627
+  was Slay Grol the Destroyer, Lady Sevine, and Archmage Allistarj. From their corpses take the Amulet of Grol, the Amulet of Sevine, and the Amulet of Allistarj.  Re
+  now Slay Grol the Destroyer, Lady Sevine, and Archmage Allistarj. From their corpses take the Amulet of Grol, the Amulet of Sevine, and the Amulet of Allistarj. Re
+
+3628
+  was Destroy Razelikh the Defiler and return the Severed Horn of the Defiler to the Fallen Hero of the Horde. You will also need to return the Ward of the Defiler so
+  now Destroy Razelikh the Defiler. You will also need to return the Ward of the Defiler so
+
+3701
+  was Venture to the Ruins of Thaurissan in the Burning Steppes and recover information from the Thaurissan Relics. Return to Royal Historian Archesonus when you have
+  now Venture to the Ruins of Thaurissan in the Burning Steppes and recover information from the Thaurissan Relics.
+
+3741
+  was Find Hilary's Necklace, and return it to Hilary in Lakeshire.
+  now Find Hilary's Necklace.
+
+3822
+  was Recover Sha'ni's Nose-Ring from Krom'Grul and return it to Thal'trak in Kargath. Search the various caves and mines in Dreadmaul Rock. 
+  now Recover Sha'ni's Nose-Ring from Krom'Grul. Search the various caves and mines in Dreadmaul Rock.
+
+3823
+  was Slay 15 Firegut Ogre-Mages, 7 Firegut Ogres, and 7 Firegut Ogre Brutes, and return to Oralius when you are finished.
+  now Slay 15 Firegut Ogre-Mages, 7 Firegut Ogres, and 7 Firegut Ogre Brutes.
+
+3824
+  was Find Gor'tesh, somewhere to the west of Dreadmaul Rock. Kill Gor'tesh and then take Gor'tesh's Lopped Off Head back to Oralius in Burning Steppes. 
+  now Find Gor'tesh, somewhere near Dreadmaul Rock. Kill Gor'tesh and then take Gor'tesh's Lopped Off Head back to Oralius in Burning Steppes.
+
+3845
+  was Examine the items inside the pack and bring them to their owner.
+  now Examine the items inside the pack.
+
+3901
+  was Kill 12 Rattlecage Skeletons, and then return to Shadow Priest Sarvis in Deathknell when you are done.
+  now Kill 12 Rattlecage Skeletons.
+
+3902
+  was Search Deathknell and the vicinity for 6 pieces of Scavenged Goods, and return them to Deathguard Saltain.
+  now Search Deathknell and the vicinity for 6 pieces of Scavenged Goods.
+
+3906
+  was Travel to the quarry in Blackrock Mountain and slay Overmaster Pyron. Return to Thunderheart when you have completed this assignment. 
+  now Travel to the quarry in Blackrock Mountain and slay Overmaster Pyron.
+
+3907
+  was Enter Blackrock Depths and track down Lord Incendius. Slay him and return any source of information you may find to Thunderheart. 
+  now Enter Blackrock Depths and track down Lord Incendius. Slay him.
+
+3909
+  was Seek out Gregan Brewspewer in northern Feralas. From him, learn how you may acquire the Videre Elixir, then return to Donova Snowden in Winterspring.
+  now Seek out Gregan Brewspewer in Feralas. From him, learn how you may acquire the Videre Elixir.
+
+3942
+  was Find Eridan Bluewind in southern Felwood.
+  now Find Eridan Bluewind in Felwood.
+
+3962
+  was Travel to Fire Plume Ridge, south of Marshal's Refuge.  Find Blazerunner and use the totem to remove his protective aura. Once he has been defeated, acquire the
+  now Travel to Fire Plume Ridge, near Marshal's Refuge. Find Blazerunner and use the totem to remove his protective aura. Once he has been defeated, acquire the
+
+4005
+  was Take the Book of Aquor, the Silvery Claws, and the Irontree Heart to Tanaris.  Use the Book of Aquor to summon Aquementas.  After you have the completed totem, 
+  now Take the Book of Aquor, the Silvery Claws, and the Irontree Heart to Tanaris. Use the Book of Aquor to summon Aquementas. After you have the completed totem,
+
+4023
+  was Show Cyrus Therepentous proof of your worth.  You have a feeling that Cyrus already knows that you are unworthy.
+  now Show Cyrus Therepentous proof of your worth. You have a feeling that Cyrus already knows that you are unworthy.
+
+4024
+  was Travel to Blackrock Depths and slay Bael'Gar.  You only know that the giant resides inside Blackrock Depths. Remember to use the Altered Black Dragonflight Molt
+  now Travel to Blackrock Depths and slay Bael'Gar. You only know that the giant resides inside Blackrock Depths. Remember to use the Altered Black Dragonflight Molt
+
+4061
+  was Venture to the Burning Steppes and recover 10 Fractured Elemental Shards for Hierophant Theodora Mulvadania.  You recall Theodora mentioning the golems and elem
+  now Venture to the Burning Steppes and recover 10 Fractured Elemental Shards for Hierophant Theodora Mulvadania. You recall Theodora mentioning the golems and elem
+
+4062
+  was Take the Elemental Shard Sample to Lotwil Veriatus.  You recall Theodora saying that Lotwil was stationed in a camp to the east. 
+  now Take the Elemental Shard Sample to Lotwil Veriatus. You recall Theodora saying that Lotwil was stationed in a camp.
+
+4063
+  was Find and slay Golem Lord Argelmach. Return his head to Lotwil. You will also need to collect 10 Intact Elemental Cores from the Ragereaver Golems and Warbringer
+  now Find and slay Golem Lord Argelmach. You will also need to collect 10 Intact Elemental Cores from the Ragereaver Golems and Warbringer
+
+4081
+  was Venture to Blackrock Depths and destroy the vile aggressors!  Warlord Goretooth wants you to kill 15 Anvilrage Guardsmen, 10 Anvilrage Wardens and 5 Anvilrage F
+  now Venture to Blackrock Depths and destroy the vile aggressors! Warlord Goretooth wants you to kill 15 Anvilrage Guardsmen, 10 Anvilrage Wardens and 5 Anvilrage F
+
+4082
+  was Venture to Blackrock Depths and destroy the vile aggressors!  Warlord Goretooth wants you to kill 10 Anvilrage Medics, 10 Anvilrage Soldiers and 10 Anvilrage Of
+  now Venture to Blackrock Depths and destroy the vile aggressors! Warlord Goretooth wants you to kill 10 Anvilrage Medics, 10 Anvilrage Soldiers and 10 Anvilrage Of
+
+4121
+  was Escort your prisoner, Grark Lorkrub, through Burning Steppes and through Blackrock Mountain to the Searing Gorge.  You recall Lexlort mentioning that he would h
+  now Escort your prisoner, Grark Lorkrub, through Burning Steppes and through Blackrock Mountain to the Searing Gorge. You recall Lexlort mentioning that he would h
+
+4122
+  was Travel to the Burning Steppes and find Grark Lorkrub. You recall Lexlort mentioning that he was last seen in a massive Blackrock fortress.  When you find Grark 
+  now Travel to the Burning Steppes and find Grark Lorkrub. You recall Lexlort mentioning that he was last seen in a massive Blackrock fortress. When you find Grark
+
+4131
+  was Search the Woodpaw Gnoll camps of southern Feralas for evidence of the courier's belongings or the courier himself.
+  now Search the Woodpaw Gnoll camps of Feralas for evidence of the courier's belongings or the courier himself.
+
+4132
+  was Travel to Blackrock Depths and slay General Angerforge! Return to Warlord Goretooth when the task is complete.
+  now Travel to Blackrock Depths and slay General Angerforge!
+
+4141
+  was Collect 15 Bloodpetals and return to Muigin.
+  now Collect 15 Bloodpetals.
+
+4143
+  was Collect 5 samples of Atal'ai Haze, then return to Muigin in Un'Goro Crater.
+  now Collect 5 samples of Atal'ai Haze.
+
+4182
+  was Slay 15 Black Broodlings, 10 Black Dragonspawn, 4 Black Wyrmkin and 1 Black Drake. Return to Helendis Riverhorn when the task is complete.
+  now Slay 15 Black Broodlings, 10 Black Dragonspawn, 4 Black Wyrmkin and 1 Black Drake.
+
+4184
+  was Travel to Stormwind and deliver Solomon's Plea to Highlord Bolvar Fordragon.  Bolvar resides in Stormwind Keep.
+  now Travel to Stormwind and deliver Solomon's Plea to Highlord Bolvar Fordragon. Bolvar resides in Stormwind Keep.
+
+4186
+  was Take Bolvar's Decree to Magistrate Solomon in Lakeshire. 
+  now Take Bolvar's Decree to Magistrate Solomon in Lakeshire.
+
+4224
+  was Speak with Ragged John to learn of Marshal Windsor's fate and return to Marshal Maxwell when you have completed this task.  You recall Marshal Maxwell telling y
+  now Speak with Ragged John to learn of Marshal Windsor's fate. You recall Marshal Maxwell telling y
+
+4244
+  was Find a Mithril Casing and return to A-Me 01 in Un'Goro Crater.
+  now Find a Mithril Casing.
+
+4261
+  was Escort Arei to safety, then speak with Kayneth Stillwind in Forest Song, in eastern Ashenvale.
+  now Escort Arei to safety, then speak with Kayneth Stillwind in Forest Song, in Ashenvale.
+
+4262
+  was Slay Overmaster Pyron and return to Jalinda Sprig.  You recall Jalinda talking about Pyron guarding the quarry. Perhaps you should search there?
+  now Slay Overmaster Pyron. You recall Jalinda talking about Pyron guarding the quarry. Perhaps you should search there?
+
+4265
+  was Free Raschal from the Zukk'ash hive.  Return to Ginro Hearthkindle in Feathermoon Stronghold and let him know that Raschal is alive and well.
+  now Free Raschal from the Zukk'ash hive.
+
+4284
+  was Collect 7 Power Crystals of each color: red, blue, yellow, and green. Bring them to J.D. Collie at Marshal's Refuge.
+  now Collect 7 Power Crystals of each color: red, blue, yellow, and green. Collie at Marshal's Refuge.
+
+4286
+  was Travel to Blackrock Depths and recover 20 Dark Iron Fanny Packs. Return to Oralius when you have completed this task. You assume that the Dark Iron dwarves insi
+  now Travel to Blackrock Depths and recover 20 Dark Iron Fanny Packs. You assume that the Dark Iron dwarves insi
+
+4293
+  was Gather Felwood Slime Samples from any of the slimes in Felwood. Then, using the Testing Equipment next to Chemist Fuely in Undercity, see which of your samples 
+  now Gather Felwood Slime Samples from any of the slimes in Felwood. Then, using the Testing Equipment next to Chemist Fuely in Undercity, see which of your samples
+
+4421
+  was Kill 11 Jadefire Felsworns, 9 Jadefire Shadowstalkers, 9 Jadefire Rogues, and Xavathras. Return to Eridan Bluewind in Felwood when the task has been completed.
+  now Kill 11 Jadefire Felsworns, 9 Jadefire Shadowstalkers, 9 Jadefire Rogues, and Xavathras.
+
+4441
+  was Travel to Darnassus and use Eridan's Vial to collect a Vial of Blessed Water from the Temple of the Moon. Return to Eridan with the filled vial.
+  now Travel to Darnassus and use Eridan's Vial to collect a Vial of Blessed Water from the Temple of the Moon.
+
+4491
+  was Lead Ringo to Spraggle Frock at Marshal's Refuge.  If Ringo faints, use Spraggle's Canteen to revive him.
+  now Lead Ringo to Spraggle Frock at Marshal's Refuge. If Ringo faints, use Spraggle's Canteen to revive him.
+
+4495
+  was Find Iverron by the cave to the north.
+  now Find Iverron by the cave.
+
+4505
+  was Collect a sample of corrupted water from the Jadefire Satyrs' moonwell and bring it to Winna Hazzard at Bloodvenom Post.
+  now Collect a sample of corrupted water from the Jadefire Satyrs' moonwell.
+
+4506
+  was Take Winna's kitten to the corrupted moonwell, release it, then bring it back to Winna.  Once you have returned to Winna, click on the cat to release it to Winn
+  now Take Winna's kitten to the corrupted moonwell, release it. Once you have returned to Winna, click on the cat to release it to Winn
+
+4507
+  was Defeat the Gorishi Hive Queen once she is summoned.  Bring the Gorishi Queen's Brain to Alchemist Pestlezugg in Gadgetzan.
+  now Defeat the Gorishi Hive Queen once she is summoned. Bring the Gorishi Queen's Brain to Alchemist Pestlezugg in Gadgetzan.
+
+4513
+  was Bring 10 Filled Pure Sample Jars to Laris Geardawdle in Ironforge.  If you have trouble finding them, perhaps try to get more clues from Laris.
+  now Bring 10 Filled Pure Sample Jars to Laris Geardawdle in Ironforge. If you have trouble finding them, perhaps try to get more clues from Laris.
+
+4641
+  was Speak with Gornek. You recall Kaltunk marking your map with his location and mentioning that Gornek resided in the Den, a building to the west.
+  now Speak with Gornek. You recall Kaltunk marking your map with his location and mentioning that Gornek resided in the Den, a building.
+
+4681
+  was Recover the Sea Turtle Remains from the Skeletal Sea Turtle in the waters west of Auberdine, and then speak with Gwennyth Bly'Leggonde back in Auberdine.
+  now Recover the Sea Turtle Remains from the Skeletal Sea Turtle in the waters near Auberdine, and then speak with Gwennyth Bly'Leggonde back in Auberdine.
+
+4740
+  was Find and slay the murloc known as Murkdeep. The creature is thought to be defending the murloc huts south of Auberdine along the water.  Report the death of Mur
+  now Find and slay the murloc known as Murkdeep. The creature is thought to be defending the murloc huts near Auberdine along the water.
+
+4762
+  was Travel north of Auberdine to the first waterfall along the Cliffspring River and draw a sample from the pool there.  Return to Thundris Windweaver in Auberdine 
+  now Travel near Auberdine to the first waterfall along the Cliffspring River and draw a sample from the pool there.
+
+4763
+  was Fill the Empty Cleansing Bowl at the Auberdine Moonwell.  Gather a sample of fruit, nut, and grain from the northern Blackwood furbolg camps.  Mix the bowl and 
+  now Fill the Empty Cleansing Bowl at the Auberdine Moonwell. Gather a sample of fruit, nut, and grain from the Blackwood furbolg camps. Mix the bowl and
+
+4771
+  was Place Dawn's Gambit in the Viewing Room of the Scholomance. Defeat Vectus, then return to Betina Bigglezink.
+  now Place Dawn's Gambit in the Viewing Room of the Scholomance. Defeat Vectus.
+
+4811
+  was Travel east of Auberdine and look for a large, red crystal along Darkshore's eastern mountain range. Report back what you find to Sentinel Glynda Nal'Shea in Au
+  now Travel near Auberdine and look for a large, red crystal along Darkshore's mountain range.
+
+4812
+  was Fill the Empty Water Tube at the Auberdine moonwell, and then investigate the red crystal along Darkshore's eastern mountain wall.
+  now Fill the Empty Water Tube at the Auberdine moonwell, and then investigate the red crystal along Darkshore's mountain wall.
+
+4841
+  was Kill 12 Galak Scouts, 10 Galak Wranglers, and 6 Galak Windchasers, and then return to Cliffwatcher Longhorn in Freewind Post.
+  now Kill 12 Galak Scouts, 10 Galak Wranglers, and 6 Galak Windchasers.
+
+4842
+  was Follow Donova Snowden's instructions, then report back.
+  now Follow Donova Snowden's instructions.
+
+4861
+  was Locate Jaron Stoneshaper's wrecked camp and supplies in southern Winterspring.
+  now Locate Jaron Stoneshaper's wrecked camp and supplies in Winterspring.
+
+4862
+  was Travel to Blackrock Spire and collect 15 Spire Spider Eggs for Kibler.  By the sound of it, these eggs could be found near spiders. 
+  now Travel to Blackrock Spire and collect 15 Spire Spider Eggs for Kibler. By the sound of it, these eggs could be found near spiders.
+
+4864
+  was Pick up Jaron's Supplies from the snow, then find the wildkin that stole the amulet Jaron spoke of.  Bring Jaron's Supplies and the Blue-feathered Amulet to Jar
+  now Pick up Jaron's Supplies from the snow, then find the wildkin that stole the amulet Jaron spoke of. Bring Jaron's Supplies and the Blue-feathered Amulet to Jar
+
+4866
+  was In the heart of Blackrock Spire you will find Mother Smolderweb. Engage her and get her to poison you. Chances are good that you will have to kill her as well. 
+  now In the heart of Blackrock Spire you will find Mother Smolderweb. Engage her and get her to poison you. Chances are good that you will have to kill her as well.
+
+4901
+  was Protect Ranshalla while she attempts to reactivate the Altar of Elune. Report your findings to Erelas Ambersky in Rut'theran Village.
+  now Protect Ranshalla while she attempts to reactivate the Altar of Elune.
+
+4903
+  was Slay Highlord Omokk, War Master Voone, and Overlord Wyrmthalak. Recover Important Blackrock Documents. Return to Warlord Goretooth in Kargath when the mission h
+  now Slay Highlord Omokk, War Master Voone, and Overlord Wyrmthalak. Recover Important Blackrock Documents.
+
+4906
+  was Eridan Bluewind in Felwood wants you to kill 8 Jadefire Hellcallers, 8 Jadefire Betrayers, 8 Jadefire Tricksters, and Xavaric. Return to Eridan when the task is
+  now Eridan Bluewind in Felwood wants you to kill 8 Jadefire Hellcallers, 8 Jadefire Betrayers, 8 Jadefire Tricksters, and Xavaric.
+
+4921
+  was Find Mankrik's wife and then return to him in the Crossroads.
+  now Find Mankrik's wife.
+
+4941
+  was Speak with Eitrigg in Orgrimmar. When you have discussed matters with Eitrigg, seek council from Thrall.  You recall having seen Eitrigg in Thrall's chamber.
+  now Speak with Eitrigg in Orgrimmar. When you have discussed matters with Eitrigg, seek council from Thrall. You recall having seen Eitrigg in Thrall's chamber.
+
+4971
+  was Use the Temporal Displacer near one of Andorhal's silos and uncover Temporal Parasites.  Slay 10 Temporal Parasites, and then return the Temporal Displacer to C
+  now Use the Temporal Displacer near one of Andorhal's silos and uncover Temporal Parasites. Slay 10 Temporal Parasites.
+
+4972
+  was Locate 5 Andorhal Watches, found in lockboxes amongst the rubble of the city. Return with them to Chromie in the Andorhal Inn, Western Plaguelands.
+  now Locate 5 Andorhal Watches, found in lockboxes amongst the rubble of the city.
+
+4974
+  was Travel to Blackrock Spire and slay Warchief Rend Blackhand. Take his head and return to Orgrimmar.
+  now Travel to Blackrock Spire and slay Warchief Rend Blackhand. Take his head.
+
+4984
+  was Destroy 8 Diseased Wolves, and then return to Mulgris Deepriver at the Writhing Haunt, Western Plaguelands.  
+  now Destroy 8 Diseased Wolves.
+
+4985
+  was Destroy 8 Diseased Grizzlies, and then return to Mulgris Deepriver at the Writhing Haunt, Western Plaguelands.
+  now Destroy 8 Diseased Grizzlies.
+
+5041
+  was Find and return Crossroads' Supply Crates to Thork in the Barrens.
+  now Find.
+
+5052
+  was Bring a Blood Shard to Mangletooth in Camp Taurajo in the Barrens.  Collect more Blood Shards if you want him to bless you with Agamaggan's power.
+  now Bring a Blood Shard to Mangletooth in Camp Taurajo in the Barrens. Collect more Blood Shards if you want him to bless you with Agamaggan's power.
+
+5066
+  was Seek out Commander Ashlam Valorfist. His base camp is located at Chillwind Camp, north of the Alterac Mountains.
+  now Seek out Commander Ashlam Valorfist. His base camp is located at Chillwind Camp, near the Alterac Mountains.
+
+5081
+  was Travel to Blackrock Spire and destroy War Master Voone, Highlord Omokk, and Overlord Wyrmthalak. Return to Marshal Maxwell when the job is done.
+  now Travel to Blackrock Spire and destroy War Master Voone, Highlord Omokk, and Overlord Wyrmthalak.
+
+5084
+  was Search the Deadwood furbolg camp in northern Felwood for a clue.
+  now Search the Deadwood furbolg camp in Felwood for a clue.
+
+5090
+  was Seek out Commander Ashlam Valorfist. His base camp is located at Chillwind Camp, north of the Alterac Mountains.
+  now Seek out Commander Ashlam Valorfist. His base camp is located at Chillwind Camp, near the Alterac Mountains.
+
+5091
+  was Seek out Commander Ashlam Valorfist. His base camp is located at Chillwind Camp, north of the Alterac Mountains.
+  now Seek out Commander Ashlam Valorfist. His base camp is located at Chillwind Camp, near the Alterac Mountains.
+
+5092
+  was Kill 10 Skeletal Flayers and 10 Slavering Ghouls in Sorrow Hill.  Return to Commander Ashlam Valorfist at Chillwind Camp, Western Plaguelands.
+  now Kill 10 Skeletal Flayers and 10 Slavering Ghouls in Sorrow Hill.
+
+5093
+  was Seek out High Executor Derrington. His base camp is located at the Bulwark, east of Tirisfal Glade and the Undercity.
+  now Seek out High Executor Derrington. His base camp is located at the Bulwark, near Tirisfal Glade and the Undercity.
+
+5094
+  was Seek out High Executor Derrington. His base camp is located at the Bulwark, east of Tirisfal Glade and the Undercity.
+  now Seek out High Executor Derrington. His base camp is located at the Bulwark, near Tirisfal Glade and the Undercity.
+
+5095
+  was Seek out High Executor Derrington. His base camp is located at the Bulwark, east of Tirisfal Glades and the Undercity.
+  now Seek out High Executor Derrington. His base camp is located at the Bulwark, near Tirisfal Glades and the Undercity.
+
+5096
+  was Proceed to the Scarlet Crusade's base camp between Felstone Field and Dalson's Tears and destroy their command tent.  Place the Scourge banner at the camp, and 
+  now Proceed to the Scarlet Crusade's base camp between Felstone Field and Dalson's Tears and destroy their command tent. Place the Scourge banner at the camp, and
+
+5097
+  was Using the Beacon Torch, mark each tower in Andorhal; you will need to stand in the doorway of the tower to successfully mark it.  Once all four towers are marke
+  now Using the Beacon Torch, mark each tower in Andorhal; you will need to stand in the doorway of the tower to successfully mark it. Once all four towers are marke
+
+5098
+  was Using the Beacon Torch, mark each tower in Andorhal; you will need to stand in the doorway of the tower to successfully mark it.  Once all four towers are marke
+  now Using the Beacon Torch, mark each tower in Andorhal; you will need to stand in the doorway of the tower to successfully mark it. Once all four towers are marke
+
+5102
+  was Travel to Blackrock Spire and destroy General Drakkisath. Return to Marshal Maxwell when the job is done. 
+  now Travel to Blackrock Spire and destroy General Drakkisath.
+
+5128
+  was Take the Crudely-written Log to Kelek Skykeeper in southern Felwood.
+  now Take the Crudely-written Log to Kelek Skykeeper in Felwood.
+
+5152
+  was Speak with Marlene, south of the Ruins of Andorhal.
+  now Speak with Marlene, near the Ruins of Andorhal.
+
+5163
+  was Take Umi's Mechanical Yeti and scare her friends with it:  Legacki in Everlook (Winterspring) Sprinkle in Gadgetzan (Tanaris) Quixxil in Marshal's Refuge (Un'Go
+  now Take Umi's Mechanical Yeti and scare her friends with it: Legacki in Everlook (Winterspring) Sprinkle in Gadgetzan (Tanaris) Quixxil in Marshal's Refuge (Un'Go
+
+5164
+  was Read from the Catalogue of the Wayward. 
+  now Read from the Catalogue of the Wayward.
+
+5165
+  was Using the Purified Moon Well Water, douse the flames of the four braziers of protection within Shadow Hold in Felwood, then return to Greta Mosshoof in the Emer
+  now Using the Purified Moon Well Water, douse the flames of the four braziers of protection within Shadow Hold in Felwood.
+
+5166
+  was To forge the Breastplate of the Chromatic Flight, you will be required to bring the following items to Jeziba the 'Sculptor':  1 Chromatic Carapace.  10 Brillia
+  now To forge the Breastplate of the Chromatic Flight, you will be required to bring the following items to Jeziba the 'Sculptor': 1 Chromatic Carapace. 10 Brillia
+
+5167
+  was To forge the Legplates of the Chromatic Defier, you will be required to bring the following items to Jeziba the 'Sculptor':  1 Chromatic Carapace.  10 Brilliant
+  now To forge the Legplates of the Chromatic Defier, you will be required to bring the following items to Jeziba the 'Sculptor': 1 Chromatic Carapace. 10 Brilliant
+
+5211
+  was Free 15 Darrowshire Spirits and return to Carlin Redpath.
+  now Free 15 Darrowshire Spirits.
+
+5212
+  was Recover 10 Plagued Flesh Samples from Stratholme and return them to Betina Bigglezink. You suspect that any creature in Stratholme would have said flesh sample.
+  now Recover 10 Plagued Flesh Samples from Stratholme. You suspect that any creature in Stratholme would have said flesh sample.
+
+5213
+  was Travel to Stratholme and search the ziggurats. Find and return new Scourge Data to Betina Bigglezink. 
+  now Travel to Stratholme and search the ziggurats. Find.
+
+5214
+  was Find Ezra Grimm's smoke shop in Stratholme and recover a box of Grimm's Premium Tobacco. Return to Smokey LaRue when the job is done.
+  now Find Ezra Grimm's smoke shop in Stratholme and recover a box of Grimm's Premium Tobacco.
+
+5216
+  was Go to Felstone Field in Western Plaguelands to locate and defeat the Cauldron Lord present there. It may have a key that will allow access to the cauldron. You 
+  now Go to Felstone Field in Western Plaguelands to locate and defeat the Cauldron Lord present there. It may have a key that will allow access to the cauldron. You
+
+5219
+  was Go to Dalson's Tears in Western Plaguelands to locate and defeat the Cauldron Lord present there, and use its key to gain access to the cauldron. You must have 
+  now Go to Dalson's Tears in Western Plaguelands to locate and defeat the Cauldron Lord present there, and use its key to gain access to the cauldron. You must have
+
+5225
+  was Go to Gahrron's Withering in Western Plaguelands to locate and defeat the Cauldron Lord present there, and use its key to gain access to the cauldron. You must 
+  now Go to Gahrron's Withering in Western Plaguelands to locate and defeat the Cauldron Lord present there, and use its key to gain access to the cauldron. You must
+
+5229
+  was Go to Felstone Field in Western Plaguelands to locate and defeat the Cauldron Lord present there. It may have a key that will allow access to the cauldron. You 
+  now Go to Felstone Field in Western Plaguelands to locate and defeat the Cauldron Lord present there. It may have a key that will allow access to the cauldron. You
+
+5231
+  was Go to Dalson's Tears in Western Plaguelands to locate and defeat the Cauldron Lord present there, and use its key to gain access to the cauldron. You must have 
+  now Go to Dalson's Tears in Western Plaguelands to locate and defeat the Cauldron Lord present there, and use its key to gain access to the cauldron. You must have
+
+5235
+  was Go to Gahrron's Withering in Western Plaguelands to locate and defeat the Cauldron Lord present there, and use its key to gain access to the cauldron. You must 
+  now Go to Gahrron's Withering in Western Plaguelands to locate and defeat the Cauldron Lord present there, and use its key to gain access to the cauldron. You must
+
+5243
+  was Travel to Stratholme, in the north. Search the supply crates that litter the city and recover 5 Stratholme Holy Water. Return to Leonid Barthalomew the Revered 
+  now Travel to Stratholme. Search the supply crates that litter the city and recover 5 Stratholme Holy Water.
+
+5245
+  was Use Jaron's Pick to find the four Highborne Relic Fragments. Bring them to Aurora Skycaller in Eastern Plaguelands.
+  now Use Jaron's Pick to find the four Highborne Relic Fragments.
+
+5246
+  was Find the Sacred Highborne Writings in the Temple of Zin-Malor in Azshara, and bring them to Aurora Skycaller near the Northpass Tower in Eastern Plaguelands.
+  now Find the Sacred Highborne Writings in the Temple of Zin-Malor in Azshara.
+
+5263
+  was Venture to Stratholme and destroy Baron Rivendare. Take his head and return to Duke Nicholas Zverenhoff. 
+  now Venture to Stratholme and destroy Baron Rivendare. Take his head.
+
+5342
+  was Travel to Chillwind Camp - Alliance territory - and assassinate Weldon Barov. Take his head and return to Alexi Barov.  Be warned, Weldon will probably be well 
+  now Travel to Chillwind Camp - Alliance territory - and assassinate Weldon Barov. Take his head. Be warned, Weldon will probably be well
+
+5344
+  was Travel to the Bulwark - Horde territory - and assassinate Alexi Barov. Take his head and return to Weldon Barov.  Be warned, Alexi will probably be well protect
+  now Travel to the Bulwark - Horde territory - and assassinate Alexi Barov. Take his head. Be warned, Alexi will probably be well protect
+
+5381
+  was Retrieve the Demon Box from Thunder Axe Fortress, and return it, along with the Demon Pick to Taiga Wisemane in Shadowprey Village. 
+  now Retrieve the Demon Box from Thunder Axe Fortress.
+
+5382
+  was Find Doctor Theolen Krastinov inside the Scholomance. Destroy him, then burn the Remains of Eva Sarkhoff and the Remains of Lucien Sarkhoff. Return to Eva Sarkh
+  now Find Doctor Theolen Krastinov inside the Scholomance. Destroy him, then burn the Remains of Eva Sarkhoff and the Remains of Lucien Sarkhoff.
+
+5384
+  was Return to the Scholomance with the Blood of Innocents. Find the porch and place the Blood of Innocents in the brazier. Kirtonos will come to feast upon your sou
+  now Find the porch and place the Blood of Innocents in the brazier. Kirtonos will come to feast upon your sou
+
+5441
+  was Use the Foreman's Blackjack on Lazy Peons when they're sleeping. Wake up 5 peons, then return the Foreman's Blackjack to Foreman Thazz'ril in the Valley of Tria
+  now Use the Foreman's Blackjack on Lazy Peons when they're sleeping. Wake up 5 peons.
+
+5461
+  was Travel to the Arathi Highlands, to the ruins of Stromgarde. Search Stromgarde for a Keepsake of Remembrance. If you find such an item, return with it to Magistr
+  now Travel to the Arathi Highlands, to the ruins of Stromgarde. Search Stromgarde for a Keepsake of Remembrance. If you find such an item.
+
+5465
+  was Return to Magistrate Marduke in Caer Darrow. Show him the Soulbound Keepsake.
+  now Show him the Soulbound Keepsake.
+
+5481
+  was Collect 3 Gloom Weed and deliver them to Junior Apothecary Holland in the Brill graveyard.
+  now Collect 3 Gloom Weed.
+
+5482
+  was Collect 10 Doom Weed and deliver them back to Junior Apothecary Holland. 
+  now Collect 10 Doom Weed.
+
+5515
+  was Locate Jandice Barov in the Scholomance and destroy her. From her corpse recover Krastinov's Bag of Horrors. Return the bag to Eva Sarkhoff.
+  now Locate Jandice Barov in the Scholomance and destroy her. From her corpse recover Krastinov's Bag of Horrors.
+
+5527
+  was Travel to Silithus and search for a Reliquary of Purity within the ruins of Southwind Village. If you are able to find it, return with it to Rabine Saturna in N
+  now Travel to Silithus and search for a Reliquary of Purity within the ruins of Southwind Village. If you are able to find it.
+
+5529
+  was Kill 20 Plagued Hatchlings, then return to Betina Bigglezink at the Light's Hope Chapel.
+  now Kill 20 Plagued Hatchlings.
+
+5534
+  was Find Some Rune that the naga have in their possession in the Ruins of Eldarath and return it to Kim'jael in Azshara.
+  now Find Some Rune that the naga have in their possession in the Ruins of Eldarath.
+
+5536
+  was Kill 6 Haldarr Satyr, 2 Haldarr Tricksters, 2 Haldarr Felsworn and then return to Loh'atu on the border of Ashenvale.
+  now Kill 6 Haldarr Satyr, 2 Haldarr Tricksters, 2 Haldarr Felsworn.
+
+5542
+  was Slay 20 Plaguehound Runts, 5 Plaguehounds and 5 Frenzied Plaguehounds. Return to Tirion Fordring when the task is complete.
+  now Slay 20 Plaguehound Runts, 5 Plaguehounds and 5 Frenzied Plaguehounds.
+
+5543
+  was Slay 30 Plaguebats and return to Tirion Fordring.
+  now Slay 30 Plaguebats.
+
+5544
+  was Seek out the Carrion Grubs and Devourers of the region. Slay them and harvest their meat. Return to Tirion Fordring when you have gathered 15 Slabs of Carrion W
+  now Seek out the Carrion Grubs and Devourers of the region. Slay them and harvest their meat.
+
+5581
+  was Banish 6 Portals at Mannoroc Coven and return to Taiga Wisemane at Shadowprey Village.
+  now Banish 6 Portals at Mannoroc Coven.
+
+5721
+  was Place the Relic Bundle at the Darrowshire town square.  Prevent Davil Lightfire's death until the death of Horgus.  Prevent Captain Redpath's death until Redpat
+  now Place the Relic Bundle at the Darrowshire town square. Prevent Davil Lightfire's death until the death of Horgus. Prevent Captain Redpath's death until Redpat
+
+5727
+  was Take the Lieutenant's Insignia to Neeru Fireblade and speak to him. Gauge if he believes you are a member of the Burning Blade and then return to Thrall in Orgr
+  now Take the Lieutenant's Insignia to Neeru Fireblade and speak to him. Gauge if he believes you are a member of the Burning Blade.
+
+5741
+  was Get the Sceptre of Light and then return it to Azore Aldamort at the tower in Ethel Rethor. 
+  now Get the Sceptre of Light.
+
+5781
+  was Travel to the Undercroft - at the southernmost section of the Eastern Plaguelands - and recover Taelan's Hammer. Return to Tirion Fordring upon completion of yo
+  now Travel to the Undercroft - at the southernmost section of the Eastern Plaguelands - and recover Taelan's Hammer.
+
+5845
+  was Travel to Northdale, in the northeastern region of the Eastern Plaguelands, and recover the Symbol of Lost Honor. Return to Tirion Fordring upon completion of y
+  now Travel to Northdale, in the region of the Eastern Plaguelands, and recover the Symbol of Lost Honor.
+
+5846
+  was Travel to island of Caer Darrow, in the south-central region of the Plaguelands, and look for any clues as to the whereabouts of the painting.
+  now Travel to island of Caer Darrow-central region of the Plaguelands, and look for any clues as to the whereabouts of the painting.
+
+5848
+  was Travel to Stratholme, in the northern part of the Plaguelands. It is in the Scarlet Bastion that you will find the painting 'Of Love and Family,' hidden behind 
+  now Travel to Stratholme, in the Plaguelands. It is in the Scarlet Bastion that you will find the painting 'Of Love and Family,' hidden behind
+
+5861
+  was Travel to Uther's Tomb, located in the southern Plaguelands. Show Myranda the Hag Tirion's Gift.
+  now Travel to Uther's Tomb, located in the Plaguelands. Show Myranda the Hag Tirion's Gift.
+
+5862
+  was Speak to Myranda to gain the Scarlet Illusion. Travel to Hearthglen while under the Scarlet Illusion and deliver Tirion's Gift to Highlord Taelan Fordring.  Hea
+  now Speak to Myranda to gain the Scarlet Illusion. Travel to Hearthglen while under the Scarlet Illusion and deliver Tirion's Gift to Highlord Taelan Fordring. Hea
+
+5901
+  was Use the Empty Termite Jar on the Termite Mounds in Eastern Plaguelands. After you've gathered 100 Plagueland Termites, return to Mickey Levine at the Bulwark in
+  now Use the Empty Termite Jar on the Termite Mounds in Eastern Plaguelands.
+
+5903
+  was Use the Empty Termite Jar on the Termite Mounds in Eastern Plaguelands. After you've gathered 100 Plagueland Termites, return to Nathaniel Dumah at Chillwind Ca
+  now Use the Empty Termite Jar on the Termite Mounds in Eastern Plaguelands.
+
+5961
+  was Speak with Nathanos Blightcaller in the Eastern Plaguelands. He is said to have taken up residence at the Marris Stead. 
+  now Speak with Nathanos Blightcaller in the Eastern Plaguelands. He is said to have taken up residence at the Marris Stead.
+
+6022
+  was Travel to Corin's Crossing to the east and slaughter the Scourge that inhabit the town. Collect 7 pieces of Living Rot in under 10 minutes. Use the Mortar and P
+  now Travel to Corin's Crossing and slaughter the Scourge that inhabit the town. Collect 7 pieces of Living Rot in under 10 minutes. Use the Mortar and P
+
+6025
+  was Enter Hearthglen and find a high vantage point from which you can see the town and gauge the Scarlet Crusade's forces, then return to Kirsta Deepshadow in Weste
+  now Enter Hearthglen and find a high vantage point from which you can see the town and gauge the Scarlet Crusade's forces.
+
+6026
+  was Smokey LaRue wants you to get 2 Thorium Bars, 1 Golden Rod, 8 Hi-Explosive Bombs, and 8 Unstable Triggers.  You will have to find a blacksmith and an engineer f
+  now Smokey LaRue wants you to get 2 Thorium Bars, 1 Golden Rod, 8 Hi-Explosive Bombs, and 8 Unstable Triggers. You will have to find a blacksmith and an engineer f
+
+6027
+  was Get the Book of the Ancients and return it to Azore Aldamort at the tower in Ethel Rethor. 
+  now Get the Book of the Ancients.
+
+6041
+  was Travel to Plaguewood, northwest of Light's Hope. Destroy 8 Scourge Structures by using Smokey's Special Compound at the Mark of Detonation planted inside each b
+  now Travel to Plaguewood, near Light's Hope. Destroy 8 Scourge Structures by using Smokey's Special Compound at the Mark of Detonation planted inside each b
+
+6042
+  was Slay 20 Noxious Plaguebats and 10 Monstrous Plaguebats. Return to Nathanos Blightcaller when you are finished.
+  now Slay 20 Noxious Plaguebats and 10 Monstrous Plaguebats.
+
+6133
+  was Travel to the northern borders of the Eastern Plaguelands and recover the Quel'Thalas Registry. The item is somewhere in the Quel'Lithien lodge.  You must also 
+  now Travel to the borders of the Eastern Plaguelands and recover the Quel'Thalas Registry. The item is somewhere in the Quel'Lithien lodge. You must also
+
+6135
+  was Find Duskwing and slay him. From the corpse, recover a Patch of Duskwing's Fur and return it to Nathanos Blightcaller.  It is said that Duskwing roams the count
+  now Find Duskwing and slay him. From the corpse, recover a Patch of Duskwing's Fur. It is said that Duskwing roams the count
+
+6136
+  was Find Borelgore in the northern wastes of Eastern Plaguelands and destroy him. Return to Nathanos Blightcaller when the mission is complete.
+  now Find Borelgore in the wastes of Eastern Plaguelands and destroy him.
+
+6142
+  was Find 10 pieces of Soft-shelled Clam Meat and bring it back to Mai'Lahii at Shadowprey Village.
+  now Find 10 pieces of Soft-shelled Clam Meat.
+
+6145
+  was Return to Eastern Plaguelands and track down the Crimson Courier. Kill the Courier and recover the Grand Crusader's Command.  Take the command to Nathanos Bligh
+  now Kill the Courier and recover the Grand Crusader's Command. Take the command to Nathanos Bligh
+
+6146
+  was Travel to Tyr's Hand, southeast of the Marris Stead. Once there, take a bite of the Rotten Apple. While under the guise of the Scarlet Crusade, deliver the Gran
+  now Travel to Tyr's Hand, near the Marris Stead. Once there, take a bite of the Rotten Apple. While under the guise of the Scarlet Crusade, deliver the Gran
+
+6147
+  was Return to Nathanos Blightcaller with the new information. 
+  now Return to Nathanos Blightcaller with the new information.
+
+6148
+  was The Scarlet Crusade is on the move. Somewhere along the road from Tyr's Hand to Stratholme you will find the Oracle, Demetria, and her entourage. Hunt her down 
+  now The Scarlet Crusade is on the move. Somewhere along the road from Tyr's Hand to Stratholme you will find the Oracle, Demetria, and her entourage. Hunt her down
+
+6162
+  was Kill Overlord Ror and return his claw to Dreka'Sur at Bloodvenom Post in Felwood.
+  now Kill Overlord Ror.
+
+6184
+  was Travel to Chillwind Camp in the Western Plaguelands and meet up with your contact, Flint Shadowmore. 
+  now Travel to Chillwind Camp in the Western Plaguelands and meet up with your contact, Flint Shadowmore.
+
+6185
+  was Scour the Eastern Plaguelands for clues as to the "Blightcaller" and the missing SI:7 agents. If you find any SI:7 Insignias, return them to Flint Shadowmore at
+  now Scour the Eastern Plaguelands for clues as to the "Blightcaller" and the missing SI:7 agents. If you find any SI:7 Insignias.
+
+6187
+  was Assemble an army and travel to the Eastern Plaguelands. Launch a full assault on Nathanos Blightcaller and any Horde filth that may attempt to protect him.  Kee
+  now Assemble an army and travel to the Eastern Plaguelands. Launch a full assault on Nathanos Blightcaller and any Horde filth that may attempt to protect him. Kee
+
+6381
+  was Plant 10 Gaea Seeds in Gaea Dirt Mounds, and then return the remaining Enchanted Gaea Seeds to Tammra at Sun Rock Retreat.
+  now Plant 10 Gaea Seeds in Gaea Dirt Mounds.
+
+6389
+  was Release the Plagueland Termites in the Northridge Lumber Mill, then return with the Barrel of Plagueland Termites to Nathaniel Dumah at Chillwind Camp in Wester
+  now Release the Plagueland Termites in the Northridge Lumber Mill.
+
+6390
+  was Release the Plagueland Termites in the Northridge Lumber Mill, then return with the Barrel of Plagueland Termites to Mickey Levine at the Bulwark in Tirisfal Gl
+  now Release the Plagueland Termites in the Northridge Lumber Mill.
+
+6395
+  was Bring Samuel Fipps' Remains to Marla's Grave, then return to Novice Elreth.
+  now Bring Samuel Fipps' Remains to Marla's Grave.
+
+6401
+  was Tell Tammra Windfield in Sun Rock Retreat the good news. 
+  now Tell Tammra Windfield in Sun Rock Retreat the good news.
+
+6481
+  was Open the Resonite cask with the Enchanted Resonite Crystal, and then slay Goggeroc. Return to Mor'rogal with the news and Enchanted Resonite Crystal.
+  now Open the Resonite cask with the Enchanted Resonite Crystal, and then slay Goggeroc.
+
+6503
+  was Kill 9 Ashenvale Outrunners, then return to Kuray'bin at Splintertree Outpost.
+  now Kill 9 Ashenvale Outrunners.
+
+6523
+  was Escort Kaya Flathoof to Camp Aparaje, and then return to Makaba Flathoof near the southeastern edge of Stonetalon. 
+  now Escort Kaya Flathoof to Camp Aparaje.
+
+6541
+  was Report to Kadrak at the watch tower in northern Barrens.
+  now Report to Kadrak at the watch tower in Barrens.
+
+6542
+  was Report to Kadrak at the watch tower in northern Barrens.
+  now Report to Kadrak at the watch tower in Barrens.
+
+6544
+  was Escort Torek on his attack against Silverwing Outpost and Duriel Moonfire, then report to Ertog Ragetusk at Splintertree Post.
+  now Escort Torek on his attack against Silverwing Outpost and Duriel Moonfire.
+
+6548
+  was Kill 8 Grimtotem Ruffians and 6 Grimtotem Mercenaries, and then return to Makaba Flathoof near the southeastern edge of Stonetalon. 
+  now Kill 8 Grimtotem Ruffians and 6 Grimtotem Mercenaries.
+
+6565
+  was Kill Lorgus Jett in Blackfathom Deeps and then return to Je'neu Sancrea in Ashenvale.
+  now Kill Lorgus Jett in Blackfathom Deeps.
+
+6569
+  was Travel to Blackrock Spire and collect 20 Black Dragonspawn Eyes. Return to Myranda the Hag when the task is complete.
+  now Travel to Blackrock Spire and collect 20 Black Dragonspawn Eyes.
+
+6570
+  was Travel to the Wyrmbog in Dustwallow Marsh and seek out Emberstrife's Den. Once inside, wear the Amulet of Draconic Subversion and speak with Emberstrife. 
+  now Travel to the Wyrmbog in Dustwallow Marsh and seek out Emberstrife's Den. Once inside, wear the Amulet of Draconic Subversion and speak with Emberstrife.
+
+6582
+  was You must find the blue dragonflight drake champion, Scryer, and slay him. Pry his skull from his corpse and return it to Emberstrife.  You know that Scryer can 
+  now You must find the blue dragonflight drake champion, Scryer, and slay him. Pry his skull from his corpse. You know that Scryer can
+
+6583
+  was Destroy the drake champion of the Green Flight, Somnus. Take his skull and return it to Emberstrife.
+  now Destroy the drake champion of the Green Flight, Somnus. Take his skull.
+
+6584
+  was Guarding the Caverns of Time in the Tanaris Desert is Chronalis, child of Nozdormu. Destroy him and return his skull to Emberstrife.
+  now Guarding the Caverns of Time in the Tanaris Desert is Chronalis, child of Nozdormu. Destroy him.
+
+6585
+  was Travel to Grim Batol and track down Axtroz, drake champion of the Red Flight. Destroy him and take his skull. Return the skull to Emberstrife.
+  now Travel to Grim Batol and track down Axtroz, drake champion of the Red Flight. Destroy him and take his skull.
+
+6602
+  was Travel to Blackrock Spire and slay General Drakkisath. Gather his blood and return it to Rexxar.
+  now Travel to Blackrock Spire and slay General Drakkisath. Gather his blood.
+
+6626
+  was Kill 8 Razorfen Battleguard, 8 Razorfen Thornweavers, and 8 Death's Head Cultists and return to Myriam Moonsinger near the entrance to Razorfen Downs.
+  now Kill 8 Razorfen Battleguard, 8 Razorfen Thornweavers, and 8 Death's Head Cultists.
+
+6629
+  was Kill Grundig Darkcloud and 6 Grimtotem Brutes, and return to Makaba Flathoof near the southeastern edge of Stonetalon. 
+  now Kill Grundig Darkcloud and 6 Grimtotem Brutes.
+
+6641
+  was Keep Muglash safe as he travels to the brazier. Help him by putting the brazier out, then protect him as you fight against the Naga.  If you are successful, ret
+  now Keep Muglash safe as he travels to the brazier. Help him by putting the brazier out, then protect him as you fight against the Naga. If you are successful, ret
+
+6805
+  was Kill 15 Dust Stormers and 15 Desert Rumblers and then return to Duke Hydraxis in Azshara.
+  now Kill 15 Dust Stormers and 15 Desert Rumblers.
+
+6822
+  was Kill 1 Fire Lord, 1 Molten Giant, 1 Ancient Core Hound and 1 Lava Surger, then return to Duke Hydraxis in Azshara.
+  now Kill 1 Fire Lord, 1 Molten Giant, 1 Ancient Core Hound and 1 Lava Surger.
+
+6981
+  was Travel to Ratchet to find someone that can tell you more about the glowing shard.  Then, deliver the shard as you are directed.
+  now Travel to Ratchet to find someone that can tell you more about the glowing shard. Then, deliver the shard as you are directed.
+
+7029
+  was Fill the Coated Cerulean Vial at the orange crystal pool in Maraudon.  Use the Filled Cerulean Vial on the Vylestem Vines to force the corrupted Noxxious Scion 
+  now Fill the Coated Cerulean Vial at the orange crystal pool in Maraudon. Use the Filled Cerulean Vial on the Vylestem Vines to force the corrupted Noxxious Scion
+
+7041
+  was Fill the Coated Cerulean Vial at the orange crystal pool in Maraudon.  Use the Filled Cerulean Vial on the Vylestem Vines to force the corrupted Noxxious Scion 
+  now Fill the Coated Cerulean Vial at the orange crystal pool in Maraudon. Use the Filled Cerulean Vial on the Vylestem Vines to force the corrupted Noxxious Scion
+
+7064
+  was Slay Princess Theradras and return to Selendra near Shadowprey Village in Desolace.
+  now Slay Princess Theradras.
+
+7065
+  was Slay Princess Theradras and return to Keeper Marandis at Nijel's Point in Desolace.
+  now Slay Princess Theradras.
+
+7067
+  was Read the Pariah's Instructions. Afterwards, obtain the Amulet of Union from Maraudon and return it to the Centaur Pariah in southern Desolace.
+  now Read the Pariah's Instructions. Afterwards, obtain the Amulet of Union from Maraudon.
+
+7068
+  was Collect 10 Shadowshard Fragments from Maraudon and return them to Uthel'nay in Orgrimmar.
+  now Collect 10 Shadowshard Fragments from Maraudon.
+
+7070
+  was Collect 10 Shadowshard Fragments from Maraudon and return them to Archmage Tervosh in Theramore on the coast of Dustwallow Marsh.
+  now Collect 10 Shadowshard Fragments from Maraudon.
+
+7081
+  was Assault a graveyard, then return to Sergeant Durgen Stormpike in the Alterac Mountains.
+  now Assault a graveyard.
+
+7082
+  was Assault a graveyard, then return to Corporal Teeka Bloodsnarl in the Alterac Mountains.
+  now Assault a graveyard.
+
+7122
+  was Capture a mine that the Stormpike does not control, then return to Sergeant Durgen Stormpike in the Alterac Mountains.
+  now Capture a mine that the Stormpike does not control.
+
+7124
+  was Capture a mine, then return to Corporal Teeka Bloodsnarl in the Alterac Mountains.
+  now Capture a mine.
+
+7141
+  was Enter Alterac Valley, defeat the Horde general Drek'thar, and then return to Prospector Stonehewer in the Alterac Mountains.
+  now Enter Alterac Valley, defeat the Horde general Drek'thar.
+
+7142
+  was Enter Alterac Valley and defeat the dwarven general, Vanndar Stormpike. Then, return to Voggah Deathgrip in the Alterac Mountains.
+  now Enter Alterac Valley and defeat the dwarven general, Vanndar Stormpike. Then.
+
+7201
+  was Travel to Blackrock Depths and recover 10 Essence of the Elements. Your first inclination is to search the golems and golem makers. You remember Vivian Lagrave 
+  now Travel to Blackrock Depths and recover 10 Essence of the Elements. Your first inclination is to search the golems and golem makers. You remember Vivian Lagrave
+
+7261
+  was Travel to Alterac Valley in the Hillsbrad Foothills. Outside of the entrance tunnel, find and speak with Lieutenant Haggerdin.  For the glory of Bronzebeard!
+  now Travel to Alterac Valley in the Hillsbrad Foothills. Outside of the entrance tunnel, find and speak with Lieutenant Haggerdin. For the glory of Bronzebeard!
+
+7383
+  was Fill the Amethyst Phial and bring it back to Corithras Moonrage in Dolanaar.
+  now Fill the Amethyst Phial.
+
+7441
+  was Travel to Dire Maul and locate the Imp, Pusillin. Convince Pusillin to give you Azj'Tordin's Book of Incantations through any means necessary.  Return to Azj'To
+  now Travel to Dire Maul and locate the Imp, Pusillin. Convince Pusillin to give you Azj'Tordin's Book of Incantations through any means necessary.
+
+7481
+  was Search Dire Maul for Telmius Dreamseeker. Report back to Sage Korolusk at Camp Mojache with whatever information that you may find.
+  now Search Dire Maul for Telmius Dreamseeker.
+
+7482
+  was Search Dire Maul for Telmius Dreamseeker. Report back to Scholar Runethorn at Feathermoon with whatever information that you may find.
+  now Search Dire Maul for Telmius Dreamseeker.
+
+7701
+  was Deep within the Slag Pit of the Cauldron, in the Searing Gorge, you will find the traitorous Dark Iron dwarf named Overseer Maltorius.  Slay Overseer Maltorius 
+  now Deep within the Slag Pit of the Cauldron, in the Searing Gorge, you will find the traitorous Dark Iron dwarf named Overseer Maltorius. Slay Overseer Maltorius
+
+7721
+  was Collect 10 Water Elemental Cores from the Sea Elementals and Sea Sprays along the Forgotten Coast of Feralas, and bring them back to Zorbin Fandazzle who is nea
+  now Collect 10 Water Elemental Cores from the Sea Elementals and Sea Sprays along the Forgotten Coast of Feralas.
+
+7722
+  was Somewhere in the Slag Pit of the Cauldron you will find the Secret Plans: Fiery Flux that Overseer Maltorius stole. Find those plans and return them to Master S
+  now Somewhere in the Slag Pit of the Cauldron you will find the Secret Plans: Fiery Flux that Overseer Maltorius stole. Find those plans.
+
+7723
+  was Hansel Heavyhands wants you to kill 20 Heavy War Golems.  The Heavy War Golems wander the areas surrounding the Cauldron in the Searing Gorge. When you've kille
+  now Hansel Heavyhands wants you to kill 20 Heavy War Golems. The Heavy War Golems wander the areas surrounding the Cauldron in the Searing Gorge. When you've kille
+
+7727
+  was Hansel Heavyhands wants you to kill 20 Incendosaurs.  You will find Incendosaurs occupying the lava pools inside the Slag Pit. The Slag Pit can be found in the 
+  now Hansel Heavyhands wants you to kill 20 Incendosaurs. You will find Incendosaurs occupying the lava pools inside the Slag Pit. The Slag Pit can be found in the
+
+7728
+  was Find and return the Smithing Tuyere and Lookout's Spyglass to Taskmaster Scrange in the Searing Gorge.  The only information you have about these items is the f
+  now Find. The only information you have about these items is the f
+
+7729
+  was Slay 15 Dark Iron Taskmasters and 15 Dark Iron Slavers. Return to Taskmaster Scrange in the Searing Gorge once you have accomplished this task.
+  now Slay 15 Dark Iron Taskmasters and 15 Dark Iron Slavers.
+
+7815
+  was Katoom the Angler at Revantusk Village in the Hinterlands wants you to kill 15 Saltwater Snapjaw turtles. Return to him when you have completed this task.
+  now Katoom the Angler at Revantusk Village in the Hinterlands wants you to kill 15 Saltwater Snapjaw turtles.
+
+7816
+  was Katoom the Angler at Revantusk Village in the Hinterlands wants you to kill Gammerita and retrieve Katoom's Best Lure from her corpse.  Katoom mentioned that Ga
+  now Katoom the Angler at Revantusk Village in the Hinterlands wants you to kill Gammerita and retrieve Katoom's Best Lure from her corpse. Katoom mentioned that Ga
+
+7828
+  was Huntsman Markhor at Revantusk Village in the Hinterlands wants you to kill 10 Silvermane Stalkers and 10 Silvermane Howlers. Return to him once the task is comp
+  now Huntsman Markhor at Revantusk Village in the Hinterlands wants you to kill 10 Silvermane Stalkers and 10 Silvermane Howlers.
+
+7829
+  was Huntsman Markhor at Revantusk Village in the Hinterlands wants you to kill 20 Savage Owlbeasts. Return to him once the task is complete.  Markhor mentioned that
+  now Huntsman Markhor at Revantusk Village in the Hinterlands wants you to kill 20 Savage Owlbeasts. Markhor mentioned that
+
+7830
+  was Huntsman Markhor at Revantusk Village in the Hinterlands wants you to kill a Razorbeak Skylord and retrieve its Skylord Plume. Return to him once the task is co
+  now Huntsman Markhor at Revantusk Village in the Hinterlands wants you to kill a Razorbeak Skylord and retrieve its Skylord Plume.
+
+7839
+  was Smith Slagtree at Revantusk Village in the Hinterlands wants you to find Slagtree's Lost Tools. Return to him once this task is complete.  You recall Smith Slag
+  now Smith Slagtree at Revantusk Village in the Hinterlands wants you to find Slagtree's Lost Tools. You recall Smith Slag
+
+7840
+  was Lard at Revantusk Village in the Hinterlands wants you to find Lard's Lunch. Return to him when this task is complete.  Lard mentioned that he left it on the is
+  now Lard at Revantusk Village in the Hinterlands wants you to find Lard's Lunch. Lard mentioned that he left it on the is
+
+7842
+  was Otho Moji'ko at Revantusk Village in the Hinterlands wants you to bring him 10 Long Elegant Feathers from the gryphons that inhabit the Hinterlands. Return to h
+  now Otho Moji'ko at Revantusk Village in the Hinterlands wants you to bring him 10 Long Elegant Feathers from the gryphons that inhabit the Hinterlands.
+
+7843
+  was Otho Moji'ko at Revantusk Village in the Hinterlands wants you to travel to Aerie Peak in the western region of the Hinterlands and place the Final Message to t
+  now Otho Moji'ko at Revantusk Village in the Hinterlands wants you to travel to Aerie Peak in the region of the Hinterlands and place the Final Message to t
+
+7844
+  was Mystic Yayo'jin at Revantusk Village in the Hinterlands wants you to kill 30 Vilebranch Scalpers and 15 Vilebranch Soothsayers. Return to her when this task is 
+  now Mystic Yayo'jin at Revantusk Village in the Hinterlands wants you to kill 30 Vilebranch Scalpers and 15 Vilebranch Soothsayers.
+
+7845
+  was Primal Torntusk at Revantusk Village in the Hinterlands wants you to rescue her mate, Elder Torntusk, from Jintha'alor.  You have been told that he is being hel
+  now Primal Torntusk at Revantusk Village in the Hinterlands wants you to rescue her mate, Elder Torntusk, from Jintha'alor. You have been told that he is being hel
+
+7846
+  was Elder Torntusk at Jintha'alor wants you to kill Hitah'ya the Keeper to get the Shackle Key to his bindings. Return to Elder Torntusk when you have recovered the
+  now Elder Torntusk at Jintha'alor wants you to kill Hitah'ya the Keeper to get the Shackle Key to his bindings.
+
+7849
+  was Huntsman Markhor at Revantusk Village in the Hinterlands wants you to recover his twin brother's remains. Find and return Huntsman Malkhor's Skull and Huntsman 
+  now Huntsman Markhor at Revantusk Village in the Hinterlands wants you to recover his twin brother's remains. Find.
+
+7850
+  was Primal Torntusk at Revantusk Village in the Hinterlands wants you to recover 10 Vessels of Tainted Blood from Jintha'alor. Return to Primal Torntusk when this t
+  now Primal Torntusk at Revantusk Village in the Hinterlands wants you to recover 10 Vessels of Tainted Blood from Jintha'alor.
+
+8277
+  was Beetix Ficklespragg at Cenarion Hold in Silithus wants you to gather 8 Stonelash Scorpid Stingers and 8 Sand Skitterer Fangs. Return to her when you have comple
+  now Beetix Ficklespragg at Cenarion Hold in Silithus wants you to gather 8 Stonelash Scorpid Stingers and 8 Sand Skitterer Fangs.
+
+8282
+  was Retrieve Noggle's Satchel from the mountains in the south of Silithus and return it to him at Cenarion Hold.
+  now Retrieve Noggle's Satchel from the mountains in the near Silithus.
+
+8285
+  was Take the restored tablet to Hermit Ortell in Silithus. 
+  now Take the restored tablet to Hermit Ortell in Silithus.
+
+8301
+  was Collect 200 Silithid Carapace Fragments and return to Baristolth.
+  now Collect 200 Silithid Carapace Fragments.
+
+8306
+  was Commander Mar'alith at Cenarion Hold in Silithus wants you to find his beloved Natalia. The information that you gathered points to Hive'Regal in the south as b
+  now Commander Mar'alith at Cenarion Hold in Silithus wants you to find his beloved Natalia. The information that you gathered points to Hive'Regal as b
+
+8315
+  was Geologist Larksbane at Cenarion Hold in Silithus wants you to recover the Crystal Unlocking Mechanism from the Qiraji Emissary.  You have been instructed to tak
+  now Geologist Larksbane at Cenarion Hold in Silithus wants you to recover the Crystal Unlocking Mechanism from the Qiraji Emissary. You have been instructed to tak
+
+8320
+  was Kill 10 Twilight Geolords, then return to Huum Wildmane in Cenarion Hold.
+  now Kill 10 Twilight Geolords.
+
+8365
+  was Haughty Modiste wants you to collect 20 Southsea Pirate Hats and return them to her at Steamwheedle Port in Tanaris.
+  now Haughty Modiste wants you to collect 20 Southsea Pirate Hats.
+
+8460
+  was Grazle wants you to prove yourself by killing 6 Deadwood Warriors, 6 Deadwood Pathfinders, and 6 Deadwood Gardeners. Return to him in southern Felwood near the 
+  now Grazle wants you to prove yourself by killing 6 Deadwood Warriors, 6 Deadwood Pathfinders, and 6 Deadwood Gardeners.
+
+8461
+  was Nafien would like you to kill 6 Deadwood Den Watchers, 6 Deadwood Avengers, and 6 Deadwood Shamans. Return to him in northern Felwood near the entrance to Timbe
+  now Nafien would like you to kill 6 Deadwood Den Watchers, 6 Deadwood Avengers, and 6 Deadwood Shamans.
+
+8462
+  was Travel north along the main road in Felwood and speak with the furbolg named Nafien. He stands guard outside the entrance to Timbermaw Hold.
+  now Travel along the main road in Felwood and speak with the furbolg named Nafien. He stands guard outside the entrance to Timbermaw Hold.
+
+8554
+  was Bring 10 Barbecued Buzzard Wings and 5 bottles of Junglevine Wine to Captain Smotts' Lifeboat.  Kill Negolash, and bring Smotts' Cutlass to Captain Smotts in St
+  now Bring 10 Barbecued Buzzard Wings and 5 bottles of Junglevine Wine to Captain Smotts' Lifeboat. Kill Negolash, and bring Smotts' Cutlass to Captain Smotts in St
+
+8905
+  was Acquire 15 Winterspring Blood Samples and 20 gold and bring them along with a set of Wildheart Bracers to Deliana in Ironforge.
+  now Acquire 15 Winterspring Blood Samples and 20 gold.
+
+8906
+  was Acquire 15 Winterspring Blood Samples and 20 gold and bring them along with a set of Beaststalker's Bindings to Deliana in Ironforge.
+  now Acquire 15 Winterspring Blood Samples and 20 gold.
+
+8907
+  was Acquire 15 Winterspring Blood Samples and 20 gold and bring them along with a set of Magister's Bindings to Deliana in Ironforge.
+  now Acquire 15 Winterspring Blood Samples and 20 gold.
+
+8908
+  was Acquire 15 Winterspring Blood Samples and 20 gold and bring them along with a set of Lightforge Bracers to Deliana in Ironforge.
+  now Acquire 15 Winterspring Blood Samples and 20 gold.
+
+8909
+  was Acquire 15 Winterspring Blood Samples and 20 gold and bring them along with 1 set of Devout Bracers to Deliana in Ironforge.
+  now Acquire 15 Winterspring Blood Samples and 20 gold.
+
+8910
+  was Acquire 15 Winterspring Blood Samples and 20 gold and bring them along with a set of Shadowcraft Bracers to Deliana in Ironforge. 
+  now Acquire 15 Winterspring Blood Samples and 20 gold.
+
+8911
+  was Acquire 15 Winterspring Blood Samples and 20 gold and bring them along with a set of Dreadmist Bracers to Deliana in Ironforge. 
+  now Acquire 15 Winterspring Blood Samples and 20 gold.
+
+8912
+  was Acquire 15 Winterspring Blood Samples and 20 gold and bring them along with a set of Bracers of Valor to Deliana in Ironforge.
+  now Acquire 15 Winterspring Blood Samples and 20 gold.
+
+8913
+  was Acquire 15 Silithus Venom Samples and 20 gold and bring them along with a set of Wildheart Bracers to Mokvar in Orgrimmar.
+  now Acquire 15 Silithus Venom Samples and 20 gold.
+
+8914
+  was Acquire 15 Silithus Venom Samples and 20 gold and bring them along with a set of Beaststalker's Bindings to Mokvar in Orgrimmar.
+  now Acquire 15 Silithus Venom Samples and 20 gold.
+
+8915
+  was Acquire 15 Silithus Venom Samples and 20 gold and bring them along with a set of Magister's Bindings to Mokvar in Orgrimmar. 
+  now Acquire 15 Silithus Venom Samples and 20 gold.
+
+8916
+  was Acquire 15 Silithus Venom Samples and 20 gold and bring them along with a set of Devout Bracers to Mokvar in Orgrimmar. 
+  now Acquire 15 Silithus Venom Samples and 20 gold.
+
+8917
+  was Acquire 15 Silithus Venom Samples and 20 gold and bring them along with a set of Shadowcraft Bracers to Mokvar in Orgrimmar. 
+  now Acquire 15 Silithus Venom Samples and 20 gold.
+
+8918
+  was Acquire 15 Silithus Venom Samples and 20 gold and bring them along with a set of Bindings of Elements to Mokvar in Orgrimmar. 
+  now Acquire 15 Silithus Venom Samples and 20 gold.
+
+8919
+  was Acquire 15 Silithus Venom Samples and 20 gold and bring them along with a set of Dreadmist Bracers to Mokvar in Orgrimmar.
+  now Acquire 15 Silithus Venom Samples and 20 gold.
+
+8920
+  was Acquire 15 Silithus Venom Samples and 20 gold and bring them along with a set of Bracers of Valor to Mokvar in Orgrimmar. 
+  now Acquire 15 Silithus Venom Samples and 20 gold.
+
+8925
+  was Find Magma Lord Bokk in the Burning Steppes, obtain his Magma Core and bring it to Mux Manascrambler in Gadgetzan.
+  now Find Magma Lord Bokk in the Burning Steppes, obtain his Magma Core.
+
+8928
+  was Search for an imp inside a cave at the entrance of Darkwhisper Gorge in southern Winterspring, purchase a Fel Elemental Rod and return to Mux Manascrambler in G
+  now Search for an imp inside a cave at the entrance of Darkwhisper Gorge in Winterspring, purchase a Fel Elemental Rod.
+
+8932
+  was Bring a Magister's Belt and a set of Magister's Gloves to Deliana in Ironforge. 
+  now Bring a Magister's Belt and a set of Magister's Gloves to Deliana in Ironforge.
+
+8933
+  was Bring a Lightforge Belt and a set of Lightforge Gauntlets to Deliana in Ironforge. 
+  now Bring a Lightforge Belt and a set of Lightforge Gauntlets to Deliana in Ironforge.
+
+8942
+  was Bring a Cord of Elements and a set of Gauntlets of Elements to Mokvar in Orgrimmar. 
+  now Bring a Cord of Elements and a set of Gauntlets of Elements to Mokvar in Orgrimmar.
+
+8943
+  was Bring a Dreadmist Belt and a set of Dreadmist Wraps to Mokvar in Orgrimmar. 
+  now Bring a Dreadmist Belt and a set of Dreadmist Wraps to Mokvar in Orgrimmar.
+
+8944
+  was Bring a Belt of Valor and a set of Gauntlets of Valor to Mokvar in Orgrimmar. 
+  now Bring a Belt of Valor and a set of Gauntlets of Valor to Mokvar in Orgrimmar.
+
+8961
+  was Gather the Incendicite of Incendius, the Ember of Emberseer and the Cinder of Cynders, along with a Hallowed Brazier, and return them to Bodley inside Blackrock
+  now Gather the Incendicite of Incendius, the Ember of Emberseer and the Cinder of Cynders, along with a Hallowed Brazier.
+
+8962
+  was Acquire Druidical Remains and return them to Bodley inside Blackrock Mountain.
+  now Acquire Druidical Remains.
+
+8963
+  was Acquire a Starbreeze Village Relic and return it to Bodley inside Blackrock Mountain.
+  now Acquire a Starbreeze Village Relic.
+
+8964
+  was Retrieve a Brilliant Sword of Zealotry and return it to Bodley inside Blackrock Mountain.
+  now Retrieve a Brilliant Sword of Zealotry.
+
+8965
+  was Obtain Soul Ashes of the Banished and return them to Bodley inside Blackrock Mountain.
+  now Obtain Soul Ashes of the Banished.
+
+8966
+  was Use the Brazier of Beckoning to summon forth the spirit of Mor Grayhoof and slay him. Return to Bodley inside Blackrock Mountain with the Left Piece of Lord Val
+  now Use the Brazier of Beckoning to summon forth the spirit of Mor Grayhoof and slay him.
+
+8967
+  was Use the Brazier of Beckoning to summon forth the spirit of Isalien and slay her. Return to Bodley inside Blackrock Mountain with the Left Piece of Lord Valthala
+  now Use the Brazier of Beckoning to summon forth the spirit of Isalien and slay her.
+
+8968
+  was Use the Brazier of Beckoning to summon forth Jarien and Sothos and slay them. Return to Bodley inside Blackrock Mountain with the Left Piece of Lord Valthalak's
+  now Use the Brazier of Beckoning to summon forth Jarien and Sothos and slay them.
+
+8969
+  was Use the Brazier of Beckoning to summon forth the spirit of Kormok and slay him. Return to Bodley inside Blackrock Mountain with the Left Piece of Lord Valthalak
+  now Use the Brazier of Beckoning to summon forth the spirit of Kormok and slay him.
+
+8970
+  was Gather 20 Bloodkelp from the Strashaz naga and then return to Bodley inside Blackrock Mountain.
+  now Gather 20 Bloodkelp from the Strashaz naga.
+
+8985
+  was Acquire a Starbreeze Village Relic and return it to Bodley inside Blackrock Mountain.
+  now Acquire a Starbreeze Village Relic.
+
+8986
+  was Acquire Druidical Remains and return them to Bodley inside Blackrock Mountain.
+  now Acquire Druidical Remains.
+
+8987
+  was Retrieve a Brilliant Sword of Zealotry and return it to Bodley inside Blackrock Mountain.
+  now Retrieve a Brilliant Sword of Zealotry.
+
+8988
+  was Obtain Soul Ashes of the Banished and return them to Bodley inside Blackrock Mountain.
+  now Obtain Soul Ashes of the Banished.
+
+8989
+  was Use the Brazier of Beckoning to summon forth the spirit of Mor Grayhoof and slay him. Return to Bodley inside Blackrock Mountain with the recombined Lord Valtha
+  now Use the Brazier of Beckoning to summon forth the spirit of Mor Grayhoof and slay him.
+
+8990
+  was Use the Brazier of Beckoning to summon forth the spirit of Isalien and slay her. Return to Bodley inside Blackrock Mountain with the recombined Lord Valthalak's
+  now Use the Brazier of Beckoning to summon forth the spirit of Isalien and slay her.
+
+8991
+  was Use the Brazier of Beckoning to summon forth Jarien and Sothos and slay them. Return to Bodley inside Blackrock Mountain with the recombined Lord Valthalak's Am
+  now Use the Brazier of Beckoning to summon forth Jarien and Sothos and slay them.
+
+8992
+  was Use the Brazier of Beckoning to summon forth the spirit of Kormok and slay him. Return to Bodley inside Blackrock Mountain with the recombined Lord Valthalak's 
+  now Use the Brazier of Beckoning to summon forth the spirit of Kormok and slay him.
+
+9016
+  was Return to Mokvar in Orgimmar with a set of Wildheart Boots, a Wildheart Kilt and Wildheart Spaulders. 
+  now Return to Mokvar in Orgimmar with a set of Wildheart Boots, a Wildheart Kilt and Wildheart Spaulders.
+
+9230
+  was Korfax at Light's Hope Chapel in the Eastern Plaguelands wants you to bring him 1 Frozen Rune, 1 Blue Sapphire and 1 Arcanite Bar. 
+  now Korfax at Light's Hope Chapel in the Eastern Plaguelands wants you to bring him 1 Frozen Rune, 1 Blue Sapphire and 1 Arcanite Bar.
+
+9664
+  was Capture Crown Guard Tower, Eastwall Tower, Northpass Tower and Plaguewood Tower in the Eastern Plaguelands, then return to Emmisary Whitebeard at Light's Hope C
+  now Capture Crown Guard Tower, Eastwall Tower, Northpass Tower and Plaguewood Tower in the Eastern Plaguelands.
+
+9665
+  was Capture Crown Guard Tower, Eastwall Tower, Northpass Tower and Plaguewood Tower in the Eastern Plaguelands, then return to Emmisary Gormok at Light's Hope Chape
+  now Capture Crown Guard Tower, Eastwall Tower, Northpass Tower and Plaguewood Tower in the Eastern Plaguelands.
+
+76156
+  was Sneak into the Venture Company mine southeast of Thunder Bluff and collect 5 Seaforium Mining Charges from carts of blasting supplies, then return them to Boart
+  now Sneak into the Venture Company mine near Thunder Bluff and collect 5 Seaforium Mining Charges from carts of blasting supplies.
+
+78261
+  was Find The Horn of Xelthos inside of Shadowfang Keep. Then, return it to C's dead drop near Pyrewood Village. You must complete the job alone.
+  now Find The Horn of Xelthos inside of Shadowfang Keep. Then. You must complete the job alone.
+
+86574
+  was Collect 6 Stonetalon Supplies from Pridewing Wyverns and deliver them to Innkeeper Faralia.
+  now Collect 6 Stonetalon Supplies from Pridewing Wyverns.
+
+86585
+  was Raise the standard of Ironforge, call out the trogg Headsplitter and kill it, then report to Captain Rugelfuss.
+  now Raise the standard of Ironforge, call out the trogg Headsplitter and kill it.
+
+86784
+  was Collect 6 Dry Branches and bring them to Eleanor Shackleton.
+  now Collect 6 Dry Branches.
+
+91723
+  was Kill 8 Kobold Geomancers in Jasperlode Mine, then return to Hamish Bergwort in the Tower of Azora.
+  now Kill 8 Kobold Geomancers in Jasperlode Mine.
+
+91724
+  was Kill 6 Defias Rogue Wizards at Stone Cairn Lake, then return to Hamish Bergwort in the Tower of Azora.
+  now Kill 6 Defias Rogue Wizards at Stone Cairn Lake.
+
+91725
+  was Collect 5 Stolen Enchanting Supplies from gnoll camps around Stone Cairn Lake, then return to Blixie Fitzwink near the Tower of Azora.
+  now Collect 5 Stolen Enchanting Supplies from gnoll camps around Stone Cairn Lake.
+
+91732
+  was Collect 4 Mining Tools from Jasperlode Mine, then return to Hagar Lowe in Eastvale Logging Camp.
+  now Collect 4 Mining Tools from Jasperlode Mine.
+
+91733
+  was Collect the Waterlogged Axe, Waterlogged Saw, and Waterlogged Toolbox that have washed downstream from Eastvale Logging Camp, then return to Ormin Pelford.
+  now Collect the Waterlogged Axe, Waterlogged Saw, and Waterlogged Toolbox that have washed downstream from Eastvale Logging Camp.
+
+91743
+  was Retrieve 8 Stolen Books from kobolds in Northshire Valley and return them to Brother Paxton.
+  now Retrieve 8 Stolen Books from kobolds in Northshire Valley.
+
+91772
+  was Follow the kobold tracks and report to Marshal Dughan in Goldshire with your findings and the Kobold Tracking Kit.
+  now Follow the kobold tracks.
+
+91775
+  was Find 6 Lost Books and "Fun with Elementals" and return them to Marshal Dughan.
+  now Find 6 Lost Books and "Fun with Elementals".
+
+91777
+  was Recover "Geomancy for Curious Young Wizards" and "Arcane Explainer: Magical Stuff in Simple Words" and return them to Brother Paxton inside Northshire's Abbey.
+  now Recover "Geomancy for Curious Young Wizards" and "Arcane Explainer: Magical Stuff in Simple Words".
+
+91920
+  was Gather 3 murloc eyes and bring them to Apothecary Renferrel at the Sepulcher.
+  now Gather 3 murloc eyes.
+
+91921
+  was Bring Quinn's potion to Quinn Yorick at the Ivar Patch, north of the Sepulcher.
+  now Bring Quinn's potion to Quinn Yorick at the Ivar Patch, near the Sepulcher.
+
+92529
+  was Report to Missionary Jasaan near the entrance to Falaath Village.  If you lose your Mark of Akir, speak with Sania Silverstream in Shen'dar Village to regain th
+  now If you lose your Mark of Akir, speak with Sania Silverstream in Shen'dar Village to regain th
+
+92643
+  was Find the cultist turncoat at the house just inside the highlands northwest of Valanaar.
+  now Find the cultist turncoat at the house just inside the highlands near Valanaar.
+
+92743
+  was Maintain your reputation with the Magram, and return a Conqueror's Crown from the Badlands to Warug in Magram Village.
+  now Maintain your reputation with the Magram.
+
+92749
+  was Obtain 10 Coarse Dynamite from crafting, trading, or the auction house, then return to Sprite Jumpsprocket in the Dwarven District of Stormwind.
+  now Obtain 10 Coarse Dynamite from crafting, trading, or the auction house.
+
+92834
+  was Collect 10 Al'Aketh Windstone Charms from Al'Aketh cultists found north of Valanaar at the Gustberry Fields or Shrine of Akir.
+  now Collect 10 Al'Aketh Windstone Charms from Al'Aketh cultists found near Valanaar at the Gustberry Fields or Shrine of Akir.
+
+92841
+  was Improve your reputation with the Magram, and locate Orgrul near the Valley of Bones south of Magram Village.
+  now Improve your reputation with the Magram, and locate Orgrul near the Valley of Bones near Magram Village.
+
+92850
+  was Slay the Shriekling Matriarch in the Shriekling Den then return its head to Fillion Flamebreeze in Valanaar.
+  now Slay the Shriekling Matriarch in the Shriekling Den.
+
+92947
+  was Slay 7 Al'Aketh Guardians, 7 Al'Aketh Spiritcallers, and 7 Al'Aketh Blademasters, then report to Hyusaa Quickbreeze at the Shrine of Akir.
+  now Slay 7 Al'Aketh Guardians, 7 Al'Aketh Spiritcallers, and 7 Al'Aketh Blademasters.
+
+93034
+  was Improve your reputation with the Gelkis, and locate Nerlokh near the Valley of Bones far east of Gelkis Village.
+  now Improve your reputation with the Gelkis, and locate Nerlokh near the Valley of Bones near Gelkis Village.
+
+93224
+  was Acquire 5 Carved Centaur Totems by slaying centaur of any clan throughout Desolace, then return them to Captain Pentigast at Nijel's Point.
+  now Acquire 5 Carved Centaur Totems by slaying centaur of any clan throughout Desolace.
+
+93225
+  was Acquire 5 Carved Centaur Totems by slaying centaur of any clan throughout Desolace, then return them to Gurda Wildmane at Ghost Walker Post.
+  now Acquire 5 Carved Centaur Totems by slaying centaur of any clan throughout Desolace.
+
+93320
+  was Report to Yorana Windyreed at the eastern watchtower in the Gustberry Lowlands.
+  now Report to Yorana Windyreed at the watchtower in the Gustberry Lowlands.
+
+93735
+  was Find Riaani Nightwind on the west side of Valanaar.
+  now Find Riaani Nightwind on Valanaar.
+
+93739
+  was Speak with Nazgrel in Grommash Hold to receive further instructions. Use the instructions received to locate and speak with Vol'jin, Cairne Bloodhoof, and Lady 
+  now Speak with Nazgrel in Grommash Hold to receive further instructions. Use the instructions received to locate and speak with Vol'jin, Cairne Bloodhoof, and Lady
+
+93926
+  was Find Peacekeeper Vaaniel at the western watchtower.
+  now Find Peacekeeper Vaaniel at the watchtower.
+
+94484
+  was Find and speak with Elegael Thornpaw in the northeastern part of Shadowgale Forest.
+  now Find and speak with Elegael Thornpaw in Shadowgale Forest.
+
+94493
+  was Speak with Elegael Thornpaw in the northeastern part of Shadowgale Forest.
+  now Speak with Elegael Thornpaw in Shadowgale Forest.
+
+94947
+  was Take the Skyborne Portal to Stormwind and report to Bolvar Fordragon in Stormwind Keep.
+  now Take the Skyborne Portal to Stormwind.
+
+95041
+  was Collect 7 Gnomeregan Archival Data cards from around Gnomeregan, then deliver them to Jemma Quikswitch in Ironforge.
+  now Collect 7 Gnomeregan Archival Data cards from around Gnomeregan.
+
+95212
+  was Collect 6 Pristine Leopard Pelts and deliver them to Amberstill Ranch.
+  now Collect 6 Pristine Leopard Pelts.
+
+95214
+  was Recover 16 Stolen Blasting Powder from the troggs east of Gol'Bolar Quarry, then return to Quarrymaster Thesten.
+  now Recover 16 Stolen Blasting Powder from the troggs near Gol'Bolar Quarry.
+
+95314
+  was Collect 8 Bottles of Whispering Elixir from Shadowvale, then return to Carolai Anise in Brill.
+  now Collect 8 Bottles of Whispering Elixir from Shadowvale.
+
+95805
+  was Carry the Smoldering Incense to the shrine of An'she and Mu'sha in the southeastern hills before the incense burns to ash in ten minutes!
+  now Carry the Smoldering Incense to the shrine of An'she and Mu'sha in the hills before the incense burns to ash in ten minutes!
+
+96139
+  was Search Raven Hill for anything of interest and return to Sirra Von'Indi in Darkshire.
+  now Search Raven Hill for anything of interest.
+
+96821
+  was Kill 6 Ridgeshade Creepers and 6 Ridgeshade Lurkers in southern Durotar, then report to Gar'thok in Razor Hill.
+  now Kill 6 Ridgeshade Creepers and 6 Ridgeshade Lurkers in Durotar.
+
+96822
+  was Collect the Raider's Battleaxe, Raider's Bow, and Raider's Shield from the Tiragarde Keep outskirts, then return them to Turroc in Razor Hill.
+  now Collect the Raider's Battleaxe, Raider's Bow, and Raider's Shield from the Tiragarde Keep outskirts.
+
+96825
+  was Cook Torka in Razor Hill wants you to collect 8 Prickly Pear Fruit from the Razormane Grounds west of town.
+  now Cook Torka in Razor Hill wants you to collect 8 Prickly Pear Fruit from the Razormane Grounds of town.
+
+97225
+  was Collect 8 Forgotten Loa Idols from the Echo Isles. Bring them to Master Gadrin in Sen'jin Village.
+  now Collect 8 Forgotten Loa Idols from the Echo Isles.
+
+97237
+  was Find each of the reading materials located somewhere in the library and then return to Roy Lewells in Stormwind's Park.
+  now Find each of the reading materials located somewhere in the library.
+
+97242
+  was Take some cuttings from the Cattails and Speargrass growing around the water flows in the Valley of Honor and return to Kor'geld in Yelmak's Alchemy and Potions
+  now Take some cuttings from the Cattails and Speargrass growing around the water flows in the Valley of Honor.
+
+97250
+  was Slay Alliance soldiers encroaching into the Barrens at the border to Dustwallow Marsh, then return to Grunt Logmar at Camp Taurajo.
+  now Slay Alliance soldiers encroaching into the Barrens at the border to Dustwallow Marsh.
+
+97253
+  was Collect 5 Handfuls of Complicated Parts from the upper pirate camp south of Ratchet, then return to Wrenix the Wretched in Ratchet.
+  now Collect 5 Handfuls of Complicated Parts from the upper pirate camp near Ratchet.
+
+97277
+  was Find Grund and Gozwin's camp in the hills to the northwest. Recover Gozwin's Mechanic's Log and kill the Snow Leopard Prowler.
+  now Find Grund and Gozwin's camp in the hills. Recover Gozwin's Mechanic's Log and kill the Snow Leopard Prowler.
+
+97279
+  was Collect 6 Abandoned Training Weapons, then return to Kzan Thornslash in the Den.
+  now Collect 6 Abandoned Training Weapons.
+
+97894
+  was Check on Gorbold Steelhand in Auberdine in Darkshore.  Borgus mentioned a boat on the southern-most dock in Stormwind Harbor that can take you there.
+  now Check on Gorbold Steelhand in Auberdine in Darkshore. Borgus mentioned a boat on the southern-most dock in Stormwind Harbor that can take you there.
+
+97914
+  was Bring Thundris' Letter to Baros Alexston in Stormwind.  Thundris mentioned a boat in Auberdine that can take you there.
+  now Bring Thundris' Letter to Baros Alexston in Stormwind. Thundris mentioned a boat in Auberdine that can take you there.
+
+97977
+  was Collect 4  Gnarlpine Totems and bring them to Tarindrella.
+  now Collect 4 Gnarlpine Totems.
+
+98025
+  was Find and slay the owl known as Jai'vhanel and take one of her feathers. The black owl was last seen north of the Ameth'Aran ruins near the mountain base. Report
+  now Find and slay the owl known as Jai'vhanel and take one of her feathers. The black owl was last seen near the Ameth'Aran ruins near the mountain base.
+
+98067
+  was Place Sentinel Owls at the entrance to the Cenarion Hold depths, the Darnassus Bank, the Craftsman's Terrace Inn, and the City Gate for Sentinel Dalia Sunblade 
+  now Place Sentinel Owls at the entrance to the Cenarion Hold depths, the Darnassus Bank, the Craftsman's Terrace Inn, and the City Gate for Sentinel Dalia Sunblade
+
+98071
+  was Deliver the bottles of Fallrook Varietal to Dun Garok in southeast Hillsbrad Foothills, and bring back a sack of their Homebrew Hops.
+  now Deliver the bottles of Fallrook Varietal to Dun Garok in Hillsbrad Foothills, and bring back a sack of their Homebrew Hops.
+
+98072
+  was Collect 8 Pristine Crimson Scales and bring them to James Halloran in Menethil Harbor.
+  now Collect 8 Pristine Crimson Scales.
+
+98094
+  was High Executor Darthalia wants you to deliver updated orders to Deathstalker Masoj, south of Tarren Mill, outside of Dun Garok.
+  now High Executor Darthalia wants you to deliver updated orders to Deathstalker Masoj, near Tarren Mill, outside of Dun Garok.
+
+98095
+  was Deathstalker Masoj needs you to place the three Apothecary Vials on peaks around Hillsbrad Foothills and return to him.
+  now Deathstalker Masoj needs you to place the three Apothecary Vials on peaks around Hillsbrad Foothills.
+
+98209
+  was Bring Nord'el to Thundris Windweaver in Auberdine in Darkshore.  You recall Sylessa mentioning a boat in Menethil Harbor can take you there.
+  now Bring Nord'el to Thundris Windweaver in Auberdine in Darkshore. You recall Sylessa mentioning a boat in Menethil Harbor can take you there.
+
+98230
+  was Find Howin Kindfeather east of Menethil Harbor, along the road.
+  now Find Howin Kindfeather near Menethil Harbor, along the road.
+
+98240
+  was Bring the Crimson Crate to Howin Kindfeather off the road to the east of Menethil Harbor.
+  now Bring the Crimson Crate to Howin Kindfeather off the road near Menethil Harbor.
+
+98251
+  was Kill 6 Shadowhorn Stag and 6 Ashenvale Bear and return to Va'xug Firefure northwest of Fallen Sky Lake.
+  now Kill 6 Shadowhorn Stag and 6 Ashenvale Bear.
+
+98322
+  was Check in on Mountaineer Gretchen west of Kharanos.
+  now Check in on Mountaineer Gretchen near Kharanos.
+
+98341
+  was Seek out the Avatar of Saeyleenan in the southern part Moonglade and learn what it has to share with you about the nature of the windborne cat.
+  now Seek out the Avatar of Saeyleenan in the part Moonglade and learn what it has to share with you about the nature of the windborne cat.
+
+98404
+  was Recover the Relic of the Fang, Relic of the Claw, and Relic of the Silent Shadow from the Stormrage Barrow Den, and return them to the Avatar of Saeyleenan.
+  now Recover the Relic of the Fang, Relic of the Claw, and Relic of the Silent Shadow from the Stormrage Barrow Den.
+
+98418
+  was Kill 5 Xavian Rogues, 5 Felsworn, 5 Betrayers, and 5 Hellcallers. Return to Maseara Autumnmoon in Forest Song afterwards.
+  now Kill 5 Xavian Rogues, 5 Felsworn, 5 Betrayers, and 5 Hellcallers.
+
+98424
+  was Collect the rest of Supervisor Fizsprocket's pages inside The Venture Co. Mine and bring them to Morin Cloudstalker near Bloodhoof Village.
+  now Collect the rest of Supervisor Fizsprocket's pages inside The Venture Co. Mine.
+
+98430
+  was Help Perith Stormhoof escape Palemane Rock, and report his safety to Cairne Bloodhoof in Thunder Bluff.
+  now Help Perith Stormhoof escape Palemane Rock.
+
+98823
+  was Bring the Titan Relic to Muln Earthfury at the Skywatcher Plateau in northwest Mulgore.
+  now Bring the Titan Relic to Muln Earthfury at the Skywatcher Plateau in Mulgore.
+
+98906
+  was Win a Darkspear Islands battleground and return back to Nizook Boof at The Merchant Coast.
+  now Win a Darkspear Islands battleground.
+
+99048
+  was Find Heglan Shadeeye north of Tiragarde Keep.
+  now Find Heglan Shadeeye near Tiragarde Keep.
+
+99052
+  was Kill the sea giant along Durotar's north coast and bring back proof of your accomplishment.
+  now Kill the sea giant along Durotar's coast and bring back proof of your accomplishment.
+
+99053
+  was Help Sentinel Lynessa Duskblossom escape Ban'ethil Barrow Den, and report her safety to Sentinel Kyra Starsong in Dolanaar.
+  now Help Sentinel Lynessa Duskblossom escape Ban'ethil Barrow Den.
+
+99079
+  was Find Longwalker Malah Longwind east of Bloodhoof Village, near the edge of Mulgore.
+  now Find Longwalker Malah Longwind near Bloodhoof Village, near the edge of Mulgore.
+
+99142
+  was Collect 5 Tomb Weed and deliver them back to Junior Apothecary Holland.
+  now Collect 5 Tomb Weed.
+
+99144
+  was Help Bareth Dawnstone escape Crusader's Outpost, and report his safety to Shari Stilwell in Brill.
+  now Help Bareth Dawnstone escape Crusader's Outpost.
+
+99411
+  was Ahab Wheathoof at Bloodhoof Village in Mulgore wants you to feed his prized puppy, Kyle the Frenzied.  Feed Kyle Tender Strider Meat and return to Ahab Wheathoo
+  now Ahab Wheathoof at Bloodhoof Village in Mulgore wants you to feed his prized puppy, Kyle the Frenzied. Feed Kyle Tender Strider Meat.

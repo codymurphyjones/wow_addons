@@ -121,6 +121,74 @@ local function Evaluate(link)
     return false, cmp.verdict
 end
 
+-- Grey gear is vendor trash unless it plainly beats what you wear, so it needs no stat priority and no
+-- selling by hand first. It can only beat a grey or white piece with nothing on it but armor (a stat
+-- is worth more than armor), or an empty slot, and only by more armor (DPS for a weapon). Returns
+-- "wear", detail, the slot; "sell", detail; nil while item data is loading.
+function Gear:GreyVerdict(link)
+    local _, _, quality, _, needs, _, _, _, equipLoc, _, _, classID = C.GetItemInfo(link)
+    if not quality then return nil end
+    if (classID ~= CLASS_ARMOR and classID ~= CLASS_WEAPON) or not E.SLOT_MAP[equipLoc or ""] then
+        return "sell", "Poor quality (grey)"
+    end
+    if (needs or 0) > (UnitLevel("player") or 1) then return "sell", "Grey, above your level" end
+    local values, info = E.Read(link)
+    if not values then return nil end
+    if info.unusable or not C.IsEquippableItem(link) then return "sell", "Grey, your character can't use it" end
+    local new = Profile(link, equipLoc)
+    if not new then return nil end
+    local weapon = new.dps > 0
+    local function Worth(p) return weapon and p.dps or p.armor end
+    if Worth(new) <= 0 then return "sell", "Poor quality (grey)" end
+    local targets, why = E.Targets(equipLoc)
+    if not targets then return "sell", "Grey: " .. tostring(why) end
+    local best, bestWorn
+    for _, target in ipairs(targets) do
+        local worn, beatable = 0, true
+        for _, slot in ipairs(target.slots) do
+            local item = GetInventoryItemLink("player", slot)
+            if item then
+                local _, _, wornQuality, _, _, _, _, _, wornLoc = C.GetItemInfo(item)
+                local old = wornQuality and Profile(item, wornLoc)
+                if not old then return nil end
+                if wornQuality > COMMON or old.hasExtras then beatable = false end
+                worn = worn + Worth(old)
+            elseif GetInventoryItemID("player", slot) then
+                return nil
+            end
+        end
+        if beatable and Worth(new) > worn and (not bestWorn or worn < bestWorn) then
+            best, bestWorn = target.slots[1], worn
+        end
+    end
+    if not best then return "sell", "Grey, no better than what you wear" end
+    local gain = Worth(new) - bestWorn
+    return "wear", weapon and ("+%.1f DPS"):format(gain) or ("+%d armor"):format(gain), best
+end
+
+-- Puts on the first grey piece in your bags that beats what you wear. The next bag update does the
+-- next one, and what comes off is judged the same way.
+function Gear:WearGreys()
+    if not (ns.db and ns.db.options.wearGreys) then return end
+    if InCombatLockdown and InCombatLockdown() then return end
+    if UnitIsDeadOrGhost and UnitIsDeadOrGhost("player") then return end
+    for _, _, info in C.IterateBags() do
+        if info.link and not info.locked and select(3, C.GetItemInfo(info.link)) == POOR then
+            local key = ns.Key(C.NameFromLink(info.link))
+            local verdict, detail, slot = self:GreyVerdict(info.link)
+            if verdict == "wear" and not ns.db.exclusions[key] then
+                EquipItemByName(info.link, slot)
+                ns:Print(("Wearing %s (%s)."):format(info.link, detail))
+                return
+            end
+        end
+    end
+end
+
+ns:On("BAG_UPDATE_DELAYED", function() Gear:WearGreys() end)
+ns:On("PLAYER_REGEN_ENABLED", function() Gear:WearGreys() end)
+ns:On("MERCHANT_SHOW", function() Gear:WearGreys() end)
+
 -- Returns isUpgrade, detail. isUpgrade is nil while item data is still loading.
 function Gear:IsPossibleUpgrade(link)
     if not link then return false end

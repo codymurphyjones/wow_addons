@@ -510,6 +510,7 @@ end
 
 UI.page = ns.NewOptionsPage({ name = "SmartPlates", build = function(p)
     p:Header("SmartPlates")
+    p:Button({ label = "Setup wizard", text = "Run setup", fn = function() ns.setup:Open() end })
     p:Button({ label = "Every setting is in the SmartPlates window", text = "Open SmartPlates", fn = OpenWindow,
         tooltip = "Sizes, colours, castbars, auras, widgets, custom plates and profiles (/sp)." })
     p:Header("Threat")

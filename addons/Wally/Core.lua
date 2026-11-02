@@ -30,6 +30,7 @@ ns.DEFAULTS = {
         autoSell = false,
         safeSell = true,
         sellGreys = true,
+        wearGreys = true,
         learn = true,
         threshold = 0.5,
         autoAcceptLearned = false,

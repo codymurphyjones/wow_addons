@@ -37,6 +37,14 @@ function JF:Evaluate(link, info, skipOneOff)
     -- Items you auction are worth more on the auction house than at a vendor.
     if db.auctionList[key] then return false, "Auction List", "keep" end
 
+    -- Grey is vendor trash: no learning, no selling it by hand first. It's kept only to wear it.
+    if opt.sellGreys and quality == POOR then
+        local verdict, detail = ns.Gear:GreyVerdict(link)
+        if not verdict then return false, "Checking gear", "upgrade" end
+        if verdict == "wear" then return false, "Better than what you wear: " .. detail, "upgrade" end
+        return true, detail, "junk"
+    end
+
     -- Your most valuable stacks are never junk, whatever the rules say.
     local valuable = ns.Value:IsProtected(link)
     if valuable then return false, ns.Value:Describe(valuable), "keep" end
@@ -66,8 +74,6 @@ function JF:Evaluate(link, info, skipOneOff)
 
     rule = ns.Lists:MatchPattern("include", key)
     if rule then return true, ("Junk rule: \"%s\""):format(rule), "junk" end
-
-    if opt.sellGreys and quality == POOR then return true, "Poor quality (grey)", "junk" end
 
     return false, nil, "none"
 end

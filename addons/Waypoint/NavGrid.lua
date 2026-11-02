@@ -24,7 +24,7 @@ ns.Grid = G
 
 local BUDGET = 2          -- milliseconds of work per frame (none in combat)
 local RUSH = 6            -- ...while you're waiting for a route
-local KEEP_TILES = 160    -- unpacked tiles kept
+local KEEP_TILES = 220    -- unpacked tiles kept
 local MOVE_YARDS = 150    -- yards you can move before your field is worked out again
 local REFINE_BUDGET = 12  -- milliseconds a path may spend walking tiles out node by node, per call
 local RUN, SWIM = 7.0, 4.72   -- the speeds the doors' times were baked at (nav_pack.py)
@@ -820,8 +820,8 @@ function Advance(f, goal, yieldable, untilTile)
 end
 
 -- The field's search carried on until tile t's doors are settled (a place past where it stopped).
-local function Ensure(f, t)
-    if f.partial and not TileSettled(f, Doors(f.m), t) then Advance(f, nil, false, t) end
+local function Ensure(f, t, yieldable)
+    if f.partial and not TileSettled(f, Doors(f.m), t) then Advance(f, nil, yieldable, t) end
 end
 
 local function Work(f)
@@ -842,6 +842,24 @@ local function Work(f)
         end
     end
     Advance(f, f.goalTile, true)
+    -- 3. The tiles on the way to the goal, node by node: here, a bit a frame. Left for later they'd
+    -- all be done at once by the first plan to ask, and the game stops a script that runs too long.
+    if f.goalTile then
+        local door, cost
+        for j = 1, D.size[f.goalTile] or 0 do
+            local id = D.base[f.goalTile] + j
+            if f.door[id] and (not cost or f.door[id] < cost) then door, cost = id, f.door[id] end
+        end
+        local seen = {}
+        while door and door ~= 0 do
+            local tile = D.tile[door]
+            if not seen[tile] then
+                seen[tile] = true
+                TileField(f, tile, true)
+            end
+            door = f.doorFrom[door]
+        end
+    end
 end
 
 local driver = CreateFrame("Frame")
@@ -865,10 +883,13 @@ driver:SetScript("OnUpdate", function(self)
         fields[key] = job.field
         jobs[key] = nil
         table.remove(queue, 1)
-        for _, fn in ipairs(listeners) do
-            local ok2, err2 = pcall(fn, key)
-            if not ok2 then geterrorhandler()(err2) end
-        end
+        -- (On the next frame: a plan on top of this frame's work is what runs too long.)
+        C_Timer.After(0, function()
+            for _, fn in ipairs(listeners) do
+                local ok2, err2 = pcall(fn, key)
+                if not ok2 then geterrorhandler()(err2) end
+            end
+        end)
     end
 end)
 
@@ -1095,6 +1116,12 @@ function G:Field(key, continent, n, w, opts)
     return nil
 end
 
+-- A field that's no longer wanted, finished or still being worked out.
+function G:Forget(key)
+    fields[key], jobs[key] = nil, nil
+    Old:Forget(key)
+end
+
 function G:Partial(key)
     local job = jobs[key]
     local f = job and job.field or fields[key]
@@ -1115,20 +1142,20 @@ function G:OnReady(fn)
 end
 
 -- A tile walked node by node from its doors, as the field reached them (cached on the field).
-TileField = function(f, t)
+TileField = function(f, t, yieldable)
     local tf = f.tilesDone[t]
     if tf then return tf end
     local m, D = f.m, Doors(f.m)
     if t == floor(f.src / 65536) then
         tf = f.home
     else
-        Ensure(f, t)
+        Ensure(f, t, yieldable)
         local seeds, seedSecs = {}, {}
         for j = 1, D.size[t] or 0 do
             local id = D.base[t] + j
             if f.door[id] then seeds[D.node[id]], seedSecs[D.node[id]] = f.door[id], f.doorSecs[id] end
         end
-        tf = Search(m, f, t, seeds, seedSecs, f.reverse)
+        tf = Search(m, f, t, seeds, seedSecs, f.reverse, nil, yieldable)
         tf.seeded = seeds
     end
     f.tilesDone[t] = tf
@@ -1177,31 +1204,78 @@ end
 
 -- Seconds from the field's source to a world point (it's reverse: from the point to the source),
 -- or nil. Exact in tiles worked out node by node; elsewhere the nearest door plus the straight way.
+-- A plan asks what every flight point, dock and teleport costs, from you and to the target, all in
+-- one frame: for each one a tile to unpack, and maybe more of the door search. Past COST_BUDGET
+-- milliseconds in a frame, a place that needs that work gets a rough answer now, and the work is done in
+-- the background, a tile a frame (Warm). When that's done the plan is made again, with the real ones.
+local COST_BUDGET = 20
+local costFrame, costSpent = nil, 0
+local warm, warmHead, warmTail = {}, 1, 0
+local function Warm(m, t, f)
+    warmTail = warmTail + 1
+    warm[warmTail] = { m, t, f }
+    if jobs.warm then return end
+    jobs.warm = { field = {}, co = coroutine.create(function()
+        while warm[warmHead] do
+            local w = warm[warmHead]
+            warm[warmHead], warmHead = nil, warmHead + 1
+            Tile(w[1], w[2])
+            if w[3] then Ensure(w[3], w[2], true) end
+            coroutine.yield()
+        end
+    end) }
+    queue[#queue + 1] = "warm"
+    driver:Show()
+end
+
+-- Whether the work on a place's tile should wait: a door search to finish, or this frame has done enough.
+local function OverBudget(m, t, f)
+    local now = GetTime()
+    if costFrame ~= now then costFrame, costSpent = now, 0 end
+    -- (The rest of a door search can be most of a continent: never in the plan's frame, budget or not.)
+    if f and f.partial and not TileSettled(f, Doors(m), t) then return true end
+    return costSpent >= COST_BUDGET and m.tiles[t] == nil
+end
+
 function G:Cost(f, n, w)
     if not (f and f.nav) then return Old:Cost(f, n, w) end
     local m = f.m
-    local p = Locate(m, n, w, nil, true)
-    if not p then return nil end
-    local t = floor(p / 65536)
-    local tf = f.tilesDone[t]
-    if tf then
-        p = LocateReached(f, n, w)
-        return p and TileField(f, floor(p / 65536)).secs[p]
+    -- (What it costs from this field doesn't change: once for each place.)
+    f.costs = f.costs or {}
+    local key = floor(n) .. ":" .. floor(w)
+    local known = f.costs[key]
+    if known ~= nil then return known or nil end
+    local start = debugprofilestop()
+    local tile = CellAt(floor((m.max - n) / m.fine), floor((m.max - w) / m.fine))
+    if not f.tilesDone[tile] and OverBudget(m, tile, f) then
+        Warm(m, tile, f)
+        return sqrt((f.n - n) ^ 2 + (f.w - w) ^ 2) * 1.2 / f.speed
     end
-    local D = Doors(m)
-    Ensure(f, t)
-    local pn, pw = Where(m, p)
-    local best
-    for j = 1, D.size[t] or 0 do
-        local id = D.base[t] + j
-        local d = f.doorSecs[id]
-        if d then
-            local dn, dw = Where(m, D.node[id])
-            local c = d + sqrt((dn - pn) ^ 2 + (dw - pw) ^ 2) * 1.2 / f.speed
-            if not best or c < best then best = c end
+    local cost
+    local p = Locate(m, n, w, nil, true)
+    if p then
+        local t = floor(p / 65536)
+        if f.tilesDone[t] then
+            p = LocateReached(f, n, w)
+            cost = p and TileField(f, floor(p / 65536)).secs[p]
+        else
+            local D = Doors(m)
+            Ensure(f, t)
+            local pn, pw = Where(m, p)
+            for j = 1, D.size[t] or 0 do
+                local id = D.base[t] + j
+                local d = f.doorSecs[id]
+                if d then
+                    local dn, dw = Where(m, D.node[id])
+                    local c = d + sqrt((dn - pn) ^ 2 + (dw - pw) ^ 2) * 1.2 / f.speed
+                    if not cost or c < cost then cost = c end
+                end
+            end
         end
     end
-    return best
+    costSpent = costSpent + debugprofilestop() - start
+    f.costs[key] = cost or false
+    return cost
 end
 
 -- The quickest way from node a to node b inside tile t, node by node (A*): { a, ..., b }, or nil.
@@ -1570,6 +1644,76 @@ local function Straighten(f, nodes)
     return back
 end
 
+-- A corner is two straight legs meeting at a point; the quick way round a hill or a lake is a sweep.
+-- Each corner of a finished path is cut, twice over, so it becomes a curve: a cut is taken when the
+-- line across it walks and weighs no more than going by the corner (PULL_SLACK). Where you go into
+-- or out of water and both ends of a drop stay (fixed), as do your end and the path's other end.
+local ROUND_PASSES = 2
+local ROUND_CUT = 24     -- yards from a corner a cut may start, at most
+local ROUND_SHARE = 0.4  -- ...and how much of each leg
+local ROUND_MIN = 4      -- yards: a shorter cut isn't worth it
+local ROUND_TURN = 0.2   -- radians (about 11 degrees): a smaller bend is left alone
+
+local function Round(f, pts, fixed)
+    local m = f.m
+    f.rounded = f.rounded or {}
+    local start = debugprofilestop()
+    local function Walks(a, b)
+        if f.reverse then return Line(m, f, a, b) end
+        return Line(m, f, b, a)
+    end
+    -- The two ends of the cut at corner b (between a and c): { n, w, h, node } each, or false.
+    local function Cut(a, b, c)
+        local la, lc = sqrt((a.n - b.n) ^ 2 + (a.w - b.w) ^ 2), sqrt((c.n - b.n) ^ 2 + (c.w - b.w) ^ 2)
+        local cut = math.min(ROUND_CUT, la * ROUND_SHARE, lc * ROUND_SHARE)
+        if cut < ROUND_MIN then return false end
+        local dot = ((a.n - b.n) * (c.n - b.n) + (a.w - b.w) * (c.w - b.w)) / (la * lc)
+        -- Straight on is dot -1.
+        if math.acos(math.max(-1, math.min(1, -dot))) < ROUND_TURN then return false end
+        local function At(o, len)
+            local n, w = b.n + (o.n - b.n) * cut / len, b.w + (o.w - b.w) * cut / len
+            local node = Locate(m, n, w, b.h)
+            local h = node and select(3, Where(m, node))
+            if not node or abs(h - b.h) > 20 then return nil end
+            return { n = n, w = w, h = h, node = node, water = false, face = false }
+        end
+        local p, q = At(a, la), At(c, lc)
+        if not (p and q) or p.node == q.node then return false end
+        local _, across = Walks(p.node, q.node)
+        local _, leg1 = Walks(p.node, b.node)
+        local _, leg2 = Walks(b.node, q.node)
+        if not (across and leg1 and leg2) or across > (leg1 + leg2) * PULL_SLACK then return false end
+        return { p, q }
+    end
+    for pass = 1, ROUND_PASSES do
+        local out = { pts[1] }
+        for k = 2, #pts - 1 do
+            local a, b, c = pts[k - 1], pts[k], pts[k + 1]
+            local cut = false
+            if not fixed[b] and not a.water and not b.water and not c.water and a.node and b.node and c.node then
+                local key = pass .. ":" .. a.node .. ":" .. b.node .. ":" .. c.node
+                cut = f.rounded[key]
+                if cut == nil and debugprofilestop() - start < REFINE_BUDGET then
+                    cut = Cut(a, b, c)
+                    f.rounded[key] = cut
+                end
+            end
+            if cut then
+                local t1, t2 = a.t or 0, c.t or 0
+                for i, e in ipairs(cut) do
+                    out[#out + 1] = { n = e.n, w = e.w, h = e.h, node = e.node, water = false, face = false,
+                        t = t1 + (t2 - t1) * i / 3 }
+                end
+            else
+                out[#out + 1] = b
+            end
+        end
+        out[#out + 1] = pts[#pts]
+        pts = out
+    end
+    return pts
+end
+
 -- Path(f, n, w): the points from a world point back to the field's source, the way the field reached
 -- it: { { n, w, water, face, h, t = seconds from the source, node } } in that order.
 function G:Path(f, n, w)
@@ -1602,6 +1746,8 @@ function G:Path(f, n, w)
         end
         if a.water ~= b.water then keep[k - 1], keep[k] = true, true end
     end
+    local fixed = {}
+    for k in pairs(keep) do fixed[pts[k]] = true end
     local out = Simplify(pts, keep)
     -- The way each step of the result goes, for G:Step (a few thousand kept, then started again).
     if not m.stepAt or m.stepCount > 20000 then m.stepAt, m.stepCount = {}, 0 end
@@ -1615,7 +1761,20 @@ function G:Path(f, n, w)
         m.stepAt[floor(wu.n) .. "," .. floor(wu.w) .. ">" .. floor(wv.n) .. "," .. floor(wv.w)] = fall and { "drop", fall } or { "walk", 0 }
         m.stepCount = m.stepCount + 1
     end
-    return out
+    -- Curves are walked, whatever they cut across.
+    local curved = Round(f, out, fixed)
+    if curved ~= out then
+        for k = 2, #curved do
+            local a, b = curved[k - 1], curved[k]
+            local wu, wv = f.reverse and a or b, f.reverse and b or a
+            local key = floor(wu.n) .. "," .. floor(wu.w) .. ">" .. floor(wv.n) .. "," .. floor(wv.w)
+            if not m.stepAt[key] then
+                m.stepAt[key] = { "walk", 0 }
+                m.stepCount = m.stepCount + 1
+            end
+        end
+    end
+    return curved
 end
 
 -- How a step between two points goes, the way you'd walk it: "walk", "drop" (and how far), or nil.
@@ -1687,7 +1846,15 @@ end
 function G:Place(continent, n, w)
     local m = Map(continent)
     if not m then return nil end
+    -- (A plan asks this of every stop too: see G:Cost.)
+    local tile = CellAt(floor((m.max - n) / m.fine), floor((m.max - w) / m.fine))
+    if not HereNode(continent, n, w) and OverBudget(m, tile) then
+        Warm(m, tile)
+        return nil
+    end
+    local start = debugprofilestop()
     local p = HereNode(continent, n, w) or Locate(m, n, w, nil, true)
+    costSpent = costSpent + debugprofilestop() - start
     if not p then return nil end
     local t, i = Split(p)
     local T = Tile(m, t)
@@ -1808,7 +1975,7 @@ local function Touch(m, tiles)
             return
         end
         for t in pairs(tiles) do f.tilesDone[t] = nil end
-        f.pulled = nil
+        f.pulled, f.rounded = nil, nil
         for key in pairs(f.steps) do
             local a = tonumber(key:match("^(%d+)>"))
             if a and tiles[floor(a / 65536)] then f.steps[key] = nil end

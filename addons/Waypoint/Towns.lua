@@ -469,20 +469,43 @@ local function AddCovered(pin, known)
     return details
 end
 
--- How many of a town's quest givers have a quest you can take now (Questie's IsDoable: not done,
--- not in your log, your race and class, prerequisites, level), and how many there are in all.
--- available is nil without Questie (then only the total is known).
+-- Whether your level suits a quest: you can take it, and it's not so far below you that it's trivial.
+-- (Questie's IsDoable says nothing about level: Questie checks that apart, as here.) Unknown: it suits.
+local function LevelSuits(db, q, me)
+    local query = db.QueryQuestSingle
+    if not (query and me) then return true end
+    local required, level = Try(query, q, "requiredLevel"), Try(query, q, "questLevel")
+    if type(required) == "number" and required > me then return false end
+    local green = GetQuestGreenRange and Try(GetQuestGreenRange, "player")
+    if type(level) == "number" and level > 0 and type(green) == "number" and level < me - green then return false end
+    return true
+end
+Towns.LevelSuits = LevelSuits -- (for tests)
+
+-- How many of a town's quest givers have a quest you can take now (Questie's IsDoable: your race and
+-- class, prerequisites; and here: a quest Questie knows, not done, not in your log, your level), and
+-- how many there are in all. available is nil without Questie (then only the total is known).
 function Towns:Givers(t)
     local M = t.g and QuestieModules()
     local doable = M and M.DB and M.DB.IsDoable
     if not doable then return nil, t[7] end
-    local n = 0
+    local me = UnitLevel and UnitLevel("player")
+    local player = K.Mod("QuestiePlayer")
+    local log = player and player.currentQuestlog
+    local n, ids = 0, {}
     for _, quests in ipairs(t.g) do
+        local counted = false
         for _, q in ipairs(quests) do
-            if Try(doable, q) then n = n + 1 break end
+            -- (No name: Questie has no such quest on this client, so nobody here offers it.)
+            local name = Try(M.DB.QueryQuestSingle, q, "name")
+            if name and not (log and log[q]) and not K.IsDone(q) and Try(doable, q) and LevelSuits(M.DB, q, me) then
+                -- (By name: the tooltip says what the ! is for.)
+                ids[#ids + 1] = name
+                if not counted then n, counted = n + 1, true end
+            end
         end
     end
-    return n, t[7]
+    return n, t[7], ids
 end
 
 local current -- the badge whose tooltip is showing (Shift redraws it)
@@ -510,10 +533,12 @@ local function OnEnter(pin)
         local grouped = parts[1] and parts[1]:find("%(") ~= nil
         if label == "Quest givers" then
             -- The ones with a quest for you; Shift adds how many there are in all: "3 (18)".
-            local available, total = Towns:Givers(t)
+            local available, total, ids = Towns:Givers(t)
             local value = available and (IsShiftKeyDown() and ("%d |cff40ff40(%d)|r"):format(available, total) or tostring(available)) or text
             if available then givers = true end
             GameTooltip:AddDoubleLine(label, value, LABEL[1], LABEL[2], LABEL[3], KIND[1], KIND[2], KIND[3])
+            -- What the ! is for, by name.
+            for _, name in ipairs(ids or {}) do GameTooltip:AddLine("   " .. name, KIND[1], KIND[2], KIND[3]) end
         elseif grouped then
             GameTooltip:AddLine(label, LABEL[1], LABEL[2], LABEL[3])
             for _, part in ipairs(parts) do

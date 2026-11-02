@@ -48,3 +48,5 @@ AuctionTab.lua
 ..\shared\MinimapButton.lua
 Minimap.lua
 API.lua
+..\shared\Wizard.lua
+Setup.lua

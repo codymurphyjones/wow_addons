@@ -45,10 +45,10 @@ Flights are one of several ways Waypoint can plan a trip. It looks for the quick
 
 | Step | How long Waypoint counts it |
 |---|---|
-| **Running and swimming** | Along the walkable ground (below), from where you are and to the target: around lakes, cliffs and lava, over bridges and up stairs, or straight across water when swimming there is quicker than going around. Swims of 200 yards or more become their own step ("Swim to the far shore"). Between flight masters, docks and towns, the walk baked over the ground (lifts, portals and the tram included); between other stops, a straight line plus 20% |
+| **Running and swimming** | Along the walkable ground (below), from where you are and to the target, at any angle: around lakes, cliffs and lava, over bridges and up stairs, or straight across water when swimming there is quicker than going around. Swims of 200 yards or more become their own step ("Swim to the far shore"). Between flight masters, docks and towns, the walk baked over the ground (lifts, portals and the tram included); between other stops, a straight line plus 20% |
 | **Aquatic Form** | Druids who know it have their swims counted at its speed (50% faster at first, then the speed Waypoint saw you swim in it). Waypoint tells you when to shift: "Switch to Aquatic Form and swim to Auberdine" at the shore, and a chat line when you're in the water in your own form |
 | **Flights** | As above, between flight points you know on one continent |
-| **Boats, zeppelins, skyships** | The wait from when you'll get to the dock, plus the ride. Each route's loop and its stops' times come from the game's tables; where the boat is in its loop is learned from sightings (below), and until one's known a wait counts as half a loop. Routes without a timetable (Forever's own) use how long the ride took you before, waiting included, else 4 minutes for a zeppelin or skyship and 5 for a ship |
+| **Boats, zeppelins, skyships** | The wait from when you'll get to the dock, plus the ride. Each route's loop and its stops' times come from the game's tables; where the boat is in its loop is learned from sightings (below), and until one's known a wait counts as half a loop. Forever's own routes (Stormwind to Auberdine, the Menethil, Southshore and Auberdine triangle, Steamwheedle to Powderfuse, the skyships) have the same timetables, from the game's own paths; their loop lengths are worked out from the path and fitted to the rides people see |
 | **Hearthstone** | What's left of its cooldown + 10 s to cast + 15 s of loading screen, when it's in your bags |
 | **Teleports** | 10 s to cast + 15 s of loading screen: the mage teleports this client has (Stormwind, Ironforge, Darnassus, Orgrimmar, Undercity, Thunder Bluff) with a Rune of Teleportation in your bags, and Teleport: Moonglade. They land where the server puts you |
 | **Astral Recall** | Like the hearthstone, when it's off cooldown |
@@ -68,6 +68,9 @@ Flights are one of several ways Waypoint can plan a trip. It looks for the quick
 - **Lifts, portals and the Deeprun Tram** are part of the walkable ground (below): taken like a walk, for their own time.
 
 ### The walkable ground
+
+- **Any angle.** A route walks in straight lines over open ground instead of along the map's grid, and sweeps round corners, wherever that's walkable and costs no more. Cliffs, water and blocked ways still shape it.
+- **After a login or `/reload`** nothing is planned until you move (or something carries you), so the first route starts from where you really are.
 
 Walks and swims are planned over the game's own ground: `Data\Nav<map>.lua`, baked from the game's files by `tools\Waypoint\nav_build.py` (part of `yarn build`; it needs Node.js and `yarn install`). It reads every map tile's terrain, water, buildings (cities, bridges, docks, caves, tunnels, stairs) and the rocks and models placed on them, and has Recast (the navigation library game servers use) work out where a character can stand and walk: no steeper than about 50 degrees, steps no higher than a yard, two yards of headroom.
 
@@ -89,12 +92,14 @@ Walks and swims are planned over the game's own ground: `Data\Nav<map>.lua`, bak
 - **This way is blocked.** The map can't see fences, buildings or a ledge you can't get down from. When the arrow leads somewhere that isn't there, right-click it and choose **This way is blocked** (or type `/way blocked`). It closes the next step the plan takes from where you stand (every jump out of there, when the next step is a jump), remembers it for all your characters, and plans another way. **Forget blocked ways** in the same menu (or `/way unblock`) clears them.
 - **Walk on Air once per walk.** Its 90-second cooldown outlasts most walks, so a route plans at most one jump with it per stretch of walking. Slow Fall and Levitate, a feather a cast, can be used for every jump; a run of jumps one after another counts as one cast.
 - **Roads.** Waypoint comes with the roads logged with RoadLog (`Data\Roads.lua`, built by `tools\Waypoint\build_roads.py`), so everyone has them, RoadLog or not. The small box at the end of the arrow's third line picks how much a walk keeps to them:
-  - **Safe:** keeps to roads, and leaves them only where a way off the road is far quicker (or there's no road).
-  - **Balanced** (the default): takes the roads that lead your way, and leaves them for the last stretch to where you're going.
+  - **Safe:** keeps to roads, and leaves them only where a way off the road is far quicker (or there's no road). With no road in play it takes the same way as the others.
+  - **Balanced** (the default): uses a road when one runs your way, for up to about 40% more walking, and cuts across open ground when none does.
   - **Speed:** the quickest way, roads or not; a road only when it's about as quick.
 
   Times are always real walking times, so the mode never makes a flight or a boat look better than it is.
 - **RoadLog marks count too.** If you run RoadLog, its narrow-pass pins open every way out of their square, its roads count as walked (and as roads for the box above), and its blockers close the ways that cross them. New marks are picked up within 15 seconds.
+- **Hover the line**, on the world map or the minimap, to see what that stretch is for: the steps at the end of it, where, what they pay and why, and how far it is. On your own stops and other addons' targets it shows what's known.
+- **The stops after this one:** when an addon says where you're going next (Field Guide does), the walk through the next five stops shows on the world map, each stop in its own colour, so you can see the journey at a glance. It's worked out only while the map is open, and a leg shows once it's ready. Turn it off with **Stops after this one on the world map**.
 - **The planned route** is drawn as a dashed line on the world map, and as a trail of dots on the minimap around you. It covers every walk, swim and jump along the land map, and flights and rides straight from stop to stop. Each kind of travel has its own colour family of 10 shades: walking cyan, flights and rides purple, jumps red, swimming green. Every line sits on a dark outline, so it stands out on any ground.
   - **Stages:** a whole trip to one target (your corpse, a quest objective) is one shade. Each new task the arrow follows takes the next shade.
   - **Your waypoint path:** every leg between the waypoints you dropped is drawn too, each in its waypoint's own shade. The shades are ordered so that each one differs clearly from the one before, and a waypoint keeps its colour as you reach the ones before it.
@@ -223,3 +228,7 @@ end
 Targets are saved without their functions. After a reload, `Get` still returns yours with its key and fields. Call `Set` again to put `onClick` back.
 
 List Waypoint in `## OptionalDeps` so it loads first. `Waypoint.VERSION` is 2 (`API_VERSION`, its older name, still works): check `Waypoint.VERSION >= n` before using a newer function.
+
+## Secondary tasks
+
+`Waypoint:SetSecondary(owner, tasks)` lists things to do on the way in a box under the arrow. The box is only as wide as its lines need, up to the arrow's width, and as tall as they need. Click its header to fold it. Field Guide uses it for quests you can work on along the walk to the current step.

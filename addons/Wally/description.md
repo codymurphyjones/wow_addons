@@ -29,12 +29,12 @@ Every item gets a verdict, and the reason is shown in tooltips and on the **In B
 | 2 | On your **Never Sell** list | Kept |
 | 3 | Matches a **keep rule** ("name contains...") | Kept |
 | 4 | On your **Auction List** | Kept (it's worth more at the auction house) |
-| 5 | One of your **protected valuables** | Kept |
-| 6 | On your **Junk List** | **Junk** |
-| 7 | A grey or white piece of gear that's a **possible upgrade** | Kept |
-| 8 | **Soulbound gear your character can never use** (wrong class, armor type or weapon skill) | **Junk**, except that enchanters keep green and better items to disenchant |
-| 9 | Matches a **junk rule** ("name contains...") | **Junk** |
-| 10 | Poor quality (grey) | **Junk** |
+| 5 | **Grey** item | **Junk**, unless it's gear worth wearing (see below) |
+| 6 | One of your **protected valuables** | Kept |
+| 7 | On your **Junk List** | **Junk** |
+| 8 | A white piece of gear that's a **possible upgrade** | Kept |
+| 9 | **Soulbound gear your character can never use** (wrong class, armor type or weapon skill) | **Junk**, except that enchanters keep green and better items to disenchant |
+| 10 | Matches a **junk rule** ("name contains...") | **Junk** |
 
 Because Never Sell, keep rules, the Auction List and valuables are checked first, they always win over everything below them.
 
@@ -116,9 +116,21 @@ N*:potion          <- keep rule (name contains)
 
 ---
 
+## Grey gear
+
+Grey items are vendor trash, so Wally never waits to learn them. Wally sells a grey piece unless all of this is true:
+
+- You can use it: your class, armor type, weapon skill and level.
+- What you wear in that slot is grey or white, with nothing on it but armor. A stat is worth more than armor, and green or better is left alone.
+- It has more armor than that piece (more DPS for a weapon), or the slot is empty.
+
+If it passes, Wally puts it on out of combat with **Wear better grey gear**, and what came off is judged the same way. White items aren't touched by this: many have crafting uses, so Wally still waits to learn those.
+
+---
+
 ## Gear upgrade protection
 
-With **Protect possible upgrades** on, Wally won't sell a grey or white weapon or armor piece that might beat what you're wearing:
+With **Protect possible upgrades** on, Wally won't sell a white weapon or armor piece that might beat what you're wearing:
 
 - An item for an **empty slot** is always kept.
 - Any extra stat (Strength, Stamina, ...) beats a piece with **only armor**.
@@ -298,8 +310,9 @@ Everything Wally sells for you is saved **per login session** under **Options > 
 |---------|---------|--------------|
 | Sell junk automatically | Off | Sell as soon as you open a merchant. |
 | Safe sell (12 at a time) | On | Never sell more than you can buy back. |
-| Grey items are junk | On | Every poor-quality item counts as junk. |
-| Protect possible upgrades | On | Keep grey/white gear that may beat what you wear. |
+| Grey items are junk | On | Sold without learning, unless it's more armor than a plain grey or white piece you wear. |
+| Wear better grey gear | On | Put on grey gear with more armor than that plain piece, out of combat. |
+| Protect possible upgrades | On | Keep white gear that may beat what you wear. |
 | Sell unusable soulbound gear | On | Sell bound gear you can't use. Enchanters keep greens and better. |
 | Repair gear automatically | On | Repair at any vendor, using guild funds first if allowed. |
 | Learn from my selling | On | Watch what you sell by hand and buy back. |

@@ -30,6 +30,13 @@ The settings list Blizzard's own windows with a **Not attached / Saddle > Tab** 
 
 Pick a tab and it's done.
 
+### Bottom Dock
+Every Saddle has a **+ / -** button at its bottom right, for one window you want to pop open and tuck away.
+
+- While editing, press **+** to open a section against the Saddle's bottom edge, and drop a window into it. The section takes that window's size.
+- From then on the button shows and hides that window, in and out of Edit Mode.
+- Right-click the section while editing to take the window out. Dropping a different window swaps it.
+
 ### Stays put
 Other addons and Blizzard's UI like to move windows back where *they* think they belong. SaddleBags notices and puts them back, whether a window is moved, resized, re-shown or created late after login.
 - **Questie:** its tracker places itself wherever Blizzard's tracker is. SaddleBags spots that and locks the Questie tracker into the same tab, so it never strays onto your screen.

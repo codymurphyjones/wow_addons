@@ -207,6 +207,7 @@ function Saddle:CreatePanel()
 	p.syncBtn = sync
 
 	self.panel = p
+	self:CreateDock()
 	self:RestorePosition()
 	self:UpdateCornerWidgets()
 	self:BuildTabs()
@@ -216,8 +217,8 @@ end
 -- Frames can't be destroyed, so a removed Saddle's are emptied and hidden.
 function Saddle:Destroy()
 	for _, tf in pairs(self.tabFrames) do
-		tf.button:Hide()
-		tf.bar:Hide()
+		if tf.button then tf.button:Hide() end
+		if tf.bar then tf.bar:Hide() end
 		tf.scroll:Hide()
 	end
 	self:FinishRename(false)
@@ -425,6 +426,139 @@ function Saddle:SetTabOpen(tf, open)
 	end
 end
 
+-- Bottom Dock -----------------------------------------------------------------
+-- A section under the Saddle that holds one window and shows or hides it with
+-- the + / - button at the Saddle's bottom right. It's tab TS.DOCK of the Saddle,
+-- so its window is kept in place by everything that keeps tabs' windows in place;
+-- it only has no button, and takes the size of what's in it. While editing, drop
+-- a window on it, and right-click it to take the window out. It hangs from the
+-- Saddle's bottom edge, with the toggle at its own bottom right. Hidden the way a
+-- tab is (SetTabOpen), never with Hide.
+
+local DOCK_MIN_W, DOCK_MIN_H = 140, 40
+local TOGGLE_SIZE = 16
+
+function Saddle:CreateDock()
+	local saddle, p = self, self.panel
+	local dock = CreateFrame("Frame", self:Name("Dock"), p)
+	p.dock = dock
+
+	local scroll = CreateFrame("ScrollFrame", self:Name("Scroll" .. TS.DOCK), dock)
+	scroll:SetPoint("TOPLEFT", PAD, -PAD)
+	scroll:SetPoint("BOTTOMRIGHT", -PAD, PAD)
+	local content = CreateFrame("Frame", self:Name("Content" .. TS.DOCK), scroll)
+	content:SetSize(1, 1)
+	content.saddleBagsContent = true
+	scroll:SetScrollChild(content)
+	self.tabFrames[TS.DOCK] = { scroll = scroll, content = content }
+
+	-- Only while editing, so the window in the dock keeps its own right-click.
+	local overlay = CreateFrame("Frame", self:Name("DockOverlay"), dock, "BackdropTemplate")
+	overlay:SetAllPoints()
+	overlay:SetFrameStrata("DIALOG")
+	overlay:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 2 })
+	overlay:EnableMouse(true)
+	overlay:SetScript("OnMouseUp", function(_, button)
+		if button == "RightButton" then saddle:DetachTab(TS.DOCK) end
+	end)
+	overlay.label = overlay:CreateFontString(nil, "OVERLAY", "SaddleBagsGameFontHighlightSmall")
+	overlay.label:SetPoint("CENTER")
+	overlay:Hide()
+	dock.overlay = overlay
+
+	local toggle = CreateFrame("Button", self:Name("DockToggle"), p)
+	toggle:SetSize(TOGGLE_SIZE, TOGGLE_SIZE)
+	toggle:SetScript("OnClick", function() saddle:ToggleDock() end)
+	toggle:SetScript("OnEnter", function(f)
+		GameTooltip:SetOwner(f, "ANCHOR_TOP")
+		GameTooltip:AddLine("Bottom Dock")
+		GameTooltip:AddLine(saddle:DockName() or "Empty: open it while editing and drop a window in.", 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	toggle:SetScript("OnLeave", GameTooltip_Hide)
+	p.dockToggle = toggle
+	self:UpdateDock()
+end
+
+-- The window in the dock, or nil. A window's attached frames (Details' rows) sit
+-- in the list after it.
+function Saddle:DockName()
+	return self.db.tabs[TS.DOCK].frames[1]
+end
+
+function Saddle:ToggleDock()
+	if CombatLocked(self.panel.dock) then
+		self.pendingDock = not self.pendingDock or nil
+		TS:Print("The Bottom Dock will change after combat.")
+		return
+	end
+	self.db.dockOpen = not self.db.dockOpen
+	self:UpdateDock()
+end
+
+-- A dock holds one window: a new one takes the place of the old.
+function Saddle:Dock(frame)
+	local list = self.db.tabs[TS.DOCK].frames
+	for k = #list, 1, -1 do
+		if _G[list[k]] ~= frame then TS:Detach(list[k]) end
+	end
+	local ok, err = TS:Capture(self, TS.DOCK, frame, true)
+	if ok then self.db.dockOpen = true end
+	self:UpdateDock()
+	return ok, err
+end
+
+-- Sized to its window. Parked off-screen when closed, as an inactive tab is.
+function Saddle:UpdateDock()
+	local p = self.panel
+	local dock = p.dock
+	if not dock or CombatLocked(dock) then return end
+	local tf = self.tabFrames[TS.DOCK]
+	local name, editing = self:DockName(), TS:IsEditing()
+	local open = self.db.dockOpen and (editing or name ~= nil)
+	local minus = "Interface\\Buttons\\UI-MinusButton"
+	local plus = "Interface\\Buttons\\UI-PlusButton"
+	local art = self.db.dockOpen and minus or plus
+	p.dockToggle:SetNormalTexture(art .. "-Up")
+	p.dockToggle:SetPushedTexture(art .. "-Down")
+	p.dockToggle:SetHighlightTexture(art .. "-Hilight")
+	-- Nothing to toggle outside editing while it's empty.
+	p.dockToggle:SetShown(editing or name ~= nil)
+
+	dock:SetAlpha(open and 1 or 0)
+	dock:ClearAllPoints()
+	if open then
+		local w = name and (tf.contentW or 1) + PAD * 2 or DOCK_MIN_W
+		local h = name and (tf.contentH or 1) + PAD * 2 or DOCK_MIN_H
+		dock:SetSize(math.min(math.max(w, 1), UIParent:GetWidth()), math.min(math.max(h, 1), UIParent:GetHeight()))
+		-- Sharing the Saddle's bottom border line.
+		if self.db.rightToLeft then
+			dock:SetPoint("TOPRIGHT", p, "BOTTOMRIGHT", 0, 1)
+		else
+			dock:SetPoint("TOPLEFT", p, "BOTTOMLEFT", 0, 1)
+		end
+	else
+		dock:SetSize(1, 1)
+		dock:SetPoint("TOPRIGHT", UIParent, "TOPLEFT", -10000, 10000)
+	end
+
+	-- The toggle stays at the bottom right of whatever is at the bottom.
+	p.dockToggle:ClearAllPoints()
+	p.dockToggle:SetPoint("TOPRIGHT", open and dock or p, "BOTTOMRIGHT", 0, -1)
+
+	local overlay = dock.overlay
+	overlay:SetShown(open and editing)
+	local target = self.dropTarget == TS.DOCK
+	if target then
+		overlay:SetBackdropColor(0.1, 0.6, 0.2, 0.4)
+		overlay:SetBackdropBorderColor(0.2, 1, 0.4, 1)
+	else
+		overlay:SetBackdropColor(0.0, 0.44, 0.87, 0.25)
+		overlay:SetBackdropBorderColor(0.3, 0.65, 1, 1)
+	end
+	overlay.label:SetText(name and (name .. "\n|cffccccccRight-click: remove|r") or "Drop a window here")
+end
+
 -- Watchdog --------------------------------------------------------------------
 -- Hooks catch most changes owners make to captured frames, but not all of
 -- them: damage meter frames get no hooks at all (see DamageMeter.lua), and
@@ -470,7 +604,7 @@ local function Watch()
 	-- Saved windows that exist (again): created late by their addon, or a
 	-- re-created damage meter window.
 	for saddle in TS:EachSaddle() do
-		for i = 1, saddle.db.tabCount do
+		for _, i in ipairs(TS.Tabs(saddle)) do
 			for _, name in ipairs(saddle.db.tabs[i].frames) do
 				local f = _G[name]
 				if type(f) == "table" and f.SetPoint and not TS.captured[f] and not TS.pending[name] then missing = true end
@@ -486,7 +620,7 @@ function TS:UpdateWatchdog()
 	if not self.ready then return end
 	local needed, interval = false, 0.5
 	for saddle in self:EachSaddle() do
-		for i = 1, saddle.db.tabCount do
+		for _, i in ipairs(TS.Tabs(saddle)) do
 			if #saddle.db.tabs[i].frames > 0 then needed = true break end
 		end
 	end
@@ -590,6 +724,7 @@ local function SuiteTab(b, active, target)
 end
 
 function Saddle:UpdateTabVisuals()
+	self:UpdateDock()
 	for k = 1, self.db.tabCount do
 		local b = self.tabFrames[k].button
 		local active = k == self.db.activeTab
@@ -712,7 +847,11 @@ function Saddle:Layout(i)
 	-- than this (to fill the view), so sizing code reads these instead.
 	tf.contentW, tf.contentH = math.max(w, 1), math.max(y, 1)
 	content:SetSize(tf.contentW, tf.contentH)
-	if i == self.db.activeTab then self:UpdatePanelSize() end
+	if i == TS.DOCK then
+		self:UpdateDock()
+	elseif i == self.db.activeTab then
+		self:UpdatePanelSize()
+	end
 end
 
 -- Coalesce bursts of show/hide/resize events into one layout next frame.
@@ -986,6 +1125,7 @@ function Saddle:UpdateEditState()
 	p.shrinkBtn:SetShown(editing)
 	p.dirBtn:SetShown(editing)
 	p.syncBtn:SetShown(editing)
+	self:UpdateDock()
 	if editing then
 		self:UpdateFitButtons()
 	else
@@ -1071,6 +1211,7 @@ local dropSaddle -- Saddle whose tab is highlighted as the drop target
 local function DropTarget()
 	for saddle in TS:EachSaddle() do
 		local p = saddle.panel
+		if p:IsVisible() and p.dock.overlay:IsShown() and p.dock:IsMouseOver() then return saddle, TS.DOCK end
 		if p:IsVisible() then
 			for i = 1, saddle.db.tabCount do
 				if saddle.tabFrames[i].button:IsMouseOver() then return saddle, i end
@@ -1148,7 +1289,12 @@ local function OnStopMoving()
 		local name = TS.FrameName(root)
 		if saddle and editing and not (info and info.saddle == saddle and info.tab == i) then
 			TS:SetLastSaddle(saddle)
-			local ok, err = TS:Capture(saddle, i, root, true)
+			local ok, err
+			if i == TS.DOCK then
+				ok, err = saddle:Dock(root)
+			else
+				ok, err = TS:Capture(saddle, i, root, true)
+			end
 			if ok then
 				TS:Print(("%s added to %s (%s)."):format(name, saddle.db.tabs[i].name, saddle.db.name))
 			else

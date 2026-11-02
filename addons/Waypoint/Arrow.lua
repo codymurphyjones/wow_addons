@@ -32,7 +32,7 @@ end
 local function Build()
     if f then return end
     f = CreateFrame("Button", "WaypointArrow", UIParent, "BackdropTemplate")
-    f:SetSize(MIN_W, 58); f:SetFrameStrata("MEDIUM"); f:SetClampedToScreen(true)
+    f:SetSize(MIN_W, 50); f:SetFrameStrata("MEDIUM"); f:SetClampedToScreen(true)
     if f.SetBackdrop then
         f:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
         f:SetBackdropColor(0, 0, 0, 0.5)
@@ -80,12 +80,38 @@ local function Build()
     f.title = Text("WaypointGameFontNormal", -6)
     f.title:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
     f.where = Text("WaypointGameFontHighlight", -23)
-    f.sub = Text("WaypointGameFontHighlightSmall", -40)
+    -- What it's for: a box of its own on top of the arrow, as the secondary tasks are under it, as wide
+    -- as the line needs to be read in full.
+    f.above = CreateFrame("Frame", nil, f, "BackdropTemplate")
+    if f.above.SetBackdrop then
+        f.above:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+        f.above:SetBackdropColor(0, 0, 0, 0.5)
+        f.above:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 0.35)
+        if WallyHUD and WallyHUD.Panel then WallyHUD.Panel(f.above, "base") end
+    end
+    f.above:SetHeight(20)
+    f.above:Hide()
+    f.sub = f.above:CreateFontString(nil, "OVERLAY", "WaypointGameFontHighlightSmall")
+    f.sub:SetPoint("LEFT", 8, 0)
+    f.sub:SetJustifyH("LEFT"); f.sub:SetWordWrap(false)
     f.sub:SetTextColor(0.65, 0.7, 0.75)
-    -- What the ground is doing: a cliff ahead, how far up or down the target is. Shown (and the
-    -- frame taller) only when there's something to say.
-    f.terrain = Text("WaypointGameFontHighlightSmall", -55)
+    -- What the ground is doing, on a bottom row shown (and the frame taller) only when there's
+    -- something to say: what's ahead as an icon with the words on hovering it, then how far up or
+    -- down the target is.
+    f.terrain = Text("WaypointGameFontHighlightSmall", -40)
     f.terrain:SetTextColor(0.85, 0.85, 0.7)
+    f.note = CreateFrame("Button", nil, f)
+    f.note:SetSize(14, 14)
+    f.note:SetPoint("TOPLEFT", 58, -38)
+    f.note.icon = f.note:CreateTexture(nil, "ARTWORK")
+    f.note.icon:SetAllPoints()
+    f.note:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(self.text or "", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    f.note:SetScript("OnLeave", GameTooltip_Hide)
+    f.note:Hide()
 
     -- The road preference (Route.lua ROAD_MODES): a small select box at the end of the third line.
     -- Click: Safe, Balanced or Speed.
@@ -96,8 +122,9 @@ local function Build()
         f.mode:SetBackdropColor(0, 0, 0, 0.35)
         f.mode:SetBackdropBorderColor(1, 1, 1, 0.14)
     end
-    f.mode.text = f.mode:CreateFontString(nil, "OVERLAY", "WaypointGameFontHighlightSmall")
-    f.mode.text:SetPoint("LEFT", 5, 0)
+    f.mode.icon = f.mode:CreateTexture(nil, "OVERLAY")
+    f.mode.icon:SetSize(13, 13); f.mode.icon:SetPoint("LEFT", 2, 0)
+    f.mode.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     f.mode.caret = f.mode:CreateTexture(nil, "OVERLAY")
     f.mode.caret:SetSize(10, 10); f.mode.caret:SetPoint("RIGHT", -3, 0)
     f.mode.caret:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
@@ -182,10 +209,10 @@ local function Build()
         btn:Hide()
     end
     f.extra = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    f.extra:SetSize(46, 20); f.extra:SetPoint("RIGHT", -6, 0)
+    f.extra:SetSize(46, 20); f.extra:SetPoint("TOPRIGHT", -6, -5)
     ExtraScripts(f.extra)
     f.extraIcon = CreateFrame("Button", nil, f)
-    f.extraIcon:SetSize(24, 24); f.extraIcon:SetPoint("RIGHT", -5, 0)
+    f.extraIcon:SetSize(24, 24); f.extraIcon:SetPoint("TOPRIGHT", -5, -3)
     f.extraIcon:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
     ExtraScripts(f.extraIcon)
 
@@ -227,17 +254,24 @@ local function LayoutButton()
     local managed = ns.Targets:GetManager() ~= nil and ns.Targets:Altered()
     f.restore:SetShown(managed)
     f.restore.wasShown = managed
-    -- The road preference box: the end of the third line, left of another addon's button.
-    f.mode.text:SetText(ns.Route and ns.Route:RoadMode().name or "")
-    f.mode:SetWidth(math.ceil(f.mode.text:GetStringWidth()) + 22)
+    f.restore:ClearAllPoints()
+    f.restore:SetPoint("TOPRIGHT", right + 2, -5) -- left of another addon's button
+    -- The right-hand column: another addon's button on the title's row, the road preference under
+    -- it, so the lines below the title keep the width.
+    if ns.Route then f.mode.icon:SetTexture(ns.Route:RoadMode().icon) end
+    f.mode:SetWidth(30)
     f.mode:ClearAllPoints()
-    f.mode:SetPoint("TOPRIGHT", f, "TOPRIGHT", right, -38)
-    for _, fs in ipairs({ f.title, f.where, f.sub, f.terrain }) do
+    f.mode:SetPoint("TOPRIGHT", f, "TOPRIGHT", -5, -30)
+    local column = -(5 + f.mode:GetWidth() + 4)
+    for _, fs in ipairs({ f.title, f.where, f.terrain }) do
         local point, rel, relPoint, x, y = fs:GetPoint(1)
         fs:ClearAllPoints()
         fs:SetPoint(point, rel, relPoint, x, y)
-        fs.inset = (fs == f.title and managed) and math.min(right, -26) or right
-        if fs == f.sub then fs.inset = right - f.mode:GetWidth() - 4 end
+        if fs == f.title then
+            fs.inset = managed and right - 18 or right
+        else
+            fs.inset = column
+        end
         fs:SetPoint("RIGHT", fs.inset, 0)
     end
     f.extra:Hide(); f.extraIcon:Hide()
@@ -281,22 +315,44 @@ end
 local checkAt = 0
 local terrainAt = 0
 
--- The terrain line, twice a second: shows or hides it, and makes the frame fit.
+-- The bottom row, twice a second: shows or hides it, and makes the frame fit.
 local function Terrain(p)
     local now = GetTime()
     if now < terrainAt then return end
     terrainAt = now + 0.5
-    local text = p and ns.Route and ns.Route:TerrainText(p)
-    Text(f.terrain, text or "")
-    local h = text and 72 or 58
+    local note, height
+    if p and ns.Route then note, height = ns.Route:TerrainNotes(p) end
+    height = height or ""
+    f.note:SetShown(note ~= nil)
+    if note then
+        f.note.icon:SetTexture(note[1])
+        f.note.icon:SetVertexColor(note[2], note[3], note[4])
+        f.note.text = note[5]
+    end
+    Text(f.terrain, height)
+    f.terrain:SetPoint("TOPLEFT", note and 76 or 58, -40)
+    local h = (note or height ~= "") and 58 or 50
     if math.abs(f:GetHeight() - h) > 0.5 then f:SetHeight(h) end
 end
 
 -- Widens the frame (up to MAX_W) so no line gets cut off, and narrows it again once there's
 -- plenty of room. Steps of 8 so a ticking ETA doesn't make it twitch.
 function Arrow:Fit()
+    -- The box on top: as the windows under the arrow, it keeps to the side they're aligned to.
+    local line = f.sub.shownText or ""
+    f.above:SetShown(line ~= "")
+    if line ~= "" then
+        local most = UIParent:GetWidth() * 0.8
+        local wide = math.min(most, ((f.sub.GetUnboundedStringWidth or f.sub.GetStringWidth)(f.sub) or 0) + 16)
+        f.above:SetWidth(math.ceil(wide))
+        f.sub:SetWidth(math.ceil(wide) - 16)
+        local a = ns.db.dockAlign
+        local side = (a == "LEFT" and "LEFT") or (a == "RIGHT" and "RIGHT") or ""
+        f.above:ClearAllPoints()
+        f.above:SetPoint("BOTTOM" .. side, f, "TOP" .. side, 0, 4)
+    end
     local need = 0
-    for _, fs in ipairs({ f.title, f.where, f.sub, f.terrain }) do
+    for _, fs in ipairs({ f.title, f.where, f.terrain }) do
         local w = (fs.GetUnboundedStringWidth or fs.GetStringWidth)(fs) or 0
         if w > 0 then need = math.max(need, 58 + w - (fs.inset or -8)) end
     end
@@ -515,7 +571,7 @@ function Arrow:SetCast(leg)
     KeepCast(b)
 end
 
--- The NPC to talk to (the target's targetName): a click on the third line runs /target <name>, so
+-- The NPC to talk to (the target's targetName): a click on the second line runs /target <name>, so
 -- you can find them in a crowd. TargetUnit is protected, so it's a secure macro button, and like
 -- the cast button it hangs off the screen itself, laid over that line, and is set up, moved and
 -- hidden out of combat only. targetFor: the name it's set to; targetSpot: where it was laid.
@@ -529,7 +585,7 @@ local function TargetButton()
     local hl = b:CreateTexture(nil, "HIGHLIGHT")
     hl:SetAllPoints(); hl:SetColorTexture(1, 1, 1, 0.08)
     b:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(f, "ANCHOR_TOP")
+        GameTooltip:SetOwner(f, "ANCHOR_RIGHT")
         GameTooltip:AddLine(targetFor or "")
         GameTooltip:AddLine("Click: /target " .. (targetFor or ""), 0.6, 1, 0.6)
         GameTooltip:Show()
@@ -548,7 +604,7 @@ local function TargetButton()
     return b
 end
 
--- Sets the button to name (nil: hides it) and lays it over the third line. Out of combat only;
+-- Sets the button to name (nil: hides it) and lays it over the second line. Out of combat only;
 -- the arrow calls it every update, so a change made in a fight catches up once it's over.
 function Arrow:SetTarget(name)
     if InCombatLockdown() then return end
@@ -855,7 +911,7 @@ function Arrow:ShowModeMenu(owner)
     MenuUtil.CreateContextMenu(owner, function(_, root)
         root:CreateTitle("Roads")
         for _, mode in ipairs(modes) do
-            local radio = root:CreateRadio(mode.name, function() return ns.Route:RoadMode() == mode end,
+            local radio = root:CreateRadio(ns.Route:ModeLabel(mode), function() return ns.Route:RoadMode() == mode end,
                 function() Pick(mode.id) end)
             if radio.SetTooltip then
                 radio:SetTooltip(function(tooltip)

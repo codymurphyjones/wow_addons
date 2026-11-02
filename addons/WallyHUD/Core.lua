@@ -15,7 +15,7 @@ ns.SAVED = { db = "WallyHUDDB", char = "WallyHUDCharDB" }
 
 ns.DEFAULTS = {
     suiteLook = true,      -- repaint our addons to the shared look (a /reload to change)
-    density = "standard",  -- "minimal" | "standard" | "expanded"
+    density = "standard",  -- "minimal" | "standard"
     minimapButtons = true, -- strip the gold rings off minimap buttons: monochrome icons, colour on hover
     hideReporter = true,   -- keep Blizzard's Issue Reporter out of the play field (keybind and toast instead)
     errorToast = true,     -- a small notice when an addon error happens, with Report and Dismiss
@@ -96,7 +96,7 @@ end
 
 local function Help()
     ns:Print("/whud - open the settings")
-    ns:Print("/whud minimal | standard | expanded - how much the HUD shows")
+    ns:Print("/whud minimal | standard - hide or show the minimap buttons")
     ns:Print("/whud report - Blizzard's Issue Reporter (also Ctrl+Shift+/)")
     ns:Print("/whud debug - what WallyHUD finds, and the frame under the mouse")
     ns:Print("/whud flags - move the battleground flag carrier frames (the right-side column); /whud flags reset")
@@ -109,7 +109,7 @@ SLASH_WALLYHUD2 = "/whud"
 SlashCmdList.WALLYHUD = function(msg)
     if not ns.db then return end
     local cmd = strlower(strtrim(msg or ""))
-    if cmd == "minimal" or cmd == "standard" or cmd == "expanded" then
+    if cmd == "minimal" or cmd == "standard" then
         ns.Density:Set(cmd)
     elseif cmd == "report" then
         ns.Reporter:Open()

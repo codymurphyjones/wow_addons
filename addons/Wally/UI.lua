@@ -444,8 +444,9 @@ end
 local OPTION_DEFS = {
     { "autoSell", "Sell junk automatically", "Sell as soon as you open a merchant." },
     { "safeSell", "Safe sell (12 at a time)", "Never sell more than you can buy back." },
-    { "sellGreys", "Grey items are junk", "Every poor-quality item counts as junk." },
-    { "protectUpgrades", "Protect possible upgrades", "Keep grey/white gear that may beat what you wear." },
+    { "sellGreys", "Grey items are junk", "Sold without learning, unless it's more armor than a plain grey or white piece you wear." },
+    { "wearGreys", "Wear better grey gear", "Put on grey gear with more armor than that plain piece, out of combat." },
+    { "protectUpgrades", "Protect possible upgrades", "Keep white gear that may beat what you wear." },
     { "sellUnusableBound", "Sell unusable soulbound gear", "Gear you can't use. Enchanters keep greens+." },
     { "autoRepair", "Repair gear automatically", "At any vendor who repairs. Uses guild funds first if allowed." },
     { "learn", "Learn from my selling", "Watch what you sell by hand and buy back." },
@@ -912,6 +913,7 @@ end
 
 UI.page = ns.NewOptionsPage({ name = "Wally", icon = true, build = function(p)
     p:Header("Wally")
+    p:Button({ label = "Setup wizard", text = "Run setup", fn = function() ns.setup:Open() end })
     for _, d in ipairs(OPTION_DEFS) do
         p:Check({ path = "db.options." .. d[1], label = d[2], tooltip = d[3] })
         if d[1] == "autoRepair" then

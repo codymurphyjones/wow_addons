@@ -18,6 +18,8 @@
 ..\shared\Instances.lua
 Core.lua
 Guides\Data.lua
+Guides\Walks.lua
+Guides\Gates.lua
 Guides\Alliance.lua
 Guides\Horde.lua
 Guides\Instances.lua
@@ -32,3 +34,5 @@ AutoQuest.lua
 Minimap.lua
 ..\shared\OptionsPage.lua
 Settings.lua
+..\shared\Wizard.lua
+Setup.lua

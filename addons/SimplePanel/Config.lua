@@ -677,6 +677,7 @@ end
 
 Config.page = ns.NewOptionsPage({ name = "SimplePanel", build = function(p)
     p:Header("SimplePanel  v" .. ns.VERSION)
+    p:Button({ label = "Setup wizard", text = "Run setup", fn = function() ns.setup:Open() end })
     p:Button({ label = "Plugins, launchers and profiles are in the SimplePanel window", text = "Open SimplePanel", fn = OpenWindow,
         tooltip = "Turn plugins on and off, place launchers, switch and share profiles (/spanel)." })
 

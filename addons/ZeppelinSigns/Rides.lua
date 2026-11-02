@@ -5,14 +5,14 @@ local _, Z = ...
 -- (where you got off last time, else the dock in the destination town), once you stand still or
 -- walk on solid ground there, or walk past any other dock's sign. How long it took from boarding
 -- is learned for A's dock (ZeppelinSignsDB.rides) and is the countdown next time. A ride never
--- timed counts down from 180 seconds, corrected as you go by how fast you're closing on B when B
--- is known. The countdown shows as a bar under the signs: A on the left, B on the right.
+-- timed counts down from the route's own length (RideTimes.lua, 180 seconds for a sign you added),
+-- corrected as you go by how fast you're closing on B when B is known. The countdown shows as a bar under the signs: A on the left, B on the right.
 -- Other addons read the ride through ZeppelinSignsAPI (Waypoint's arrow and map icons).
 local R = {}
 Z.Rides = R
 
 local TICK = 0.5
-local DEFAULT = 180        -- seconds: a ride never timed
+local DEFAULT = 180        -- seconds: a ride never timed, on a sign RideTimes.lua doesn't have
 local MIN_RIDE = 20        -- shorter than this wasn't a ride
 local MAX_RIDE = 15 * 60   -- longer than this wasn't one either
 local CARRIED_SPEED = 4    -- yards a second you move without moving yourself: carried
@@ -114,7 +114,7 @@ local function Begin(spot, boarded)
     ride = {
         sign = s, from = spot, boarded = boarded,
         fromName = s.place or (GetRealZoneText and GetRealZoneText()) or "Here",
-        expect = rec and rec.secs or DEFAULT, timed = rec and rec.secs ~= nil,
+        expect = rec and rec.secs or Z.RIDE_TIMES[s.key] or DEFAULT, timed = rec and rec.secs ~= nil,
         to = Landing(s), at = now,
     }
     ride.shown = ride.expect - (now - boarded)

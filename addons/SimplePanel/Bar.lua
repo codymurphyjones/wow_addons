@@ -369,15 +369,11 @@ end
 -- Layout
 -- ---------------------------------------------------------------------------
 
--- Plugins WallyHUD's density preset hides for now (SimplePanel.SetDensityHidden); the saved
--- layout doesn't change.
-local function DensityHidden(p) return SimplePanel.densityHidden and SimplePanel.densityHidden[p.id] end
-
 local function ZoneButtons(zone, skip)
     local out = {}
     for _, p in pairs(PK.plugins) do
         if p.enabled and p.button and p.button ~= skip and p:Layout().zone == zone then
-            if DensityHidden(p) then p.button:Hide() else out[#out + 1] = p end
+            out[#out + 1] = p
         end
     end
     table.sort(out, function(a, b)

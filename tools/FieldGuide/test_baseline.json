@@ -1,0 +1,82 @@
+{
+ "Dwarf": {
+  "avoidable": 73,
+  "breaks": 7,
+  "errors": 0,
+  "level": 40,
+  "returns": 296,
+  "stalls": 1,
+  "steps": 852,
+  "yards": 432529
+ },
+ "Gnome": {
+  "avoidable": 69,
+  "breaks": 0,
+  "errors": 1,
+  "level": 38,
+  "returns": 261,
+  "stalls": 1,
+  "steps": 776,
+  "yards": 495429
+ },
+ "Human": {
+  "avoidable": 56,
+  "breaks": 0,
+  "errors": 0,
+  "level": 39,
+  "returns": 299,
+  "stalls": 1,
+  "steps": 821,
+  "yards": 374828
+ },
+ "NightElf": {
+  "avoidable": 80,
+  "breaks": 2,
+  "errors": 0,
+  "level": 45,
+  "returns": 357,
+  "stalls": 1,
+  "steps": 1076,
+  "yards": 567922
+ },
+ "Orc": {
+  "avoidable": 89,
+  "breaks": 18,
+  "errors": 0,
+  "level": 44,
+  "returns": 366,
+  "stalls": 1,
+  "steps": 1042,
+  "yards": 985141
+ },
+ "Tauren": {
+  "avoidable": 67,
+  "breaks": 1,
+  "errors": 1,
+  "level": 41,
+  "returns": 319,
+  "stalls": 1,
+  "steps": 927,
+  "yards": 597357
+ },
+ "Troll": {
+  "avoidable": 133,
+  "breaks": 28,
+  "errors": 1,
+  "level": 51,
+  "returns": 534,
+  "stalls": 1,
+  "steps": 1380,
+  "yards": 1160419
+ },
+ "Undead": {
+  "avoidable": 71,
+  "breaks": 2,
+  "errors": 1,
+  "level": 42,
+  "returns": 345,
+  "stalls": 1,
+  "steps": 1007,
+  "yards": 525667
+ }
+}

@@ -52,7 +52,7 @@ end
 local function WhyNot(questID)
     local E = ns.Engine
     if not ns.Quests[questID] then return "None of Field Guide's guides have this quest. It's yours to do whenever you like." end
-    if ns.char.ignored[questID] then return "You skipped it, so Field Guide leaves it to you (/fg unskip brings it back)." end
+    if ns.char.ignored[questID] then return "You skipped it, so Field Guide leaves it to you unless you take it near your level (/fg unskip brings it back)." end
     if ns.char.doneByHand[questID] then return "You marked it done (/fg unskip brings it back)." end
     if not E.section then return "Field Guide has no route for your level right now." end
     for _, s in ipairs(E.guide and E.guide.sections or {}) do

@@ -13,6 +13,11 @@ local _, ns = ...
 --       next = "Pick up: The Essence of Aku'Mai",   -- optional: what comes after, for the tooltip
 --       upcoming = { mapID = 52, x = 0.6, y = 0.5 }, -- optional: where that is, so the way there is
 --                                                   -- worked out ahead and ready when you set it
+--       ahead = { { mapID = 52, x = 0.6, y = 0.5 } }, -- optional: the stops after this one, in order:
+--                                                   -- the walk through them shows on the world map, each leg its own colour
+--       info = { { title = "Pick up: X", detail = "Bob, Mulgore 44, 77", why = "Worth about 200 XP." } },
+--                                                   -- optional: shown hovering the line to this target;
+--                                                   -- an `ahead` stop can have an info of its own
 --       color = "green",                            -- "gold" (default: your own waypoints),
 --                                                   -- "green" (a leveling guide), "purple" (a dungeon)
 --       key = "quest:1234",                         -- optional: anything you want back from Get
@@ -106,6 +111,14 @@ end
 
 function API:Undock(frame)
     ns.Arrow:Undock(frame)
+end
+
+-- Things to do on the way, in a box under the arrow: Field Guide's quests along the walk. Each addon
+-- has its own list; nil or {} takes yours away. text is the line, the rest are optional.
+--   Waypoint:SetSecondary("MyAddon", { { text = "Kill 8 Swoops", title = "Swoop Hunting",
+--       tooltip = "...", onClick = fn } })
+function API:SetSecondary(owner, tasks)
+    ns.Secondary:Set(owner, tasks)
 end
 
 -- A button on the arrow for your addon (Field Guide's "Play" while it's paused). The arrow shows

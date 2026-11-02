@@ -49,6 +49,7 @@ ns.Transports.RADIUS = { zeppelin = 15, skyship = 15, ship = 60 }
 ns.Transports.TELEPORTS = {
     [3561] = "Stormwind City", [3562] = "Ironforge", [3565] = "Darnassus",
     [3567] = "Orgrimmar", [3563] = "Undercity", [3566] = "Thunder Bluff",
+    [1297659] = "Dalaran", -- Forever's: lands at the town until it's been cast once
     [18960] = "Moonglade", -- Teleport: Moonglade (druids)
 }
 -- Teleports that need no Rune of Teleportation (the mage ones do).

@@ -24,3 +24,5 @@ Settings.lua
 Designer.lua
 MainSpec.lua
 Probe.lua
+..\shared\Wizard.lua
+Setup.lua

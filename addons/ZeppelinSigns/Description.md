@@ -22,6 +22,9 @@ Zeppelin towers have two platforms side by side, and harbors have several ships 
 ### Look at the master, get the sign
 Mouse over, target or soft-target a zeppelin master or dockmaster and their sign shows right away, from any distance, even before you reach the platform. Frezza, Snurk Bucksquick, Zapetta, Hin Denburg, Nez'raz, Squibby Overspeck, Grimble, Grizzlowe and Raul Sweete are built in.
 
+### A countdown on board
+Once the ride leaves, a bar under the sign counts down to where it lands. Every built-in route starts with its own ride time, Forever's routes included, and your first ride of each is timed and used from then on. Turn it off with `/zep timer`.
+
 ### Make it yours
 - **Move a sign:** stand where you want it and type `/zep mark`. The nearest sign within 60 yards moves to your spot.
 - **Add a sign:** `/zep mark new` opens a small window. Pick **Ship** or **Zeppelin**, type the destination, then:
@@ -74,6 +77,7 @@ Skyships show as **Zeppelin** signs.
 |---|---|
 | `/zep` | Turn signs on or off |
 | `/zep test` | Show a sample sign for five seconds |
+| `/zep timer` | Turn the ride timer on or off |
 | `/zep mark` | Move the nearest sign (within 60 yards) to where you stand |
 | `/zep mark new` | Add a new ship or zeppelin sign |
 | `/zep remove` | Delete the nearest sign you added, or reset a moved built-in sign |

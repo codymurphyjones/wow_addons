@@ -16,12 +16,21 @@ The arrow stays on one quest while you walk. When you track something else, chan
 ### Takes the fastest way, even across continents
 Waypoint times your flights, your rides and your travel speed, and plans the quickest trip using everything you have:
 - flight paths;
-- boats, zeppelins and skyships;
+- boats, zeppelins and skyships, with timetables for every route, Forever's own included;
 - swimming across to an island when that beats the boat (with Aquatic Form's speed for druids);
 - your hearthstone;
 - mage teleports.
 
 The arrow leads one step at a time: "Zeppelin to Undercity", then "Fly: Undercity to Tarren Mill", then the target. A chat line gives the whole trip and how long it takes.
+
+### Walks the way you would
+- Straight across open ground at any angle, not in right angles along a grid.
+- Sweeps round hills and corners instead of turning on a point.
+- Goes around cliffs, water and lava, and over bridges and up stairs.
+- Three road preferences: **Safe** keeps to roads, **Balanced** uses a road when one runs your way, and **Speed** takes the quickest way. Roads are never faster, only safer, so with no road nearby all three take the same way.
+- With Field Guide, the world map shows your next five stops, each in its own colour, so you can see the journey ahead at a glance.
+- Hover the line on either map to see where it leads, what you'll do there, what it pays and how far it is.
+- After a login or `/reload` it waits until you move, so the first route starts from where you really are.
 
 ### Paths you draw on the map
 - **Ctrl+click** the world map to drop waypoints. They join into a path, and the arrow leads you through it in order.

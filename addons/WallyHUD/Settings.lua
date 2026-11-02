@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- Options > AddOns > WallyHUD. The suite's name lives here, not on the HUD. Built with the shared
--- OptionsPage.lua (addons/shared); /whud minimal | standard | expanded changes the same option.
+-- OptionsPage.lua (addons/shared); /whud minimal | standard changes the same option.
 local S = {}
 ns.Settings = S
 
@@ -9,11 +9,10 @@ S.page = ns.NewOptionsPage({ name = "WallyHUD", build = function(p)
     p:Header("WallyHUD: one look for the suite")
     -- Density:Set saves it through ns:SetOption (its apply lays the HUD out) and says so in chat.
     p:Dropdown({ id = "Density", path = "db.density", label = "Density",
-        choices = { { "minimal", "Minimal" }, { "standard", "Standard" }, { "expanded", "Expanded" } },
+        choices = { { "minimal", "Minimal" }, { "standard", "Standard" } },
         set = function(value) ns.Density:Set(value) end,
         apply = function() ns.Density:Apply() end,
-        tooltip = "How much the HUD shows. Minimal: the clock and performance on the status rail, no minimap buttons. "
-            .. "Standard: everything you've set up, without memory use. Expanded: everything (/whud minimal | standard | expanded)." })
+        tooltip = "Minimal hides the minimap buttons. Standard shows them (/whud minimal | standard)." })
     p:Check({ id = "suiteLook", path = "db.suiteLook", label = "Shared look for our addons",
         tooltip = "Our addons' windows, popups and bars in one look: see-through surfaces, 1px hairlines, one teal accent, "
             .. "colour only for state, and one font (Roboto Condensed) in its weights. Takes a /reload to switch." })
@@ -71,5 +70,5 @@ end })
 
 function S:Open()
     if not self.page.headless then return self.page:Open() end
-    ns:Print("/whud minimal | standard | expanded, /whud report.")
+    ns:Print("/whud minimal | standard, /whud report.")
 end

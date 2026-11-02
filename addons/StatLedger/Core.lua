@@ -387,6 +387,7 @@ Help = ns:Slash({ "/statledger", "/statprio", "/statpriority" }, {
     end, "reset your current spec to its default" },
     { "options", function() ns.Settings:Open() end, "open settings (also just /statledger)" },
     { "mainspec", function() ns.MainSpec:Open() end, "choose your main spec" },
+    { "setup", function() ns.setup:Open() end, "run the setup wizard" },
     { { "designer", "weights" }, function() ns.Designer:Open() end, "open the Weight Designer" },
     { "probe", function() ns.Probe:Run() end, "record what this client gives for talents and stats" },
     -- No command: the settings; one not listed: the help.

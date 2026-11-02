@@ -11,22 +11,25 @@ local function Thousands(n) return ns.Format.Thousands(n) end
 
 local function RoadModes()
     local out = {}
-    for _, mode in ipairs(ns.Route.ROAD_MODES) do out[#out + 1] = { mode.id, mode.name } end
+    for _, mode in ipairs(ns.Route.ROAD_MODES) do out[#out + 1] = { mode.id, ns.Route:ModeLabel(mode) } end
     return out
 end
 
 S.page = ns.NewOptionsPage({ name = "Waypoint", icon = true, build = function(p)
     p:Header(ns.IconMarkup(28) .. "  Waypoint: the arrow")
+    p:Button({ label = "Setup wizard", text = "Run setup", fn = function() ns.setup:Open() end })
     p:Check({ path = "db.arrowHidden", invert = true, label = "Show the arrow", tooltip = "Show Waypoint's arrow (/way arrow)." })
     p:Check({ path = "db.locked", label = "Lock the arrow", tooltip = "The arrow can't be dragged (/way lock)." })
     p:Check({ path = "db.steer", label = "Lead around lakes and cliffs",
         tooltip = "When the straight line to where you're headed crosses water you'd rather not swim, a cliff or lava, the arrow points along the way around instead." })
     p:Check({ path = "db.showHeight", label = "Terrain under the arrow",
-        tooltip = "A line under the arrow, from Waypoint's land map: a cliff or a slope too steep to climb in front of you (with how far down and what the fall would cost), "
+        tooltip = "A row on the arrow, from Waypoint's land map, with what's ahead as an icon you can point at: a cliff or a slope too steep to climb in front of you (with how far down and what the fall would cost), "
             .. "and how far above or below you the target is (\"Target 60 yd below you\"), once it's 15 yards or more." })
     p:Check({ path = "db.showWay", label = "Planned route on the world map",
         tooltip = "The whole trip as a dashed line on the world map: walking teal, swimming blue, jumps orange, flights pale blue, boats and zeppelins white. "
             .. "If it goes the wrong way, walk the right way once: Waypoint learns any pass its land map missed. RoadLog's narrow passes, roads and blockers count too." })
+    p:Check({ path = "db.showAhead", label = "Stops after this one on the world map",
+        tooltip = "The walk through the next few stops, each in its own colour, when an addon such as Field Guide says where they are. Only worked out while the world map is open." })
     p:Check({ path = "db.showWayMinimap", label = "Planned route on the minimap", tooltip = "The part of the trip around you as a trail of dots on the minimap, in the same colours." })
     p:Check({ path = "char.minimap.hide", invert = true, label = "Show the minimap button", tooltip = "Waypoint's minimap button (/way minimap).",
         apply = function() if ns.MinimapButton then ns.MinimapButton:Refresh() end end })

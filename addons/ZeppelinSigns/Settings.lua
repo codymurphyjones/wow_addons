@@ -14,7 +14,7 @@ S.page = Z.NewOptionsPage({ name = "Zeppelin Signs", build = function(p)
         tooltip = "A big sign at the top of your screen with where the zeppelin or ship at the dock you stand at goes (/zep)." })
     p:Check({ path = "db.timer", label = "Ride timer",
         apply = function() if Z.Rides then Z.Rides:Refresh() end end,
-        tooltip = "On board, a countdown to where the ride lands, from how long it took last time (/zep timer)." })
+        tooltip = "On board, a countdown to where the ride lands, from how long it took last time, else the route's own length (/zep timer)." })
 end })
 
 function S:Open() return self.page:Open() end

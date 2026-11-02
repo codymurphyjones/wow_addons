@@ -44,6 +44,7 @@ Comm.lua
 Timetable.lua
 Questie.lua
 Arrow.lua
+Secondary.lua
 MapPins.lua
 OpenMap.lua
 MinimapPin.lua
@@ -58,3 +59,5 @@ API.lua
 WayLine.lua
 ..\shared\OptionsPage.lua
 Settings.lua
+..\shared\Wizard.lua
+Setup.lua

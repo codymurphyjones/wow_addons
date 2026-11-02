@@ -667,6 +667,9 @@ end
 
 -- How a step between two neighbouring squares (world points) goes, the way you'd walk it:
 -- "walk", "drop" (and how many yards down), or nil when you can't take it.
+-- A field that's no longer wanted, finished or still being worked out.
+function G:Forget(key) fields[key], jobs[key] = nil, nil end
+
 -- What's along a straight line (NavGrid.lua's walks it cell by cell; here squares are big enough).
 function G:Ahead(continent, n1, w1, n2, w2) return self:Step(continent, n1, w1, n2, w2) end
 

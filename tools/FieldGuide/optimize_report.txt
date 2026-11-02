@@ -1,0 +1,142 @@
+Horde    Durotar                      steps delay      20352918 ->      19606618    -3.7%   out of order  0 ->  0
+Horde    Durotar                      clear delay      22398947 ->      22173922    -1.0%   out of order  0 ->  0
+Horde    Mulgore 1                    steps delay      35002745 ->      35002745    +0.0%   out of order  0 ->  0
+Horde    Mulgore 1                    clear delay      46633949 ->      46633949    +0.0%   out of order  0 ->  0
+Horde    Tirisfal Glades 1            steps delay      36457204 ->      36040774    -1.1%   out of order  0 ->  0
+Horde    Tirisfal Glades 1            clear delay      39990182 ->      39990182    +0.0%   out of order  0 ->  0
+Horde    Zephras Isle                 steps delay     110621252 ->     110621252    +0.0%   out of order  0 ->  0
+Horde    Thunder Bluff 7              steps delay        575314 ->        575314    +0.0%   out of order  1 ->  1
+Horde    Orgrimmar 9                  steps delay       2201154 ->       2201154    +0.0%   out of order  0 ->  0
+Horde    Silverpine Forest            steps delay      35672660 ->      35672660    +0.0%   out of order  0 ->  0
+Horde    Silverpine Forest            clear delay      39089711 ->      39089711    +0.0%   out of order  0 ->  0
+Horde    The Barrens                  steps delay     349760353 ->     349760353    +0.0%   out of order  0 ->  0
+Horde    Undercity 13                 steps delay       8511293 ->       8511293    +0.0%   out of order  0 ->  0
+Horde    Undercity 13                 clear delay      11898409 ->      11898409    +0.0%   out of order  0 ->  0
+Horde    Westfall                     steps delay       1008512 ->       1008512    +0.0%   out of order  0 ->  0
+Horde    Stonetalon Mountains         steps delay      26574524 ->      26573727    -0.0%   out of order  3 ->  3
+Horde    Ashenvale                    steps delay     181408220 ->     181408220    +0.0%   out of order  3 ->  3
+Horde    Hillsbrad Foothills          steps delay      24004577 ->      23992823    -0.0%   out of order  4 ->  4
+Horde    Hillsbrad Foothills          clear delay      23980856 ->      23980856    +0.0%   out of order  4 ->  4
+Horde    Moonglade 20                 steps delay       3034114 ->       3034114    +0.0%   out of order  0 ->  0
+Horde    Thousand Needles             steps delay     121598258 ->     121598258    +0.0%   out of order  1 ->  1
+Horde    Thousand Needles             clear delay     107760644 ->     107760644    +0.0%   out of order  3 ->  3
+Horde    Mulgore 27                   steps delay       2241317 ->       2241317    +0.0%   out of order  0 ->  0
+Horde    Undercity 27                 steps delay        172916 ->        172916    +0.0%   out of order  0 ->  0
+Horde    Desolace                     steps delay     105366401 ->     105029215    -0.3%   out of order  0 ->  0
+Horde    Desolace                     clear delay      75814376 ->      75814376    +0.0%   out of order  1 ->  1
+Horde    Alterac Mountains 31         steps delay        316159 ->        316159    +0.0%   out of order  0 ->  0
+Horde    Arathi Highlands             steps delay     174216572 ->     174216572    +0.0%   out of order  1 ->  1
+Horde    Dustwallow Marsh 32          steps delay      30216762 ->      30216762    +0.0%   out of order  0 ->  0
+Horde    Dustwallow Marsh 32          clear delay      23727618 ->      23727618    +0.0%   out of order  5 ->  5
+Horde    Orgrimmar 32                 steps delay       2853748 ->       2853748    +0.0%   out of order  0 ->  0
+Horde    Orgrimmar 32                 clear delay       3373320 ->       3373320    +0.0%   out of order  0 ->  0
+Horde    Stranglethorn Vale           steps delay     283465140 ->     279674850    -1.3%   out of order 12 -> 12
+Horde    Stranglethorn Vale           clear delay     283410410 ->     275110629    -2.9%   out of order 12 -> 12
+Horde    Badlands                     steps delay      11422709 ->      11422709    +0.0%   out of order  1 ->  1
+Horde    Swamp of Sorrows             steps delay      31999791 ->      31999791    +0.0%   out of order  1 ->  1
+Horde    Feralas                      steps delay      93252474 ->      93252474    +0.0%   out of order  6 ->  6
+Horde    Tanaris                      steps delay      69889116 ->      69855910    -0.0%   out of order  5 ->  5
+Horde    Tanaris                      clear delay      59327511 ->      59255996    -0.1%   out of order  5 ->  5
+Horde    Undercity 42                 steps delay      16986785 ->      16986785    +0.0%   out of order  0 ->  0
+Horde    Undercity 42                 clear delay      17236943 ->      17236943    +0.0%   out of order  0 ->  0
+Horde    Thunder Bluff 44             steps delay       2569558 ->       2569558    +0.0%   out of order  0 ->  0
+Horde    Thunder Bluff 44             clear delay       2569558 ->       2569558    +0.0%   out of order  0 ->  0
+Horde    Searing Gorge                steps delay      93175542 ->      93175542    +0.0%   out of order  0 ->  0
+Horde    The Hinterlands              steps delay     178494465 ->     178494465    +0.0%   out of order  0 ->  0
+Horde    Blasted Lands                steps delay       4415478 ->       4415478    +0.0%   out of order  0 ->  0
+Horde    Azshara                      steps delay      65958904 ->      65958904    +0.0%   out of order  0 ->  0
+Horde    Felwood                      steps delay      49598398 ->      49598398    +0.0%   out of order  5 ->  5
+Horde    Felwood                      clear delay      51248940 ->      51248940    +0.0%   out of order  5 ->  5
+Horde    Un'Goro Crater               steps delay     130144256 ->     129420196    -0.6%   out of order  2 ->  2
+Horde    Burning Steppes              steps delay       9492525 ->       9492525    +0.0%   out of order  0 ->  0
+Horde    Burning Steppes              clear delay       9492525 ->       9492525    +0.0%   out of order  0 ->  0
+Horde    Tirisfal Glades 50           steps delay        123396 ->        123396    +0.0%   out of order  0 ->  0
+Horde    Tirisfal Glades 50           clear delay       1176390 ->       1176390    +0.0%   out of order  0 ->  0
+Horde    Western Plaguelands          steps delay      76501934 ->      76501934    +0.0%   out of order  1 ->  1
+Horde    Western Plaguelands          clear delay      36275733 ->      36275733    +0.0%   out of order  1 ->  1
+Horde    Eastern Plaguelands          steps delay     163195317 ->     163195317    +0.0%   out of order  0 ->  0
+Horde    Winterspring                 steps delay      84264160 ->      84264160    +0.0%   out of order  0 ->  0
+Horde    Moonglade 54                 steps delay       2508597 ->       2508597    +0.0%   out of order  0 ->  0
+Horde    Silithus                     steps delay     199205133 ->     199205133    +0.0%   out of order  0 ->  0
+Horde    Silithus                     clear delay     206413188 ->     199857195    -3.2%   out of order  0 ->  0
+Horde    Alterac Mountains 57         clear delay        886662 ->        886662    +0.0%   out of order  0 ->  0
+Horde    Stormwind City               steps delay        711816 ->        711816    +0.0%   out of order  0 ->  0
+Alliance Dun Morogh                   steps delay      40079740 ->      39241198    -2.1%   out of order  0 ->  0
+Alliance Dun Morogh                   clear delay      39270439 ->      39270439    +0.0%   out of order  0 ->  0
+Alliance Elwynn Forest 1              steps delay      31083282 ->      31083282    +0.0%   out of order  0 ->  0
+Alliance Elwynn Forest 1              clear delay      33248020 ->      33248020    +0.0%   out of order  0 ->  0
+Alliance Stormwind City 1             steps delay        162866 ->        162866    +0.0%   out of order  0 ->  0
+Alliance Teldrassil 1                 steps delay      45953758 ->      45953758    +0.0%   out of order  0 ->  0
+Alliance Teldrassil 1                 clear delay      56060657 ->      50766634    -9.4%   out of order  0 ->  0
+Alliance Zephras Isle                 steps delay      93806003 ->      93806003    +0.0%   out of order  0 ->  0
+Alliance Zephras Isle                 clear delay     105732050 ->     105732050    +0.0%   out of order  0 ->  0
+Alliance Darnassus 6                  steps delay        404740 ->        404740    +0.0%   out of order  1 ->  1
+Alliance Darnassus 6                  clear delay        375830 ->        375830    +0.0%   out of order  1 ->  1
+Alliance Ironforge 7                  steps delay         73365 ->         73365    +0.0%   out of order  0 ->  0
+Alliance Ironforge 7                  clear delay         73365 ->         73365    +0.0%   out of order  0 ->  0
+Alliance Westfall 9                   steps delay      25908520 ->      25908520    +0.0%   out of order  0 ->  0
+Alliance Westfall 9                   clear delay      12810051 ->      12810051    +0.0%   out of order  0 ->  0
+Alliance Darkshore                    steps delay     242838994 ->     242838994    +0.0%   out of order  0 ->  0
+Alliance Darkshore                    clear delay     153783245 ->     153783245    +0.0%   out of order  0 ->  0
+Alliance Loch Modan                   steps delay     102731831 ->     102201250    -0.5%   out of order  2 ->  2
+Alliance Loch Modan                   clear delay      63858299 ->      62293971    -2.4%   out of order  1 ->  1
+Alliance The Barrens                  steps delay      15868625 ->      15868625    +0.0%   out of order  1 ->  1
+Alliance Redridge Mountains           steps delay      16088790 ->      16076861    -0.1%   out of order 11 -> 11
+Alliance Redridge Mountains           clear delay      16117528 ->      16117528    +0.0%   out of order 11 -> 11
+Alliance Stormwind City 14            steps delay       8647838 ->       8647838    +0.0%   out of order  0 ->  0
+Alliance Stormwind City 14            clear delay       8050147 ->       8050147    +0.0%   out of order  0 ->  0
+Alliance Undercity 17                 steps delay         65597 ->         65597    +0.0%   out of order  0 ->  0
+Alliance Stonetalon Mountains         steps delay      15312395 ->      15312395    +0.0%   out of order  0 ->  0
+Alliance Stonetalon Mountains         clear delay      17825121 ->      17825121    +0.0%   out of order  0 ->  0
+Alliance Ashenvale                    steps delay     165658596 ->     146539661   -11.5%   out of order  8 ->  8
+Alliance Ashenvale                    clear delay     154452963 ->     154452963    +0.0%   out of order  9 ->  9
+Alliance Elwynn Forest 20             steps delay        261602 ->        261602    +0.0%   out of order  0 ->  0
+Alliance Moonglade 20                 steps delay       3034114 ->       3034114    +0.0%   out of order  0 ->  0
+Alliance Duskwood                     steps delay      87443427 ->      87443427    +0.0%   out of order 12 -> 12
+Alliance Duskwood                     clear delay     101012809 ->     100932012    -0.1%   out of order 11 -> 11
+Alliance Wetlands                     steps delay     442924530 ->     442924530    +0.0%   out of order  5 ->  5
+Alliance Wetlands                     clear delay     291644257 ->     291644257    +0.0%   out of order 14 -> 14
+Alliance Hillsbrad Foothills          steps delay       5285646 ->       5285646    +0.0%   out of order  2 ->  2
+Alliance Hillsbrad Foothills          clear delay       5312871 ->       5312871    +0.0%   out of order  3 ->  3
+Alliance Thousand Needles             steps delay       8172695 ->       8172695    +0.0%   out of order  0 ->  0
+Alliance Thousand Needles             clear delay       9011978 ->       9011978    +0.0%   out of order  0 ->  0
+Alliance Alterac Mountains 30         steps delay       1948512 ->       1948512    +0.0%   out of order  0 ->  0
+Alliance Desolace                     steps delay     200287141 ->     200287141    +0.0%   out of order  0 ->  0
+Alliance Desolace                     clear delay     160247664 ->     158927669    -0.8%   out of order  1 ->  1
+Alliance Ironforge 31                 steps delay       2072158 ->       2072158    +0.0%   out of order  0 ->  0
+Alliance Ironforge 31                 clear delay       2600026 ->       2600026    +0.0%   out of order  0 ->  0
+Alliance Stranglethorn Vale           steps delay     250929528 ->     250929528    +0.0%   out of order 13 -> 13
+Alliance Stranglethorn Vale           clear delay     267866432 ->     252024633    -5.9%   out of order 13 -> 13
+Alliance Dustwallow Marsh             steps delay      52848470 ->      52848470    +0.0%   out of order  0 ->  0
+Alliance Dustwallow Marsh             clear delay      58335164 ->      57512008    -1.4%   out of order  0 ->  0
+Alliance Swamp of Sorrows 32          steps delay       9079311 ->       9079311    +0.0%   out of order  0 ->  0
+Alliance Arathi Highlands             steps delay      51486471 ->      51486471    +0.0%   out of order  6 ->  6
+Alliance Badlands                     steps delay      18445905 ->      18445905    +0.0%   out of order  1 ->  1
+Alliance Feralas                      steps delay     164748793 ->     164744586    -0.0%   out of order  4 ->  4
+Alliance Feralas                      clear delay     105994143 ->     105994143    +0.0%   out of order  6 ->  6
+Alliance The Hinterlands              steps delay      11612347 ->      11612347    +0.0%   out of order  0 ->  0
+Alliance Tanaris                      steps delay      69058438 ->      69058438    +0.0%   out of order  5 ->  5
+Alliance Tanaris                      clear delay      57371820 ->      57371820    +0.0%   out of order  5 ->  5
+Alliance Blasted Lands                steps delay       1170583 ->       1170583    +0.0%   out of order  0 ->  0
+Alliance Blasted Lands                clear delay       2685353 ->       2685353    +0.0%   out of order  0 ->  0
+Alliance Teldrassil 44                steps delay         33937 ->         33937    +0.0%   out of order  0 ->  0
+Alliance Searing Gorge                steps delay      63100847 ->      63100847    +0.0%   out of order  8 ->  8
+Alliance Darnassus 47                 steps delay       4925442 ->       4925442    +0.0%   out of order  0 ->  0
+Alliance Darnassus 47                 clear delay       1762788 ->       1762788    +0.0%   out of order  0 ->  0
+Alliance Azshara                      steps delay      80289742 ->      80289742    +0.0%   out of order  0 ->  0
+Alliance Felwood                      steps delay      39631489 ->      39631489    +0.0%   out of order  5 ->  5
+Alliance Felwood                      clear delay      41329145 ->      41329145    +0.0%   out of order  5 ->  5
+Alliance Un'Goro Crater               steps delay     129466574 ->     129466574    +0.0%   out of order  2 ->  2
+Alliance Burning Steppes              steps delay      42825463 ->      42825463    +0.0%   out of order  0 ->  0
+Alliance Burning Steppes              clear delay      43117817 ->      43117817    +0.0%   out of order  0 ->  0
+Alliance Stormwind City 51            steps delay       6405170 ->       6405170    +0.0%   out of order  0 ->  0
+Alliance Stormwind City 51            clear delay       6881287 ->       6881287    +0.0%   out of order  0 ->  0
+Alliance Western Plaguelands          steps delay     165946098 ->     165946098    +0.0%   out of order  2 ->  2
+Alliance Western Plaguelands          clear delay     129290329 ->     125212076    -3.2%   out of order  2 ->  2
+Alliance Eastern Plaguelands          steps delay     130194439 ->     130194439    +0.0%   out of order  2 ->  2
+Alliance Winterspring                 steps delay      96585522 ->      96585522    +0.0%   out of order  5 ->  5
+Alliance Moonglade 54                 steps delay       2508597 ->       2508597    +0.0%   out of order  0 ->  0
+Alliance Silithus                     steps delay     182189669 ->     178691207    -1.9%   out of order  0 ->  0
+Alliance Silithus                     clear delay     186332476 ->     179311373    -3.8%   out of order  0 ->  0
+Alliance Swamp of Sorrows 54          steps delay        127083 ->        127083    +0.0%   out of order  0 ->  0
+Alliance Alterac Mountains 57         clear delay        918265 ->        918265    +0.0%   out of order  0 ->  0

@@ -1,26 +1,26 @@
 == Alliance (53 zones)
-  Dun Morogh                 from level  1 to 11.85    48 quests,   2 dropped   ~212 min
+  Dun Morogh                 from level  1 to 11.84    48 quests,   2 dropped   ~205 min
      dropped (low XP for the walk): The Reports [291], Dawn in the Mountains [99158]
-  Elwynn Forest 1            from level  1 to 11.32    53 quests,   1 dropped   ~223 min
-     dropped (low XP for the walk): Shipment to Stormwind [61]
+  Elwynn Forest 1            from level  1 to 11.24    52 quests,   2 dropped   ~219 min
+     dropped (low XP for the walk): Shipment to Stormwind [61], Stolen Enchanting Supplies [91725]
   Stormwind City 1           from level  1 to  1.86     3 quests,   0 dropped   ~3 min
-  Teldrassil 1               from level  1 to 11.66    52 quests,   5 dropped   ~249 min
+  Teldrassil 1               from level  1 to 11.35    51 quests,   6 dropped   ~225 min
      XP estimated: Escaping Ban'ethil
-     dropped (low XP for the walk): Rellian Greenspyre [922], Flight to Auberdine [6342], The Sisterhood of Elune [98391], The Lost Runner [99046], Easing Suffering [99073]
-  Zephras Isle               from level  1 to 13.59    82 quests,   3 dropped   ~297 min
-     dropped (low XP for the walk): Hippogryph Harrassment [92516], Unwelcome Visitors [92741], Crab Season [93317]
+     dropped (low XP for the walk): Bounty: Gnarlpine Furbolg [490], Rellian Greenspyre [922], Flight to Auberdine [6342], The Sisterhood of Elune [98391], The Lost Runner [99046], Easing Suffering [99073]
+  Zephras Isle               from level  1 to 13.32    81 quests,   4 dropped   ~287 min
+     dropped (low XP for the walk): Stolen Supplies [92551], Unwelcome Visitors [92741], Mercy Falls on Deaf Ears [93165], Crab Season [93317]
   Darnassus 6                from level  6 to  9.36     6 quests,   2 dropped   ~71 min
      dropped (low XP for the walk): Return to Denalan [2498], The Temple of the Moon [2519]
   Ironforge 7                from level  7 to 18.22     5 quests,   1 dropped   ~85 min
      dropped (low XP for the walk): Speak with Shoni [2041]
-  Westfall 9                 from level  9 to 17.11    24 quests,   4 dropped   ~303 min
+  Westfall 9                 from level  9 to 17.11    24 quests,   4 dropped   ~300 min
      dropped (low XP for the walk): The Defias Brotherhood [135], Messenger to Westfall [144], Continue to Stormwind [6281], Explosive Consultation [92748]
-  Darkshore                  from level 10 to 18.22    55 quests,   3 dropped   ~264 min
+  Darkshore                  from level 10 to 18.22    55 quests,   3 dropped   ~275 min
      XP estimated: Holy Diver
      dropped (low XP for the walk): The Absent Minded Prospector [741], The Tower of Althalaxx [967], Expanding Horizons [97914]
-  Loch Modan                 from level 10 to 19.27    32 quests,   4 dropped   ~330 min
+  Loch Modan                 from level 10 to 19.27    32 quests,   4 dropped   ~339 min
      dropped (low XP for the walk): Excavation Progress Report [298], Report to Ironforge [301], Ironband's Excavation [436], Ride to Ironforge [6391]
-  The Barrens                from level 11 to 34.01    19 quests,   0 dropped   ~151 min
+  The Barrens                from level 11 to 34.01    19 quests,   0 dropped   ~154 min
   Redridge Mountains         from level 13 to 23.21    33 quests,   1 dropped   ~383 min
      dropped (low XP for the walk): The Price of Shoes [118]
   Stormwind City 14          from level 14 to 40.06    35 quests,   3 dropped   ~380 min
@@ -29,63 +29,63 @@
   Undercity 17               from level 17 to 17.14    16 quests,   0 dropped   ~256 min
   Stonetalon Mountains       from level 18 to 25.08    17 quests,   1 dropped   ~153 min
      dropped (low XP for the walk): Update for Sentinel Thenysil [1082]
-  Ashenvale                  from level 19 to 29.37    39 quests,   3 dropped   ~321 min
+  Ashenvale                  from level 19 to 29.37    39 quests,   3 dropped   ~329 min
      dropped (low XP for the walk): Velinde Starsong [1037], The Tower of Althalaxx [1167], Kayneth Stillwind [4581]
   Elwynn Forest 20           from level 20 to 25.10     8 quests,   0 dropped   ~109 min
   Moonglade 20               from level 20 to 20.10     3 quests,   0 dropped   ~12 min
   Duskwood                   from level 21 to 32.18    56 quests,   4 dropped   ~480 min
      dropped (low XP for the walk): The Legend of Stalvan [69], Seeking Wisdom [269], The Missing Diplomat [1244], The Missing Diplomat [1245]
-  Wetlands                   from level 21 to 31.18    51 quests,   5 dropped   ~398 min
+  Wetlands                   from level 21 to 31.19    51 quests,   5 dropped   ~391 min
      XP estimated: For Further Study, A Friend of the Family
      dropped (low XP for the walk): A Dark Threat Looms [274], Blessed Arm [322], The Thandol Span [633], The Missing Diplomat [1264], James Hyal [1302]
-  Hillsbrad Foothills        from level 28 to 37.12    17 quests,   3 dropped   ~271 min
+  Hillsbrad Foothills        from level 28 to 37.12    17 quests,   3 dropped   ~266 min
      dropped (low XP for the walk): Letter to Stormpike [514], Dark Council [537], Hints of a New Plague? [659]
-  Thousand Needles           from level 29 to 38.04    10 quests,   8 dropped   ~98 min
+  Thousand Needles           from level 29 to 38.04    10 quests,   8 dropped   ~95 min
      dropped (low XP for the walk): Martek the Exiled [1106], Wharfmaster Dizzywig [1111], The Rumormonger [1115], Back to Booty Bay [1118], Get the Gnomes Drunk [1120], Goblin Sponsorship [1178], Razzeric's Tweaking [1187], Safety First [1188]
   Alterac Mountains 30       from level 30 to 34.02     5 quests,   0 dropped   ~49 min
   Desolace                   from level 30 to 37.42    28 quests,   2 dropped   ~321 min
      dropped (low XP for the walk): Valley of Bones [92841], Valley of Bones [93034]
   Ironforge 31               from level 31 to 57.02    19 quests,   4 dropped   ~296 min
      dropped (low XP for the walk): A Donation of Wool [7802], A Donation of Silk [7803], A Donation of Silk [7808], A Donation of Mageweave [7809]
-  Stranglethorn Vale         from level 31 to 47.05    73 quests,   2 dropped   ~890 min
+  Stranglethorn Vale         from level 31 to 47.05    73 quests,   2 dropped   ~889 min
      dropped (low XP for the walk): Whiskey Slim's Lost Grog [580], Goblin Sponsorship [1183]
   Dustwallow Marsh           from level 32 to 37.24    20 quests,   1 dropped   ~147 min
      dropped (low XP for the walk): Suspicious Hoofprints [1284]
-  Swamp of Sorrows 32        from level 32 to 39.04     6 quests,   0 dropped   ~74 min
+  Swamp of Sorrows 32        from level 32 to 39.04     6 quests,   0 dropped   ~69 min
   Undercity 32               from level 32 to 32.04     8 quests,   0 dropped   ~141 min
-  Arathi Highlands           from level 33 to 41.05    26 quests,   0 dropped   ~257 min
+  Arathi Highlands           from level 33 to 41.05    26 quests,   0 dropped   ~253 min
      XP estimated: Hints of a New Plague?
   Badlands                   from level 35 to 47.06    15 quests,   0 dropped   ~196 min
-  Feralas                    from level 40 to 48.03    27 quests,   2 dropped   ~200 min
+  Feralas                    from level 40 to 48.03    27 quests,   2 dropped   ~199 min
      dropped (low XP for the walk): In Search of Knowledge [2939], Rise of the Silithid [4267]
   The Hinterlands            from level 40 to 48.05    11 quests,   0 dropped   ~131 min
   Westfall 41                from level 41 to 41.25     5 quests,   0 dropped   ~102 min
-  Tanaris                    from level 42 to 58.18    32 quests,   7 dropped   ~419 min
+  Tanaris                    from level 42 to 58.18    32 quests,   7 dropped   ~421 min
      XP estimated: Noggenfogger Elixir
      dropped (low XP for the walk): The Super Egg-O-Matic [2741], Return to Ironforge [2977], The Stone Circle [3444], Screecher Spirits [3520], Calm Before the Storm [4508], Fire Plume Forged [5801], A Portable Power Source [8925]
   Undercity 42               from level 42 to 42.03     7 quests,   0 dropped   ~141 min
-  Blasted Lands              from level 44 to 52.10     7 quests,   2 dropped   ~35 min
+  Blasted Lands              from level 44 to 52.10     7 quests,   2 dropped   ~27 min
      dropped (low XP for the walk): The Cover of Darkness [2743], Petty Squabbles [2783]
   Teldrassil 44              from level 44 to 45.04     3 quests,   0 dropped   ~20 min
   Teldrassil 44 (2)          from level 44 to 54.05     4 quests,   0 dropped   ~66 min
-  Searing Gorge              from level 45 to 49.16    23 quests,   0 dropped   ~178 min
+  Searing Gorge              from level 45 to 49.16    23 quests,   0 dropped   ~174 min
   Darnassus 47               from level 47 to 57.02     6 quests,   3 dropped   ~78 min
      dropped (low XP for the walk): March of the Silithid [4493], A Donation of Wool [7792], A Donation of Silk [7798]
   Azshara                    from level 49 to 55.35    14 quests,   0 dropped   ~161 min
-  Felwood                    from level 49 to 55.06    15 quests,   1 dropped   ~259 min
+  Felwood                    from level 49 to 55.06    15 quests,   1 dropped   ~252 min
      dropped (low XP for the walk): Speak to Nafien [8462]
   Un'Goro Crater             from level 49 to 53.10    28 quests,   0 dropped   ~292 min
   Burning Steppes            from level 50 to 53.18    11 quests,   1 dropped   ~201 min
      dropped (low XP for the walk): The True Masters [4224]
   Stormwind City 51          from level 51 to 57.13     8 quests,  11 dropped   ~61 min
      dropped (low XP for the walk): A Donation of Wool [7791], A Donation of Silk [7793], A Donation of Mageweave [7794], Undead Potatoes [84395], Magma or Lava? [84396], Northern Kalimdor - A Comprehensive Guide [84397], A Study of the Light [84398], Ka-Boom! [84399], The Knight and the Lady [84400], Scourge: Undead Menace or Misunderstood? [84401], Necromancy 101 [84402]
-  Western Plaguelands        from level 51 to 57.44    40 quests,   3 dropped   ~231 min
+  Western Plaguelands        from level 51 to 57.44    40 quests,   3 dropped   ~228 min
      XP estimated: Mrs. Dalson's Diary
      dropped (low XP for the walk): Better Late Than Never [5022], Brother Carlin [5210], Mold Rhymes With... [5538]
-  Eastern Plaguelands        from level 53 to 57.16    18 quests,   0 dropped   ~269 min
-  Winterspring               from level 53 to 57.03    21 quests,   0 dropped   ~212 min
+  Eastern Plaguelands        from level 53 to 57.16    18 quests,   0 dropped   ~270 min
+  Winterspring               from level 53 to 57.03    21 quests,   0 dropped   ~215 min
   Moonglade 54               from level 54 to 57.03     4 quests,   0 dropped   ~43 min
-  Silithus                   from level 54 to 60.00    23 quests,   4 dropped   ~276 min
+  Silithus                   from level 54 to 60.00    23 quests,   4 dropped   ~269 min
      dropped (low XP for the walk): What Tomorrow Brings [8286], Vyral the Vile [8321], Abyssal Contacts [8361], Cenarion Battlegear [8800]
   Swamp of Sorrows 54        from level 54 to 57.14     8 quests,   0 dropped   ~97 min
   Alterac Mountains 57       from level 57 to 57.12     4 quests,   0 dropped   ~22 min
@@ -124,19 +124,18 @@
     Zephras Isle: The Magical City of Dalaran -> Alterac Mountains (7)
 
 == Horde (45 zones)
-  Durotar                    from level  1 to 11.23    39 quests,   3 dropped   ~200 min
+  Durotar                    from level  1 to 11.22    39 quests,   3 dropped   ~198 min
      dropped (low XP for the walk): Need for a Cure [812], Neeru Fireblade [829], Conscript of the Horde [840]
-  Mulgore 1                  from level  1 to 11.01    37 quests,   8 dropped   ~212 min
+  Mulgore 1                  from level  1 to 11.04    37 quests,   8 dropped   ~209 min
      dropped (low XP for the walk): Sharing the Land [745], The Venture Co. [764], Journey into Thunder Bluff [775], The Hunter's Way [861], Welcome to Azeroth [95350], The Longwalkers [98430], Thunderhorn's Report [98435], The High Chieftain [99082]
-  Tirisfal Glades 1          from level  1 to 13.04    53 quests,   4 dropped   ~295 min
-     dropped (low XP for the walk): The Prodigal Lich [405], That Shadowvale Green Elixir [95314], Hides for the Forsaken [97558], Leonid's Letter [98545]
-  Zephras Isle               from level  1 to 13.93    83 quests,   1 dropped   ~319 min
-     dropped (low XP for the walk): Hippogryph Harrassment [92516]
+  Tirisfal Glades 1          from level  1 to 13.34    55 quests,   2 dropped   ~324 min
+     dropped (low XP for the walk): The Prodigal Lich [405], Leonid's Letter [98545]
+  Zephras Isle               from level  1 to 13.97    84 quests,   0 dropped   ~338 min
   Thunder Bluff 7            from level  7 to 26.02    11 quests,   0 dropped   ~166 min
   Orgrimmar 9                from level  9 to 12.42    10 quests,   0 dropped   ~72 min
   Silverpine Forest          from level 10 to 21.09    34 quests,   8 dropped   ~230 min
      dropped (low XP for the walk): The Engraved Ring [440], Rot Hide Origins [444], The Weaver [480], Beren's Peril [516], Zinge's Delivery [1359], Ride to the Undercity [6323], Watching the Roads [95981], Stop the Spread [98299]
-  The Barrens                from level 11 to 36.04    88 quests,   0 dropped   ~699 min
+  The Barrens                from level 11 to 36.04    88 quests,   0 dropped   ~694 min
   Undercity 13               from level 13 to 18.34     7 quests,  20 dropped   ~56 min
      dropped (low XP for the walk): Return the Book [366], Thule Ravenclaw [446], A Husband's Revenge [530], Michael Garrett [6322], Nar'thalas Almanac [78124], The Dalaran Digest [78127], Bewitchments and Glamours [78142], Secrets of the Dreamers [78143], Arcanic Systems Manual [78145], Goaz Scrolls [78146], Crimes Against Anatomy [78147], Runes of the Sorcerer-Kings [78148], Fury of the Land [78149], Archmage Antonidas: The Unabridged Autobiography [79091], Archmage Theocritus' Research Journal [79092], Rumi of Gnomeregan: The Collected Works [79093], The Lessons of Ta'zo [79094], The Apothecary's Metaphysical Primer [79095], Ataeric: On Arcane Curiosities [79096], Baxtan: On Destructive Magics [79097]
   Westfall                   from level 13 to 17.11     3 quests,   0 dropped   ~36 min
@@ -146,51 +145,52 @@
   Hillsbrad Foothills        from level 20 to 40.10    37 quests,   3 dropped   ~466 min
      dropped (low XP for the walk): Dalaran Patrols [545], WANTED: Baron Vardus [566], Undamaged Venom Sac [2934]
   Moonglade 20               from level 20 to 20.10     3 quests,   0 dropped   ~12 min
-  Thousand Needles           from level 25 to 38.04    26 quests,   9 dropped   ~228 min
+  Thousand Needles           from level 25 to 38.04    26 quests,   9 dropped   ~225 min
      dropped (low XP for the walk): Martek the Exiled [1106], Wharfmaster Dizzywig [1111], The Rumormonger [1115], Back to Booty Bay [1118], Get the Gnomes Drunk [1120], Test of Lore [1152], Goblin Sponsorship [1178], Razzeric's Tweaking [1187], Safety First [1188]
-  Mulgore 27                 from level 27 to 28.06     4 quests,   0 dropped   ~27 min
+  Mulgore 27                 from level 27 to 28.07     4 quests,   0 dropped   ~27 min
   Undercity 27               from level 27 to 33.07    11 quests,   0 dropped   ~234 min
-  Desolace                   from level 30 to 42.00    25 quests,   1 dropped   ~269 min
+  Desolace                   from level 30 to 42.00    25 quests,   1 dropped   ~267 min
      dropped (low XP for the walk): Valley of Bones [93034]
   Alterac Mountains 31       from level 31 to 37.05     3 quests,   0 dropped   ~33 min
-  Arathi Highlands           from level 31 to 41.05    33 quests,   0 dropped   ~283 min
+  Arathi Highlands           from level 31 to 41.05    33 quests,   0 dropped   ~273 min
   Dustwallow Marsh 32        from level 32 to 42.10    20 quests,   2 dropped   ~159 min
      dropped (low XP for the walk): Report to Zor [1262], The Black Shield [1276]
   Orgrimmar 32               from level 32 to 57.03    12 quests,   5 dropped   ~167 min
      dropped (low XP for the walk): March of the Silithid [4494], A Donation of Wool [7826], A Donation of Silk [7827], A Donation of Wool [7833], A Donation of Silk [7834]
-  Stranglethorn Vale         from level 32 to 47.05    69 quests,   2 dropped   ~965 min
+  Stranglethorn Vale         from level 32 to 47.05    69 quests,   2 dropped   ~964 min
      dropped (low XP for the walk): Whiskey Slim's Lost Grog [580], Goblin Sponsorship [1183]
   Badlands                   from level 35 to 52.09    16 quests,   0 dropped   ~298 min
-  Swamp of Sorrows           from level 37 to 57.14    24 quests,   0 dropped   ~258 min
+  Swamp of Sorrows           from level 37 to 57.14    24 quests,   0 dropped   ~261 min
      XP estimated: Threat From the Sea
-  Feralas                    from level 40 to 49.10    28 quests,   0 dropped   ~395 min
-  Tanaris                    from level 42 to 58.18    32 quests,   6 dropped   ~406 min
+  Feralas                    from level 40 to 49.10    28 quests,   0 dropped   ~380 min
+  Tanaris                    from level 42 to 58.18    32 quests,   6 dropped   ~408 min
      XP estimated: Noggenfogger Elixir
      dropped (low XP for the walk): The Super Egg-O-Matic [2741], Return to Thunder Bluff [2967], Screecher Spirits [3520], Calm Before the Storm [4509], Fire Plume Forged [5802], A Portable Power Source [8925]
   Undercity 42               from level 42 to 57.02    14 quests,   9 dropped   ~154 min
      dropped (low XP for the walk): A Donation of Wool [7813], A Donation of Silk [7814], Sanguine Sorcery [81947], Legends of the Tidesages [81949], Everyday Etiquette [81952], Stonewrought Design [81953], Venomous Journeys [81954], A Mind of Metal [81955], Conjurer's Codex [81956]
   Thunder Bluff 44           from level 44 to 54.01     5 quests,   3 dropped   ~69 min
      dropped (low XP for the walk): A Donation of Wool [7820], A Donation of Silk [7821], A Donation of Mageweave [7822]
-  Searing Gorge              from level 45 to 49.06    17 quests,   0 dropped   ~115 min
-  The Hinterlands            from level 45 to 48.50    23 quests,   0 dropped   ~268 min
-  Blasted Lands              from level 47 to 57.02     8 quests,   0 dropped   ~47 min
+  Searing Gorge              from level 45 to 49.06    17 quests,   0 dropped   ~110 min
+  The Hinterlands            from level 45 to 48.50    23 quests,   0 dropped   ~264 min
+  Blasted Lands              from level 47 to 57.02     8 quests,   0 dropped   ~39 min
   Azshara                    from level 49 to 55.35    22 quests,   0 dropped   ~225 min
-  Felwood                    from level 49 to 56.05    19 quests,   1 dropped   ~290 min
+  Felwood                    from level 49 to 56.05    19 quests,   1 dropped   ~286 min
      dropped (low XP for the walk): Speak to Nafien [8462]
   Un'Goro Crater             from level 49 to 53.10    28 quests,   0 dropped   ~277 min
   Burning Steppes            from level 50 to 52.04     4 quests,   1 dropped   ~36 min
      dropped (low XP for the walk): Felnok Steelspring [4808]
   Tirisfal Glades 50         from level 50 to 57.08     7 quests,   9 dropped   ~41 min
      dropped (low XP for the walk): Alas, Andorhal [105], Skeletal Fragments [964], Target: Felstone Field [5229], Target: Dalson's Tears [5231], Target: Writhing Haunt [5233], Target: Gahrron's Withering [5235], Mold Rhymes With... [5514], A Plague Upon Thee [5901], A Plague Upon Thee [5902]
-  Western Plaguelands        from level 52 to 57.17    16 quests,   8 dropped   ~70 min
+  Western Plaguelands        from level 52 to 57.17    16 quests,   8 dropped   ~64 min
      XP estimated: Mrs. Dalson's Diary
      dropped (low XP for the walk): Glyphed Oaken Branch [4987], Better Late Than Never [5023], Brother Carlin [5210], Return to the Bulwark [5230], Return to the Bulwark [5232], Return to the Bulwark [5234], Return to the Bulwark [5236], The Battle of Darrowshire [5721]
-  Eastern Plaguelands        from level 53 to 57.19    17 quests,   0 dropped   ~231 min
-  Winterspring               from level 53 to 57.10    17 quests,   0 dropped   ~166 min
+  Eastern Plaguelands        from level 53 to 57.19    17 quests,   0 dropped   ~234 min
+  Winterspring               from level 53 to 57.10    17 quests,   0 dropped   ~167 min
   Moonglade 54               from level 54 to 57.03     4 quests,   0 dropped   ~43 min
-  Silithus                   from level 54 to 60.00    23 quests,   4 dropped   ~275 min
+  Silithus                   from level 54 to 60.00    23 quests,   4 dropped   ~272 min
      dropped (low XP for the walk): What Tomorrow Brings [8286], Vyral the Vile [8321], Abyssal Contacts [8361], Cenarion Battlegear [8800]
-  Alterac Mountains 57       from level 57 to 57.12     4 quests,   0 dropped   ~22 min
+  Alterac Mountains 57       from level 57 to 57.05     2 quests,   2 dropped   ~0 min
+     dropped (low XP for the walk): The Graveyards of Alterac [7082], Capture a Mine [7124]
   Dustwallow Marsh 57        from level 57 to 57.15     4 quests,   0 dropped   ~84 min
   Stormwind City             from level 57 to 57.03     8 quests,   0 dropped   ~112 min
   Hand-offs to another zone: 78
