@@ -232,3 +232,7 @@ List Waypoint in `## OptionalDeps` so it loads first. `Waypoint.VERSION` is 2 (`
 ## Secondary tasks
 
 `Waypoint:SetSecondary(owner, tasks)` lists things to do on the way in a box under the arrow. The box is only as wide as its lines need, up to the arrow's width, and as tall as they need. Click its header to fold it. Field Guide uses it for quests you can work on along the walk to the current step.
+
+## Long trips
+
+Every zone entrance, and the walk between those on one zone, ships with the addon, once for each road mode (`Data/ZoneWays.lua`, baked by `tools/Waypoint/nav_zones.py`). The stored walks also cover every dock, flight master and town. A trip over 1,200 yards is chained from them straight away and plans flights and boats with them; only the ground up to the first stop is searched, so nothing of the rest of the world has to be unpacked. Inside 1,200 yards of the target the land map takes over. In memory: the costs of the road mode in use, the walks of the last few stops, and about two zones of ground (`KEEP_TILES`). `/way why` reports what a route is waiting on.

@@ -51,8 +51,11 @@ S.page = ns.NewOptionsPage({ name = "Field Guide", icon = true, build = function
             .. "(over the guide's step while the guide window is closed). A quest you untrack yourself isn't tracked again." })
 
     p:Check({ path = "db.autoAccept", label = "Auto Accept",
-        tooltip = "Takes a quest when you talk to its giver. Quests you skipped and repeatable quests are left alone, and "
+        tooltip = "Takes quests when you talk to their giver. Quests you skipped and repeatable quests are left alone, and "
             .. "gray quests are only taken in Zone Clear. Hold Shift while you talk to the NPC to do it by hand." })
+    p:Check({ path = "db.autoAcceptGuide", label = "Accept Field Guide Quests",
+        tooltip = "With Auto Accept on, only takes the quests the guide is telling you to pick up. Anything else a giver "
+            .. "offers is left for you to take or leave. Turn it off to take every quest." })
     p:Check({ path = "db.autoTurnIn", label = "Auto Turn-in",
         tooltip = "Hands in a finished quest when you talk to the NPC. It stops if there's a reward to choose or the quest "
             .. "wants gold, so that's yours to decide. Hold Shift while you talk to the NPC to do it by hand." })

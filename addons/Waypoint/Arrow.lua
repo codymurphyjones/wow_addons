@@ -13,6 +13,7 @@ local JUMP = { 0.35, 1, 0.45 } -- the arrow at a cliff's edge: the way to jump
 
 local f
 local buttons = {} -- owner -> { text, icon, color, tooltip, onClick }, from other addons (API:SetButton)
+local sides = {}   -- owner -> { icon, title, text, onClick }, the button left of the arrow (API:SetSide)
 local MIN_W, MAX_W = 230, 330 -- the frame widens to fit its text, up to MAX_W
 
 -- A line's text, set only when it changed (the arrow updates often; most of the time nothing has).
@@ -235,6 +236,33 @@ local function Build()
     end)
     f.restore:SetScript("OnLeave", GameTooltip_Hide)
     f.restore:Hide()
+
+    -- Another addon's button on the left, outside the frame (one shows: the first by owner name).
+    f.side = CreateFrame("Button", nil, f, "BackdropTemplate")
+    f.side:SetSize(30, 30); f.side:SetPoint("RIGHT", f, "LEFT", -3, 0)
+    if f.side.SetBackdrop then
+        f.side:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+        f.side:SetBackdropColor(0, 0, 0, 0.5)
+        f.side:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 0.35)
+        if WallyHUD and WallyHUD.Panel then WallyHUD.Panel(f.side, "base") end
+    end
+    f.side.icon = f.side:CreateTexture(nil, "ARTWORK")
+    f.side.icon:SetPoint("TOPLEFT", 4, -4); f.side.icon:SetPoint("BOTTOMRIGHT", -4, 4)
+    f.side:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+    f.side:SetScript("OnClick", function(self)
+        local s = self.owner and sides[self.owner]
+        if s and s.onClick then pcall(s.onClick, self) end
+    end)
+    f.side:SetScript("OnEnter", function(self)
+        local s = self.owner and sides[self.owner]
+        if not s then return end
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        if s.title then GameTooltip:AddLine(s.title) end
+        if s.text then GameTooltip:AddLine(s.text, 1, 1, 1, true) end
+        GameTooltip:Show()
+    end)
+    f.side:SetScript("OnLeave", GameTooltip_Hide)
+    f.side:Hide()
 end
 
 local function FirstButton()
@@ -247,6 +275,15 @@ end
 
 -- Shows the button another addon asked for, and makes room for it.
 local function LayoutButton()
+    local first
+    for o in pairs(sides) do
+        if not first or o < first then first = o end
+    end
+    f.side.owner = first
+    f.side:SetShown(first ~= nil)
+    if first then f.side.icon:SetTexture(sides[first].icon) end
+    -- (It stays on the screen with the frame, moved up against the left edge.)
+    f:SetClampRectInsets(first and -33 or 0, 0, 0, 0)
     local owner, b = FirstButton()
     f.extra.owner, f.extraIcon.owner = owner, owner
     local right = b and (b.icon and -32 or -56) or -8
@@ -298,6 +335,12 @@ function Arrow:SetButton(owner, button)
     buttons[owner] = type(button) == "table" and button or nil
     if f then LayoutButton() end
     self:Refresh()
+end
+
+function Arrow:SetSide(owner, side)
+    if type(owner) ~= "string" then return end
+    sides[owner] = type(side) == "table" and side or nil
+    if f then LayoutButton() end
 end
 
 local shownColor

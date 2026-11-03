@@ -330,6 +330,37 @@ local function InstallHooks(frame)
 	frame:HookScript("OnSizeChanged", OnVisibilityChanged)
 end
 
+-- Windows that cap their own height and scroll inside: in a tab that's the Saddle's job, so they get
+-- to be as tall as they like, and go back to what you set when they leave. Questie's tracker stops at
+-- half the screen unless a manual height says otherwise (QuestieTracker:UpdateHeight).
+TS.GROW = {
+	Questie_BaseFrame = {
+		grow = function()
+			local profile = Questie and Questie.db and Questie.db.profile
+			if not profile then return end
+			if TS.db.questieHeight == nil then TS.db.questieHeight = profile.TrackerHeight or 0 end
+			profile.TrackerHeight = 100000
+		end,
+		release = function()
+			local profile = Questie and Questie.db and Questie.db.profile
+			if not profile or TS.db.questieHeight == nil then return end
+			profile.TrackerHeight = TS.db.questieHeight
+			TS.db.questieHeight = nil
+		end,
+		update = function()
+			local tracker = QuestieLoader and QuestieLoader:ImportModule("QuestieTracker")
+			if tracker and tracker.Update then tracker:Update() end
+		end,
+	},
+}
+
+local function Regrow(name, how)
+	local entry = TS.GROW[name]
+	if not entry then return end
+	pcall(entry[how])
+	pcall(entry.update)
+end
+
 function TS:Capture(saddle, tabIndex, frameOrName, includeAttached)
 	local frame = type(frameOrName) == "string" and _G[frameOrName] or frameOrName
 	if type(frame) ~= "table" or type(frame.GetName) ~= "function" or not frame.SetPoint then
@@ -407,6 +438,7 @@ function TS:Capture(saddle, tabIndex, frameOrName, includeAttached)
 			end
 			InstallHooks(frame)
 		end
+		Regrow(name, "grow")
 	end
 
 	RemoveEverywhere(name, saddle, tabIndex)
@@ -447,6 +479,10 @@ function TS:Detach(frameOrName)
 	local info = frame and self.captured[frame]
 	if info then
 		self.captured[frame] = nil
+		for f in pairs(info.wheeled or {}) do
+			if TS.IsUsable(f) and CanTouch(f) then f:EnableMouseWheel(true) end
+		end
+		Regrow(name, "release")
 		self.anchoring = true
 		if not info.handsOff then
 			local parent = info.parent or UIParent

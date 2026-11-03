@@ -176,6 +176,32 @@ Check("then toggles", sd.dockOpen == false)
 
 sd.rightToLeft = true; s:ToggleDock()
 Check("right to left: pinned to the right edge", dock:GetPoint(1) == "TOPRIGHT")
+
+-- The wheel, while a tab scrolls, and windows that cap their own height.
+local inner = CreateFrame("Frame"); inner.wheel = true
+function inner:IsMouseWheelEnabled() return self.wheel end
+function inner:EnableMouseWheel(on) self.wheel = on end
+function inner:IsClampedToScreen() return false end
+local tall = CreateFrame("Frame", "Tall", UIParent); tall:SetSize(200, 90); tall:SetPoint("CENTER")
+tall.wheel = false
+function tall:IsMouseWheelEnabled() return false end
+tall.GetChildren = function() return inner end
+local children = TS.ClampTargets
+TS.ClampTargets = function(f) if f == tall then return { tall, inner } end return children(f) end
+TS:Capture(s, 1, tall, false)
+s:TakeWheel(1, true)
+Check("a scrolling tab takes the wheel", inner.wheel == false)
+s:TakeWheel(1, false)
+Check("and gives it back", inner.wheel == true)
+s:TakeWheel(1, true)
+TS:Detach(tall)
+Check("leaving gives it back too", inner.wheel == true)
+Questie = { db = { profile = { TrackerHeight = 0 } } }
+local qf = CreateFrame("Frame", "Questie_BaseFrame", UIParent); qf:SetSize(200, 90); qf:SetPoint("CENTER")
+TS:Capture(s, 1, qf, false)
+Check("Questie's tracker drops its limit in a tab", Questie.db.profile.TrackerHeight == 100000)
+TS:Detach(qf)
+Check("and gets your height back", Questie.db.profile.TrackerHeight == 0 and TS.db.questieHeight == nil)
 return table.concat(out, "\n")
 '''
 

@@ -23,10 +23,12 @@ Guides\Gates.lua
 Guides\Alliance.lua
 Guides\Horde.lua
 Guides\Instances.lua
+Guides\DungeonArt.lua
 Progress.lua
 Exists.lua
 Engine.lua
 Instance.lua
+DungeonPicker.lua
 UI.lua
 QuestLog.lua
 AutoQuest.lua

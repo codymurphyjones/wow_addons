@@ -33,11 +33,13 @@ Data\Roads.lua
 Grid.lua
 Data\Nav0.lua
 Data\Nav1.lua
+Data\ZoneWays.lua
 Data\Nav2991.lua
 Data\Nav2995.lua
 Data\Nav2980.lua
 Data\Spots.lua
 NavGrid.lua
+ZoneWays.lua
 Route.lua
 Chain.lua
 Comm.lua

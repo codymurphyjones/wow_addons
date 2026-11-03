@@ -753,10 +753,11 @@ local function Rebuild()
     wipe(model)
     local E = ns.Engine
     local n = 0
-    for i, s in ipairs(E.steps or {}) do
-        local current = i == E.current
+    local demo = UI.demoRoute
+    for i, s in ipairs(demo or E.steps or {}) do
+        local current = i == (demo and 1 or E.current)
         -- (Zone Clear's quests above your level don't count toward the section, but they're listed.)
-        if current or ((E:Counts(s) or s.later) and not E:StepDone(s) and (not E.current or i > E.current)) then
+        if current or demo or ((E:Counts(s) or s.later) and not E:StepDone(s) and (not E.current or i > E.current)) then
             local verb, name, detail, pts = E:Describe(s)
             local points
             if pts then
@@ -821,6 +822,57 @@ end
 -- Instances where the guide stays out of the way: dungeons, raids, battlegrounds and arenas.
 local QUIET = { party = true, raid = true, pvp = true, arena = true }
 
+-- A character with no route still gets a demo: the first steps of the section nearest its level, drawn
+-- as if you stood at the first of them. Nothing of the guide's changes.
+local DEMO_STEPS = 6
+local function DemoRoute()
+    local E = ns.Engine
+    local guide = E:Guide()
+    local level = UnitLevel("player") or 1
+    local best, gap
+    for _, s in ipairs(guide and guide.sections or {}) do
+        local off = (level < (s.from or 1) and s.from - level) or (level > (s.to or 60) and level - s.to) or 0
+        local quests = 0
+        for _, st in ipairs(s.steps or {}) do
+            if st[1] == "A" or st[1] == "T" then quests = quests + 1 end
+        end
+        if quests >= 3 and not s.instance and not s.travel and (not best or off < gap) then best, gap = s, off end
+    end
+    local route, spot = {}, nil
+    for _, st in ipairs(best and best.steps or {}) do
+        if #route >= DEMO_STEPS then break end
+        if st[1] == "A" or st[1] == "O" or st[1] == "T" then
+            local _, _, _, points = E:Describe(st)
+            if points then
+                route[#route + 1] = st
+                if not spot then
+                    local p = points[1]
+                    local c, n, w = WM.World(p[1], p[2], p[3])
+                    if c then spot = { c, n, w } end
+                end
+            end
+        end
+    end
+    if spot and #route > 0 then return route, spot end
+end
+
+-- The setup wizard's demo: the real field, fully up with your own steps, moving or not. It doesn't
+-- count as reading, so it teaches the field nothing.
+function UI:Demo(on)
+    self.demo = on or nil
+    self.demoRoute, self.demoSpot = nil, nil
+    if on then
+        Field()
+        local E = ns.Engine
+        if not (E.current and E.steps and E.steps[E.current]) then
+            self.demoRoute, self.demoSpot = DemoRoute()
+        end
+    else
+        stillSince, episode = nil, nil
+    end
+    Rebuild()
+end
+
 local function Still()
     if InCombatLockdown() or UnitAffectingCombat("player") then return false end
     local inside, kind = Call(IsInInstance)
@@ -846,6 +898,7 @@ end
 -- (named after the first you'll do there), and a hotspot keeps its light while its first step lasts.
 local function Compose(stage, pulsing, now)
     local c, n, w = WM.Player()
+    if UI.demoSpot then c, n, w = UI.demoSpot[1], UI.demoSpot[2], UI.demoSpot[3] end
     local facing = Num(Call(GetPlayerFacing))
     local ahead = forcedTrail and 999 or Ahead()
     local spots, visits = {}, {}
@@ -907,8 +960,8 @@ function UI:Tick(elapsed)
     local now = GetTime()
     local E = ns.Engine
     Geometry()
-    local visible = ns.db and ns.db.shown and E.guide and not E:HidesWhilePaused()
-    local still = visible and Still()
+    local visible = ns.db and (ns.db.shown or UI.demo) and (E.guide or UI.demoRoute) and not E:HidesWhilePaused()
+    local still = visible and (UI.demo or Still())
     if still then
         stillSince = stillSince or now
     else
@@ -916,7 +969,7 @@ function UI:Tick(elapsed)
         forcedTrail = nil
         EndEpisode()
     end
-    local stillFor = stillSince and now - stillSince or 0
+    local stillFor = UI.demo and 60 or stillSince and now - stillSince or 0
     local stage = 0
     for i = 1, #STAGES do if stillFor >= StageAt(i) then stage = i end end
     if forcedTrail and still then stage = 3 end

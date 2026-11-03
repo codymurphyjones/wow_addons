@@ -3,7 +3,8 @@ local _, ns = ...
 -- Auto Accept and Auto Turn-in (Options > AddOns > Field Guide; both on until you turn them off). Hold
 -- Shift when you talk to an NPC to do it by hand. It stops, for you to decide, at anything that's
 -- yours to choose: a reward to pick, or gold a quest wants. Quests you skipped aren't taken, repeatable
--- quests are left alone, and gray ones are only taken in Zone Clear.
+-- quests are left alone, and gray ones are only taken in Zone Clear. With Accept Field Guide Quests on,
+-- only the quests the guide has you picking up are taken; the others are yours to take or leave.
 local A = {}
 ns.AutoQuest = A
 
@@ -18,6 +19,12 @@ local tried = {} -- [questID] = when we last chose it from a list
 
 local function Paused() return IsShiftKeyDown and IsShiftKeyDown() end
 
+-- The guide wants this quest, or the option to ask isn't on.
+local function Wanted(id)
+    if not ns.db.autoAcceptGuide then return true end
+    return id ~= nil and ns.Engine:WantsQuest(id)
+end
+
 local function Fresh(id)
     return not id or not tried[id] or GetTime() - tried[id] >= RETRY_SECONDS
 end
@@ -28,7 +35,7 @@ end
 
 -- Worth taking from an NPC's list.
 local function Takes(id, trivial, repeatable)
-    if repeatable or (id and ns.char.ignored[id]) or not Fresh(id) then return false end
+    if repeatable or (id and ns.char.ignored[id]) or not Fresh(id) or not Wanted(id) then return false end
     return not trivial or ns.char.preference == "clear"
 end
 
@@ -97,7 +104,7 @@ ns:On("QUEST_DETAIL", function()
     if id and ns.char.ignored[id] then return end
     Later(function()
         -- (Still this quest's dialog: you may have closed it, or moved on.)
-        if ns.db.autoAccept and Call(GetQuestID) == id then AcceptQuest() end
+        if ns.db.autoAccept and Call(GetQuestID) == id and Wanted(id) then AcceptQuest() end
     end)
 end)
 

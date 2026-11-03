@@ -372,6 +372,7 @@ function Saddle:GetTabFrame(i)
 	bar:SetWidth(SCROLLBAR_W - 4)
 	bar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
 	bar:SetBackdropColor(0, 0, 0, 0.4)
+	bar:SetAlpha(0.7)
 	local thumb = bar:CreateTexture(nil, "OVERLAY")
 	thumb:SetColorTexture(0.7, 0.7, 0.7, 0.9)
 	thumb:SetSize(SCROLLBAR_W - 4, 24)
@@ -391,8 +392,8 @@ function Saddle:GetTabFrame(i)
 		bar:SetValue(bar:GetValue() - delta * 30)
 	end)
 	scroll:EnableMouseWheel(false)
-	bar:HookScript("OnShow", function() scroll:EnableMouseWheel(true) end)
-	bar:HookScript("OnHide", function() scroll:EnableMouseWheel(false) end)
+	bar:HookScript("OnShow", function() scroll:EnableMouseWheel(true); saddle:TakeWheel(i, true) end)
+	bar:HookScript("OnHide", function() scroll:EnableMouseWheel(false); saddle:TakeWheel(i, false) end)
 
 	self.tabFrames[i] = tf
 	self:SetTabOpen(tf, false)
@@ -559,6 +560,30 @@ function Saddle:UpdateDock()
 	overlay.label:SetText(name and (name .. "\n|cffccccccRight-click: remove|r") or "Drop a window here")
 end
 
+-- While a tab scrolls, the wheel is the tab's: anything inside that takes the wheel (Questie's own
+-- scroll area) gives it up, so the bar moves instead. They get it back when the tab stops scrolling
+-- or they leave. Windows that are only anchored here (the damage meter) are left alone.
+function Saddle:TakeWheel(i, take)
+	for f, info in pairs(TS.captured) do
+		if info.saddle == self and info.tab == i and not info.handsOff and not CombatLocked(f) then
+			if take then
+				info.wheeled = info.wheeled or {}
+				for _, t in ipairs(TS.ClampTargets(f)) do
+					if t.IsMouseWheelEnabled and t:IsMouseWheelEnabled() and not CombatLocked(t) then
+						info.wheeled[t] = true
+						t:EnableMouseWheel(false)
+					end
+				end
+			else
+				for t in pairs(info.wheeled or {}) do
+					if TS.IsUsable(t) and not CombatLocked(t) then t:EnableMouseWheel(true) end
+				end
+				info.wheeled = nil
+			end
+		end
+	end
+end
+
 -- Watchdog --------------------------------------------------------------------
 -- Hooks catch most changes owners make to captured frames, but not all of
 -- them: damage meter frames get no hooks at all (see DamageMeter.lua), and
@@ -598,6 +623,13 @@ local function Watch()
 	for saddle, tabs in pairs(relayout) do
 		for i in pairs(tabs) do
 			if not TS.anchoring then saddle:Layout(i) end
+		end
+	end
+	-- (Scroll areas a window made after the tab began to scroll.)
+	for saddle in TS:EachSaddle() do
+		for i = 1, saddle.db.tabCount do
+			local tf = saddle.tabFrames[i]
+			if tf and tf.bar and tf.bar:IsShown() then saddle:TakeWheel(i, true) end
 		end
 	end
 	TS:AdoptStowaways()

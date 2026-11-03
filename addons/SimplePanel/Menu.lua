@@ -17,6 +17,7 @@ local _, ns = ...
 
     Any `text` may be a function returning the text. `tooltip` is a string or function(tt).
     Any row may show a color chip at its right with `swatch = { r, g, b }` (or a function returning one).
+    Any row may take `doubleClick = function(button) end`: the menu closes and it runs.
 ]]
 local Menu = {}
 ns.Menu = Menu
@@ -262,6 +263,14 @@ local function OnRowClick(row, button)
     end
 end
 
+-- A row with `doubleClick`: the menu closes and it runs.
+local function OnRowDoubleClick(row, button)
+    local item = row.item
+    if not item or row.disabled or not item.doubleClick then return end
+    Menu:Close()
+    SafeCall(item.doubleClick, button)
+end
+
 -- A slider's value text: `format` is a format string or a function of the value.
 local function FormatValue(item, v)
     if type(item.format) == "function" then return item.format(v) end
@@ -410,6 +419,7 @@ function Render(f, builder, keepPosition)
         row.text:SetText(text)
         row:EnableMouse(true)
         row:SetScript("OnEnter", OnRowEnter); row:SetScript("OnLeave", OnRowLeave); row:SetScript("OnClick", OnRowClick)
+        row:SetScript("OnDoubleClick", OnRowDoubleClick)
 
         if it.kind == "title" then
             row.text:SetFontObject("SimplePanelFontTitle"); row.text:SetTextColor(T.accent[1], T.accent[2], T.accent[3])

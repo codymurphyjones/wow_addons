@@ -142,6 +142,23 @@ a.setup = a.NewWizard({ name = "A", needed = function() return false end, steps 
 Login(a); Run()
 Check("needed false skips", Open() == nil)
 
+-- A step's demo runs while it's up, and stops when you leave it or close the window.
+a = Fresh()
+local shown = {}
+local steps2 = Steps(2)
+steps2[2].demo = function(on) shown[#shown + 1] = on end
+a.setup = a.NewWizard({ name = "A", steps = steps2 })
+Login(a); Run()
+frame = Showing()
+Check("no demo on another step", #shown == 0)
+frame.next.scripts.OnClick()
+Check("the demo starts on its step", shown[1] == true)
+frame.back.scripts.OnClick()
+Check("and stops when you leave it", shown[2] == false)
+frame.next.scripts.OnClick()
+frame.later.scripts.OnClick()
+Check("and when the window closes", shown[4] == false)
+
 return table.concat(out, "\n")
 '''
 

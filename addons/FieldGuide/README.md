@@ -37,6 +37,9 @@ Field Guide has no window, no buttons and nothing that stays on screen. **Stand 
 - **Errands wait for your route.** A quest with a far-off hand-in stays on the route, but it isn't fetched early just because it's available: it moves as a whole to where the route suits it, and you pick it up as you pass (see below).
 - **What's in the area comes first.** A quest you can pick up, or one ready to hand in, within about 75 yards of you goes to the front, whatever the plan said: it takes moments, and coming back for it later doesn't. The step you were on carries on after them.
 - **Ask the line.** Hover Waypoint's line on the world map or the minimap for the steps at the end of it, what they pay and why.
+- **Swap to a dungeon.** While you have dungeon quests to do, a button sits left of Waypoint's arrow. It opens a small list of those dungeons, a picture and a name each: pick one and the guide takes you through it. On a dungeon's route the same button goes back to questing. Choosing "Guide me" when a dungeon is offered skips the list.
+- **Never a trip back for what was beside you.** Before a long walk away, whatever is close and worth doing comes first: a pick-up, an unfinished objective, a finished quest to hand in. That holds for quests on no route at all, and on the way to another zone.
+- **Zones by level bracket.** Each zone is judged two levels at a time, by the average of all the quests in the bracket, with quests from one town or chain kept together. Its XP over its time plus the walk there decides, so a further zone has to pay enough to be worth the walk.
 - **See the road ahead.** With the world map open, Waypoint draws the walk through your next five stops, each in its own colour. Steps at the same place count as one stop.
 - **Real walks, not straight lines.** The route order knows when two places look close but the walk is long (the one way down from a mesa, built by `tools\FieldGuide\quest_walks.py`), so it finishes what's near before it leaves. Areas with only one or two ways in are found from the ground itself (`tools\FieldGuide\quest_gates.py`, listed in `gates_report.txt`), so this holds from wherever you stand.
 - **Pick-ups go where they cost least.** A last check over the whole route moves each pick-up to the point where it adds the least walking, before anything that needs it, so a quest 480 yards out of your way now waits for when you pass 130 yards from it.
@@ -82,6 +85,10 @@ It works with the quest log beside the world map and with a separate Quest Log w
 ## Auto Accept and Auto Turn-in
 
 Both are on until you turn them off in the options. Talking to an NPC takes its quests and hands in the ones you've finished, turn-ins first. Auto Turn-in stops when there's a reward to choose, or when a quest wants gold. Quests you skipped and repeatable quests are left alone, and gray quests are only taken in Zone Clear. Hold Shift while you talk to the NPC to do it by hand.
+
+**Accept Field Guide Quests** (on until you turn it off) narrows Auto Accept to the quests the guide is telling you to pick up, so nothing else lands in your log. Whatever else a giver offers is yours to take or leave.
+
+**Quests that cost too much time.** Leveling won't pick up a quest that takes more than about 4 minutes for each 1% of a level it pays, walking and objectives counted, unless it leads on to something worth doing. Zone Clear still takes everything.
 
 ## Preference: Leveling or Zone Clear
 

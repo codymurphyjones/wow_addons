@@ -26,7 +26,7 @@ for _, quests in ipairs(ns.DungeonQuests or {}) do
     if d then
         local inst = {}
         for k, v in pairs(quests) do inst[k] = v end
-        inst.name, inst.from, inst.to, inst.entrance = d.name, d.from, d.to, d.entrance
+        inst.key, inst.name, inst.from, inst.to, inst.entrance = d.key, d.name, d.from, d.to, d.entrance
         inst.map, inst.bosses, inst.wings = d.instanceID, d.bosses, d.wings
         I.list[#I.list + 1] = inst
     end

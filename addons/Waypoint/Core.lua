@@ -203,6 +203,8 @@ SlashCmdList.WAYPOINT = function(msg)
         if ns.Settings then ns.Settings:Open() end
     elseif cmd == "flights" then
         if arg == "on" or arg == "off" then OnOff("flights", "Flight paths", arg) else ns.Flight:Status() end
+    elseif cmd == "why" then
+        ns.Route:Why()
     elseif cmd == "where" then
         ns:Print("Where Waypoint has you: " .. (ns.Grid.WhereText and ns.Grid:WhereText() or "the land map only (no walkable-ground data here)"))
     elseif cmd == "towns" and arg == "debug" then

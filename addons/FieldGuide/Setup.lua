@@ -16,18 +16,31 @@ ns.setup = ns.NewWizard({
             },
         },
         {
+            title = "The field",
+            text = "This is how it looks. When you stand still, your next steps rise up around your character, each one placed in the direction it really lies, and more come up the longer you wait. Move or start a fight and it all fades away.",
+            demo = function(on) ns.UI:Demo(on) end,
+            low = true,
+            path = "db.shown",
+            choices = {
+                { true, "Show it when I stand still", "Rest the cursor on a step for its details." },
+                { false, "Keep it off", "The arrow still guides you. /fg brings it back." },
+            },
+        },
+        {
             title = "Talking to quest givers",
-            text = "Auto takes any quest a giver offers, not only the guide's, and you skip the quest text.",
+            text = "Accepting for you skips the quest text. You can have it take only the guide's quests, or everything a giver offers.",
             get = function()
-                if ns.db.autoAccept then return "both" end
+                if ns.db.autoAccept then return ns.db.autoAcceptGuide and "guide" or "both" end
                 return ns.db.autoTurnIn and "turnin" or "off"
             end,
             set = function(value)
-                ns:SetOption("db.autoAccept", value == "both")
+                ns:SetOption("db.autoAccept", value == "both" or value == "guide")
+                ns:SetOption("db.autoAcceptGuide", value == "guide")
                 ns:SetOption("db.autoTurnIn", value ~= "off")
             end,
             choices = {
-                { "both", "Accept and hand in for me", "The fastest way through a route." },
+                { "guide", "Accept the guide's quests and hand in for me", "The fastest way through a route, with nothing extra in your log." },
+                { "both", "Accept everything and hand in for me", "Takes every quest a giver offers, on the guide or not." },
                 { "turnin", "Only hand in", "You read and accept quests yourself." },
                 { "off", "Neither", "You do both by hand. Best for enjoying the story." },
             },

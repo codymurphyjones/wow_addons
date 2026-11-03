@@ -130,6 +130,14 @@ function API:SetButton(owner, button)
     ns.Arrow:SetButton(owner, button)
 end
 
+-- A button of your addon's left of the arrow, outside its frame: for a switch that isn't about the
+-- target (Field Guide's swap between its leveling and dungeon guides). One per addon; nil removes it.
+--   Waypoint:SetSide("MyAddon", { icon = texture, title = "...", text = "...", onClick = fn })
+-- onClick gets the button, to anchor a popup to.
+function API:SetSide(owner, side)
+    ns.Arrow:SetSide(owner, side)
+end
+
 -- Quest tracking, with a history of who tracked what. Quests you track yourself are recorded as
 -- yours: the arrow prefers them, and addons can't untrack them. A quest you untracked yourself
 -- isn't tracked again by an addon while it's in your log.

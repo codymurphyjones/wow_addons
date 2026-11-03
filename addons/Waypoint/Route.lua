@@ -489,7 +489,7 @@ end
 -- The fixed place (NavGrid.lua: a flight master, dock or town) a vertex stands at, kept on it as
 -- v.place; nil when it's at none.
 local function PlaceOf(v)
-    if v.place == nil then v.place = G.Place and G:Place(v.c, v.n, v.w) or false end
+    if v.place == nil then v.place = G.PlaceIndex and G:PlaceIndex(v.c, v.n, v.w) or false end
     return v.place or nil
 end
 
@@ -1251,6 +1251,10 @@ local function BuildLines(route, way, hereField, targetField, target, c, n, w)
             local pts = {}
             if i == 1 then pts[1], pts[2] = n, w end
             local path = a.c == b.c and G:Detail(a.c, FieldPath(hereField, targetField, leg, b == target) or nil)
+            -- (Its fields not worked out yet, or a walk neither of them covers: the stored one.)
+            if not path and a.c == b.c then
+                path = R:StoredWay(a.c, i == 1 and n or a.n, i == 1 and w or a.w, b)
+            end
             if path then path = CityWay(a.c, i == 1 and n or a.n, i == 1 and w or a.w, path, b.n, b.w, i == 1) end
             if path then
                 for _, sq in ipairs(path) do pts[#pts + 1], pts[#pts + 2] = sq.n, sq.w end
@@ -1326,6 +1330,7 @@ end
 -- The arrow's bottom row: what's ahead as an icon { icon, r, g, b, text } (the text shows on hovering
 -- it), or nil, and how far up or down where it leads is, as words ("" when level).
 local STEEP, CLIFF = "Interface\\Icons\\Spell_Nature_Earthquake", "Interface\\Icons\\Spell_Magic_FeatherFall"
+local LIFT, LIFT_NEAR = "Interface\\Icons\\INV_Misc_Gear_01", 40
 function R:TerrainNotes(p)
     local note
     local ahead = self:AheadText()
@@ -1334,6 +1339,18 @@ function R:TerrainNotes(p)
         local lethal = ahead:find("lethal", 1, true)
         local icon = ahead:find("Too steep", 1, true) and STEEP or CLIFF
         note = { icon, 1, lethal and 0.3 or 1, lethal and 0.3 or 1, ahead }
+    end
+    -- The way goes by a lift, portal or tram, right here: that's what to do next.
+    local c, n, w = ns.Nav:Player()
+    local way = self.way
+    if way and way.continent == c then
+        for i = 1, math.min(8, #way.squares) do
+            local s = way.squares[i]
+            if s.lift and Dist(n, w, s.n, s.w) <= LIFT_NEAR then
+                note = { LIFT, 1, 1, 1, "Take the lift here" }
+                break
+            end
+        end
     end
     local height = self:HeightText(p):gsub("^  %-  ", "")
     return note, (height:gsub("^(%d)", "Target %1"))
@@ -1463,6 +1480,43 @@ end
 -- it: then the plan made before for this target stands as it was (its route, its lines on the
 -- map, where the arrow steers), or for a new target nothing is drawn yet, rather than a guess.
 -- Grid reports when it's ready, and the plan is made again then (Flight.lua).
+-- /way why: what the route to the target is waiting on, for when the arrow only points.
+function R:Why()
+    local e = ns.Targets and ns.Targets.current
+    local c, n, w = ns.Nav:Player()
+    local t = self.whyGoal
+    if ns.Flight and ns.Flight:WaitingToMove() then
+        ns:Print("Nothing's planned until you move after a login or /reload. Take a few steps, wait, and ask again.")
+    end
+    ns:Print(("You: continent %s, %s, %s. Target: %s, continent %s, %s, %s."):format(tostring(c), n and math.floor(n) or "?",
+        w and math.floor(w) or "?", e and e.title or "none", t and tostring(t.c) or "?", t and math.floor(t.n) or "?", t and math.floor(t.w) or "?"))
+    local grid = G and ns.db.useGrid
+    ns:Print(("Land map: %s. Road follow: %s."):format(grid and "on" or "off", ns.db.useGrid and "on" or "off"))
+    if not grid then return end
+    local here, there = self.whyHere, self.whyTarget
+    ns:Print(("From you: %s%s. To the target: %s%s. Queue: %s."):format(here and "field" or "NO FIELD",
+        here and here.ready and " ready" or "", there and "field" or "NO FIELD", there and there.ready and " ready" or "",
+        G:Busy() and "working" or "idle"))
+    if G.JobInfo then
+        local a, ar = G:JobInfo("here")
+        local b, br = G:JobInfo("target")
+        ns:Print(("Searching from you: %s, restarted %d. To the target: %s, restarted %d."):format(
+            a and ("%d s"):format(a) or "not running", ar, b and ("%d s"):format(b) or "not running", br))
+    end
+    local path = there and c and G:Path(there, n, w)
+    local trip = ns.Flight and ns.Flight.route
+    ns:Print(("Path to the target: %s. Planned for this target: %s. Way: %d squares. Trip: %s."):format(
+        path and (#path .. " points") or "none", self.plannedFor and "yes" or "no",
+        self.way and #self.way.squares or 0, trip and (#trip.legs .. " legs") or "walking"))
+    local stored = t and self:StoredWay(c, n, w, t)
+    ns:Print(("Stored zone to zone walk: %s. Using it: %s."):format(stored and (#stored .. " points") or "none",
+        self.usedStored and "yes" or "no"))
+    local s = here and t and G:Cost(here, t.n, t.w)
+    local back = there and c and G:Cost(there, n, w)
+    ns:Print(("Walk there: %s. Walk from there to you: %s. Legs planned: %d."):format(
+        s and ("%d s"):format(s) or "none", back and ("%d s"):format(back) or "none", self.lines and #self.lines or 0))
+end
+
 function R:Plan(p, last)
     local kept = { lines = self.lines, steer = self.steer, way = self.way, p = self.plannedFor }
     self.steer, self.lines, self.plannedFor = nil, nil, nil
@@ -1491,16 +1545,25 @@ function R:Plan(p, last)
     local grid = G and ns.db.useGrid
     local maxDrop, climb = self:MaxDrop(), ns.db.climb or 1
     local offroad = R:Offroad()
+    -- A long trip goes by the stored walks (ZoneWays.lua), and searches only as far as its first stop:
+    -- no field to the target, and none of the world. Short of LONG yards from it the land map takes over.
+    local Z = ns.ZoneWays
+    local stored = grid and Z and Z:Has(c) and (target.c ~= c or Dist(n, w, target.n, target.w) >= Z.LONG)
+    local chain = stored and self:StoredWay(c, n, w, target)
+    local goal = chain and { chain[1].n, chain[1].w } or (target.c == c and { target.n, target.w }) or nil
     local hereField = grid and G:Field("here", c, n, w, { speed = speed, swim = swim, safe = fall, once = once,
-        maxDrop = maxDrop, climb = climb, offroad = offroad, slack = G.MOVE,
-        goal = target.c == c and { target.n, target.w } or nil }) or nil
+        maxDrop = maxDrop, climb = climb, offroad = offroad, slack = G.MOVE, goal = goal }) or nil
     -- To the target: worked out toward you first (A*), so the walk from here is there early.
     local targetOpts = { speed = speed, swim = swim, safe = fall, once = once, maxDrop = maxDrop, climb = climb,
         offroad = offroad, slack = 0, reverse = true, toward = target.c == c and { n, w } or nil }
-    local targetField = grid and G:Field("target", target.c, target.n, target.w, targetOpts) or nil
+    local targetField = grid and not stored and G:Field("target", target.c, target.n, target.w, targetOpts) or nil
+    if stored and G.Forget then G:Forget("target") end
+    self.whyHere, self.whyTarget, self.whyGoal = hereField, targetField, target
     self.aheadOpts = grid and targetOpts or nil
     G.rush = false
-    if grid and ((not hereField and G:Working("here")) or (not targetField and G:Working("target"))) then
+    -- A long trip doesn't wait for a field: flights, boats and the rest are planned with the stored walks.
+    if stored and G:Working("here") then G.rush = true end
+    if grid and not stored and ((not hereField and G:Working("here")) or (not targetField and G:Working("target"))) then
         -- The plan made before still stands while the new one is worked out, unless its next step
         -- is behind you: a flight or ride you've taken (Taken).
         local nx = last and last.next
@@ -1559,9 +1622,28 @@ function R:Plan(p, last)
     end
     local function Done(route)
         local aim = route and route.aim or (not route and p) or nil
-        local way = aim and WayFrom(hereField, targetField, aim == p, c, n, w, aim)
+        local way
+        -- A long way: the stored walks, with the ground around you worked out as far as the first stop
+        -- when that's ready (until then a straight line to it).
+        local ac, an, aw
+        if aim then ac, an, aw = ns.Nav:World(aim) end
+        local chained = stored and ac == c and self:StoredWay(c, n, w, { c = ac, n = an, w = aw })
+        if chained then
+            way = chained
+            local first = chained[1]
+            local lead = hereField and WayFrom(hereField, nil, false, c, n, w,
+                { _c = c, _n = first.n, _w = first.w, _island = false })
+            if lead then
+                way = {}
+                for _, s in ipairs(lead) do way[#way + 1] = s end
+                for _, s in ipairs(chained) do way[#way + 1] = s end
+            end
+        elseif aim then
+            way = WayFrom(hereField, targetField, aim == p, c, n, w, aim)
+        end
+        self.usedStored = chained and true or false
         self.way = way and { continent = c, squares = way } or nil
-        self.lines = BuildLines(route, self.way, hereField, targetField, target, c, n, w)
+        self.lines = BuildLines(route, self.way, not stored and hereField or nil, targetField, target, c, n, w)
         -- This task's shade; on your waypoint path, the waypoint's own, and the legs after it too.
         local onPath = e and e.owner == "path" and p.id
         local shade = onPath and ShadeOf(p) or self.shade
@@ -1578,15 +1660,19 @@ function R:Plan(p, last)
         if nx and nx.from and nx.from.c == c then route.fromDist = Dist(n, w, nx.from.n, nx.from.w) end
         return route
     end
+    local mode = self:RoadMode().id
+    local toRun = ns.ZoneWays and 7 / speed or 1
     local direct
-    if hereField and target.c == c then
+    if hereField and target.c == c and not stored then
         direct = G:Cost(hereField, target.n, target.w) or INF
+    elseif stored and target.c == c and Z:Secs(c, n, w, target.n, target.w, mode) then
+        direct = Z:Secs(c, n, w, target.n, target.w, mode) * toRun
     else
         local walkable = target.c == c and target.land == here.land
         direct = walkable and Dist(n, w, target.n, target.w) * F.DETOUR / speed or INF
     end
     -- A short walk needs no planning, unless there's a jump on it (that's a step of its own).
-    if direct < MinGain() + F.OVERHEAD and not (hereField and HasJump(hereField, target)) then return Done(nil) end
+    if direct < MinGain() + F.OVERHEAD and not (not stored and hereField and HasJump(hereField, target)) then return Done(nil) end
     -- A ghost can't take a flight, a boat or the hearthstone: back to the body on foot.
     if ghost then return Done(nil) end
 
@@ -1680,10 +1766,13 @@ function R:Plan(p, last)
             local b = V[v]
             if not done[v] and b.c == a.c then
                 local cost, kind
-                if u == 1 and hereField then
+                local zone = stored and (u == 1 or v == 2) and Z:Secs(a.c, a.n, a.w, b.n, b.w, mode)
+                if u == 1 and hereField and not stored then
                     cost, kind = G:Cost(hereField, b.n, b.w), "walk"
                 elseif v == 2 and targetField then
                     cost, kind = G:Cost(targetField, a.n, a.w), "walk"
+                elseif zone then
+                    cost, kind = zone * toRun, "walk"
                 else
                     -- Between two fixed places (flight masters, docks, towns): the walk baked over the
                     -- ground (NavGrid.lua), lifts and portals included. Else the straight line.
@@ -1733,7 +1822,7 @@ function R:Plan(p, last)
         local parts = { leg }
         if leg.kind == "walk" then
             leg.aquatic = aquatic
-            if i == 1 and hereField then
+            if i == 1 and hereField and not stored then
                 local path = G:Path(hereField, leg.to.n, leg.to.w)
                 if path then
                     local steps = {}
@@ -1773,7 +1862,7 @@ function R:Plan(p, last)
     -- Another plan than the one you're on (hearth, then fly; or fly from somewhere else): only
     -- if it's clearly quicker. Otherwise the old one stands, with its time from where you are now.
     if last and not same then
-        local still = StillTakes(last, p, hereField, c, n, w, speed)
+        local still = StillTakes(last, p, not stored and hereField or nil, c, n, w, speed)
         local beatsWalking = still and (direct >= INF or direct - still >= math.max(MinGain(), direct * MinShare()) / 2)
         if still and beatsWalking and route.total > still - math.max(KEEP_SECS, still * KEEP_SHARE) then
             last.total, last.gain = still, (last.direct or INF) - still
@@ -2037,6 +2126,9 @@ function R:RoadMode()
     return self.ROAD_MODES[2]
 end
 function R:Offroad() return self:RoadMode().offroad end
+function R:StoredWay(c, n, w, target)
+    return ns.ZoneWays and ns.ZoneWays:Way(c, n, w, target.c, target.n, target.w, self:RoadMode().id)
+end
 -- A mode's icon and name, for a menu: the icon cropped of its border, as the button shows it.
 function R:ModeLabel(mode)
     return ("|T%s:16:16:0:0:64:64:5:59:5:59|t  %s"):format(mode.icon, mode.name)

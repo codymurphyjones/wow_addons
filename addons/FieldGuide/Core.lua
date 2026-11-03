@@ -22,6 +22,7 @@ ns.DEFAULTS = {
     dock = true,        -- sit under Waypoint's arrow (when Waypoint is installed)
     manageTracking = true, -- track the guide's quests, untrack the rest (never the ones you tracked)
     autoAccept = true,  -- take quests when you talk to their givers (AutoQuest.lua)
+    autoAcceptGuide = true, -- ...only the ones the guide has on its list
     autoTurnIn = true,  -- hand quests in, unless there's a reward to pick
     detourMinutes = 2,  -- Leveling: how far off the route a quick quest may be (minutes of extra walking)
     questCheck = {},    -- [questID] = whether the server has it, for one game build (Exists.lua)
@@ -41,6 +42,10 @@ ns.CHAR_DEFAULTS = {
     deferred = {},   -- Zone Clear: quests you skipped once. They wait until the rest of the zone is done
     doneByHand = {}, -- quests you marked done ("Done it"), whatever the game's record says
     lastPick = nil,  -- the zone section Automatic last chose (kept while you travel through others)
+    handIns = {},    -- finished quests off the route that the plan took on (E.WithHandIns)
+    early = {},      -- quests of a higher bracket taken while passing: they wait for their level (E.WithEarly)
+    adopted = {},    -- quests worth doing that you were beside, on the route or not (E.WithNearby)
+    carried = {},    -- quests in your log, off the route, worth finishing in the zone you're following (E.Carried)
     rerun = {},      -- quests whose item didn't drop and you chose to run the dungeon again for
     ran = {},        -- ["dungeon:wing"] = true: that run (or wing) is over on the current route
     preference = "leveling", -- "leveling": XP and convenience first; "clear": every quest of the zone you're on
@@ -54,6 +59,7 @@ ns:OnChanged(function()
     if ns.Engine then ns.Engine:Update() end
     if ns.UI then ns.UI:Refresh() end
     if ns.MinimapButton then ns.MinimapButton:Refresh() end
+    if ns.DungeonPicker then ns.DungeonPicker:Refresh() end
 end)
 
 ns:On("PLAYER_LOGIN", function()

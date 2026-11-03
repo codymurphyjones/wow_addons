@@ -46,7 +46,9 @@ STUBS = r'''
 GAME = { parts = {}, time = 1000, level = 1, xp = 0, race = 1, faction = "Horde", name = "Test", map = 1412, x = 0.5, y = 0.5,
          log = {}, done = {}, ready = {}, timers = {}, errors = {} }
 function GetTime() return GAME.time end
-function debugprofilestop() return py_clock() end
+-- A count, not the clock: a plan's time budget runs out at the same point every run.
+CLOCK = 0
+function debugprofilestop() CLOCK = CLOCK + 0.004; return CLOCK end
 function issecretvalue() return false end
 function canaccessvalue() return true end
 function wipe(t) for k in pairs(t) do t[k] = nil end return t end
@@ -124,6 +126,85 @@ for _, name in ipairs({ "CreateTexture", "CreateFontString", "CreateLine", "Crea
     FRAME[name] = function() return New() end
 end
 function CreateFrame() return New() end
+WaypointSides = {}
+function SideOf() return WaypointSides.FieldGuide end
+function FollowAt(key)
+    local E = ns.Engine
+    local kind, id = key:match("^(%a)(%d+)$")
+    id = tonumber(id)
+    local q = ns.Quests[id]
+    local p = q and ((kind == "A" and q.a) or (kind == "T" and q.t) or (kind == "O" and q.o and q.o[1]))
+    local yards = "?"
+    if p and E.YardsTo then yards = E.YardsTo(p) or "?" end
+    local cur = E.current and E.steps[E.current]
+    local plain = cur and (cur.plain or cur)
+    return ("sect=%s log=%d current=%s%s yards=%s"):format(tostring(E.section and E.section.id), #ns.Progress:LogQuests(),
+        tostring(plain and plain[1]), tostring(plain and plain[2]), tostring(yards))
+end
+function QuestStateAt(key)
+    local kind, id = key:match("^(%a)(%d+)$")
+    id = tonumber(id)
+    local E, P, q = ns.Engine, ns.Progress, ns.Quests[id]
+    if not q then return "no data" end
+    local secs = {}
+    for _, g in ipairs(E:Guide().sections) do
+        for _, s in ipairs(g.steps) do
+            if s[2] == id and s[1] == kind then secs[#secs + 1] = g.id; break end
+        end
+    end
+    return ("log=%s ready=%s level=%d l=%s r=%s prereqs=%s open=%s section now %s; in %s"):format(tostring(P:InLog(id)), tostring(P:ReadyToTurnIn(id)),
+        GAME.level, tostring(q.l), tostring(q.r), tostring(E:PrereqsDone(id)), tostring(E:QuestOpen(id)), tostring(E.section and E.section.id), table.concat(secs, ","))
+end
+function StepStates()
+    local E, out = ns.Engine, {}
+    for i, s in ipairs(E.steps) do
+        if s[1] == "A" or s[1] == "O" or s[1] == "T" then
+            local key = s[1] .. tostring(s[2])
+            local flags = (E:StepDone(s) and "done " or "") .. (E:Waits(s) and "waits " or "") .. (E:MovedOn(s) and "moved " or "")
+                .. (s.later and "later " or "") .. (s.early and "early " or "")
+            out[#out + 1] = key .. "=" .. (i - (E.current or 1)) .. " " .. flags
+        end
+    end
+    return table.concat(out, ";")
+end
+function DumpPlan(ids)
+    local E, P, out = ns.Engine, ns.Progress, {}
+    out[#out + 1] = ("section %s level %d held %s bump %s"):format(tostring(E.section and E.section.id), GAME.level, tostring(E.Held(E)), tostring(E.lastBump))
+    for i = E.current or 1, math.min(#E.steps, (E.current or 1) + 11) do
+        local s = E.steps[i]
+        out[#out + 1] = ("  %d %s:%s part %s"):format(i, s[1], tostring(s[2]), tostring(s.part))
+    end
+    for id in tostring(ids):gmatch("%d+") do
+        id = tonumber(id)
+        local where = {}
+        for i, s in ipairs(E.steps) do
+            if s[2] == id then
+                local k = s[1] .. ":" .. tostring(s.part)
+                where[#where + 1] = ("#%d %s done=%s waits=%s later=%s moved=%s"):format(i, k, tostring(E:StepDone(s)), tostring(E:Waits(s)), tostring(s.later), tostring(E:MovedOn(s)))
+            end
+        end
+        out[#out + 1] = ("  quest %d inlog=%s ready=%s: %s"):format(id, tostring(P:InLog(id)), tostring(P:ReadyToTurnIn(id)), table.concat(where, "; "))
+    end
+    return table.concat(out, string.char(10))
+end
+function EarlySteps()
+    local E, out = ns.Engine, {}
+    for i, st in ipairs(E.steps) do
+        if st.early then out[#out + 1] = ("#%d A:%d l%s r%s %s"):format(i - (E.current or 1) + 1, st[2], tostring(ns.Quests[st[2]].l), tostring(ns.Quests[st[2]].r), tostring(ns.Quests[st[2]].n)) end
+    end
+    return table.concat(out, "; ")
+end
+function WhyLines()
+    local E, out = ns.Engine, {}
+    for _, s in ipairs(E:Guide().sections) do
+        local rate, _, walk, band = E.ValueOf(s)
+        if rate and rate > 0 then
+            out[#out + 1] = ("%s %s: %d XP a minute, band %s, %d min walk"):format(s.id, s.title, rate, tostring(band), walk or 0)
+        end
+    end
+    return out
+end
+function UseSides() Waypoint = { SetSide = function(_, owner, side) WaypointSides[owner] = side end } end
 function CreateFont() return New() end
 UIParent, WorldMapFrame, Minimap, GameTooltip, QuestFrame, GossipFrame = New(), New(), New(), New(), New(), New()
 function GameTooltip:IsOwned() return false end
@@ -320,6 +401,13 @@ function NearTexts()
     for i, t in ipairs(ns.Engine:NearbyActions()) do out[i] = t.text end
     return table.concat(out, " | ")
 end
+function DemoSteps()
+    local UI = ns.UI
+    UI:Demo(true)
+    local n = UI.demoRoute and #UI.demoRoute or 0
+    UI:Demo(false)
+    return n
+end
 function Tasks()
     local E = ns.Engine
     E.current = 1
@@ -346,6 +434,16 @@ function Current()
     if not s then return nil end
     local plain = s.plain or s
     return plain[1], plain[2]
+end
+-- The objectives the current step is a task of several with: looked for on the walk there.
+function TaskWith()
+    local E, out = ns.Engine, {}
+    local s = E.current and E.steps[E.current]
+    local plain = s and (s.plain or s)
+    for _, w in ipairs(s and s.with or {}) do
+        if w[1] == "O" and w ~= plain and not w.part then out[#out + 1] = w[2] end
+    end
+    return out
 end
 function Place(kind, id)
     local q = ns.Quests[id]
@@ -425,6 +523,11 @@ def skip_rules(ns, g, game, fire, lua_table):
         if not ok:
             bad.append(what)
 
+    check("a dungeon's quest is never all here: Blueleaf Tubers", not ns.Engine.AllHere(1221, lua_table([1, 0, 0])))
+    check("Accept Field Guide Quests: the guide doesn't want Blueleaf Tubers", not ns.Engine.WantsQuest(ns.Engine, 1221))
+    picks = [s for s in (ns.Engine.steps[i] for i in range(1, len(ns.Engine.steps) + 1))
+             if s[1] == "A" and not ns.Engine.Waits(ns.Engine, s)]
+    check("and it does want the next pick-up on its list", not picks or ns.Engine.WantsQuest(ns.Engine, picks[0][2]))
     ns.char.preference = "clear"
     ns.Engine.Invalidate(ns.Engine)
     g.Settle()
@@ -476,7 +579,10 @@ def skip_rules(ns, g, game, fire, lua_table):
     names = [tasks[i].title for i in range(1, len(tasks) + 1)]
     print("     now:", step[1], step[2], "on the way:", names)
     check("a quest along the walk is listed", want in names)
-    check("the step itself isn't listed", ns.Quests[step[2]].n not in names)
+    # (The rest of a quest with several objectives is listed: the line on the arrow isn't.)
+    texts = [tasks[i].text for i in range(1, len(tasks) + 1)]
+    left = ns.Engine.ActionsLeft(ns.Engine, step[2], step.part)
+    check("the step itself isn't listed", not left[1] or left[1].text not in texts)
     check("at most six", len(names) <= 6)
     check("its line is the short objective", names and len(tasks[1].text) < 120)
     lines = [tasks[i].text for i in range(1, len(tasks) + 1)]
@@ -535,6 +641,14 @@ def skip_rules(ns, g, game, fire, lua_table):
     check("a task's hunt moves on too", g.TaskMoves(745))
     E.hunting[745] = None
     game.log[745] = None
+
+    # The setup demo: a character with no route still sees one, and the guide's own stays as it was.
+    kept = E.current
+    E.current = None
+    check("no route: the demo finds one", g.DemoSteps() >= 3)
+    E.current = 1
+    check("with a route, the demo is your own", g.DemoSteps() == 0)
+    E.current = kept
 
     # A hunting area: the arrow moves on a little after you walk in, and the hand-in waits.
     for q in (747, 780, 750, 752, 753):
@@ -621,6 +735,50 @@ def run_race(name, opts):
     fire("ADDON_LOADED", "FieldGuide")
     fire("PLAYER_LOGIN")
     fire("PLAYER_ENTERING_WORLD", True, False)
+    if opts.no_early:
+        ns.Engine.EARLY_LOG = 0
+    if opts.no_group:
+        ns.Engine.GROUP_YARDS = 0
+    if opts.at:
+        m, x, y = opts.at.split(",")
+        game.level = opts.at_level
+        ns.char.lastPick = opts.at_pick
+        if opts.at_level >= 22:
+            # A character who has played the Barrens up to here (as /fg why saved it): low quests done,
+            # the rest of the zone open, these in the log.
+            for i in range(1, 100000):
+                q = ns.Quests[i]
+                if q and q.l and q.l <= 16:
+                    game.done[i] = True
+            for i in (6361, 6362, 1492, 848, 853, 844, 903, 905, 881, 3261, 882):
+                game.done[i] = True
+            for i in (6541, 1069, 896, 899, 878, 4921):
+                game.done[i] = None
+                game.log[i] = True
+            # Finished dungeon quests, handed in at Ratchet: on no route.
+            for i in (959, 1491):
+                game.done[i] = None
+                game.log[i] = True
+                game.ready[i] = True
+        game.map, game.x, game.y = int(m), float(x) / 100, float(y) / 100
+        fire("QUEST_LOG_UPDATE")
+        g.Settle()
+        E = ns.Engine
+        keys, i = [], E.current or 1
+        while i <= len(E.steps) and len(keys) < 5:
+            st = E.steps[i]
+            keys.append("%s:%s" % (st[1], st[2]))
+            i += 1
+        print("  at %-14s %-14s %s" % (opts.at, E.section.id if E.section else None, " ".join(keys)), flush=True)
+        print("      taken early:", g.EarlySteps(), flush=True)
+        print("      brackets:", E.BracketText(E.section) if E.section else None, flush=True)
+        for line in g.WhyLines().values():
+            print("     ", str(line)[:90], flush=True)
+        return {"race": name, "trip": True}
+    if opts.picker:
+        return {"race": name, "trip": picker(ns, g, game, fire)}
+    if opts.trip:
+        return {"race": name, "trip": trip_replay(ns, g, game, fire)}
     fire("QUEST_LOG_UPDATE")
     first = STARTS.get(name)
     game.map, game.x, game.y = first[0], first[1] / 100, first[2] / 100
@@ -644,13 +802,29 @@ def run_race(name, opts):
             return table.concat(d, " | ")
         """))
     t0 = time.time()
+    snaps, quest_states = {}, {}
+    follows = {}
     current = g.Current
     place = g.Place
     for n in range(opts.steps):
         if game.level >= opts.levels:
             break
         result = current()
+        if opts.trace:
+            states = {}
+            for row in g.StepStates().split(";"):
+                if "=" in row:
+                    k, v = row.split("=", 1)
+                    states[k] = v
+            snaps[len(me.stops)] = states
+            for k in opts.watch:
+                quest_states[(len(me.stops), k)] = g.QuestStateAt(k)
+            for k in opts.follow:
+                follows.setdefault(k, []).append((len(me.stops), states.get(k, "-"), g.FollowAt(k)))
         kind, qid = result if result else (None, None)
+        if opts.dump and qid and "%s:%d" % (kind, qid) in opts.dump.split(",") and not getattr(opts, "dumped", None):
+            opts.dumped = True
+            print(g.DumpPlan(opts.dump_ids), flush=True)
         with_part = None
         if kind is not None:
             item = g.WithItem()
@@ -714,21 +888,30 @@ def run_race(name, opts):
                 missing = [x for x in pres if not game.done[x]]
                 if pres and (len(missing) == len(pres) if quest.preAny else missing):
                     me.breaks.append(("before what it needs", qid, missing[:3]))
+            along = list(g.TaskWith().values()) if opts.together else []
             me.go(p)
             me.steps_done += 1
             # When this step could first have been done (see backtracks).
             stop = len(me.stops) - 1
+            # As a player does: what the arrow lists for the walk gets done on the walk.
+            for other in along:
+                o = ns.Quests[other]
+                if o and game.log[other] and not game.ready[other]:
+                    game.ready[other] = True
+                    worked[other] = stop
+                    game.time = game.time + max(o.m or 1, 2) * 60
             if kind == "A":
                 pres = [quest.pre[i] for i in range(1, len(quest.pre) + 1)] if quest.pre else []
                 got = [turned.get(x, 0) for x in pres]
                 first = (min(got) if quest.preAny else max(got)) if got else 0
-                ready[stop] = max(first, level_at.get(max(quest.r or 1, (quest.l or 1) - 3), 0))
+                need = max(quest.r or 1, (quest.l or 1) - 3)
+                ready[stop] = max(first, level_at.get(need, level_at.get(quest.r or 1, stop)))
             elif kind == "O":
                 ready[stop] = taken.get(qid, 0)
             else:
                 ready[stop] = worked.get(qid, taken.get(qid, 0))
-            trail.append("%3d L%-2d %s%-6d %-34s %5.1f,%5.1f  +%d yd" % (
-                len(me.stops) - 1, game.level, kind, qid, str(quest.n)[:34], p[2], p[3], me.yards - walked))
+            trail.append("%3d L%-2d %s%-6d %-34s %5.1f,%5.1f  +%d yd  t=%d" % (
+                len(me.stops) - 1, game.level, kind, qid, str(quest.n)[:34], p[2], p[3], me.yards - walked, (game.time - 1000) / 60))
             walked = me.yards
             if kind == "A":
                 taken[qid] = stop
@@ -741,7 +924,16 @@ def run_race(name, opts):
                 if not part or g.DonePart(qid, part):
                     game.ready[qid] = True
                 worked[qid] = stop
-                game.time = game.time + (quest.m or 1) * 60 / (len(quest.g) if part else 1)
+                game.time = game.time + max(quest.m or 1, 2) * 60 / (len(quest.g) if part else 1)
+                if opts.together and quest.o:
+                    # As a player does: what's at this spot gets done with it, not one quest a visit.
+                    here = quest.o[1]
+                    for other in list(game.log.keys()):
+                        o = ns.Quests[other]
+                        at = o.o[1] if o and o.o else None
+                        if at and game.log[other] and not game.ready[other] and at[1] == here[1] and at[2] == here[2] and at[3] == here[3]:
+                            game.ready[other] = True
+                            worked[other] = stop
             else:
                 if not game.log[qid]:
                     me.breaks.append(("hand-in without the quest", qid))
@@ -768,9 +960,9 @@ def run_race(name, opts):
         seen[kind] += 1
         g.Settle()
     errors = sorted({str(game.errors[i])[:150] for i in range(1, len(game.errors) + 1)})
-    return {"race": name, "level": game.level, "steps": me.steps_done, "yards": round(me.yards),
+    return {"race": name, "level": game.level, "minutes": (game.time - 1000) / 60, "steps": me.steps_done, "yards": round(me.yards),
             "stalls": stalls, "breaks": me.breaks, "back": backtracks(me.stops, ready), "errors": errors,
-            "seconds": round(time.time() - t0), "stops": me.stops, "trail": trail}
+            "seconds": round(time.time() - t0), "stops": me.stops, "trail": trail, "snaps": snaps, "states": quest_states, "follows": follows}
 
 
 STARTS = {"Tauren": (1412, 44.3, 77.0), "Orc": (1411, 43.0, 68.0), "Troll": (1411, 43.0, 68.0), "Undead": (1420, 30.0, 71.0),
@@ -784,9 +976,23 @@ def main():
     ap.add_argument("--steps", type=int, default=3000)
     ap.add_argument("--debug", action="store_true")
     ap.add_argument("--skip-rules", action="store_true", help="only the rules for skipped quests (with --race)")
+    ap.add_argument("--dump", default=None, help="print the plan when this step comes up")
+    ap.add_argument("--dump-ids", default="")
+    ap.add_argument("--together", action="store_true", help="objectives at one spot are done together, as a player does")
+    ap.add_argument("--watch", default="", help="quest steps to record the state of, as A6523,T355")
+    ap.add_argument("--follow", default="", help="print a step's place on the list at every stop (with --trace)")
+    ap.add_argument("--no-early", action="store_true", help="no quests taken early")
+    ap.add_argument("--no-group", action="store_true", help="brackets by level alone")
+    ap.add_argument("--at-level", type=int, default=20)
+    ap.add_argument("--at-pick", default="horde-1440-19")
+    ap.add_argument("--at", default=None, help="only: plan fresh at map,x,y at level 20, and print it")
+    ap.add_argument("--picker", action="store_true", help="only the swap to the dungeon guide (with --race Tauren)")
+    ap.add_argument("--trip", action="store_true", help="only a walk into a new zone: the plan must hold (--race Tauren)")
     ap.add_argument("--baseline", action="store_true", help="make this run the one later runs are held to")
     ap.add_argument("--trace", action="store_true", help="every step, and every double-back")
     a = ap.parse_args()
+    a.watch = [x for x in a.watch.split(",") if x]
+    a.follow = [x for x in a.follow.split(",") if x]
     names = [a.race] if a.race else list(RACES)
     failed = False
     results = {}
@@ -796,21 +1002,39 @@ def main():
             print(n, "LOAD FAILED:", r["load"])
             failed = True
             continue
+        if "trip" in r:
+            failed = failed or not r["trip"]
+            continue
         if "skip_rules" in r:
             failed = failed or bool(r["skip_rules"])
             continue
         back = sorted(r["back"], reverse=True)
         avoid = [b for b in back if b[3]]
-        print("%-9s level %2d  %4d steps  %7d yd  %3d avoidable double-backs of %d returns  %d stalls  %d rule breaks  %d errors  %ds" % (
-            n, r["level"], r["steps"], r["yards"], len(avoid), len(back), len(r["stalls"]),
+        print("%-9s level %2d  %4d min  %4d steps  %7d yd  %3d avoidable double-backs of %d returns  %d stalls  %d rule breaks  %d errors  %ds" % (
+            n, r["level"], r["minutes"], r["steps"], r["yards"], len(avoid), len(back), len(r["stalls"]),
             len(r["breaks"]), len(r["errors"]), r["seconds"]), flush=True)
         results[n] = {"level": r["level"], "steps": r["steps"], "yards": r["yards"], "avoidable": len(avoid),
                       "returns": len(back), "stalls": len(r["stalls"]), "breaks": len(r["breaks"]), "errors": len(r["errors"])}
         if a.trace:
             for line in r["trail"]:
                 print("   ", line)
-            for yards, i, j, can in back[:12]:
+            def held(b):
+                line = next((l for l in r["trail"] if l.lstrip().startswith("%d L" % b[1])), "")
+                key = line.split()[2] if line else ""
+                return "waits" in r["snaps"].get(b[2] + 1, {}).get(key, "")
+            print("    of those, %d were waiting on a level or a quest" % len([b for b in back if b[3] and held(b)]))
+            for key, rows in sorted(r.get("follows", {}).items()):
+                print("    FOLLOW %s" % key)
+                for stop, state, info in rows:
+                    print("      stop %d  %-14s %s" % (stop, state, info))
+            for yards, i, j, can in back[:12] + [b for b in back[12:] if b[3]]:
                 print("    back: stop %d returns to stop %d, %d yd later%s" % (i, j, yards, ", AVOIDABLE" if can else ""))
+                if can:
+                    line = next((l for l in r["trail"] if l.lstrip().startswith("%d L" % i)), "")
+                    key = line.split()[2] if line else ""
+                    print("      %s | was: %s" % (line.strip()[:60], next((l.strip()[:60] for l in r["trail"] if l.lstrip().startswith("%d L" % j)), "")))
+                    print("      at the earlier visit, %s: %s" % (key, r["snaps"].get(j + 1, {}).get(key, "NOT ON THE LIST")))
+                    print("      that quest then: %s" % r["states"].get((j + 1, key), "?"))
         for label, rows in (("stall", r["stalls"][:4]), ("break", r["breaks"][:4]), ("error", r["errors"][:4])):
             for row in rows:
                 print("    %s: %s" % (label, str(row)[:150]))
@@ -829,6 +1053,84 @@ def main():
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 json.dump(results, f, indent=1, sort_keys=True)
     sys.exit(1 if failed else 0)
+
+
+def picker(ns, g, game, fire):
+    """The button left of the arrow, and the list it opens."""
+    ok = []
+    def check(name, good):
+        ok.append(bool(good))
+        print("  %s %s" % ("ok  " if good else "FAIL", name), flush=True)
+    g.UseSides()
+    side = g.SideOf
+    game.map, game.x, game.y = 1412, 0.5, 0.5
+    game.level = 1
+    fire("QUEST_LOG_UPDATE")
+    g.Settle()
+    check("no dungeon due: no button", side() is None)
+    game.level = 20
+    fire("PLAYER_LEVEL_UP")
+    ns.Changed(ns)
+    g.Settle()
+    now = side()
+    check("a dungeon due: the button opens the list", now is not None and "Dungeon guide" == now.title)
+    print("     ", now.text if now else None)
+    list_ = ns.Instance.Current(ns.Instance)
+    for i in range(1, len(list_) + 1):
+        inst = list_[i].inst
+        print("     ", inst.name, "->", ns.DungeonPicker.Picture(inst))
+        check("%s has a picture" % inst.name, "Dungeons" in ns.DungeonPicker.Picture(inst))
+    ns.DungeonPicker.Toggle(ns.DungeonPicker, g.UIParent)
+    check("the list opens with no errors", len(game.errors) == 0)
+    picked = list_[1].inst
+    ns.Instance.Start(ns.Instance, picked)
+    g.Settle()
+    now = side()
+    check("on a route: the button goes back", now is not None and "leveling" in now.title and ns.char.instance == picked.id)
+    now.onClick()
+    g.Settle()
+    check("back on the leveling guide", ns.char.instance is None and side().title == "Dungeon guide")
+    ns.Engine.SetPaused(ns.Engine, True)
+    g.Settle()
+    check("paused: no button", side() is None)
+    return all(ok)
+
+
+def trip_replay(ns, g, game, fire):
+    """Walks from the north of the Barrens into Ashenvale, printing the plan at each point."""
+    E = ns.Engine
+    def show(label):
+        g.Settle()
+        keys = []
+        i = E.current or 1
+        while i <= len(E.steps) and len(keys) < 7:
+            st = E.steps[i]
+            keys.append("%s:%s" % (st[1], st[2]))
+            i += 1
+        print("  %-22s zone %s  now %s  trip for %s  held %s  section %s" % (
+            label, game.map, " ".join(keys), E.TripTarget(E), E.Held(E), E.section.id if E.section else None), flush=True)
+    game.level = 20
+    ns.char.lastPick, ns.char.onStep, ns.char.onTrip = "horde-1440-19", None, None
+    game.map, game.x, game.y = 1456, 0.47, 0.10
+    fire("QUEST_LOG_UPDATE")
+    show("in the Barrens")
+    game.map, game.x, game.y = 1456, 0.47, 0.03
+    fire("QUEST_LOG_UPDATE")
+    show("still the Barrens")
+    game.map, game.x, game.y = 1440, 0.60, 0.72
+    fire("ZONE_CHANGED_NEW_AREA")
+    fire("QUEST_LOG_UPDATE")
+    show("into Ashenvale")
+    E.lastBump = None
+    went = E.steps[E.current]
+    E.Reorder(E)
+    fire("QUEST_LOG_UPDATE")
+    show("plan again, same spot")
+    print("  bump:", E.lastBump)
+    now = E.steps[E.current]
+    same = went[1] == now[1] and went[2] == now[2]
+    print("  ok   planning again changes nothing" if same else "  FAIL planning again changes the route")
+    return same
 
 
 if __name__ == "__main__":

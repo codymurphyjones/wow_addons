@@ -306,6 +306,7 @@ ns:On("PLAYER_STARTED_MOVING", function()
         ns:Changed()
     end
 end)
+function F:WaitingToMove() return waitingToMove end
 local function StillWaiting()
     if not waitingToMove then return false end
     local speed = C.Num(GetUnitSpeed and C.Call(GetUnitSpeed, "player")) or 0

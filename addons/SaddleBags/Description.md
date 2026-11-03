@@ -44,6 +44,7 @@ Other addons and Blizzard's UI like to move windows back where *they* think they
 
 ### Sized the way you want
 - **Drag the corner grip** to set a tab's size. Anything taller scrolls.
+- **One scrollbar:** while a tab scrolls, the mouse wheel moves the Saddle's bar, not a window inside it. Questie's tracker drops its height limit while it's in a tab, and gets your setting back when it leaves.
 - **Grow / shrink to fit** buttons, and **right-click the grip** to fit the tab to its windows.
 - **=** gives every tab in the Saddle the same size, so switching tabs never changes its shape.
 - **Grow direction:** pin the left or the right edge, so a Saddle on the right side of your screen grows to the left.

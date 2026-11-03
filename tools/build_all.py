@@ -86,6 +86,7 @@ STEPS = [
     ("FieldGuide", "build_guides.py", [], "the leveling guides", [_questiedb]),
     ("FieldGuide", "quest_walks.py", [], "real walks between each zone's quest points (Waypoint's walkable ground)", []),
     ("FieldGuide", "quest_gates.py", [], "the areas with one or two ways in (Waypoint's walkable ground)", []),
+    ("FieldGuide", "make_dungeon_art.py", [], "the dungeon picker's pictures (from Spyglass's)", []),
     ("FieldGuide", "optimize_guides.py", [], "every section in the best order a long search finds", []),
     ("MrMiyagi", "fetch_mobs.py", [], "mob abilities (CMaNGOS, wago.tools)", []),
     ("Spyglass", "fetch_wowhead_quests.py", [], "SpyglassPluginQuests' quest database (Wowhead)", []),
@@ -104,6 +105,7 @@ DEV_STEPS = [
     ("RoadLog", "build_caves.py", [], "heights along the caves you logged (the caves' floors in the game files)",
      [_module("numpy"), _module("lupa"), _saved("RoadLog")]),
     ("Waypoint", "build_roads.py", [], "the roads, blockers and passes logged with RoadLog, packaged for every Waypoint user",
+    ("Waypoint", "nav_zones.py", [], "every zone entrance, and the walks between them by road mode (Waypoint's walkable ground, the roads)", []),
      [_module("numpy"), _module("lupa"), _saved("RoadLog")]),
 ]
 

@@ -139,6 +139,12 @@ local function StyleGoal(line, x)
         x.fill:SetWidth(math.max(1, width * math.min(1, have / need)))
         x.fill:SetColorTexture(WallyHUD.RGBA(T.accent))
         x.fill:SetShown(have > 0)
+        -- A little room under the bar, so it reads as this line's and not a stray rule above the next.
+        -- (Questie's lines stack on each other, and it sets their heights back: only once per reset.)
+        if math.abs(line:GetHeight() - (x.tall or 0)) > 0.1 then
+            x.tall = line:GetHeight() + 5
+            line:SetHeight(x.tall)
+        end
     end
 end
 

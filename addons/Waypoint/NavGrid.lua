@@ -21,11 +21,14 @@ if not (Old and DATA and next(DATA) and C_EncodingUtil and C_EncodingUtil.Decomp
 
 local G = setmetatable({}, { __index = Old })
 ns.Grid = G
+G.restarts = {} -- searches started over, by field
 
 local BUDGET = 2          -- milliseconds of work per frame (none in combat)
 local RUSH = 6            -- ...while you're waiting for a route
-local KEEP_TILES = 220    -- unpacked tiles kept
+local KEEP_TILES = 40     -- unpacked tiles kept, at about 0.8 MB each (long trips are stored, ZoneWays.lua)
+local TIDY_EVERY = 5      -- seconds between clearing out what no search is using (G:Tidy)
 local MOVE_YARDS = 150    -- yards you can move before your field is worked out again
+local JOB_KEEP = 1500     -- yards you can move before a field still being worked out is started over
 local REFINE_BUDGET = 12  -- milliseconds a path may spend walking tiles out node by node, per call
 local RUN, SWIM = 7.0, 4.72   -- the speeds the doors' times were baked at (nav_pack.py)
 local SLIDE = 1.5         -- sliding down a small drop is this much slower than walking
@@ -604,6 +607,13 @@ local ZONE_WEIGHT = 4
 local TOWN_WEIGHT = 6
 local TOWN_RADIUS = 150
 
+-- The zone at a world point (its place in the map's zones), or 0: ZoneWays.lua's exits use the same.
+function G:ZoneAt(continent, n, w)
+    local m = Map(continent)
+    if not m then return 0 end
+    return G.ZoneOfCell(m, floor((m.max - n) / m.fine), floor((m.max - w) / m.fine))
+end
+
 -- The zone of a global cell (its place in the map's zones), or 0.
 local function ZoneAt(m, gr, gc)
     local t, c = CellAt(gr, gc)
@@ -618,6 +628,7 @@ local function ZoneAt(m, gr, gc)
     local r, cc = floor(c / 64), c % 64
     return z:byte(floor(r / 4) * 16 + floor(cc / 4) + 1) or 0
 end
+G.ZoneOfCell = ZoneAt
 
 -- The other faction's towns on this map (ns.Towns), as cells: { [cell key] = town number }.
 local function EnemyCells(m, faction)
@@ -712,7 +723,7 @@ end
 local PLACE_NEAR = 60 -- yards from a place a point may be to count as it
 
 -- The fixed place at a world point (within PLACE_NEAR yards): its number, or nil.
-function G:Place(continent, n, w)
+function G:PlaceIndex(continent, n, w)
     local m = Map(continent)
     if not (m and m.d.places) then return nil end
     local best, bd
@@ -1101,6 +1112,17 @@ function G:Field(key, continent, n, w, opts)
     if Fits(f, continent, n, w, o, slack, src) then return f end
     local job = jobs[key]
     if job and Fits(job.field, continent, n, w, o, slack, src) then return nil end
+    -- Still being worked out from a little way back: it carries on. A long trip takes longer than it
+    -- takes to walk out of range, so starting again each time would mean it never finishes, and the
+    -- long part of the way is the same from here.
+    if job and slack == 1 and job.field.continent == continent then
+        local same = true
+        for k, v in pairs(o) do
+            if job.field[k] ~= v then same = false end
+        end
+        local dn, dw = job.field.n - n, job.field.w - w
+        if same and dn * dn + dw * dw <= JOB_KEEP * JOB_KEEP then return nil end
+    end
     -- Where the plan is headed (the target, for a field from you; you, for one to the target): its
     -- tile is where the door search may stop (Advance).
     local goal = opts.goal or opts.toward
@@ -1110,8 +1132,10 @@ function G:Field(key, continent, n, w, opts)
     for k, v in pairs(o) do field[k] = v end
     if not jobs[key] then
         if opts.reverse and not opts.later then table.insert(queue, 1, key) else queue[#queue + 1] = key end
+    else
+        G.restarts[key] = (G.restarts[key] or 0) + 1
     end
-    jobs[key] = { field = field, co = coroutine.create(function() Work(field) end) }
+    jobs[key] = { field = field, co = coroutine.create(function() Work(field) end), started = GetTime() }
     driver:Show()
     return nil
 end
@@ -1121,6 +1145,31 @@ function G:Forget(key)
     fields[key], jobs[key] = nil, nil
     Old:Forget(key)
 end
+
+-- Memory, and the frames it costs: every table here is one the garbage collector has to walk. A search
+-- caches each node's links as it goes, more than a tile's own data, and none of it is worth keeping
+-- once it's done: it's cleared when nothing's searching, and worked out again when asked. A continent
+-- you've left, with no field on it, goes altogether (tiles and doors), and comes back when it's needed.
+function G:Tidy()
+    if queue[1] then return end
+    local used = {}
+    for _, f in pairs(fields) do
+        if f.m then used[f.m] = true end
+    end
+    local here = ns.Nav and ns.Nav.Player and ns.Nav:Player()
+    for c, m in pairs(maps) do
+        if m and here and c ~= here and not used[m] then
+            m.tiles, m.used, m.count, m.doors = {}, {}, 0, nil
+        elseif m then
+            for _, T in pairs(m.tiles) do
+                if T and (next(T.nb) or next(T.packed) or next(T.rev)) then
+                    T.nb, T.packed, T.rev = {}, {}, {}
+                end
+            end
+        end
+    end
+end
+C_Timer.NewTicker(TIDY_EVERY, function() G:Tidy() end)
 
 function G:Partial(key)
     local job = jobs[key]
@@ -1132,6 +1181,12 @@ end
 function G:Settled(f, n, w)
     if f and f.nav then return false end
     return Old:Settled(f, n, w)
+end
+
+-- For /way why: seconds a search has been going (nil: none), and how many it has been restarted.
+function G:JobInfo(key)
+    local job = jobs[key]
+    return job and job.started and GetTime() - job.started or nil, G.restarts[key] or 0
 end
 
 function G:Busy() return queue[1] ~= nil or Old:Busy() end
@@ -1740,6 +1795,10 @@ function G:Path(f, n, w)
                 if l[2] == 2 then
                     drop[k] = l[3]
                     keep[k - 1], keep[k] = true, true
+                elseif l[2] == 3 then
+                    -- A lift, portal or the tram: both ends stay on the way, and the arrow goes to them.
+                    keep[k - 1], keep[k] = true, true
+                    a.via, b.via, a.lift, b.lift = true, true, true, true
                 end
                 break
             end

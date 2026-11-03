@@ -216,6 +216,23 @@ end)
 -- The icons on the quest log's rows
 -- ---------------------------------------------------------------------------------------------
 
+-- A quest that isn't on the route you're following gets a question mark: click it to see where it is.
+local ELSEWHERE = "Interface\\Icons\\INV_Misc_QuestionMark"
+local routeSet, routeAt = {}, 0
+
+-- The quests with a step left on the route. (Worked out at most twice a second, for all the rows.)
+local function OnRoute(questID)
+    local now = GetTime()
+    if now - routeAt >= 0.5 then
+        routeAt = now
+        wipe(routeSet)
+        for _, s in ipairs(Left()) do
+            if Quest(s) then routeSet[s[2]] = true end
+        end
+    end
+    return routeSet[questID] == true
+end
+
 local function Icon(row)
     local b = icons[row]
     if b then return b end
@@ -223,6 +240,10 @@ local function Icon(row)
     b:SetSize(14, 14)
     b.tex = b:CreateTexture(nil, "ARTWORK"); b.tex:SetAllPoints()
     b.tex:SetTexture(ns.ICON)
+    -- (Rounds the question mark, as the guide's own icon is.)
+    b.round = b:CreateMaskTexture()
+    b.round:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    b.round:SetAllPoints(b.tex)
     b:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
     b:SetScript("OnClick", function(self) QL:Open(self.questID, self) end)
     b:SetScript("OnEnter", function(self)
@@ -233,6 +254,7 @@ local function Icon(row)
             GameTooltip:AddLine(summary .. (now and " (now)" or ""), 1, 1, 1)
         else
             GameTooltip:AddLine("Not on the route you're following.", 0.8, 0.8, 0.8)
+            GameTooltip:AddLine(WhyNot(self.questID), 1, 1, 1, true)
         end
         GameTooltip:AddLine("Click: the route for this zone, with this quest in it", 0.75, 0.8, 0.85)
         GameTooltip:Show()
@@ -251,6 +273,15 @@ local function Mark(row, questID)
     end
     local b = Icon(row)
     b.questID = questID
+    if OnRoute(questID) then
+        b.tex:SetTexture(ns.ICON)
+        b.tex:SetTexCoord(0, 1, 0, 1)
+        if b.masked then b.tex:RemoveMaskTexture(b.round); b.masked = false end
+    else
+        b.tex:SetTexture(ELSEWHERE)
+        b.tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        if not b.masked then b.tex:AddMaskTexture(b.round); b.masked = true end
+    end
     b:SetFrameLevel(row:GetFrameLevel() + 5)
     if not b.placed then
         b.placed = true

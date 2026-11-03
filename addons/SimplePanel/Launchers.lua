@@ -1107,7 +1107,12 @@ PK:Register({
             table.sort(all, function(a, b) return a.name:lower() < b.name:lower() end)
             if #all == 0 then sub:Header("None found yet") end
             for _, e in ipairs(all) do
-                sub:Submenu({ text = e.name, icon = e.icon, build = function(s2) L:PlacementMenu(e, s2) end })
+                sub:Submenu({ text = e.name, icon = e.icon, build = function(s2) L:PlacementMenu(e, s2) end,
+                    tooltip = "Double-click: the same as clicking its minimap button.",
+                    doubleClick = function()
+                        local plugin = PK:Find("Launchers")
+                        L:Click(e, plugin and plugin.button or ns.Bar.frame, "LeftButton")
+                    end })
             end
         end })
         m:Button({ text = "Rescan minimap", fn = function() L:Scan(true) end })

@@ -14,6 +14,8 @@ local addonName, ns = ...
 --           char = true,           -- belongs to one character: asked again on each new character
 --           when = function() ... end, -- optional: leaves the step out while false
 --           multi = true,          -- tick any number: get(value) says if it's on, set(value, on) changes it
+--           demo = function(on) ... end, -- optional: shows the real thing while this step is up
+--           low = true,            -- optional: the window moves down, out of the way of the demo
 --       } },
 --   })
 --
@@ -48,7 +50,7 @@ local function Same(a, b) return a == b or (not a and not b) end
 
 function ns.NewWizard(def)
     local wizard = {}
-    local frame, current, scope, finished
+    local frame, current, scope, finished, demoing
 
     local function Store() return (def.store and def.store()) or ns.db end
     local function CharStore() return (def.charStore and def.charStore()) or ns.char end
@@ -90,6 +92,14 @@ function ns.NewWizard(def)
     end
 
     local Render
+
+    -- The current step's demo on, any other's off.
+    local function Demo(step)
+        if demoing == step then return end
+        if demoing and demoing.demo then demoing.demo(false) end
+        demoing = step
+        if step and step.demo then step.demo(true) end
+    end
 
     local function Finish()
         local store, charStore = Store(), CharStore()
@@ -199,6 +209,7 @@ function ns.NewWizard(def)
         frame.back:SetPoint("RIGHT", frame.next, "LEFT", -6, 0)
 
         frame:SetScript("OnHide", function()
+            Demo(nil)
             if queue.open == wizard then queue.open = nil end
             if not finished then wipe(queue.waiting) end -- Later: the rest wait for the next login too
             Pump()
@@ -213,6 +224,12 @@ function ns.NewWizard(def)
             pos = 1
         end
         if not current then return Finish() end
+        Demo(current)
+        if frame.low ~= (current.low or false) then
+            frame.low = current.low or false
+            frame:ClearAllPoints()
+            if frame.low then frame:SetPoint("BOTTOM", 0, 40) else frame:SetPoint("CENTER", 0, 80) end
+        end
         frame.header:SetText(("%s setup  ·  step %d of %d"):format(def.name, pos, #list))
         frame.title:SetText(current.title)
         local text = current.text
