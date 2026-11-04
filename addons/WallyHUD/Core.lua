@@ -19,6 +19,7 @@ ns.DEFAULTS = {
     minimapButtons = true, -- strip the gold rings off minimap buttons: monochrome icons, colour on hover
     hideReporter = true,   -- keep Blizzard's Issue Reporter out of the play field (keybind and toast instead)
     errorToast = true,     -- a small notice when an addon error happens, with Report and Dismiss
+    maxCamera = true,      -- the camera zooms out as far as the game allows (Camera.lua)
     questieSkin = true,    -- Questie's tracker in the suite's look (Questie.lua; a /reload to switch off)
     vitals = false,          -- the tideline: health and power drawn into the screen (Vitals.lua); with it on, the orb tracks your resource only
     vitalsPlayerFrame = "orb", -- your unit frame: "orb" (Orb.lua) | "blizzard" (Blizzard's player frame)

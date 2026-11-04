@@ -37,6 +37,7 @@ It loads last: its TOC lists every addon of ours as an optional dependency. It r
   - Left alone: frames Bartender4 replaces, frames held in a SaddleBags panel, frames SimplePanel places itself (its minimap square and the buffs beside it), and the player frame while the orb replaces it.
   - `/whud move` brings up the boxes without Edit Mode, and again locks them. `/whud move list` shows each frame and what moves it in this client. `/whud move reset` puts them all back.
   - Protected frames (unit frames) move only out of combat.
+- **Camera** (Camera.lua): the camera zooms out as far as the game allows, past the limit in the game's own settings (the `cameraDistanceMaxZoomFactor` CVar, raised at every login). On by default; switching **Maximum camera distance** off puts back the limit you had before.
 - **Density** (Density.lua): Minimal hides the minimap buttons, Standard (the default) shows them. SimplePanel's plugins are left alone.
 
 ## Vitals (Vitals.lua)

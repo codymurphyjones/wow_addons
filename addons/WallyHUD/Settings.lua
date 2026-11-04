@@ -24,6 +24,10 @@ S.page = ns.NewOptionsPage({ name = "WallyHUD", build = function(p)
             .. "quest titles in plain text with the level after them, the focused quest marked with an accent bar, thin "
             .. "progress bars under goals with a count, and Ready to turn in for finished quests. A /reload to switch off.",
         apply = function(on) if on and ns.Questie then ns.Questie:Apply() end end })
+    p:Check({ id = "maxCamera", path = "db.maxCamera", label = "Maximum camera distance",
+        tooltip = "Lets the camera zoom out as far as the game allows, past the limit in the game's own settings. "
+            .. "Switching it off puts back the limit you had before.",
+        apply = function() ns.Camera:Apply() end })
     p:Header("Vitals: your health and power, drawn into the screen")
     p:Check({ id = "vitals", path = "db.vitals", label = "The line (health and power across the screen)",
         tooltip = "One faint line across the screen: its height is your health (it sinks as you're hurt), and how far it's "

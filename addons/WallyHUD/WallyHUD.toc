@@ -19,6 +19,7 @@ Primitives.lua
 Minimap.lua
 Reporter.lua
 Density.lua
+Camera.lua
 RightColumn.lua
 Movers.lua
 Vitals.lua
