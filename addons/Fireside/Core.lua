@@ -20,7 +20,9 @@ ns.DEFAULTS = {
         shareBanner = true,   -- show the party the kudos you've received
         relay = true,         -- pass kudos and passed-on Flak you know of on to your groups (gossip)
         acceptTips = true,    -- accept private keep / try notes
-        hearth = true,        -- the Hearth strip while you're in a party (Hearth.lua)
+        hearth = true,        -- the Hearth while you're in a party (Hearth.lua)
+        hearthFrames = true,  -- its buttons on the party frames; false: the strip of portraits
+        raidSpot = "free",    -- the raid kudos button: "free" (dragged), "raidframes" or "minimap"
         prompts = true,       -- after a fight, offer a spark for what the data saw
         debug = false,
     },
@@ -35,6 +37,8 @@ ns.CHAR_DEFAULTS = {
     -- left, and the ripples feed.
     fb = { received = {}, letters = {}, sent = {}, feed = {}, sparks = {} },
     hearth = { point = "TOP", x = 0, y = -120 }, -- where the Hearth strip sits
+    raidButton = { point = "TOP", x = 0, y = -120 }, -- where the raid kudos button sits (raidSpot "free")
+    -- raidSession: the raid you're in, or left a little while ago (Feedback.RaidSession)
 }
 
 -- What a change refreshes (ns:Changed coalesces many edits into one refresh next frame).
@@ -57,6 +61,7 @@ local function Help()
     ns:Print("/fire <name> - look someone up", true)
     ns:Print("/fire party - your history with everyone in your party, in chat", true)
     ns:Print("/fire run - this run so far", true)
+    ns:Print("/fire raid - raid kudos: thank anyone who fought beside you in your raid", true)
     ns:Print("/fire recap - the last death recap", true)
     ns:Print("/fire debug - print what each fight's data harvest found (on/off)", true)
     ns:Print("/fire minimap - show/hide the minimap button", true)
@@ -78,6 +83,8 @@ SlashCmdList.FIRESIDE = function(msg)
         ns.UI:ShowPlayer(nil, true)
     elseif cmd == "party" then
         ns.Popup:ShowParty(true)
+    elseif cmd == "raid" or cmd == "kudos" then
+        ns.RaidKudos:Open()
     elseif cmd == "recap" then
         if not ns.DeathPopup:Reopen() then ns:Print("No death recap yet.", true) end
     elseif cmd == "run" then

@@ -2,7 +2,7 @@
 
 **Thank the people you run dungeons with, in the moment and at the end. Fireside turns a pickup group into a party that remembers each other.**
 
-Most dungeon groups end the same way: the last boss dies, someone says "ty", and everyone scatters. Fireside gives the run a proper ending. During the run, a small strip on your screen lets you send quick thanks the moment something happens ("Nice pull!", "Clutch heal!"). When the last boss falls, the whole party gathers round a campfire: everyone who was part of the run, even the ones who left. You thank people with kudos the whole party sees fly across the fire. If something could go better next time, you can say so privately, kindly and only to them.
+Most dungeon groups end the same way: the last boss dies, someone says "ty", and everyone scatters. Fireside gives the run a proper ending. During the run, small buttons on your party frames let you send quick thanks the moment something happens ("Nice pull!", "Clutch heal!"). When the last boss falls, the whole party gathers round a campfire: everyone who was part of the run, even the ones who left. You thank people with kudos the whole party sees fly across the fire. If something could go better next time, you can say so privately, kindly and only to them.
 
 - **Praise in public, critique in private.** Kudos are seen by the party and travel with people as what they're known for. Anything critical goes only to the person it's about.
 - **Built on what actually happened.** Fireside reads each fight (who interrupted, who healed whom, who held the mobs) and suggests the thanks that fit.
@@ -13,13 +13,21 @@ Most dungeon groups end the same way: the last boss dies, someone says "ty", and
 ## Features
 
 ### The Hearth: thanks in the moment
-While you're in a party, a slim strip shows a portrait for each member, with a small fire at its end.
+While you're in a party, each member's party frame gets a small spark button on its portrait, placed clear of buffs and debuffs, and your own frame gets a small fire. If you'd rather have a slim strip of portraits at the top of the screen, turn off **Put the Hearth on the party frames** in the settings. The strip also shows on its own when another addon replaces the party frames.
 
-- **Left-click someone** for a row of **sparks**, small thanks you send with one click: *Nice pull, Clutch heal, Good kick, Good crowd control, Thanks for the cleanse, Thanks for the buff, Thanks for the rez, Thanks for the summon, Thanks for waiting, Thanks for the quest, Good call.* Everyone in the party with Fireside sees it light up on that person's portrait.
+- **Left-click someone** for a row of **sparks**, small thanks you send with one click: *Nice pull, Clutch heal, Good kick, Good crowd control, Thanks for the cleanse, Thanks for the buff, Thanks for the rez, Thanks for the summon, Thanks for waiting, Thanks for the quest, Good call.* Everyone in the party with Fireside sees it light up on that person's button.
 - **Sparks for you** flash on your fire, with a short note of who sent what.
 - **Right-click someone** to **jot** a quick note to yourself about them ("held the bridge pull perfectly"). Jots are never sent to anyone. They wait for you at the campfire.
 - **After a fight**, if the data saw someone do something worth a thank-you, a toast offers the matching spark in one click: "Bob kept you up through that pull: *Send Clutch heal*".
-- **Shift-click** someone for their page. **Click the fire** for this run's campfire. Drag the strip by its edge to put it anywhere.
+- **Shift-click** someone for their page. **Click the fire** for this run's campfire. The strip can be dragged by its edge.
+
+### Raid kudos
+In a raid, the Hearth stays off your raid frames. A single button opens the **raid kudos** window instead. It also appears in a party that's shown with raid-style frames.
+
+- **Everyone who fought beside you**: anyone who was in the raid and in combat while in it with you. Someone kicked after the fighting started is still on the list, and kudos and notes reach them directly. Someone removed before any fight never shows up.
+- **Pick someone** and send **sparks**, give **kudos** the whole raid sees land, or leave a **private note** only they will see.
+- The list stays for 45 minutes after you leave the raid. **/fire raid** opens it.
+- The button can go anywhere you drag it, at the bottom-right of the raid frames, or under the minimap. The first-login setup shows each spot before you pick one.
 
 ### The Campfire: a proper ending
 When the last boss dies, while the party is still together, the campfire opens. Everyone sits in a ring around the fire:
@@ -93,8 +101,9 @@ Each person's page shows what they're known for (and where it came from), your r
 - The analysis stays on your own screen. At the campfire it only appears as the fire's nameless lessons.
 
 ### Settings
-In **Options > AddOns > Fireside** (or the Settings tab of the window), you can set:
-- the Hearth, and the spark offers after a fight
+On your first login, a short setup asks where the Hearth goes, whether the campfire opens on its own, and what you share. You can change all of it later in **Options > AddOns > Fireside** (or the Settings tab of the window), where you can set:
+- the Hearth (on the party frames, as a strip, or off), and the spark offers after a fight
+- where the raid kudos button sits
 - whether the campfire opens at the end of each run
 - whether to tell your party the kudos you've given, and show them the kudos you've received
 - whether to accept private notes (if you turn them off, people who try to send you one are told)
@@ -112,7 +121,7 @@ Names are WoW Forever's realmless "Given Family" names. Fights are read from Bli
 
 - Sparks, kudos, testimony and notes only reach players who also run Fireside. Everyone else still gets a seat at your fire, and everything you give them is remembered on your side.
 - Notes to someone who has left the group are sent to them directly. If they aren't online, the note is sent again the next time you group with them.
-- Fireside tracks 5-player dungeon groups. Raids aren't tracked, and the Hearth hides in a raid.
+- Fireside tracks 5-player dungeon groups. Raids aren't recorded as runs and have no campfire: in a raid, the raid kudos window is where you thank people.
 - The data can't see crowd control, positioning or what was said in chat, so some things only you can thank people for. That's what the kudos tray and jots are for.
 - A tip with nothing to measure (like "Say the plan before a pull") is kept as one to keep in mind. Practice only tracks the ones the data can see.
 - WoW Forever is still in beta, so what the game shows addons may change.

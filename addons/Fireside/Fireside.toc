@@ -40,6 +40,7 @@ Social.lua
 Popup.lua
 DeathPopup.lua
 Hearth.lua
+RaidKudos.lua
 ..\shared\Window.lua
 Campfire.lua
 Mirror.lua
@@ -48,3 +49,5 @@ UI.lua
 Minimap.lua
 ..\shared\OptionsPage.lua
 Settings.lua
+..\shared\Wizard.lua
+Setup.lua

@@ -6,7 +6,7 @@ local _, ns = ...
 -- error toasts (Reporter.lua), and the density presets (Density.lua). Settings: Options >
 -- AddOns > WallyHUD, or /whud.
 WallyHUD = WallyHUD or {}
-ns.VERSION = "0.1.2"
+ns.VERSION = "0.1.3"
 WallyHUD.VERSION = 1             -- the API's version (a number, as every suite API has)
 WallyHUD.RELEASE = ns.VERSION    -- the addon's release ("0.1.0")
 

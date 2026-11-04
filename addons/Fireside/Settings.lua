@@ -27,7 +27,16 @@ S.page = ns.NewOptionsPage({ name = "Fireside", build = function(p)
     p:Check({ path = "db.options.relay", label = "Pass on what I've heard (gossip)",
         tooltip = "Kudos and passed-on Flak you know of go on to the people you group with, never to the player they're about. Hearsay from people you haven't grouped with counts half, and can't make a Flak warning on its own." })
     p:Check({ path = "db.options.hearth", label = "Show the Hearth while in a party",
-        tooltip = "A slim strip with your party's portraits: left-click someone to send a spark (a small thanks), right-click to jot a note for the campfire.",
+        tooltip = "Spark buttons for your party: left-click someone to send a spark (a small thanks), right-click to jot a note for the campfire.",
+        apply = function() if ns.Hearth then ns.Hearth:Refresh() end end })
+    p:Check({ path = "db.options.hearthFrames", label = "Put the Hearth on the party frames",
+        tooltip = "A small spark button on each party frame's portrait, clear of buffs and debuffs, and a fire on yours. "
+            .. "Off: a strip of portraits at the top of the screen instead. If another addon replaces the party frames, the strip shows anyway. "
+            .. "In a raid, or a party shown with raid-style frames, one kudos button takes its place.",
+        apply = function() if ns.Hearth then ns.Hearth:Refresh() end end })
+    p:Dropdown({ path = "db.options.raidSpot", label = "Raid kudos button",
+        tooltip = "In a raid, the Hearth is one button that opens the raid kudos window (/fire raid). Where it sits.",
+        choices = { { "free", "Anywhere (drag it)" }, { "raidframes", "Bottom-right of the raid frames" }, { "minimap", "Under the minimap" } },
         apply = function() if ns.Hearth then ns.Hearth:Refresh() end end })
     p:Check({ path = "db.options.prompts", label = "Offer a spark after a fight",
         tooltip = "When the data saw someone do something worth a thank-you, a toast under the Hearth offers the spark in one click." })

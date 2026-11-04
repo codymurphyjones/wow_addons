@@ -28,12 +28,28 @@ local M = ns.Marks
 
 local comm = ns.NewGroupComm("FiresideFB", { pace = 0.3, raids = false, normalize = C.Canon, isMe = ns.Units.IsMe })
 F.comm = comm
+-- In a raid only kudos ("G") and sparks ("S") go out, from the raid kudos window (RaidKudos.lua),
+-- under a prefix of their own: cards, banners and gossip stay party-only.
+local raidComm = ns.NewGroupComm("FiresideFBR", { pace = 0.4, raids = true, normalize = C.Canon, isMe = ns.Units.IsMe })
+
+-- To the whole group: the raid in a raid, else the party.
+local function Broadcast(kind, payload)
+    if IsInRaid() then return raidComm:Send(kind, payload) end
+    return comm:Send(kind, payload)
+end
+
+-- Both channels hear kudos and sparks.
+local function Hear(kind, fn)
+    comm:On(kind, fn)
+    raidComm:On(kind, fn)
+end
 
 local FEED_KEEP = 100
 local RETRIES = 5
 local LIVE = 45 * 60 -- a finished run's campfire still takes kudos this long
 
 local function Me() return C.UnitFull("player") end
+local MemberOf -- the run's member key for a name (below)
 local function Wire(name) return ns.Units.Wire(name) or Clean(name, "[|;,=:]") end
 
 function F.DB()
@@ -68,8 +84,103 @@ function F.LiveRun()
     if last and last.stop and time() - last.stop <= LIVE then return last end
 end
 
+-- ---------------------------------------------------------------------------
+-- The raid session: a raid isn't a run, but kudos, sparks and notes in it need one to land on (so
+-- a kudo is given once and a note sent once). Kept per character (ns.char.raidSession):
+--   { id, raid = true, t, left (when you left the raid), me,
+--     members = { [full] = { class, fought } }, kudos, sparks, tips }
+-- Everyone who is in the raid at some point is a member; the ones who were in combat while in the
+-- raid with you have fought = true, and only they are on the raid kudos list (RaidKudos.lua): so
+-- someone kicked after the fighting started is still there to thank, and someone removed before
+-- it never shows up.
+-- ---------------------------------------------------------------------------
+
+local RAID_SESSION_AGE = 8 * 3600
+local IN_COMBAT_EVERY = 2
+
+local function UnitInCombat(unit) return C.Bool(C.Call(UnitAffectingCombat, unit)) end
+
+local function NoteRaid(s)
+    s.me = s.me or Me()
+    local anyFight = UnitInCombat("player")
+    for _, unit in ipairs(C.GroupUnits()) do
+        local full = C.UnitFull(unit)
+        if full then
+            local key = MemberOf(s, full) or full
+            local m = s.members[key]
+            if type(m) ~= "table" then m = {}; s.members[key] = m end
+            if not m.class then
+                local _, class = C.Call(UnitClass, unit)
+                m.class = C.Str(class)
+            end
+            if not m.fought and UnitInCombat(unit) then m.fought = true; anyFight = true end
+        end
+    end
+    return anyFight
+end
+
+-- The session of the raid you're in (made when you join), else nil.
+function F.RaidSession()
+    if not IsInRaid() then return nil end
+    local s = ns.char.raidSession
+    if type(s) ~= "table" or s.left or not s.t or time() - s.t > RAID_SESSION_AGE then
+        s = { id = "raid" .. time(), raid = true, t = time(), members = {}, kudos = {}, sparks = {}, tips = {} }
+        ns.char.raidSession = s
+        NoteRaid(s)
+    end
+    return s
+end
+
+-- The raid session in a raid, or the last one for a while after you leave it (its kudos window).
+function F.LastRaid()
+    local s = F.RaidSession() or ns.char.raidSession
+    if type(s) == "table" and (not s.left or time() - s.left <= LIVE) then return s end
+end
+
+-- The raid's kudos list: the members who fought, with whether they're still in the group.
+function F.RaidList(s)
+    local out = {}
+    for full, m in pairs(s and s.members or {}) do
+        if type(m) == "table" and m.fought and not C.IsMe(full) then
+            out[#out + 1] = { full = full, class = m.class, here = C.InGroup(full) }
+        end
+    end
+    table.sort(out, function(a, b)
+        if a.here ~= b.here then return a.here end
+        return a.full < b.full
+    end)
+    return out
+end
+
+-- Where feedback lands now: the raid session in a raid, else the campfire's run.
+function F.Live()
+    return F.RaidSession() or F.LiveRun()
+end
+
+-- Who was in combat while in the raid: checked every few seconds while anyone in it is fighting.
+local raidTicker
+local function WatchRaid()
+    if not ns.char then return end
+    if not IsInRaid() then
+        if raidTicker then raidTicker:Cancel(); raidTicker = nil end
+        local s = ns.char and ns.char.raidSession
+        if type(s) == "table" and not s.left then s.left = time() end
+        return
+    end
+    local s = F.RaidSession()
+    NoteRaid(s)
+    if not raidTicker then
+        raidTicker = C_Timer.NewTicker(IN_COMBAT_EVERY, function()
+            if not IsInRaid() then return WatchRaid() end
+            if NoteRaid(F.RaidSession()) then ns:Changed() end
+        end)
+    end
+end
+ns:On("PLAYER_ENTERING_WORLD", function() if ns.char then WatchRaid() end end)
+ns:On("PLAYER_REGEN_DISABLED", function() if IsInRaid() then NoteRaid(F.RaidSession()) end end)
+
 -- The run's member key for a name (any shape), or the run's "me".
-local function MemberOf(run, name)
+function MemberOf(run, name)
     if not (run and name) then return nil end
     if run.me and C.SameName(run.me, name) then return run.me end
     for full in pairs(run.members or {}) do
@@ -158,7 +269,7 @@ end
 function F:Give(run, to, k)
     if not (M.kudo[k] and to) then return false, "unknown" end
     if C.IsMe(to) then return false, "self" end
-    run = run or F.LiveRun()
+    run = run or F.Live()
     local key = MemberOf(run, to) or to
     if run and HasKudo(run, Me(), key, k) then return false, "given" end
     local p = ns.History:Get(key, true)
@@ -166,14 +277,14 @@ function F:Give(run, to, k)
     p.given[k] = (p.given[k] or 0) + 1
     Landed(run, Me(), key, k)
     local payload = ("%s|%s"):format(Wire(key), k)
-    if C.InGroup(key) then comm:Send("G", payload) else comm:SendTo("G", payload, key) end
+    if C.InGroup(key) then Broadcast("G", payload) else comm:SendTo("G", payload, key) end
     return true
 end
 
-comm:On("G", function(payload, sender)
+Hear("G", function(payload, sender)
     local to, k = payload:match("^([^|]+)|(%w+)$")
     if not (to and M.kudo[k]) or C.SameName(to, sender) then return end
-    local run = F.LiveRun()
+    local run = F.Live()
     local from = MemberOf(run, sender) or sender
     to = MemberOf(run, to) or (C.IsMe(to) and Me()) or ns.History:Key(to) or to
     -- Only kudos between people in the run (or for you, off the group) count for it.
@@ -230,19 +341,19 @@ end
 function F:Spark(to, s)
     if not (M.spark[s] and to) then return false, "unknown" end
     if C.IsMe(to) then return false, "self" end
-    local run = F.LiveRun()
+    local run = F.Live()
     local key = MemberOf(run, to) or to
     if Flooding(Me(), key, s, SPARK_GAP) then return false, "soon" end
     SparkLanded(run, Me(), key, s)
     local payload = ("%s|%s"):format(Wire(key), s)
-    if C.InGroup(key) then comm:Send("S", payload) else comm:SendTo("S", payload, key) end
+    if C.InGroup(key) then Broadcast("S", payload) else comm:SendTo("S", payload, key) end
     return true
 end
 
-comm:On("S", function(payload, sender)
+Hear("S", function(payload, sender)
     local to, s = payload:match("^([^|]+)|(%w+)$")
     if not (to and M.spark[s]) or C.SameName(to, sender) then return end
-    local run = F.LiveRun()
+    local run = F.Live()
     local from = MemberOf(run, sender) or sender
     to = MemberOf(run, to) or (C.IsMe(to) and Me()) or ns.History:Key(to) or to
     if not (run and MemberOf(run, from) and MemberOf(run, to)) then run = nil end
@@ -262,7 +373,7 @@ F.MAX_JOT = 140
 function F:Jot(to, text)
     text = ns.Trim(text or ""):sub(1, F.MAX_JOT)
     if text == "" or not to or C.IsMe(to) then return false end
-    local run = F.LiveRun()
+    local run = F.Live()
     local key = MemberOf(run, to) or ns.History:Key(to) or to
     local p = ns.History:Get(key, true)
     p.jots = p.jots or {}
@@ -301,7 +412,7 @@ end
 function F:GiveFlak(run, to, k, tell, pass)
     if not (M.flak[k] and to) then return false, "unknown" end
     if C.IsMe(to) then return false, "self" end
-    run = run or F.LiveRun()
+    run = run or F.Live()
     local key = MemberOf(run, to) or ns.History:Key(to) or to
     if run and F.FlakIn(run, key)[k] then return false, "given" end
     local p = ns.History:Get(key, true)
@@ -450,7 +561,7 @@ comm:On("R", function(payload, sender)
     for a, g, kind, k, t in body:gmatch("(%d+)%.(%d+)%.([fk])%.(%w+)%.(%d+)") do
         local about, giver = names[tonumber(a)], names[tonumber(g)]
         if about and giver and not C.SameName(about, sender) then
-            local key = MemberOf(F.LiveRun(), about) or ns.History:Key(about) or about
+            local key = MemberOf(F.Live(), about) or ns.History:Key(about) or about
             local hand = C.SameName(giver, sender) and 1 or 2
             if F.AddReport(key, giver, kind, k, tonumber(t), hand, sender) then changed = true end
         end
@@ -549,7 +660,7 @@ comm:On("C", function(payload, sender)
     for entry in payload:gmatch("[^;]+") do
         local to, marks = entry:match("^([^=]+)=(.+)$")
         if to and not C.IsMe(to) and not C.SameName(to, sender) then
-            local key = MemberOf(F.LiveRun(), to) or ns.History:Key(to) or to
+            local key = MemberOf(F.Live(), to) or ns.History:Key(to) or to
             local p = ns.History:Get(key, true)
             if p then
                 p.heard = p.heard or {}
@@ -565,7 +676,7 @@ comm:On("C", function(payload, sender)
 end)
 
 comm:On("B", function(payload, sender)
-    local p = ns.History:Get(MemberOf(F.LiveRun(), sender) or sender, true)
+    local p = ns.History:Get(MemberOf(F.Live(), sender) or sender, true)
     if not p then return end
     local b = { marks = {}, t = time() }
     for k, n, g in payload:gmatch("(%w+):(%d+):(%d+)") do
@@ -600,7 +711,7 @@ function F:SendTip(run, to, keep, try, note)
     note = ns.Trim(note or ""):sub(1, M.MAX_NOTE)
     if try == "" then try = nil end
     if not (M.kudo[keep] and to and Says(try, note)) or C.IsMe(to) then return false end
-    run = run or F.LiveRun()
+    run = run or F.Live()
     local key = MemberOf(run, to) or to
     if run and F.TipIn(run, key) then return false end
     self:Give(run, key, keep)
@@ -740,6 +851,7 @@ end)
 local inParty = {}
 local pending
 ns:On("GROUP_ROSTER_UPDATE", function()
+    WatchRaid()
     if pending then return end
     pending = true
     C_Timer.After(2, function()

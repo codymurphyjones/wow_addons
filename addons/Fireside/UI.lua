@@ -363,14 +363,15 @@ local function CreateSettingsPage()
         { "shareKudos", "Tell my party the kudos I've given", "When someone joins, your party hears the kudos you've given the others, and kudos travel on as gossip from group to group." },
         { "shareBanner", "Show my party the kudos I've received", "Your own record, so people new to you see what you're known for." },
         { "relay", "Pass on what I've heard (gossip)", "Kudos and passed-on Flak you know of go on to the people you group with, never to the player they're about. Hearsay from people you haven't grouped with counts half, and can't make a Flak warning on its own." },
-        { "hearth", "Show the Hearth while in a party", "A slim strip with your party's portraits: left-click someone to send a spark (a small thanks), right-click to jot a note for the campfire." },
+        { "hearth", "Show the Hearth while in a party", "Spark buttons for your party: left-click someone to send a spark (a small thanks), right-click to jot a note for the campfire." },
+        { "hearthFrames", "Put the Hearth on the party frames", "A small spark button on each party frame's portrait, clear of buffs and debuffs. Off: a strip of portraits at the top of the screen instead." },
         { "prompts", "Offer a spark after a fight", "When the data saw someone do something worth a thank-you, a toast under the Hearth offers the spark in one click." },
         { "acceptTips", "Accept private notes", "Keep / try notes from the people you group with. Off: senders are told you've turned them off." },
         { "chat", "Print messages in chat" },
     }
     p.boxes = {}
     for i, c in ipairs(checks) do
-        local b = W.MakeCheckbox(p, c[2]); b:SetPoint("TOPLEFT", -4, -30 - (i - 1) * 26)
+        local b = W.MakeCheckbox(p, c[2]); b:SetPoint("TOPLEFT", -4, -30 - (i - 1) * 24)
         b:SetScript("OnClick", function(self) ns:SetOption("db.options." .. c[1], self:GetChecked() and true or false) end)
         if c[3] then Hint(b, c[2], c[3]) end
         p.boxes[c[1]] = b
