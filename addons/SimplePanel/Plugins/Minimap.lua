@@ -462,6 +462,8 @@ local function TakeAuras(p)
     local k0, found, right, top = UIParent:GetEffectiveScale(), {}, nil, nil
     for _, name in ipairs(AURAS) do
         local f = _G[name]
+        -- the bar may have pushed it down: back to its own place, which is what we remember
+        if f and ns.Bar.ReleaseFrame then ns.Bar.ReleaseFrame(f) end
         if f and f:GetRight() and f:GetTop() and not (f.IsProtected and f:IsProtected()) then
             local k = f:GetEffectiveScale() / k0
             local r, t = f:GetRight() * k, f:GetTop() * k

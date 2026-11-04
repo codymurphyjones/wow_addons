@@ -88,6 +88,18 @@ function R:Toggle()
         return
     end
     if InCombatLockdown() then return ns:Print("After the fight: the column can't move in combat.") end
+    self:ShowMover()
+    ns:Print("Drag the box to move the flag carrier frames (the right-side column). /whud flags again to lock; /whud flags reset to put it back.")
+end
+
+-- With the other frames' boxes (Movers.lua: Edit Mode, /whud move), without a word in chat.
+function R:HideMover()
+    if mover then mover:Hide() end
+end
+
+function R:ShowMover()
+    if InCombatLockdown() or not Column() then return end
+    local m = Mover()
     -- Over the column as it is now (or where you'd put it), at least big enough to grab.
     local f = Column()
     local s = UIParent:GetEffectiveScale()
@@ -106,7 +118,6 @@ function R:Toggle()
     m:ClearAllPoints()
     m:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", right, top)
     m:Show()
-    ns:Print("Drag the box to move the flag carrier frames (the right-side column). /whud flags again to lock; /whud flags reset to put it back.")
 end
 
 -- Laid out again by the game (frames shown or hidden in it, the screen resized): back where you

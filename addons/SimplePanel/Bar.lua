@@ -806,12 +806,12 @@ function Bar:BuildMenu(m)
         sub:Checkbox({ text = "Auto-hide", get = function() return o.autoHide end, set = Setter("autoHide"),
             tooltip = "Slide the bar away until the mouse touches the top of the screen." })
         sub:Checkbox({ text = "Hide in combat", get = function() return o.hideInCombat end, set = Setter("hideInCombat") })
-        sub:Checkbox({ text = "Push minimap and buffs down", get = function() return o.screenAdjust end,
+        sub:Checkbox({ text = "Push frames below the bar", get = function() return o.screenAdjust end,
             set = Setter("screenAdjust"),
             disabled = function() return o.autoHide end,
             tooltip = function(tt)
-                tt:SetTitle("Push minimap and buffs down")
-                tt:AddLine("Moves the minimap and buff frames below the bar so it doesn't cover them.", T.text, true)
+                tt:SetTitle("Push frames below the bar")
+                tt:AddLine("Moves every frame the bar would cover (minimap, buffs, unit frames, widgets, other addons' frames) down below it. Frames you drag yourself stay where you put them.", T.text, true)
                 if o.autoHide then tt:AddLine("Not used while auto-hide is on: the bar takes no room then.", T.yellow, true) end
             end })
         sub:Checkbox({ text = "Lock plugins", get = function() return o.locked end, set = Setter("locked"),
@@ -879,13 +879,27 @@ end
 function Bar:Reveal() idle = 0; targetOffset = 0 end
 
 -- ---------------------------------------------------------------------------
--- Screen adjust: move the minimap and buffs below the bar
+-- Screen adjust: every frame the bar would cover moves down below it
 -- ---------------------------------------------------------------------------
+-- Only while the bar stays on screen (option on, auto-hide off, bar showing); otherwise every frame
+-- moved goes back where it was. Candidates are UIParent's children placed only against UIParent (a
+-- frame placed against another frame follows that one: DebuffFrame follows BuffFrame, a SaddleBags
+-- panel's frames follow the panel). A frame collides when its own place (before our shift) reaches
+-- into the bar's band at the top of the screen; it moves down by the bar's height. Someone else
+-- moving a frame we moved makes that their place, and it's checked again.
 
-local ADJUST = { "MinimapCluster", "BuffFrame" }
-local saved, applying = {}, false
--- Frames a plugin positions itself (the Minimap plugin lines buffs up beside its square); left alone here.
+-- Frames a plugin positions itself (the Minimap plugin lines buffs up beside its square); left alone
+-- here. Keyed by global name.
 Bar.adjustOwned = {}
+
+local saved = {}     -- [frame] = its own anchor points (what we restore)
+local shifted = {}   -- [frame] = the offset applied (UIParent units)
+local hooked = {}    -- [frame] = SetPoint hooked
+local broken = {}    -- [frame] = moving it failed once; never tried again
+local applying, pending = false, false
+
+-- Strata of things that come and go over everything (menus, popups' dimming, tooltips).
+local SKIP_STRATA = { FULLSCREEN = true, FULLSCREEN_DIALOG = true, TOOLTIP = true }
 
 local function CapturePoints(f)
     local pts = {}
@@ -894,38 +908,186 @@ local function CapturePoints(f)
 end
 
 local function Offset()
-    if not Opt().screenAdjust or Opt().autoHide or not frame:IsShown() then return 0 end
+    if not frame or not Opt().screenAdjust or Opt().autoHide or not frame:IsShown() then return 0 end
     return Height() * frame:GetScale()
 end
 
-local function ApplyAdjust()
+local function Secret(...)
+    if not issecretvalue then return false end
+    for i = 1, select("#", ...) do
+        if issecretvalue((select(i, ...))) then return true end
+    end
+    return false
+end
+
+-- Its scale against UIParent's: UIParent units = own units * k.
+local function ScaleOf(f)
+    local s = f:GetEffectiveScale()
+    if Secret(s) or not s or s == 0 then return nil end
+    return s / UIParent:GetEffectiveScale()
+end
+
+local function Protected(f) return f.IsProtected ~= nil and f:IsProtected() end
+
+-- Every point placed against UIParent (or the parent, when that's UIParent)?
+local function OnlyOnUIParent(pts)
+    if #pts == 0 then return false end
+    for _, pt in ipairs(pts) do
+        local rel = pt[2]
+        if Secret(rel) or (rel ~= nil and rel ~= UIParent) then return false end
+    end
+    return true
+end
+
+-- Ours, or never to be pushed.
+local function Excluded(f)
+    if f.IsForbidden and f:IsForbidden() then return true end
+    if broken[f] or f == frame or f == strip or f.isFloat then return true end
+    local name = f.GetName and f:GetName()
+    if name then
+        if Bar.adjustOwned[name] or name == "WorldFrame" or name:find("^SimplePanel") or name:find("Tooltip") then
+            return true
+        end
+    end
+    local strata = f:GetFrameStrata()
+    if Secret(strata) or SKIP_STRATA[strata] then return true end
+    -- The user drags it about and the game saves where: a shift would be saved and add up.
+    if f.IsUserPlaced and f:IsMovable() and f:IsUserPlaced() then return true end
+    -- Placed by you through WallyHUD (its Edit Mode boxes): that's where you want it.
+    if WallyHUD and WallyHUD.PlacesFrame and WallyHUD.PlacesFrame(f) then return true end
+    return false
+end
+
+-- For other addons (WallyHUD's movers): does SimplePanel place this frame itself? The buffs its
+-- minimap square lines up, and the minimap cluster while the square replaces it.
+function SimplePanel.PlacesFrame(f)
+    local name = f and f.GetName and f:GetName()
+    if name and Bar.adjustOwned[name] then return true end
+    if f == MinimapCluster and Bar.minimapHost and Bar.minimapHost.IsActive() then return true end
+    return false
+end
+
+-- Its own top and bottom (before our shift) in UIParent units, or nil when it has no place yet.
+local function BaseEdges(f)
+    local t, b = f:GetTop(), f:GetBottom()
+    local w, h = f:GetWidth(), f:GetHeight()
+    if Secret(t, b, w, h) or not (t and b) then return nil end
+    local k = ScaleOf(f)
+    if not k then return nil end
+    local W, H = UIParent:GetWidth(), UIParent:GetHeight()
+    -- full-screen helpers and tall columns aren't "at the top"
+    if h * k > H / 2 or (w * k > W * 0.9 and h * k > H / 4) then return nil end
+    local a = shifted[f] or 0
+    return t * k + a, b * k + a
+end
+
+local function Collides(f, off)
+    local top, bottom = BaseEdges(f)
+    if not top then return false end
+    local screenTop = UIParent:GetTop() or UIParent:GetHeight()
+    return top > screenTop - off + 0.5 and bottom < screenTop
+end
+
+local function Place(f, off)
+    local k = ScaleOf(f)
+    if not k then return false end
+    local dy = off / k
+    applying = true
+    local ok = pcall(function()
+        f:ClearAllPoints()
+        for _, pt in ipairs(saved[f]) do
+            local p, rel, rp, x, y = unpack(pt)
+            f:SetPoint(p, rel, rp, x, (y or 0) - dy)
+        end
+    end)
+    applying = false
+    return ok
+end
+
+-- Back to its own place and forgotten.
+local function Release(f)
+    if not saved[f] then return end
+    if (shifted[f] or 0) ~= 0 and not (InCombatLockdown() and Protected(f)) then
+        if not Place(f, 0) then broken[f] = true end
+    end
+    saved[f], shifted[f] = nil, nil
+end
+
+local ApplyAdjust
+
+local function Hook(f)
+    if hooked[f] then return end
+    hooked[f] = true
+    hooksecurefunc(f, "SetPoint", function(self)
+        if applying or not saved[self] then return end
+        -- Someone else moved it: that's its place now; check it again.
+        saved[self], shifted[self] = CapturePoints(self), 0
+        if not pending then
+            pending = true
+            C_Timer.After(0, function() pending = false; ApplyAdjust() end)
+        end
+    end)
+end
+
+function ApplyAdjust()
+    if not frame then return end
     if InCombatLockdown() then return ns:AfterCombat("screenAdjust", ApplyAdjust) end
     local off = Offset()
-    for _, name in ipairs(ADJUST) do
-        local f = _G[name]
-        if f and not (f.IsProtected and f:IsProtected()) and not Bar.adjustOwned[name] then
-            if not saved[name] then
-                saved[name] = CapturePoints(f)
-                hooksecurefunc(f, "SetPoint", function(self)
-                    if applying or Bar.adjustOwned[name] then return end
-                    -- Someone else moved it: take their position as the new base and re-offset.
-                    saved[name] = CapturePoints(self)
-                    C_Timer.After(0, ApplyAdjust)
-                end)
+
+    -- Frames already moved: keep, re-shift (the bar changed height) or let go.
+    for f in pairs(saved) do
+        local name = f:GetName()
+        if name and Bar.adjustOwned[name] then
+            saved[f], shifted[f] = nil, nil -- the plugin places it now
+        elseif off == 0 or Excluded(f) or not Collides(f, off) then
+            Release(f)
+        elseif shifted[f] ~= off then
+            if Place(f, off) then shifted[f] = off else Release(f); broken[f] = true end
+        end
+    end
+    if off == 0 then return end
+
+    -- Everything else at the top of the screen.
+    for _, f in ipairs({ UIParent:GetChildren() }) do
+        if not saved[f] and not Excluded(f) then
+            local pts = CapturePoints(f)
+            if OnlyOnUIParent(pts) and Collides(f, off) then
+                saved[f], shifted[f] = pts, 0
+                Hook(f)
+                if Place(f, off) then shifted[f] = off
+                else
+                    pcall(Place, f, 0)
+                    saved[f], shifted[f], broken[f] = nil, nil, true
+                end
             end
-            applying = true
-            f:ClearAllPoints()
-            for _, pt in ipairs(saved[name]) do
-                local p, rel, rp, x, y = unpack(pt)
-                -- Only frames anchored to the top of the screen move.
-                local y2 = (rel == UIParent or rel == nil) and (y or 0) - off or y
-                f:SetPoint(p, rel, rp, x, y2)
-            end
-            applying = false
         end
     end
 end
 Bar.ApplyAdjust = ApplyAdjust
+
+-- A plugin taking a frame over (the Minimap plugin's buffs): put it back on its own place first, so
+-- the place the plugin remembers (and restores later) is the real one.
+function Bar.ReleaseFrame(f)
+    if f then Release(f) end
+end
+
+-- Frames show up late (battleground widgets, load-on-demand windows, other addons): look again now
+-- and then while there's something to push.
+C_Timer.NewTicker(2, function()
+    if frame and not InCombatLockdown() and Offset() > 0 then ApplyAdjust() end
+end)
+
+local loadPending = false
+ns:On("ADDON_LOADED", function()
+    if not frame or loadPending then return end
+    loadPending = true
+    C_Timer.After(0.5, function() loadPending = false; ApplyAdjust() end)
+end)
+
+-- Addons that save their frame's place at logout save the real one, not ours.
+ns:On("PLAYER_LOGOUT", function()
+    for f in pairs(saved) do Release(f) end
+end)
 
 -- ---------------------------------------------------------------------------
 -- Build

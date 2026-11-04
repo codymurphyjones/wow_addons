@@ -189,11 +189,11 @@ local steps = {
     },
     {
         title = "Room for the bar",
-        text = "The game keeps its minimap and buffs in the same corner as the end of the bar.",
+        text = "The game keeps its minimap, buffs and other frames at the top of the screen, under the bar.",
         when = function() return not ns.db.options.autoHide end,
         path = "db.options.screenAdjust",
         choices = {
-            { true, "Push them down", "The minimap and buffs move below the bar." },
+            { true, "Push them down", "Every frame the bar would cover moves below it." },
             { false, "Leave them", "Pick this if another addon places them." },
         },
     },

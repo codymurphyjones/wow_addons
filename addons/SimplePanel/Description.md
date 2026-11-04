@@ -34,7 +34,7 @@ SimplePanel puts the things you check all the time into one thin bar along the t
   - Alerts from hidden plugins flash on **»**.
 - **Auto-hide:** the bar slides away after a moment and comes back when your mouse touches the top of the screen. It stays put while you're using a menu, a tooltip or the drawer.
 - **Hide in combat:** the bar steps aside during fights.
-- **Push minimap and buffs down:** moves the minimap and your buffs below the bar so it doesn't cover them.
+- **Push frames below the bar:** moves every frame the bar would cover (the minimap, your buffs, unit frames, the game's widgets, other addons' frames) down below it. Only while the bar stays on screen: with auto-hide on, everything keeps its place. Frames you drag yourself stay where you put them.
 - **Own Panels** (Options → AddOns → SimplePanel): clicking the Durability plugin opens SimplePanel's own character sheet in Wally's style, latched to the plugin: your gear around your 3D model with durability on every slot, the repair bill, your stats, and the Pet, Reputation, Skills and Honor tabs. Tabs other add-ons add to the game's sheet open the game's window on that tab. SimplePanel's panels (the sheet, the launcher drawer) hang from their plugin, lined up with it, and move aside so they never cover each other.
 - **Size and look:** height, background opacity, dividers between plugins, small or normal font, and a **Scale** setting that grows the bar and its charts together.
 - **Flashes:** a plugin briefly lights up when something happens: new mail, a skill-up, a quest done, ammo running low.
@@ -167,7 +167,7 @@ Most settings sit right on the bar.
 
 | Where | What's there |
 |---|---|
-| **Right-click empty bar space** | **Edit the bar**; **Plugins** (every plugin, by category, to turn on or off); **Bar**: Auto-hide, Hide in combat, Push minimap and buffs down, Lock plugins, Dividers, Chat messages, Height, Background opacity, Scale (bar and charts), Font; Rescan minimap buttons; Settings; Reload UI |
+| **Right-click empty bar space** | **Edit the bar**; **Plugins** (every plugin, by category, to turn on or off); **Bar**: Auto-hide, Hide in combat, Push frames below the bar, Lock plugins, Dividers, Chat messages, Height, Background opacity, Scale (bar and charts), Font; Rescan minimap buttons; Settings; Reload UI |
 | **Right-click any plugin** | Its own options, then **Display** (Show icon, Show label, Colored values, Inline sparkline, Progress bar: Fill or Underline and Bar width, Position: Left, Center or Right) and **Hide** |
 | **Appearance plugin** | Color scheme, Accent in my class color, Window opacity, Text size |
 | **Launchers plugin (right-click)** | Sort, Tile size, Columns, Show hidden launchers, Placement for this character only, Every launcher, Rescan minimap |

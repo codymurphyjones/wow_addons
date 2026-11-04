@@ -6,7 +6,7 @@ local _, ns = ...
 -- error toasts (Reporter.lua), and the density presets (Density.lua). Settings: Options >
 -- AddOns > WallyHUD, or /whud.
 WallyHUD = WallyHUD or {}
-ns.VERSION = "0.1.1"
+ns.VERSION = "0.1.2"
 WallyHUD.VERSION = 1             -- the API's version (a number, as every suite API has)
 WallyHUD.RELEASE = ns.VERSION    -- the addon's release ("0.1.0")
 
@@ -28,6 +28,7 @@ ns.DEFAULTS = {
     vitalsFilm = true,       -- the cold film over the health you've lost
     vitalsRim = true,        -- the bruised edges and the beat when you're low for you
     vitalsRhythm = true,     -- the five-second rule sweep and the tick ripples
+    movers = {},             -- [key] = { point, x, y }: where you put a frame Edit Mode can't move (Movers.lua)
 }
 ns.CHAR_DEFAULTS = {}
 
@@ -99,6 +100,7 @@ local function Help()
     ns:Print("/whud minimal | standard - hide or show the minimap buttons")
     ns:Print("/whud report - Blizzard's Issue Reporter (also Ctrl+Shift+/)")
     ns:Print("/whud debug - what WallyHUD finds, and the frame under the mouse")
+    ns:Print("/whud move - move the game's frames Edit Mode and Bartender4 can't (also in Edit Mode); /whud move list | reset")
     ns:Print("/whud flags - move the battleground flag carrier frames (the right-side column); /whud flags reset")
     ns:Print("/whud vitals - what Vitals has learned about you; /whud vitals forget")
     ns:Print("/whud orb reset - put the orb back where your portrait was")
@@ -117,6 +119,12 @@ SlashCmdList.WALLYHUD = function(msg)
         Help()
     elseif cmd == "debug" then
         ns:Debug()
+    elseif cmd == "move" then
+        ns.Movers:Toggle()
+    elseif cmd == "move list" then
+        ns.Movers:PrintList()
+    elseif cmd == "move reset" then
+        ns.Movers:ResetAll()
     elseif cmd == "flags" then
         ns.RightColumn:Toggle()
     elseif cmd == "flags reset" then

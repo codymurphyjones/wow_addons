@@ -684,8 +684,8 @@ Config.page = ns.NewOptionsPage({ name = "SimplePanel", build = function(p)
     p:Header("Bar")
     p:Check({ path = "db.options.autoHide", label = "Auto-hide", tooltip = "Slide the bar away until the mouse touches the top of the screen (/spanel autohide).", apply = ApplyBar })
     p:Check({ path = "db.options.hideInCombat", label = "Hide in combat", apply = ApplyBar })
-    p:Check({ path = "db.options.screenAdjust", label = "Push minimap and buffs down",
-        tooltip = "Moves the minimap and buff frames below the bar so it doesn't cover them. Not used while auto-hide is on: the bar takes no room then.", apply = ApplyBar })
+    p:Check({ path = "db.options.screenAdjust", label = "Push frames below the bar",
+        tooltip = "Moves every frame the bar would cover (minimap, buffs, unit frames, widgets, other addons' frames) down below it. Frames you drag yourself stay where you put them. Not used while auto-hide is on: the bar takes no room then.", apply = ApplyBar })
     p:Check({ path = "db.options.locked", label = "Lock plugins", tooltip = "When unlocked, shift-drag a plugin to move it (/spanel lock)." })
     p:Check({ path = "db.options.divider", label = "Dividers", apply = LayoutBar })
     p:Check({ path = "db.options.chat", label = "Chat messages", tooltip = "Notices such as 'freed 2.1 MB' or launcher changes." })

@@ -20,6 +20,10 @@ local _, ns = ...
 -- The cheapest wins, unless even that one puts more than VITAL_SHARE of the tooltip over something
 -- vital: then it goes where Edit Mode puts it (the game's default spot), as without this addon. A
 -- tooltip the game shows at the cursor (your setting) is left there.
+-- In a fight (combatKeepOut) the middle of the screen is off limits, not just costly: a square
+-- KEEP_OUT of the screen's height on a side, centred. Spots over it are never taken (four more,
+-- just outside it in line with the cursor, are tried instead), Edit Mode's spot only when it's
+-- clear of it, and a tooltip doesn't glide across it: it jumps.
 local Place = {}
 ns.Place = Place
 
@@ -41,12 +45,13 @@ local CLAMPED = 0.1      -- a spot pushed back onto the screen costs this much m
 local BIG = 0.12         -- a tooltip this share of the screen cares half as much about being near
 local VITAL_SHARE = 0.2  -- more of the tooltip than this over something vital: Edit Mode's spot instead
 local GLIDE = 14         -- how fast a tooltip that's showing moves to a new spot (about 1/5 s)
+local KEEP_OUT = 0.5     -- in a fight: a square in the middle, this share of the screen's height on a side, never covered
 
 local last -- { x, y }: the spot it had last
 
 -- What happened, for /wtip status: hooks run, tooltips placed, Edit Mode's spot used, sizes the game
--- kept secret, and errors (with the last one).
-ns.stats = { hooked = 0, placed = 0, fallback = 0, secret = 0, errors = 0, lastError = nil }
+-- kept secret, placements in a fight that skipped spots over the middle, and errors (with the last one).
+ns.stats = { hooked = 0, placed = 0, fallback = 0, secret = 0, keptOut = 0, errors = 0, lastError = nil }
 
 -- A number the game may keep secret (this client hides some of a tooltip's details from addons):
 -- nil when it's secret.
@@ -55,6 +60,25 @@ local function Num(v)
     return v
 end
 local known = { w = 260, h = 120 } -- the last size that wasn't secret (a typical one until then)
+local biggest = { w = 260, h = 120 } -- the largest size read this session: a secret size is checked against the middle at this
+
+-- The square kept clear in a fight: { x, y, w, h } in UIParent's units.
+local function Zone()
+    local W, H = UIParent:GetWidth(), UIParent:GetHeight()
+    local side = H * KEEP_OUT
+    return { x = (W - side) / 2, y = (H - side) / 2, w = side, h = side }
+end
+Place.Zone = Zone
+
+-- In a fight: the game says so (the lockdown starts a moment after PLAYER_REGEN_DISABLED, so that
+-- event counts too).
+local fighting = false
+local function InFight()
+    if fighting or InCombatLockdown() then return true end
+    local v = UnitAffectingCombat("player")
+    if issecretvalue and issecretvalue(v) then return false end
+    return v and true or false
+end
 
 -- Where the cursor is heading: its speed (UIParent units a second), smoothed over a few frames.
 local cursor = { x = nil, y = nil, vx = 0, vy = 0 }
@@ -73,14 +97,17 @@ tracker:SetScript("OnUpdate", function(_, dt)
 end)
 
 -- The moment a tooltip is placed in: what it's about (its owner, when that's a button or window,
--- not the world), a fight, you moving, the cursor's heading, and where it is now (if showing).
+-- not the world), a fight, you moving, the cursor's heading, where it is now (if showing), and the
+-- square to keep clear (keepOut, in a fight).
 local function Moment(tip)
-    local ctx = { vx = cursor.vx, vy = cursor.vy, focus = S.info and S.info.owner }
+    local ctx = { vx = cursor.vx, vy = cursor.vy, focus = S.info and S.info.owner, skipped = 0 }
+    local fight = InFight()
     if ns.db.combatAware then
-        ctx.combat = (InCombatLockdown() or UnitAffectingCombat("player")) and true or false
+        ctx.combat = fight
         local speed = GetUnitSpeed and Num(GetUnitSpeed("player"))
         ctx.moving = speed ~= nil and speed > 0
     end
+    if ns.db.combatKeepOut and fight then ctx.keepOut = Zone() end
     local g = S.glide
     if g and g.shown and tip:IsShown() then ctx.here = { x = g.tx, y = g.ty } end
     return ctx
@@ -93,8 +120,26 @@ local function Overlap(ax, ay, aw, ah, b)
     return w * h
 end
 
--- The spots to try for a w x h tooltip: { name, x, y } (bottom left), on the screen.
-local function Spots(w, h, cx, cy, W, H, here)
+-- How much of a w x h tooltip at x, y (bottom left) is over the square kept clear (0 when it's clear,
+-- or there's no square). When the game kept its size secret (ctx.pad), it's checked at the largest
+-- size read, grown away from the corner the game pins it by.
+local function OverMiddle(x, y, w, h, ctx)
+    local zone = ctx.keepOut
+    if not zone then return 0 end
+    local p = ctx.pad
+    if p then
+        local pw, ph = math.max(w, p.w), math.max(h, p.h)
+        local corner = p.corner or ""
+        if corner:find("RIGHT") then x = x + w - pw end
+        if corner:find("TOP") then y = y + h - ph end
+        w, h = pw, ph
+    end
+    return Overlap(x, y, w, h, zone)
+end
+
+-- The spots to try for a w x h tooltip: { name, x, y } (bottom left), on the screen. zone: the
+-- square kept clear in a fight, with four spots just outside it in line with the cursor.
+local function Spots(w, h, cx, cy, W, H, here, zone)
     local out = {}
     local function Add(name, x, y)
         local fx = math.max(MARGIN, math.min(W - w - MARGIN, x))
@@ -107,6 +152,12 @@ local function Spots(w, h, cx, cy, W, H, here)
         Add("above right of the cursor", cx + NEAR, cy + NEAR)
         Add("below left of the cursor", cx - NEAR - w, cy - NEAR - h)
         Add("above left of the cursor", cx - NEAR - w, cy + NEAR)
+    end
+    if zone and cx then
+        Add("left of the middle", zone.x - NEAR - w, cy - h / 2)
+        Add("right of the middle", zone.x + zone.w + NEAR, cy - h / 2)
+        Add("above the middle", cx - w / 2, zone.y + zone.h + NEAR)
+        Add("below the middle", cx - w / 2, zone.y - NEAR - h)
     end
     local left, right = MARGIN, W - w - MARGIN
     local bottom, top, middle = MARGIN, H - h - MARGIN, (H - h) / 2
@@ -125,7 +176,9 @@ local function Spots(w, h, cx, cy, W, H, here)
 end
 
 -- The best spot for the tooltip: x, y (bottom left, UIParent units), its name and what it covers;
--- or nil when every spot covers too much that's vital.
+-- or nil when every spot covers too much that's vital (and the best one, as the second value). In a
+-- fight, spots over the middle are skipped (counted in ctx.skipped); when none is clear of it,
+-- nil and the one over it least.
 function Place:Choose(w, h, ctx)
     ctx = ctx or {}
     local us = UIParent:GetEffectiveScale()
@@ -145,31 +198,52 @@ function Place:Choose(w, h, ctx)
     if area / (W * H) > BIG then far = far * 0.5 end
     local speed = math.sqrt((ctx.vx or 0) ^ 2 + (ctx.vy or 0) ^ 2)
     local best, bestCost, bestVital
-    for _, spot in ipairs(Spots(w, h, cx, cy, W, H, ctx.here)) do
-        local cost, vital, worst, worstShare = 0, 0, nil, 0
-        for _, o in ipairs(obstacles) do
-            local share = Overlap(spot.x, spot.y, w, h, o) / area
-            if share > 0 then
-                cost = cost + share * o.weight
-                if o.weight >= ns.Screen.VITAL then vital = vital + share end
-                if share * o.weight > worstShare then worst, worstShare = o.name, share * o.weight end
+    local nearest, nearestOver -- the spot over the middle least, for when none is clear of it
+    ctx.skipped = 0
+    for _, spot in ipairs(Spots(w, h, cx, cy, W, H, ctx.here, ctx.keepOut)) do
+        local over = OverMiddle(spot.x, spot.y, w, h, ctx)
+        if over > 0 then
+            ctx.skipped = ctx.skipped + 1
+            if not nearestOver or over < nearestOver then nearest, nearestOver = spot, over end
+        else
+            local cost, vital, worst, worstShare = 0, 0, nil, 0
+            for _, o in ipairs(obstacles) do
+                local share = Overlap(spot.x, spot.y, w, h, o) / area
+                if share > 0 then
+                    cost = cost + share * o.weight
+                    if o.weight >= ns.Screen.VITAL then vital = vital + share end
+                    if share * o.weight > worstShare then worst, worstShare = o.name, share * o.weight end
+                end
             end
+            local dx, dy = spot.x + w / 2 - ax, spot.y + h / 2 - ay
+            local dist = math.sqrt(dx * dx + dy * dy)
+            cost = cost + far * dist / diag
+            -- In the way of where the cursor's heading.
+            if speed > MOVING_FAST and dist > 0 then
+                local ahead = ((spot.x + w / 2 - cx) * ctx.vx + (spot.y + h / 2 - cy) * ctx.vy) / (speed * math.max(1, dist))
+                if ahead > 0.4 then cost = cost + HEADING * ahead end
+            end
+            if spot.clamped then cost = cost + CLAMPED end
+            if spot.here or (last and math.abs(last.x - spot.x) < 4 and math.abs(last.y - spot.y) < 4) then cost = cost - STAY end
+            spot.cost, spot.covers = cost, worst
+            if not bestCost or cost < bestCost then best, bestCost, bestVital = spot, cost, vital end
         end
-        local dx, dy = spot.x + w / 2 - ax, spot.y + h / 2 - ay
-        local dist = math.sqrt(dx * dx + dy * dy)
-        cost = cost + far * dist / diag
-        -- In the way of where the cursor's heading.
-        if speed > MOVING_FAST and dist > 0 then
-            local ahead = ((spot.x + w / 2 - cx) * ctx.vx + (spot.y + h / 2 - cy) * ctx.vy) / (speed * math.max(1, dist))
-            if ahead > 0.4 then cost = cost + HEADING * ahead end
-        end
-        if spot.clamped then cost = cost + CLAMPED end
-        if spot.here or (last and math.abs(last.x - spot.x) < 4 and math.abs(last.y - spot.y) < 4) then cost = cost - STAY end
-        spot.cost, spot.covers = cost, worst
-        if not bestCost or cost < bestCost then best, bestCost, bestVital = spot, cost, vital end
     end
-    if not best or bestVital > VITAL_SHARE then return nil, best end
+    if not best then return nil, nearest end
+    if bestVital > VITAL_SHARE then return nil, best end
     return best
+end
+
+-- Whether the tooltip at Edit Mode's spot (its holder where it rests, the tooltip pinned to it by
+-- the same corner) is clear of the middle. Puts the holder back there to look; not knowing is no.
+function Place:RestClear(w, h, ctx)
+    local holder, corner = S.info.holder, S.info.corner or ""
+    Place.Release(holder)
+    local ok, hx, hy, hw, hh = pcall(ns.Screen.Rect, holder)
+    if not (ok and hx) then return false end
+    local x = corner:find("RIGHT") and hx + hw - w or hx
+    local y = corner:find("TOP") and hy + hh - h or hy
+    return OverMiddle(x, y, w, h, ctx) == 0
 end
 
 -- Places the tooltip now (it may be about to grow: it's placed again then).
@@ -183,13 +257,22 @@ function Place:Now(tip)
         w, h = tw * s, th * s
         if w < 20 or h < 10 then return end
         known.w, known.h = w, h
-    else
+        biggest.w, biggest.h = math.max(biggest.w, w), math.max(biggest.h, h)
+    end
+    local ctx = Moment(tip)
+    if not (tw and th) then
         ns.stats.secret = ns.stats.secret + 1
         w, h = known.w, known.h
+        ctx.pad = { w = biggest.w, h = biggest.h, corner = S.info.corner }
     end
-    local spot, tried = self:Choose(w, h, Moment(tip))
+    local spot, tried = self:Choose(w, h, ctx)
+    -- In a fight, Edit Mode's spot only when it's clear of the middle: else the best spot that is
+    -- (or, when none is, the one over it least).
+    if not spot and ctx.keepOut and tried and not self:RestClear(w, h, ctx) then spot = tried end
+    if ctx.skipped > 0 then ns.stats.keptOut = ns.stats.keptOut + 1 end
+    S.info.keptOut = ctx.skipped > 0
     if spot then
-        self:MoveTo(tip, spot.x, spot.y, w, h)
+        self:MoveTo(tip, spot.x, spot.y, w, h, ctx.keepOut)
         last = { x = spot.x, y = spot.y }
         ns.stats.placed = ns.stats.placed + 1
     else
@@ -216,6 +299,7 @@ function Place:Now(tip)
                 line = ("Tooltip: Edit Mode's spot (the best place, %s, covered %s)."):format(
                     t.tried and t.tried.name or "?", t.tried and t.tried.covers or "something vital")
             end
+            if t.keptOut then line = line:sub(1, -2) .. " (kept out of the middle)." end
             if line ~= S.lastLine then
                 S.lastLine = line
                 ns:Print(line)
@@ -271,9 +355,20 @@ local function Gone(tip)
     if S.info then Place.Release(S.info.holder) end
 end
 
--- x, y: the spot (UIParent units); w, h: the tooltip's size there.
-function Place:MoveTo(tip, x, y, w, h)
+-- Whether gliding from ax, ay to bx, by (a w x h tooltip) would cross the square kept clear: the
+-- box round both ends touches it.
+local function Crosses(ax, ay, bx, by, w, h, zone)
+    if not zone then return false end
+    local x0, y0 = math.min(ax, bx), math.min(ay, by)
+    return Overlap(x0, y0, math.max(ax, bx) - x0 + w, math.max(ay, by) - y0 + h, zone) > 0
+end
+
+-- x, y: the spot (UIParent units); w, h: the tooltip's size there; zone: the square kept clear in a
+-- fight (it jumps rather than glide across it).
+function Place:MoveTo(tip, x, y, w, h, zone)
     local g = S.glide
+    if g and g.shown and tip:IsShown() and Crosses(g.x, g.y, x, y, math.max(g.w, w), math.max(g.h, h), zone) then g = nil end
+    if gone and Crosses(gone.x, gone.y, x, y, w, h, zone) then gone = nil end
     if not ns.db.glide then
         g = { x = x, y = y, tx = x, ty = y, w = w, h = h, shown = tip:IsShown() }
         S.glide = g
@@ -365,4 +460,49 @@ ns:On("PLAYER_LOGIN", function()
             Again(self)
         end
     end)
+end)
+
+-- ---------------------------------------------------------------------------------------------
+-- Fights: a tooltip that's showing when one starts is placed again (out of the middle). With
+-- debug on, a faint outline shows the square kept clear while you're in the fight.
+-- ---------------------------------------------------------------------------------------------
+
+local outline
+function Place:Outline()
+    local show = fighting and ns.db and ns.db.debug and ns.db.combatKeepOut
+    if not show then
+        if outline then outline:Hide() end
+        return
+    end
+    if not outline then
+        outline = CreateFrame("Frame", nil, UIParent)
+        outline:SetFrameStrata("BACKGROUND")
+        outline:EnableMouse(false)
+        local function Line(a, b, horizontal)
+            local t = outline:CreateTexture(nil, "OVERLAY")
+            t:SetColorTexture(0.25, 0.77, 0.8, 0.35)
+            t:SetPoint(a); t:SetPoint(b)
+            if horizontal then t:SetHeight(1) else t:SetWidth(1) end
+        end
+        Line("TOPLEFT", "TOPRIGHT", true); Line("BOTTOMLEFT", "BOTTOMRIGHT", true)
+        Line("TOPLEFT", "BOTTOMLEFT"); Line("TOPRIGHT", "BOTTOMRIGHT")
+    end
+    local z = Zone()
+    outline:ClearAllPoints()
+    outline:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", z.x, z.y)
+    outline:SetSize(z.w, z.h)
+    outline:Show()
+end
+
+ns:On("PLAYER_REGEN_DISABLED", function()
+    fighting = true
+    Place:Outline()
+    if ns.db and ns.db.combatKeepOut and S.info and GameTooltip:IsShown() then
+        last = nil
+        Again(GameTooltip)
+    end
+end)
+ns:On("PLAYER_REGEN_ENABLED", function()
+    fighting = false
+    Place:Outline()
 end)

@@ -18,10 +18,16 @@ S.page = ns.NewOptionsPage({ name = "WallyTooltip", build = function(p)
     p:Check({ id = "combatAware", path = "db.combatAware", label = "Keep the fight clear",
         tooltip = "In combat, and while you're moving, the middle of the screen (your character and the way ahead) is kept "
             .. "clearer, and tooltips go further out of the way rather than right beside the cursor." })
+    p:Check({ id = "combatKeepOut", path = "db.combatKeepOut", label = "Never over the middle in a fight",
+        tooltip = "In combat, a square in the middle of the screen (half the screen's height on a side) is off limits: a "
+            .. "tooltip goes just outside it, or anywhere else that's clear, never over it, and jumps rather than glide "
+            .. "across it. Tooltips the game shows at your cursor, or that a button pins beside itself, aren't moved.",
+        apply = function() ns.Place:Outline() end })
     p:Header("Troubleshooting")
     p:Check({ id = "debug", path = "db.debug", label = "Say where each tooltip goes",
         tooltip = "A line in chat for each tooltip: the spot it took and what it touched, or why it went to Edit Mode's spot "
-            .. "(/wtip debug). /wtip status counts what it has done since you logged in." })
+            .. "(/wtip debug). In a fight, a faint outline shows the middle kept clear. /wtip status counts what it has done since you logged in.",
+        apply = function() ns.Place:Outline() end })
 end })
 
 function S:Open()

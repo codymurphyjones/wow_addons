@@ -16,6 +16,7 @@ ns.DEFAULTS = {
     enabled = true,      -- place tooltips smartly (off: the game's default spot, as always)
     glide = true,        -- a tooltip that's showing glides to a new spot (off: it jumps)
     combatAware = true,  -- in a fight, and while you move, keep the middle of the screen clearer
+    combatKeepOut = true, -- in a fight, never over the middle of the screen (a square, half the screen's height)
     debug = false,       -- say in chat where each tooltip went, and why
 }
 
@@ -44,14 +45,15 @@ SlashCmdList.WALLYTOOLTIP = function(msg)
         ns.Settings:Open()
     elseif cmd == "status" then
         local s = ns.stats or {}
-        ns:Print(("%s. Tooltips seen: %d, placed: %d, at Edit Mode's spot: %d, size kept secret: %d, errors: %d."):format(
-            ns.db.enabled and "On" or "Off", s.hooked or 0, s.placed or 0, s.fallback or 0, s.secret or 0, s.errors or 0))
+        ns:Print(("%s. Tooltips seen: %d, placed: %d, at Edit Mode's spot: %d, size kept secret: %d, kept out of the middle in a fight: %d, errors: %d."):format(
+            ns.db.enabled and "On" or "Off", s.hooked or 0, s.placed or 0, s.fallback or 0, s.secret or 0, s.keptOut or 0, s.errors or 0))
         if s.lastError then ns:Print("Last error: " .. s.lastError) end
         if (s.hooked or 0) == 0 then
             ns:Print("No tooltip has asked for the default spot yet: hover a player or a creature in the world.")
         end
     elseif cmd == "debug" then
-        ns:Print(ns:ToggleOption("db.debug") and "Saying where each tooltip goes, and why." or "Quiet again.")
+        ns:Print(ns:ToggleOption("db.debug") and "Saying where each tooltip goes, and why (in a fight, an outline shows the middle kept clear)." or "Quiet again.")
+        ns.Place:Outline()
     else
         ns:Print(("Smart placement is %s. /wtip on | off, /wtip options, /wtip status (what it's done), /wtip debug (where each tooltip goes, and why)."):format(
             ns.db.enabled and "on" or "off"))

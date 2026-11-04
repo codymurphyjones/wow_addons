@@ -1,6 +1,6 @@
 local _, ns = ...
 
-ns.VERSION = "0.1.5"
+ns.VERSION = "0.1.6"
 ns.PREFIX = "|cff55d6beSmartPlates|r"
 ns.ICON = "Interface/AddOns/SmartPlates/Media/SmartPlates"
 

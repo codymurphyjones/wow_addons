@@ -17,6 +17,7 @@ Each time a tooltip opens, WallyTooltip tries spots **beside your cursor** (or b
 - **How far it is from what it's about.** Close is better, so your eyes don't have to travel. A very tall tooltip cares less, because beside the cursor it would cover a lot.
 - **Where your cursor is heading.** If you're sweeping the mouse across the screen, the tooltip stays out of its path.
 - **The fight.** In combat, and while you're moving, the middle of the screen counts much more, and the tooltip moves further out of the way.
+- **The middle, in a fight.** In combat, a square in the middle of the screen (half the screen's height on a side) is off limits: no tooltip goes over it, and one that's showing when the fight starts moves out of it.
 - **Steadiness.** A tooltip that's showing only moves for a clearly better spot, so it doesn't hop around.
 - **The screen's edges.** A spot that only fits by being squashed against an edge counts as a worse spot.
 
@@ -32,6 +33,7 @@ A tooltip that's showing **glides** to its new spot in about a fifth of a second
 - **Smart placement:** on or off.
 - **Glide to a new spot:** on or off (off: it jumps).
 - **Keep the fight clear:** in combat and while moving, keep the middle of the screen clearer.
+- **Never over the middle in a fight:** in combat, no tooltip goes over a square in the middle of the screen (on by default).
 - **Say where each tooltip goes:** a line in chat per tooltip, for when a spot looks wrong.
 
 ## Commands
