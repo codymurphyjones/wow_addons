@@ -154,6 +154,8 @@ end
 local function Refresh(l, mapID)
     if not (ns.db and ns.db.transportPins and ns.Transports) then return end
     if not MapShows(mapID) then return end
+    -- OneForAll draws the docks (its Map Landmarks): its icons lead you there (OneForAll.lua).
+    if ns.OneForAll and ns.OneForAll:DocksShown() then return end
     local mine, ride = MyFaction(), Ride()
     local landed -- B's dock was drawn
     for _, d in ipairs(ns.Route:Docks()) do

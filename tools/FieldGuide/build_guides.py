@@ -38,6 +38,7 @@ from questiedb import QuestieDB, lua_list  # noqa: E402
 from instances import LEVELS, OUTSIDE_FIRST, WINGS, dungeon_areas, dungeon_entrances, dungeon_of, load_dungeons  # noqa: E402
 from zones import Zones
 from quest_areas import assign as assign_areas
+import task_areas  # noqa: E402
 from quest_text import action_line, callout, goal, prose_actions
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -109,9 +110,30 @@ PATH_UNITS = 3.5
 FIGHT_SHARE = 0.14
 SAFE_LEVELS = 6
 STEP_UNITS = 2.0       # how often the walk is sampled
+# Travelling from one of a quest's places to the next you steer round most mobs and fight only a few
+# (what its objectives ask you to kill is counted apart, in full): this share of the fights a walk
+# passes. On a road, almost none: roads rarely lead to a fight. A road is one players logged with
+# RoadLog (Waypoint's Data/Roads.lua, as its routing uses them); where none are logged yet, the walk
+# counts as off the road.
+TRAVEL_SHARE = 0.30
+ROAD_SHARE = 0.05
+# A delivery (nothing to do but carry it from one person to another) mostly goes hub to hub, and hubs
+# are joined by roads (not every one: some cross open country): off a logged road (most aren't logged
+# yet) its walk counts as mostly road, this share.
+DELIVERY_SHARE = 0.15
+ROAD_NEAR = 30         # yards: a walk this near a logged road is on it
+ROAD_CELL = 30         # yards: the road index's squares
 STRETCH = 3            # a quest waits until you're within this many levels of it (Engine.lua has the same rule)
 
 REPEATABLE = 1  # specialFlags
+# Questie's quest categories that are classes (QuestSort: warlock, warrior, shaman, paladin, mage, rogue,
+# hunter, priest, druid). Forever's own class quests (The Great Windborne Cat Spirit) have no
+# requiredClasses, only the category: guides never suggest class quests, so both count.
+CLASS_SORT = {-61, -81, -82, -141, -161, -162, -261, -262, -263}
+
+
+def class_quest(q):
+    return bool(q.get('requiredClasses')) or q.get('zoneOrSort') in CLASS_SORT
 
 QUESTIE = os.path.join(os.path.dirname(os.path.dirname(paths.QUESTIEDB_TOC)), 'Questie')
 
@@ -215,6 +237,27 @@ def hostile(npc):
     return not npc.get('friendlyToFaction') and 0 < npc_level(npc) <= 63
 
 
+KILL_WORDS = re.compile(r'\b(kill|slay|slain|destroy|defeat|slaughter|exterminate)\b', re.I)
+
+
+def to_kill(npc, text):
+    """A quest's creature objective is a kill: the mob is hostile, or the quest's own words say to kill
+    it by name (QuestieDB marks some mobs friendly that aren't: Forever's Rattlecage Skeleton is
+    friendlyToFaction "AH", and "Kill 12 Rattlecage Skeletons" came out as "Talk to")."""
+    if hostile(npc):
+        return True
+    if not (0 < npc_level(npc) <= 63) or not text or not KILL_WORDS.search(text):
+        return False
+    words = [w for w in re.findall(r"[A-Za-z']+", npc.get('name') or '') if len(w) >= 4]
+    if not words:
+        return False
+    stem = max(words, key=len).lower().rstrip('s')
+    if stem.endswith('man'):
+        stem = stem[:-2]  # Councilman: Councilmen too
+    # The kill word and the name in one sentence ("Engage her ... Ragged John" isn't a kill).
+    return any(KILL_WORDS.search(part) and stem in part.lower() for part in re.split(r'[.;:!?]', text))
+
+
 class Point:
     __slots__ = ('map', 'x', 'y')
 
@@ -285,8 +328,52 @@ class Data:
                     self._grid[(p.map, int(p.x // 5), int(p.y // 5))].append((p.x, p.y, level))
         return self._grid
 
-    def fights(self, points, level):
-        """(kills, XP) from hostile mobs along a walk through points, for a character of this level."""
+    def road_index(self):
+        """{(continent, cell n, cell w): [(n, w)]}: the logged roads' points, ROAD_NEAR apart at most."""
+        if getattr(self, '_roads', None) is None:
+            self._roads = collections.defaultdict(list)
+            path = os.path.join(paths.addon('Waypoint'), 'Data', 'Roads.lua')
+            try:
+                src = open(path, encoding='utf-8').read()
+            except OSError:
+                src = ''
+            for m in re.finditer(r'\[(\d+)\] = \{\s*roads = \{(.*?)\n\s*\},\s*blockers', src, re.S):
+                cont = int(m.group(1))
+                for line in re.findall(r'\{([^{}]*)\}', m.group(2)):
+                    v = [float(x) for x in line.split(',') if x.strip()]
+                    pts = list(zip(v[0::2], v[1::2]))
+                    for (n1, w1), (n2, w2) in zip(pts, pts[1:] or pts):
+                        k = max(1, int(math.hypot(n2 - n1, w2 - w1) / (ROAD_NEAR / 2)))
+                        for j in range(k + 1):
+                            n, w = n1 + (n2 - n1) * j / k, w1 + (w2 - w1) * j / k
+                            self._roads[(cont, int(n // ROAD_CELL), int(w // ROAD_CELL))].append((n, w))
+        return self._roads
+
+    def on_road(self, mapid, x, y):
+        """Whether a map spot (0-100) is within ROAD_NEAR yards of a logged road."""
+        roads = self.road_index()
+        if not roads:
+            return False
+        if getattr(self, '_assign', None) is None:
+            import zone_walks
+            self._assign = zone_walks.assignments()
+            self._world = zone_walks.C.world
+        w = self._world(self._assign, mapid, x / 100, y / 100)
+        if not w:
+            return False
+        c, n, e = w
+        for dn in (-1, 0, 1):
+            for de in (-1, 0, 1):
+                for rn, rw in roads.get((c, int(n // ROAD_CELL) + dn, int(e // ROAD_CELL) + de), ()):
+                    if math.hypot(rn - n, rw - e) <= ROAD_NEAR:
+                        return True
+        return False
+
+    def fights(self, points, level, delivery=False):
+        """(kills, XP) from hostile mobs along a walk through points, for a character of this level:
+        travelling, so TRAVEL_SHARE of them (DELIVERY_SHARE for a delivery), ROAD_SHARE where the walk
+        is on a logged road."""
+        off_road = DELIVERY_SHARE if delivery else TRAVEL_SHARE
         grid = self.hostile_grid()
         seen, kills, xp = set(), 0.0, 0.0
         for a, b in zip(points, points[1:]):
@@ -295,6 +382,7 @@ class Data:
             steps = max(1, int(a.dist(b) / STEP_UNITS))
             for i in range(steps + 1):
                 x, y = a.x + (b.x - a.x) * i / steps, a.y + (b.y - a.y) * i / steps
+                share = FIGHT_SHARE * (ROAD_SHARE if self.on_road(a.map, x, y) else off_road)
                 cx, cy = int(x // 5), int(y // 5)
                 for dx in (-1, 0, 1):
                     for dy in (-1, 0, 1):
@@ -303,8 +391,8 @@ class Data:
                                 continue
                             seen.add(m)
                             if level - SAFE_LEVELS < m[2] <= level + 3:
-                                kills += FIGHT_SHARE
-                                xp += FIGHT_SHARE * kill_xp(round(m[2]), level)
+                                kills += share
+                                xp += share * kill_xp(round(m[2]), level)
         return kills, xp
 
     def spawns(self, spawns, maps):
@@ -421,7 +509,9 @@ class Data:
         nothing to do but talk, or INSTANCE when everything it needs is inside a dungeon or raid.
         prefer: a uiMapID whose spawns win when the objective is found in several zones."""
         objs = q.get('objectives')
-        if not objs or not any(lua_list(field(objs, i)) for i in (1, 2, 3, 5)):
+        # A place to explore ("Explore the waters of the Forgotten Pools"): its spot is the objective.
+        explore = self.spawns(field(q.get('triggerEnd'), 2), maps)
+        if not explore and (not objs or not any(lua_list(field(objs, i)) for i in (1, 2, 3, 5))):
             return None
         text = ' '.join(lua_list(q.get('objectivesText')))
         nums = [int(n) for n in re.findall(r'\b(\d{1,2})\b', text)]
@@ -431,7 +521,7 @@ class Data:
             npc = self.db.npc(lua_list(entry)[0])
             if npc:
                 points += self.spawns(npc.get('spawns'), maps)
-                if hostile(npc):
+                if to_kill(npc, text):
                     levels.append(npc_level(npc))
                     effort += count * KILL_UNITS
                 else:
@@ -456,6 +546,14 @@ class Data:
                 obj = self.db.object(obj_id)
                 if obj:
                     points += self.spawns(obj.get('spawns'), maps)
+            # Handed to you by someone (Questie files them as vendors): The Warsong Reports' three
+            # updates, one from each scout. Without them the quest had no spot and counted as a
+            # dungeon's, and was left out.
+            if not item.get('npcDrops') and not item.get('objectDrops'):
+                for npc_id in lua_list(item.get('vendors')):
+                    npc = self.db.npc(npc_id)
+                    if npc:
+                        points += self.spawns(npc.get('spawns'), maps)
             effort += count * (KILL_UNITS / DROP_RATE if item.get('npcDrops') else LOOT_UNITS)
         for entry in lua_list(field(objs, 5)):  # kill credit
             for npc_id in lua_list(lua_list(entry)[0] if lua_list(entry) else []):
@@ -467,6 +565,9 @@ class Data:
                 npc = self.db.npc(npc_id)
                 if npc and npc_level(npc) > 0:
                     levels.append(npc_level(npc))
+        if explore:
+            points += explore
+            effort += LOOT_UNITS  # walk in, and it's done
         if not points:
             return INSTANCE
         if prefer and any(p.map == prefer for p in points):
@@ -488,6 +589,46 @@ class Data:
                 groups.append((Point(p.map, cx, cy), near, p, n / top))
         mob_level = sum(levels) / len(levels) if levels else None
         return groups[0][0], groups[0][1], effort, mob_level, groups
+
+
+def required_items(data, q):
+    """Items a quest needs you to carry that it doesn't hand you and that aren't its objectives
+    (Questie's requiredSourceItems: a key off a mob, a bauble from a lake, a sample jar): [(itemID,
+    name, [Points])], each with where it drops (the densest spots) or who sells it. The guide fetches
+    these before it sends you to the objective."""
+    row = q.row
+    need = lua_list(row.get('requiredSourceItems'))
+    if not need:
+        return []
+    given = row.get('sourceItemId')
+    objs = row.get('objectives')
+    as_objective = {lua_list(e)[0] for e in lua_list(field(objs, 3))} if objs else set()
+    out = []
+    for item_id in need:
+        if not item_id or item_id == given or item_id in as_objective:
+            continue
+        item = data.db.item(item_id) or {}
+        points = []
+        for npc_id in lua_list(item.get('npcDrops')):
+            npc = data.db.npc(npc_id)
+            if npc:
+                points += data.spawns(npc.get('spawns'), None)
+        for obj_id in lua_list(item.get('objectDrops')):
+            obj = data.db.object(obj_id)
+            if obj:
+                points += data.spawns(obj.get('spawns'), None)
+        for npc_id in lua_list(item.get('vendors')):
+            npc = data.db.npc(npc_id)
+            if npc:
+                points += data.spawns(npc.get('spawns'), None)
+        if not points:
+            continue
+        # Near the quest's own work when there's a choice (the same item can drop in several zones).
+        near = q.obj[0] if q.obj else (q.giver[0] if q.giver else None)
+        if near is not None and any(p.map == near.map for p in points):
+            points = [p for p in points if p.map == near.map]
+        out.append((item_id, item.get('name') or ('item %d' % item_id), densest(points)))
+    return out
 
 
 def place_objectives(quests):
@@ -561,11 +702,33 @@ class Quest:
             self.kill_xp += int(self.obj[2] / KILL_UNITS * kill_xp(round(self.obj[3]), lv))
         walk = [p for p in ((self.giver and self.giver[0]), (self.obj and self.obj[0]), (self.ender and self.ender[0])) if p]
         if len(walk) > 1:
-            kills, xp = data.fights(walk, lv)
+            kills, xp = data.fights(walk, lv, delivery=self.talk)
             self.kill_xp += int(xp)
             self.extra_minutes = kills * KILL_UNITS * SECONDS_PER_UNIT / 60
         self.single = [abs(x) for x in lua_list(q.get('preQuestSingle'))]
         self.group = [abs(x) for x in lua_list(q.get('preQuestGroup'))]
+        # Checked by hand in game (data/prereqs_manual.json): over everything else.
+        manual = manual_prereqs().get(qid)
+        if manual:
+            pre = [p for p in manual['pre'] if p in data.quests]
+            self.single, self.group = (pre, []) if manual.get('any') else ([], pre)
+        # No prerequisite in Questie: the quests whose "next in chain" is this one come first
+        # (Questie often records a chain only forwards). One: it's needed; several: any one of them.
+        # (Not when checked by hand and found to need nothing: an optional breadcrumb isn't needed.)
+        if not (self.single or self.group) and not manual:
+            found = sorted(p for p in chained_from(data).get(qid, ()) if p in data.quests)
+            if len(found) == 1:
+                self.group = found
+            elif found:
+                self.single = found
+        # Forever's own quests: Questie mostly has no prerequisites for them, players' comments on
+        # Wowhead do (fetch_forever_prereqs.py). One named: it's needed; several: any one of them.
+        if not (self.single or self.group) and not manual:
+            found = [p for p in forever_prereqs().get(qid, []) if p in data.quests]
+            if len(found) == 1:
+                self.group = found
+            elif found:
+                self.single = found
         self.exclusive = lua_list(q.get('exclusiveTo'))
         self.breadcrumb_for = q.get('breadcrumbForQuestId')
         self.races = q.get('requiredRaces') or 0
@@ -583,6 +746,31 @@ def dungeon_quests(data):
     return DUNGEON_QUESTS
 
 
+def inside_ender(data, quest, dungeon):
+    """A dungeon quest handed in to someone who's only inside the dungeon (Deathstalkers in
+    Shadowfang: Deathstalker Vincent, in Shadowfang Keep) has no turn-in out in the world, and was
+    dropped for it. Its turn-in goes at the dungeon's entrance, named "(inside)", and the quest is
+    marked ti (turned in inside): the route hands it in during the run."""
+    finished = quest.row.get('finishedBy')
+    name, pid = None, None
+    for kind, idx in (('npc', 1), ('object', 2)):
+        for i in lua_list(field(finished, idx)):
+            row = data.db.npc(i) if kind == 'npc' else data.db.object(i)
+            if row and row.get('name'):
+                name, pid = row['name'], i
+                break
+        if name:
+            break
+    if not name:
+        return
+    for e_area, x, y in dungeon.get('entrances') or []:
+        m = data.zones.map_of(e_area)
+        if m:
+            quest.ender = (Point(m, x, y), '%s (inside)' % name, 'npc', pid)
+            quest.inside_end = True
+            return
+
+
 def candidates(data, bit, maps, dungeons=None):
     """Quests some race of the faction can do. With dungeons ({areaId: dungeon}): only the
     quests for those dungeons, as {areaId: [Quest]}. Without: never a dungeon's quest."""
@@ -594,13 +782,15 @@ def candidates(data, bit, maps, dungeons=None):
         area = dungeon_of(q, dungeons) if dungeons is not None else None
         if dungeons is not None and area is None:
             continue
-        if q.get('requiredClasses') or (q.get('specialFlags') or 0) & REPEATABLE:
+        if class_quest(q) or (q.get('specialFlags') or 0) & REPEATABLE:
             continue
         if not can_take(q.get('requiredRaces') or 0, bit):
             continue
         if (q.get('questLevel') or 0) > 60 or q.get('requiredSkill') or q.get('requiredMinRep'):
             continue
         quest = Quest(data, qid, maps)
+        if dungeons is not None and quest.giver and not quest.ender:
+            inside_ender(data, quest, dungeons[area])
         if not (quest.giver and quest.ender):
             continue
         # Reward tokens and the like: max-level "quests" anyone can take, with no known XP.
@@ -620,7 +810,7 @@ def candidates(data, bit, maps, dungeons=None):
 
 # --- the route simulation ---------------------------------------------------------------------
 
-SPLIT_DISTANCE = 6.0  # map % (about 350 yd): a quest whose objectives are further apart gets one route stop each
+TASK_APART = 1.5      # map % (about 90 yd): objectives further apart than this are tasks of their own (one stop each)
 
 
 def densest(points, limit=6):
@@ -643,16 +833,16 @@ def quest_actions(data, qid, text, talk, prefer=None):
     maps = None
     out = []
 
-    def add(line, name, points):
+    def add(line, name, points, mob=None):
         if not any(a['line'] == line for a in out):
-            out.append({'line': line, 'name': name, 'kind': None, 'points': points})
+            out.append({'line': line, 'name': name, 'kind': None, 'points': points, 'mob': mob})
 
     for entry in lua_list(field(objs, 1)) if objs else []:
         npc = data.db.npc(lua_list(entry)[0])
         if not npc or not npc.get('name'):
             continue
         name = npc['name']
-        add(action_line('Kill' if hostile(npc) else 'Talk to', name, text), name, data.spawns(npc.get('spawns'), maps))
+        add(action_line('Kill' if to_kill(npc, text) else 'Talk to', name, text), name, data.spawns(npc.get('spawns'), maps), name)
     for entry in lua_list(field(objs, 2)) if objs else []:
         obj = data.db.object(lua_list(entry)[0])
         if obj and obj.get('name'):
@@ -678,11 +868,16 @@ def quest_actions(data, qid, text, talk, prefer=None):
             same = drops[0]['name'].lower() in (name.lower(), 'a ' + name.lower())
             add(action_line('Pick up', name, text, None if same else drops[0]['name']), name, points)
         elif len(mobs) == 1:
-            add(action_line('Loot', name, text, mobs[0]['name']), name, points)
+            add(action_line('Loot', name, text, mobs[0]['name']), name, points, mobs[0]['name'])
         elif mobs:
             add(action_line('Loot', name, text), name, points)
         else:
-            add(action_line('Get', name, text), name, points)
+            # Handed over by someone (Questie's vendors): one action at each of them.
+            givers = [data.db.npc(i) for i in lua_list(item.get('vendors'))]
+            givers = [g for g in givers if g and g.get('name')]
+            for g in givers:
+                points += data.spawns(g.get('spawns'), maps)
+            add(action_line('Get', name, text, givers[0]['name'] if len(givers) == 1 else None), name, points)
     if prefer:
         for a in out:
             here = [p for p in a['points'] if p.map == prefer]
@@ -731,6 +926,115 @@ def action_spots(a):
     return [area[0]] + area[1] if area else densest(a['points'])
 
 
+def task_spots(q, actions):
+    """The quest's tasks for the leveling planner (task_areas.py): [(part, Point)]. One per objective
+    stop when its objectives are in different places (the same split as action_fields' sp, one per
+    distinct first spot, as Engine.lua's SplitParts makes them), else its one objective place (part 0),
+    else its hand-in (part -1: nothing to do but talk)."""
+    if not q.obj:
+        return [(-1, q.ender[0])] if q.ender else []
+    centres = []
+    for i, a in enumerate(actions or [], 1):
+        spots = action_spots(a)
+        if spots:
+            centres.append((i, spots[0]))
+    pts = [c for _, c in centres]
+    if any(a.map != b.map or a.dist(b) > TASK_APART for a in pts for b in pts if a is not b):
+        out, seen = [], set()
+        for i, c in centres:
+            key = (c.map, c.x, c.y)
+            if key not in seen:
+                seen.add(key)
+                out.append((i, c))
+        return out
+    for a in actions or []:
+        if a.get('area'):
+            return [(0, action_spots(a)[0])]
+    return [(0, q.obj[0])]
+
+
+def task_area_sets(used, everything):
+    """The task areas of each faction (task_areas.py): { faction: [ [Task] ] }."""
+    import zone_walks
+    assign = zone_walks.assignments()
+    per = {}
+    for faction in (ALLIANCE, HORDE):
+        tasks = []
+        for qid in sorted(used):
+            q = used[qid]
+            if q.pvp or qid in DUNGEON_QUESTS or not can_take(q.races or 0, FACTION_MASK[faction]):
+                continue
+            for part, spot in task_spots(q, everything.get(qid)):
+                w = zone_walks.C.world(assign, spot.map, spot.x / 100, spot.y / 100)
+                if w:
+                    tasks.append(task_areas.Task(qid, part, spot, q.level, w))
+        per[faction] = task_areas.areas(tasks)
+        print('%s: %d tasks in %d task areas' % (faction, len(tasks), len(per[faction])))
+    return per
+
+
+def write_areas(per):
+    """Guides/Areas.lua: the task areas of each faction (task_area_sets)."""
+    with open(os.path.join(GUIDES, 'Areas.lua'), 'w', encoding='utf-8', newline='\n') as f:
+        f.write(task_areas.lua(per, pt))
+
+
+def transition_quests(used, per):
+    """Transition quests: { questID: (from area, to area) } (indexes into the faction's areas; from is
+    None when you pick it up away from any work, a city). A pick-up and hand-in with nothing else to do
+    (talk, not started from an item) that takes you to a new questing area: its hand-in is in a task
+    area with real work in it (another quest's objective), not the area you pick it up in, and farther
+    than an area's LINK away. Areas are task_areas.py's: "a new area" is the planner's idea of one, not
+    a zone."""
+    import zone_walks
+    assign = zone_walks.assignments()
+    link = task_areas.LINK
+    out = {}
+    for faction in (ALLIANCE, HORDE):
+        cell = collections.defaultdict(list)  # (continent, n // link, w // link) -> [(area index, Task)]
+        work = set()                          # areas with an objective in them
+        for i, g in enumerate(per.get(faction) or []):
+            for t in g:
+                cell[(t.c, int(t.n // link), int(t.w // link))].append((i, t))
+                if t.part >= 0:
+                    work.add(i)
+
+        def area_at(spot, skip):
+            """(the area with a task, not quest skip's, nearest spot within link yards, or None; spot in
+            world yards, or None)."""
+            w = zone_walks.C.world(assign, spot.map, spot.x / 100, spot.y / 100)
+            if not w:
+                return None, None
+            c, n, e = w
+            best, best_d = None, None
+            for dn in (-1, 0, 1):
+                for de in (-1, 0, 1):
+                    for i, t in cell.get((c, int(n // link) + dn, int(e // link) + de), ()):
+                        if t.qid == skip:
+                            continue
+                        d = math.hypot(t.n - n, t.w - e)
+                        if d <= link and (best_d is None or d < best_d):
+                            best, best_d = i, d
+            return best, w
+
+        for qid, q in used.items():
+            if not (q.talk and q.giver and q.ender) or q.item or q.pvp or qid in DUNGEON_QUESTS:
+                continue
+            if qid in out or not can_take(q.races or 0, FACTION_MASK[faction]):
+                continue
+            to, wt = area_at(q.ender[0], qid)
+            if to is None or to not in work:
+                continue
+            frm, wf = area_at(q.giver[0], qid)
+            if frm == to or not wf:
+                continue
+            if wf[0] == wt[0] and math.hypot(wf[1] - wt[1], wf[2] - wt[2]) <= link:
+                continue
+            out[qid] = (frm, to)
+    print('transition quests: %d' % len(out))
+    return out
+
+
 def action_fields(actions):
     """The quest's `g` and `sp` for Data.lua, and `o` when it's in a hunting area (or None)."""
     if not actions:
@@ -746,6 +1050,8 @@ def action_fields(actions):
             bits.append('n = %s' % lua_str(a['name']))
         if a['kind']:
             bits.append('k = %s' % lua_str(a['kind']))
+        if a.get('mob'):
+            bits.append('m = %s' % lua_str(a['mob']))
         if a.get('area'):
             bits.append('z = true')
         if spots:
@@ -755,7 +1061,10 @@ def action_fields(actions):
             bits.append('w = { %s }' % ', '.join('{ %s }' % pt(p) for p in everywhere))
         rows.append('{ %s }' % ', '.join(bits))
     parts = ['g = { %s }' % ', '.join(rows)]
-    if any(a.dist(b) > SPLIT_DISTANCE for a in centres for b in centres if a is not b and a.map == b.map):
+    # In different places (talk to each of three scouts, someone in each capital): each one is a task
+    # of its own, a route stop the leveling planner puts wherever it's quickest, in any order.
+    # (Without, only the first place's spots make the quest's o.)
+    if any(a.map != b.map or a.dist(b) > TASK_APART for a in centres for b in centres if a is not b):
         parts.append('sp = true')
     objective = None
     if any(a.get('area') for a in actions):
@@ -951,6 +1260,53 @@ def starting_point(quests, pool, zone):
     return max(spots, key=lambda p: sum(1 for q in free if q.giver[0].dist(p) <= CLUSTER_RADIUS))
 
 
+_FOREVER_PREREQS = None
+_CHAINED_FROM = None
+_MANUAL = None
+
+
+def manual_prereqs():
+    """{ questId: { pre: [...], any } }: prerequisites checked by hand in game (data/prereqs_manual.json)."""
+    global _MANUAL
+    if _MANUAL is None:
+        _MANUAL = {}
+        try:
+            with open(os.path.join(HERE, 'data', 'prereqs_manual.json'), encoding='utf-8') as f:
+                for k, v in json.load(f).items():
+                    if k.isdigit() and isinstance(v, dict) and 'pre' in v:  # (pre = []: checked, needs nothing)
+                        _MANUAL[int(k)] = {'pre': [int(x) for x in v['pre']], 'any': bool(v.get('any'))}
+        except OSError:
+            pass
+    return _MANUAL
+
+
+def chained_from(data):
+    """{ questId: {questId, ...} }: the quests whose nextQuestInChain is it (Questie's chains, read backwards)."""
+    global _CHAINED_FROM
+    if _CHAINED_FROM is None:
+        _CHAINED_FROM = collections.defaultdict(set)
+        for qid, row in data.quests.items():
+            nxt = row.get('nextQuestInChain')
+            if isinstance(nxt, int) and nxt > 0 and nxt != qid:
+                _CHAINED_FROM[nxt].add(qid)
+    return _CHAINED_FROM
+
+
+def forever_prereqs():
+    """{ questId: [questId, ...] }: Forever quests' prerequisites from Wowhead comments (data/forever_prereqs.json)."""
+    global _FOREVER_PREREQS
+    if _FOREVER_PREREQS is None:
+        _FOREVER_PREREQS = {}
+        try:
+            with open(os.path.join(HERE, 'data', 'forever_prereqs.json'), encoding='utf-8') as f:
+                for k, v in json.load(f).items():
+                    if v.get('pre'):
+                        _FOREVER_PREREQS[int(k)] = [int(x) for x in v['pre']]
+        except OSError:
+            pass
+    return _FOREVER_PREREQS
+
+
 def add_prerequisites(data, q, used, depth=0):
     """Every quest q needs first, anywhere, so the addon can send you back for a missed one."""
     if depth > 30:
@@ -1096,6 +1452,12 @@ def build():
         for qid in exits:
             used[qid] = quests[qid]
             add_prerequisites(data, quests[qid], used)
+        # The leveling planner (Tasks.lua) works from every quest the faction can do, wherever it is
+        # and whether a zone's route took it or not: all of them go to Data.lua.
+        for qid, q in quests.items():
+            if not q.pvp:
+                used[qid] = q
+                add_prerequisites(data, q, used)
 
         pvp = sorted(q for q in quests if quests[q].pvp)
         print('%s: %d PvP quests, Zone Clear only: %s' % (faction, len(pvp), ', '.join(quests[q].name for q in pvp[:8])))
@@ -1155,7 +1517,7 @@ def build():
                         inst[area][faction].append(q.id)
                     else:
                         inst[area]['inside'][faction].append(q.id)
-                        wing = data.wing_of(area, q.row, q.item[0])
+                        wing = data.wing_of(area, q.row, q.item[0] if q.item else None)
                         if wing:
                             inst[area]['wings'][q.id] = wing
                         # What the found item leads on to: the quests after it, handed in after the run.
@@ -1166,6 +1528,7 @@ def build():
                                 used[f] = Quest(data, f, None)
                     used[q.id] = q
                     add_prerequisites(data, q, used)
+    after_the_run(data, inst, used, report)
     for area, i in sorted(inst.items(), key=lambda kv: kv[1]['levels']):
         report.append('  %-28s %2d-%2d   Alliance %2d   Horde %2d   started inside: Alliance %d, Horde %d' % (
             i['name'], i['levels'][0], i['levels'][1], len(i[ALLIANCE]), len(i[HORDE]),
@@ -1182,26 +1545,146 @@ def build():
     print('\n'.join(report))
 
 
+def after_the_run(data, inst, used, report):
+    """Before the run or after it. A dungeon's quest that needs something done inside it first, directly
+    or further back, is only offered after the run: Earthen Echo (Heavehammer) comes from Bashana
+    Runetotem once Elder Knowledge is handed in, and that one starts from the Titan Relic, which drops
+    inside. Done inside: a quest started by an item that drops in there, one handed in in there (ti),
+    and one whose objectives are in there (all of them, or the rest after a start outside). Those
+    quests leave the list to pick up beforehand: after a quest started inside, as what it leads to
+    (follow, handed in after the run, like the quests a found item leads to); after any other, as
+    inst['after'] (picked up and handed in after the run). The rest is the before-the-run flow, with
+    whatever it needs out in the world first (Instance.lua's unlock chain, as far back as it goes).
+    Writes the after-the-run ones into the report, for checking by hand."""
+    def pre_of(qid):
+        q = used.get(qid)
+        if q is None and qid in data.quests:
+            q = Quest(data, qid, None)
+            if q.ender and (q.giver or q.item):
+                used.setdefault(qid, q)
+        return (q.single + q.group) if q else []
+
+    report.append('== Dungeon quests for after the run (they need something done inside first)')
+    found = 0
+    for area, i in sorted(inst.items(), key=lambda kv: kv[1]['levels']):
+        i.setdefault('after', {ALLIANCE: [], HORDE: []})
+        for faction in (ALLIANCE, HORDE):
+            inside = list(i['inside'][faction])
+            done_in = set(inside)
+            for qid in i[faction]:
+                q = used.get(qid)
+                if q and (q.dungeon or getattr(q, 'inside_end', False) or OUTSIDE_FIRST.get(qid) == 'part'):
+                    done_in.add(qid)
+
+            def root(qid):
+                """The first quest done inside that qid needs (not itself), searching back, and the quests
+                between them (earliest first: Unending Torment part 3, no dungeon quest of its own, between
+                parts 2 and 4), or (None, [])."""
+                seen, todo, parent = {qid}, [(p, qid) for p in pre_of(qid)], {}
+                while todo:
+                    p, child = todo.pop(0)
+                    if p in seen:
+                        continue
+                    seen.add(p)
+                    parent[p] = child
+                    if p in done_in:
+                        between, x = [], parent[p]
+                        while x != qid:
+                            between.append(x)
+                            x = parent[x]
+                        return p, between
+                    if len(seen) < 60:
+                        todo += [(pp, p) for pp in pre_of(p)]
+                return None, []
+
+            listed = set(i[faction]) | set(inside)
+            for qid in list(i[faction]):
+                r, between = root(qid)
+                if r is None:
+                    continue
+                i[faction].remove(qid)
+                # The quests between that aren't the dungeon's own come along, in order (the route
+                # otherwise has nothing to send you to them with).
+                chain = [b for b in between if b not in listed and b in used
+                         and can_take(used[b].races or 0, FACTION_MASK[faction])] + [qid]
+                if r in inside:
+                    i['follow'].setdefault(r, [])
+                    for c in chain:
+                        if c not in i['follow'][r]:
+                            i['follow'][r].append(c)
+                else:
+                    for c in chain:
+                        if c not in i['after'][faction]:
+                            i['after'][faction].append(c)
+                found += 1
+                q = used.get(qid)
+                rq = used.get(r)
+                report.append('  %-28s %-8s %6d %-34s after %6d %s%s' % (
+                    i['name'], faction, qid, (q.name if q else '?')[:34], r, rq.name if rq else '?',
+                    ' (started inside)' if r in inside else ''))
+    if not found:
+        report.append('  (none)')
+    report.append('')
+
+
 def inside_quests(data, bit, dungeons):
     """Quests some race of the faction can do that start from an item, for a dungeon:
     {areaId: [Quest]} (the Quest's `item` is (itemID, name))."""
     out = collections.defaultdict(list)
     for qid, q in data.quests.items():
         area = dungeon_of(q, dungeons)
-        if area is None or q.get('requiredClasses') or (q.get('specialFlags') or 0) & REPEATABLE:
+        if area is None or class_quest(q) or (q.get('specialFlags') or 0) & REPEATABLE:
             continue
         if not can_take(q.get('requiredRaces') or 0, bit) or q.get('requiredSkill') or q.get('requiredMinRep'):
             continue
         items = lua_list(field(q.get('startedBy'), 3))
         if not items:
+            # Given by someone (or something) who's only inside: Commander Gor'shak's What Is Going On?,
+            # Jail Break!, The Bearer of Bad News. Their giver goes at the entrance, "(inside)", like an
+            # inside hand-in, and they're picked up during the run (gi).
+            # (Handed in in there too, Bijou's Belongings, Kharan's Tale: done during the run, and what
+            # comes after it needs it.)
+            quest = Quest(data, qid, None)
+            if quest.giver or (q.get('questLevel') or 0) > 60:
+                continue
+            if not quest.ender:
+                inside_ender(data, quest, dungeons[area])
+            if quest.ender and inside_starter(data, quest, dungeons[area]):
+                out[area].append(quest)
             continue
         quest = Quest(data, qid, None)
+        if not quest.giver and not quest.ender:
+            inside_ender(data, quest, dungeons[area])  # (the Grime-Encrusted Ring: the Sparklematic, inside)
         if quest.giver or not quest.ender:
             continue
         item = data.db.item(items[0]) or {}
         quest.item = (items[0], item.get('name') or ('item %d' % items[0]))
         out[area].append(quest)
     return out
+
+
+def inside_starter(data, quest, dungeon):
+    """A dungeon quest given by an NPC or object that's only inside the dungeon: its giver goes at the
+    dungeon's entrance, named "(inside)", and the quest is marked gi (given inside). True when done."""
+    started = quest.row.get('startedBy')
+    name, who, pid = None, None, None
+    for kind, idx in (('npc', 1), ('object', 2)):
+        for i in lua_list(field(started, idx)):
+            row = data.db.npc(i) if kind == 'npc' else data.db.object(i)
+            if row and row.get('name'):
+                name, who, pid = row['name'], kind, i
+                break
+        if name:
+            break
+    if not name:
+        return False
+    for e_area, x, y in dungeon.get('entrances') or []:
+        m = data.zones.map_of(e_area)
+        if m:
+            quest.giver = (Point(m, x, y), '%s (inside)' % name, who, pid)
+            quest.inside_start = True
+            return True
+    return False
 
 
 def follow_ups(data, qid, bit, max_level=60, depth=0):
@@ -1214,7 +1697,7 @@ def follow_ups(data, qid, bit, max_level=60, depth=0):
         pre = [abs(x) for x in lua_list(o.get('preQuestSingle'))] + [abs(x) for x in lua_list(o.get('preQuestGroup'))]
         if qid not in pre or oid == qid:
             continue
-        if o.get('requiredClasses') or (o.get('specialFlags') or 0) & REPEATABLE:
+        if class_quest(o) or (o.get('specialFlags') or 0) & REPEATABLE:
             continue
         if not can_take(o.get('requiredRaces') or 0, bit) or o.get('requiredSkill') or o.get('requiredMinRep'):
             continue
@@ -1238,7 +1721,9 @@ def write_instances(inst):
            '-- (all in Guides\\Data.lua). id = the dungeon\'s area ID: its name, levels, entrance, map,',
            '-- final bosses and wings are ns.Instances\' (shared\\Instances.lua).',
            '-- wingOf = [quest] = the wing it\'s done in; follow = [inside quest] = the quests it leads to;',
-           '-- before = [quest] = done outside before going in (true), or started there ("part").',
+           '-- before = [quest] = done outside before going in (true), or started there ("part");',
+           '-- after = the quests offered only once something inside is done (build_guides.py after_the_run):',
+           '-- picked up and handed in after the run (those after a quest started inside are in its follow).',
            'ns.DungeonQuests = {']
     for area, i in sorted(inst.items(), key=lambda kv: kv[1]['levels']):
         if not (i[ALLIANCE] or i[HORDE]):
@@ -1252,6 +1737,10 @@ def write_instances(inst):
         if before:
             out.append('      before = { %s },' % ', '.join('[%d] = %s' % (q, 'true' if OUTSIDE_FIRST[q] is True else '"part"')
                                                       for q in before))
+        after = i.get('after') or {}
+        if after.get(ALLIANCE) or after.get(HORDE):
+            out.append('      after = { Alliance = { %s }, Horde = { %s } },' % (
+                ', '.join(str(q) for q in after.get(ALLIANCE, [])), ', '.join(str(q) for q in after.get(HORDE, []))))
         if i['follow']:
             out.append('      follow = { %s },' % ', '.join('[%d] = { %s }' % (q, ', '.join(str(f) for f in fs))
                                                       for q, fs in sorted(i['follow'].items())))
@@ -1274,13 +1763,22 @@ def write(data, used, guides):
              '-- pre = quests needed first (any one of them if preAny), from the same database;',
              '-- rm = the races that can take it (QuestieDB race mask; none: everyone);',
              '-- dq = a dungeon\'s quest: only the dungeon routes use it, never the leveling guide;',
+             '-- ti = turned in inside its dungeon (t is the entrance, its name says "(inside)"): handed in during the run;',
              '-- talk = nothing to do but hand it in (no objectives, nowhere to explore);',
+             '-- tr = a transition quest: talk, and its hand-in takes you to a new questing area (a task area with',
+             '--   work in it, not the one you pick it up in; build_guides.py transition_quests);',
+             '-- ri = { { itemID, "name", { { uiMapID, x, y }, ... } } }: items to carry that the quest needs and',
+             '--   doesn\'t give you (a key, a bauble): fetched first, from where they drop or are sold;',
              '-- m = about how many minutes its objectives and the fights on the way take, walking aside;',
-             '-- k = XP from those kills at the quest\'s level (objectives, and hostile mobs along the walk).',
+             '-- k = XP from those kills at the quest\'s level (objectives in full; the mobs along the walk at the few',
+             '--   a traveller fights: TRAVEL_SHARE of them, DELIVERY_SHARE for a delivery, ROAD_SHARE on a logged road).',
              '-- ot = what to do, shortened (quest_text.py); g = the same one action at a time: l = the line, n = the name in the',
-             '-- game\'s objective text, k = "use" or "keep" (shown in colour), p = where; sp = objectives far apart: one stop each.',
+             '-- game\'s objective text, k = "use" or "keep" (shown in colour), m = the creature it\'s about (to kill or talk to, or',
+             '-- the one that drops it: the arrow\'s /target), p = where; sp = objectives far apart: one stop each.',
              'ns.Quests = {']
     everything = area_actions(data, sorted(used.items()))
+    per_areas = task_area_sets(used, everything)
+    transitions = transition_quests(used, per_areas)
     for qid in sorted(used):
         q = used[qid]
         parts = ['n = %s' % lua_str(q.name)] + (['pvp = true'] if q.pvp else []) + ['l = %d' % q.level, 'r = %d' % q.req, 'xp = %d' % q.base_xp]
@@ -1306,10 +1804,20 @@ def write(data, used, guides):
             parts += action_fields(everything.get(qid))[0]
         if q.talk:
             parts.append('talk = true')
+        if qid in transitions:
+            parts.append('tr = true')
         if q.races:
             parts.append('rm = %d' % q.races)
+        need = required_items(data, q)
+        if need:
+            parts.append('ri = { %s }' % ', '.join('{ %d, %s, { %s } }' % (i, lua_str(n), ', '.join('{ %s }' % pt(p) for p in spots))
+                                                  for i, n, spots in need))
         if qid in DUNGEON_QUESTS:
             parts.append('dq = true')
+        if getattr(q, 'inside_end', False):
+            parts.append('ti = true')
+        if getattr(q, 'inside_start', False):
+            parts.append('gi = true')
         pre = q.single or q.group
         if pre:
             parts.append('pre = { %s }' % ', '.join(str(p) for p in pre))
@@ -1331,6 +1839,7 @@ def write(data, used, guides):
     lines.append('}')
     with open(os.path.join(GUIDES, 'Data.lua'), 'w', encoding='utf-8', newline='\n') as f:
         f.write('\n'.join(lines) + '\n')
+    write_areas(per_areas)
 
     for key, name, faction, sections, quests, exits in guides:
         out = ['-- GENERATED by tools/FieldGuide/build_guides.py. Do not edit.', 'local _, ns = ...', '',

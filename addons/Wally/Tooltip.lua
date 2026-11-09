@@ -8,6 +8,12 @@ local COLOR = {
     upgrade = { 0.4, 0.8, 1 },
     learn = { 0.85, 0.75, 0.4 },
 }
+local TRENDS = {
+    { label = "daily trend", days = 1 },
+    { label = "weekly trend", days = 7 },
+    { label = "monthly trend", days = 30 },
+}
+local TREND_COLOR = { up = { 0.35, 0.95, 0.55 }, down = { 1, 0.45, 0.35 }, none = { 0.7, 0.7, 0.7 } }
 
 -- Returns false (try again on the next update) while the saved data isn't loaded or the line is off.
 local function AddLines(tooltip, link)
@@ -29,6 +35,23 @@ local function AddLines(tooltip, link)
             tooltip:AddLine(("Wally: worth ~%s each (%s)"):format(C.Money(worth), source == "auction" and "auction price" or "estimate"),
                 0.6, 0.75, 0.8)
         end
+    end
+    -- Market trend at your faction's auction houses (Wealth Planner's history per auction pool):
+    -- today's price against the start of each window. Then Steamwheedle's latest price on its own.
+    local AP = ns.AuctionPrice
+    local steam = AP.PoolPrice(link, AP.STEAMWHEEDLE)
+    if steam or AP.HasHistory(link) or AP.Market(link) then
+        for _, w in ipairs(TRENDS) do
+            local diff = AP.Trend(link, w.days)
+            local text, c = "N/A", TREND_COLOR.none
+            if diff then
+                text = (diff < 0 and "-" or diff > 0 and "+" or "") .. C.Money(math.abs(diff))
+                c = diff > 0 and TREND_COLOR.up or diff < 0 and TREND_COLOR.down or TREND_COLOR.none
+            end
+            tooltip:AddDoubleLine("Wally: " .. w.label, text, 0.6, 0.75, 0.8, c[1], c[2], c[3])
+        end
+        local c = steam and { 1, 1, 1 } or TREND_COLOR.none
+        tooltip:AddDoubleLine("Wally: Steamwheedle", steam and C.Money(steam) or "N/A", 0.6, 0.75, 0.8, c[1], c[2], c[3])
     end
     local key = ns.Key(C.NameFromLink(link))
     local h = key and ns.db.habits[key]

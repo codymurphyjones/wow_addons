@@ -13,8 +13,13 @@ local _, ns = ...
 local X = {}
 ns.Exists = X
 
-local PER_TICK = 20  -- questions sent every TICK seconds
+-- Every answer fires QUEST_DATA_LOAD_RESULT, and other addons can do heavy work on each one
+-- (QuestieTrace re-reads the whole quest log, ~30 ms an answer): 20 at a time froze the game.
+-- So quests the route waits on go one per TICK, the background scan one every SLOW seconds
+-- (out of combat), and background answers redraw the route at most every REDRAW seconds.
 local TICK = 0.1
+local SLOW = 2
+local REDRAW = 30
 local TIMEOUT = 10
 -- The server saying no to more than this share of the first answers (at least TRUST_AFTER of them)
 -- means the lookup doesn't work here, not that the quests are gone: every quest counts as there.
@@ -157,29 +162,43 @@ function X:ScanGuide()
     end
 end
 
+local lastSlow = 0
 local function Ask()
     if not Api() then return end
-    local n = 0
-    while n < PER_TICK and #queue > 0 do
-        local id = table.remove(queue, 1)
+    local now = GetTime()
+    local checked = 0
+    while #queue > 0 and checked < 50 do
+        local id = queue[1]
+        if not urgent[id] and (now - lastSlow < SLOW or InCombatLockdown()) then return end
+        table.remove(queue, 1)
         queued[id] = nil
+        checked = checked + 1
         local c = Cache()
         if c[id] == nil and not asked[id] then
             if Known(id) then
                 c[id], urgent[id] = true, nil
             else
                 asked[id] = GetTime()
+                if not urgent[id] then lastSlow = now end
                 ns.QuestieKit.Call(C_QuestLog.RequestLoadQuestByID, id)
-                n = n + 1
+                return -- one question a tick
             end
         end
     end
+end
+
+local pendingRedraw = false
+local function ChangedLater()
+    if pendingRedraw then return end
+    pendingRedraw = true
+    C_Timer.After(REDRAW, function() pendingRedraw = false; Changed() end)
 end
 
 ns:On("QUEST_DATA_LOAD_RESULT", function(id, success)
     if not (id and asked[id] and ns.db) or broken then return end
     local there = success and true or false
     Cache()[id] = there
+    local wanted = urgent[id]
     timedOut[id], urgent[id] = nil, nil
     answers = answers + 1
     if not there then nos = nos + 1 end
@@ -188,8 +207,9 @@ ns:On("QUEST_DATA_LOAD_RESULT", function(id, success)
         broken = true
         ns.db.questCheck, cache = nil, nil
         ns:Print("The server's quest lookup doesn't answer reliably here: every quest counts as there.")
+        wanted = true
     end
-    Changed()
+    if wanted then Changed() else ChangedLater() end
 end)
 
 ns:On("PLAYER_LOGIN", function()
@@ -246,9 +266,45 @@ local function CheckGiver(event)
     if offered[id] or (q.n and offered[q.n]) then return end
     ns.char.notOffered[id] = true
     E:Invalidate()
-    ns:Print(("%s isn't offered here: dropped from the route (/fg unskip brings it back)."):format(E:QuestName(id)))
+    ns:Print(("%s isn't offered here yet (it may need an earlier quest): dropped from the route until one it needs is "
+        .. "handed in (/fg unskip brings it back now)."):format(E:QuestName(id)))
     ns:Changed()
 end
+
+-- "Not offered" said while its prerequisites weren't done (they weren't known then: Forever's own
+-- quests, before the guide data had them) wasn't the giver's last word. At login those go back on
+-- the route: it now takes you through what they need first (the dungeon route's unlock stage).
+ns:On("PLAYER_LOGIN", function()
+    C_Timer.After(2, function()
+        local E = ns.Engine
+        if not (ns.char and E and E.PrereqsDone) then return end
+        local back = {}
+        for id in pairs(ns.char.notOffered) do
+            if not E:PrereqsDone(id) then
+                ns.char.notOffered[id] = nil
+                back[#back + 1] = E:QuestName(id)
+            end
+        end
+        if #back > 0 then
+            E:Invalidate()
+            ns:Print(("Back on the route, after what they need first: %s."):format(table.concat(back, ", ")))
+            ns:Changed()
+        end
+    end)
+end)
+
+-- A quest handed in may be the one a not-offered quest was waiting for: those that list it as a
+-- prerequisite go back on the route.
+ns:On("QUEST_TURNED_IN", function(done)
+    if not (ns.char and type(done) == "number") then return end
+    local back = false
+    for id in pairs(ns.char.notOffered) do
+        for _, p in ipairs((ns.Quests[id] or {}).pre or {}) do
+            if p == done then ns.char.notOffered[id] = nil; back = true end
+        end
+    end
+    if back and ns.Engine then ns.Engine:Invalidate(); ns:Changed() end
+end)
 
 for _, event in ipairs({ "GOSSIP_SHOW", "QUEST_GREETING", "QUEST_DETAIL" }) do
     -- (The NPC's dialog fills in a moment after the event.)

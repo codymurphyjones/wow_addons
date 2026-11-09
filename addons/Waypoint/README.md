@@ -22,6 +22,7 @@ Questie is optional. Without it the arrow only shows up for paths and other addo
 - **In a quest's area** (the game's own quest area on the minimap, or near the objective's spots) the arrow shows "In the area" instead of chasing one spawn point, and the line and the minimap dot go away.
 - **A target inside a dungeon or raid** leads to its entrance (the wing's, for a wing's floor) while you're outside it.
 - Drag it to move it (`/way lock` stops that).
+- The small bar at its top left minimizes it to a faint tab that still points the way. Click the tab to bring the arrow back (right-click: the menu). Windows docked under it stay where they are.
 - **Left-click** runs the target's own action, for example opening the Spyglass quest window.
 - **Right-click** moves on: to the next waypoint, to another quest, or away from an addon's target.
 - **Shift+right-click** clears the waypoint path.
@@ -174,7 +175,8 @@ Options → AddOns → Waypoint (or `/way options`):
 - **The arrow:** show or lock it, lead around lakes and cliffs, the terrain line, the minimap button, and how windows under the arrow line up.
   - **Terrain line:** a line under the arrow that appears only when there's something to say. In the direction you're facing it says "Cliff ahead: 184 yd down (lethal)" (or "Walk on Air ready"), or "Too steep to climb ahead". It also says how far above or below you the target is ("Target 245 yd below you"). It comes from the 66-yard land map, so ridges and ledges narrower than that can be missed.
 - **What it follows:** Questie quests, sharing paths with your group, asking before adding a waypoint.
-- **World map:** town icons.
+- **World map:** town icons and dock icons.
+  - **With OneForAll** (optional, `OneForAll.lua`): its Map Landmarks draw the dungeon entrances, flight masters, zeppelins, ships and the tram, so Waypoint's dock icons stay off while OneForAll shows its own. Its icons lead you there instead: click a flight master, zeppelin, ship or tram icon (again to stop), Shift-click an entrance, zone exit or book (a plain click keeps OneForAll's action), and Ctrl+click adds a waypoint as anywhere on the map. Town icons stay and never hide OneForAll's icons: one a town icon would cover at the current zoom is pushed just clear of it, and goes back to its own spot when zooming in leaves room. Routes still use Waypoint's own data. Without OneForAll nothing changes.
 - **Planning the way there:**
   - **Transport:** flight paths, taking the planned flight by itself, boats/zeppelins/skyships, hearthstone, mage teleports.
   - **Terrain:** following the land map, swimming, Aquatic Form and its chat tip, Slow Fall/Levitate.

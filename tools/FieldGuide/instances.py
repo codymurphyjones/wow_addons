@@ -34,7 +34,8 @@ OUTSIDE_FIRST = {
     962: 'part',    # Serpentbloom: the outer cave, and inside
     6626: True,     # A Host of Evil: around Razorfen Downs' entrance
     6521: True,     # An Unholy Alliance: Ambassador Malcin, outside Razorfen Downs
-    2926: 'part',   # Gnogaine: irradiated invaders outside Gnomeregan
+    2926: True,     # Gnogaine: irradiated invaders and pillagers outside Gnomeregan (every spot is in Dun Morogh:
+                    # The Only Cure is More Green Glow, which needs it, is picked up before the run)
     704: True,      # Agmond's Fate: urns at Uldaman's outer dig site
     709: True,      # Solution to Doom: the tablet in Uldaman's outer cave
     1360: True,     # Reclaimed Treasures (Alliance): Krom Stoutarm's chest, Uldaman's outer cave

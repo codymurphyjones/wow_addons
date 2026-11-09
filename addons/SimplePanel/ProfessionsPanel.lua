@@ -3,7 +3,8 @@ local _, ns = ...
 -- Own Panels: the professions window in Wally's style, latched to the Professions plugin
 -- (Panels.lua). It takes the place of the game's profession window entirely:
 --   left    your professions: icon, skill bar (yellow when it's time to train), specialization.
---           A crafting profession opens with one click; a gathering one shows its card.
+--           Every profession opens with one click: on WoW Forever gathering ones craft too (camping's
+--           campfires and camp gear). One the game won't open (nothing to craft yet) shows its card.
 --   right   with no profession open: a card per profession (its spells to click, unlearn) and a
 --           search through every recipe of every profession you've opened before (remembered per
 --           character, so it works with nothing open), with how many you could make from your
@@ -499,8 +500,10 @@ end
 -- OpenProfessionUIToSkillLine does). It needs your click behind it: the game blocks it from a timer.
 -- Another addon can close it again at once (LinkedInn, reading that same profession in the
 -- background, takes the window for its read): then it says so, and the next click opens it.
+-- onFail(): the game wouldn't open it (a gathering profession with nothing to craft yet): instead of
+-- the "closed right after opening" line.
 local opening -- { skillLine }: a click waiting for its profession to open
-local function OpenTrade(p)
+local function OpenTrade(p, onFail)
     if not (p and p.skillLine) then return end
     if IsOpen(p, OpenProfession()) then Sync(); return PP:Dirty() end
     local job = { skillLine = p.skillLine }
@@ -508,10 +511,15 @@ local function OpenTrade(p)
     askedAt = GetTime()
     local ok, opened = pcall(TS.OpenTradeSkill, p.skillLine)
     if not ok or opened == false then opened = false end
+    if opened == false and onFail then
+        opening = nil
+        return onFail()
+    end
     C_Timer.After(opened == false and 0.5 or 1.5, function()
         if opening ~= job then return end -- clicked something else since
         opening = nil
         if IsOpen(p, OpenProfession()) then return end
+        if onFail then return onFail() end
         ns:Print(("%s was closed right after opening (another addon was reading it): click it again."):format(p.name), true)
     end)
 end
@@ -928,6 +936,12 @@ local function DrawProfessions(list, current)
             MakeCasting(r, p.open.name or p.open.spellID)
             r:SetScript("OnClick", function()
                 if InCombatLockdown() then ns:Print("Professions can't be opened from SimplePanel in combat.", true) end
+            end)
+        elseif OpensDirectly(p) then
+            -- A gathering profession: its recipes too (camping), or its card when there are none yet.
+            MakeCasting(r, nil)
+            r:SetScript("OnClick", function()
+                OpenTrade(p, function() panel.focus = p.skillLine; PP:ShowOverview(p.skillLine) end)
             end)
         else
             MakeCasting(r, nil)

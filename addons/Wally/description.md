@@ -54,6 +54,7 @@ The Wally button sits next to the merchant window's own sell-junk button (or at 
 ### Selling options
 - **Sell junk automatically:** sells as soon as you open a merchant.
 - **Safe sell (12 at a time):** sells no more than 12 items per click, so everything Wally just sold is still in the merchant's buyback tab. It sells the cheapest junk first, and you can click again to sell the next 12.
+- **Offer greens not worth auctioning:** after the junk, Wally opens a window with the green weapons and armor that a vendor pays more for than the auction house would (Auctionator's price, after your undercut and the auction house's 5% cut), plus soulbound greens, which can't be auctioned. Mouse over an item to see it; click it to keep it (its icon turns grey). **Sell** sells the rest; **Keep all** or Escape sells nothing. Never offered: upgrades and gear you wear, anything on your Never Sell or Auction List or covered by a keep rule, items with no Auctionator price yet, and, for enchanters, any green. Items you keep aren't offered again until you reload.
 - **Repair gear automatically:** repairs everything at any vendor who can repair. Guild bank funds are used first when you're allowed to use them and they cover the cost.
 
 Wally prints the total after each sale (turn off **Chat messages** to keep it quiet). Selling stops by itself if you close the merchant or the vendor refuses an item.
@@ -124,7 +125,7 @@ Grey items are vendor trash, so Wally never waits to learn them. Wally sells a g
 - What you wear in that slot is grey or white, with nothing on it but armor. A stat is worth more than armor, and green or better is left alone.
 - It has more armor than that piece (more DPS for a weapon), or the slot is empty.
 
-If it passes, Wally puts it on out of combat with **Wear better grey gear**, and what came off is judged the same way. White items aren't touched by this: many have crafting uses, so Wally still waits to learn those.
+If it passes, Wally puts it on out of combat with **Wear better grey gear**, and what came off is judged the same way. While you hold a fishing pole, grey weapons wait: Wally neither puts one on over the pole nor sells it, and judges it against your real weapons once the pole is off. White items aren't touched by this: many have crafting uses, so Wally still waits to learn those.
 
 ---
 
@@ -145,7 +146,7 @@ The check updates whenever you change gear, level up or learn new skills.
 
 ## Protected valuables
 
-Wally ranks every stack in your bags by worth and protects the most valuable ones. They're **never sold as junk** and they **sort first** (right after pinned items).
+Wally ranks every stack in your bags by worth and protects the most valuable ones. They're **never sold as junk**, and they sort with their group like any other item.
 
 - **Protect the top N stacks:** default **10**, from 0 (off) to 40.
 - **Rare and better are always protected:** blue and purple items are protected whatever their rank.
@@ -202,10 +203,10 @@ Tick the rules you want and use the arrows to put them in order. The top rule de
 - **A to Z:** name only.
 
 ### Group order
-Arrange the groups used by the Group rule: Hearthstone & keys, Consumables, Quest items, Weapons & armor, Trade goods & reagents, Recipes, Bags & quivers, Ammo, Everything else.
+Arrange the groups used by the Group rule. The default order is Hearthstone & keys, Consumables, Quest items, Weapons & armor, Bags & quivers, Ammo, Recipes, Everything else, then Trade goods & reagents. With Junk goes last on, everything Wally would sell comes after all of them.
 
 ### Options
-- **Junk goes last:** everything Wally would sell ends up together at the end.
+- **Junk goes last:** everything Wally would sell ends up together at the end, the stacks that sell for the most first.
 - **Fill from the end of the last bag:** like Blizzard's sort. When off, sorting starts at the backpack.
 - **Sort button on bags and bank**, and whether it sits **left or right of the search box**.
 - **Sort after Wally sells junk:** closes the gaps that selling leaves.
@@ -242,8 +243,8 @@ Wally adds a **Wally** tab to the auction house window.
 - Right-click an item to never auction it. Shift+right-click removes it from the Auction List.
 
 ### Pricing
-- By default Wally **price matches**: it posts 1 below Auctionator's price (1 copper, which rounds down to 1 silver, the smallest step the auction house takes). Tick **Undercut** to go lower instead, by a percentage (default **5%**, up to 90%) or a fixed copper amount. Set it on the tab, in settings, or with `/wally auction undercut 5%`, `/wally auction undercut 100` or `/wally auction undercut off`.
-- Prices round down to whole silver.
+- By default Wally **price matches**: it posts 1 copper below Auctionator's price. Tick **Undercut** to go lower instead, by a percentage (default **5%**, up to 90%) or a fixed copper amount. Set it on the tab, in settings, or with `/wally auction undercut 5%`, `/wally auction undercut 100` or `/wally auction undercut off`.
+- Prices are in copper, as Forever's auction house takes them (a 28 copper item posts at 27 copper, not 1 silver).
 - **An item is never listed below its vendor price.** If it's worth more at a vendor, Wally says so and skips it.
 - Items without an Auctionator price are skipped until you scan them with Auctionator.
 - Wally runs Auctionator's full scan the first time you open its tab, at most once every **4 hours** per realm (it remembers across reloads, logins and alts). Any full scan counts, including Auctionator's own.
@@ -274,6 +275,8 @@ Wally watches every auction you create, whether through Auctionator, Blizzard's 
 With **Item tooltip lines** on, item tooltips show:
 - **Wally's verdict** and reason: junk (red), kept (green) or possible upgrade (blue).
 - **Worth per item** for trade goods, reagents and gems (auction price or estimate).
+- **Daily, weekly and monthly trend** for anything with an auction price: the latest price at your faction's auction houses minus their price 1, 7 or 30 days ago (green up, red down). Prices from Booty Bay, Gadgetzan and Everlook never count toward the trends. The trends need **Wealth Planner**, which keeps each auction house's prices apart; a trend reads **N/A** until its history reaches back that far.
+- **Steamwheedle**: the latest price at Booty Bay, Gadgetzan and Everlook (they share their listings), or **N/A** if it hasn't been seen there.
 - **Learning progress**: "learning 40% (sold 2, bought back 0)".
 - **Auction learning progress** for items you've been posting.
 
@@ -310,6 +313,7 @@ Everything Wally sells for you is saved **per login session** under **Options > 
 |---------|---------|--------------|
 | Sell junk automatically | Off | Sell as soon as you open a merchant. |
 | Safe sell (12 at a time) | On | Never sell more than you can buy back. |
+| Offer greens not worth auctioning | On | After junk, show green gear a vendor pays more for than the auction house. You pick what sells. |
 | Grey items are junk | On | Sold without learning, unless it's more armor than a plain grey or white piece you wear. |
 | Wear better grey gear | On | Put on grey gear with more armor than that plain piece, out of combat. |
 | Protect possible upgrades | On | Keep white gear that may beat what you wear. |

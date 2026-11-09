@@ -23,6 +23,9 @@ S.page = ns.NewOptionsPage({ name = "WallyTooltip", build = function(p)
             .. "tooltip goes just outside it, or anywhere else that's clear, never over it, and jumps rather than glide "
             .. "across it. Tooltips the game shows at your cursor, or that a button pins beside itself, aren't moved.",
         apply = function() ns.Place:Outline() end })
+    p:Check({ id = "minimapAside", path = "db.minimapAside", label = "Keep the minimap readable",
+        tooltip = "Pointing at something on the minimap (a blip, a quest pin) shows its tooltip beside the map, on the side "
+            .. "towards the middle of the screen, instead of over the map at your cursor." })
     p:Header("Troubleshooting")
     p:Check({ id = "debug", path = "db.debug", label = "Say where each tooltip goes",
         tooltip = "A line in chat for each tooltip: the spot it took and what it touched, or why it went to Edit Mode's spot "

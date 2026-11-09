@@ -70,7 +70,8 @@ local function Build()
     tinsert(UISpecialFrames, "FieldGuideDungeonPicker")
     frame:RegisterEvent("GLOBAL_MOUSE_DOWN")
     frame:SetScript("OnEvent", function(self)
-        if self:IsShown() and not MouseIsOver(self) and not (owner and MouseIsOver(owner)) then self:Hide() end
+        -- (Region:IsMouseOver: this client has no global MouseIsOver.)
+        if self:IsShown() and not self:IsMouseOver() and not (owner and owner:IsMouseOver()) then self:Hide() end
     end)
 end
 

@@ -1,6 +1,6 @@
 local ADDON, ns = ...
 
--- The dungeon watch: what really happens in dungeons, kept so the pull maps can be checked and
+-- The dungeon watch: what really happens in dungeons, kept so the mob positions can be checked and
 -- improved (tools/Spyglass/ingest_contrib.py extracts it; fetch_pulls.py folds it in).
 --
 -- Inside a dungeon or raid it notes:

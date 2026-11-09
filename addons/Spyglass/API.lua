@@ -152,6 +152,54 @@ function API:ClearWaypoint()
     if self:HasWaypoints() then Waypoint:Clear("SpyGlass") end
 end
 
+-- The same, asked first: "Point Waypoint's arrow at <title>?" with Yes / No. For a click in SpyGlass's
+-- windows (a stray click on an item's source line set an arrow you didn't want). A window of its own,
+-- not the game's StaticPopup: an addon's popup there taints the game's next dialog.
+local ask
+local function BuildAsk()
+    ask = CreateFrame("Frame", "SpyGlassWaypointAsk", UIParent, "BackdropTemplate")
+    ask:SetSize(340, 120)
+    ask:SetPoint("TOP", 0, -135)
+    ask:SetFrameStrata("DIALOG")
+    ask:SetToplevel(true)
+    ask:EnableMouse(true)
+    ask:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+    ask:SetBackdropColor(0.05, 0.06, 0.08, 0.95)
+    ask:SetBackdropBorderColor(0.4, 0.73, 1, 0.6)
+    ask.text = ask:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    ask.text:SetPoint("TOPLEFT", 16, -16)
+    ask.text:SetPoint("TOPRIGHT", -16, -16)
+    ask.text:SetJustifyH("CENTER")
+    local function Button(label, x, yes)
+        local b = CreateFrame("Button", nil, ask, "UIPanelButtonTemplate")
+        b:SetSize(110, 24)
+        b:SetPoint("BOTTOM", x, 14)
+        b:SetText(label)
+        b:SetScript("OnClick", function()
+            local wp = ask.wp
+            ask.wp = nil
+            ask:Hide()
+            if yes and wp then API:SetWaypoint(wp) end
+        end)
+    end
+    Button(YES or "Yes", -60, true)
+    Button(NO or "No", 60, false)
+    ask:SetScript("OnHide", function() ask.wp = nil end)
+    tinsert(UISpecialFrames, "SpyGlassWaypointAsk")
+    ask:Hide()
+end
+
+function API:ConfirmWaypoint(wp)
+    if not (self:HasWaypoints() and type(wp) == "table") then return end
+    if not ask then BuildAsk() end
+    ask.wp = wp
+    local line = "|cff66bbffSpyGlass|r: point Waypoint's arrow at\n|cffffffff" .. tostring(wp.title or "this place") .. "|r?"
+    if wp.subtitle and wp.subtitle ~= "" then line = line .. "\n|cffaaaaaa" .. tostring(wp.subtitle) .. "|r" end
+    ask.text:SetText(line)
+    ask:SetHeight(math.max(110, ask.text:GetStringHeight() + 70))
+    ask:Show()
+end
+
 -- The tracked waypoint, or nil. After a reload it has no onClick until its
 -- plugin sets it again (key tells the plugin which one it was).
 function API:GetWaypoint()
@@ -170,39 +218,6 @@ end
 --                      onClick = function(row) end }, ... }, "Text when there are no rows"
 --       end,
 --   })
--- Dungeon maps (SpyGlass's, with mob packs and pull plans), floor by floor:
---   API:DungeonMapInstances()        { { key, name } } of every instance with a map, by name
---   API:DungeonMapFloors(instance)   { { index, name, uiMap, packs, fullArt } } in order, or nil;
---                                    instance: SpyGlass's key, the instance (map) ID or its name
---   API:DungeonMapFloorOf(uiMapID)   the instance key and floor index a game map is, or nil
---   API:OpenDungeonMap(instance, floor)  opens the journal's Maps tab on it (floor: index or uiMapID;
---                                    default: where you are). False when there's no map of it.
-function API:DungeonMapInstances()
-    local out = {}
-    for _, e in ipairs(ns.DungeonMap:Instances()) do out[#out + 1] = { key = e[1], name = e[2] } end
-    return out
-end
-
-function API:DungeonMapFloors(instance)
-    local key = ns.DungeonMap:FindKey(instance)
-    return key and ns.DungeonMap:Floors(key) or nil
-end
-
-function API:DungeonMapFloorOf(uiMapID)
-    return ns.DungeonMap:FloorOfMap(uiMapID)
-end
-
-function API:OpenDungeonMap(instance, floor)
-    local M = ns.DungeonMap
-    local key = instance and M:FindKey(instance) or M:Current()
-    if not key then return false end
-    if type(floor) == "number" and floor > #(M:Data(key).floors or {}) then
-        local k, i = M:FloorOfMap(floor)
-        floor = k == key and i or nil
-    end
-    return ns.Maps:Open(key, floor) and true or false
-end
-
 function API:RequestJournalTab(addon, tab)
     return ns.Plugins:RequestJournalTab(addon, tab)
 end

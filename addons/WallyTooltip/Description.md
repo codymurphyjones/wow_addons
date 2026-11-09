@@ -11,7 +11,8 @@ The game puts most tooltips in one fixed corner (the one you set in Edit Mode), 
 Each time a tooltip opens, WallyTooltip tries spots **beside your cursor** (or beside the button the tooltip belongs to), spots **along the screen's edges**, and **where the tooltip already is**. It scores each one on:
 
 - **What it would cover.**
-  - *Vital, never covered if it can be helped:* the thing under your cursor, the button or window the tooltip is about, your unit frames, target and party frames, action bars, cast bars and raid frames.
+  - *Never covered:* the creature, player or object you're pointing at, sized as it is on screen (a creature's box reaches up to its nameplate), not just a small square round the cursor.
+  - *Vital, never covered if it can be helped:* the button or window the tooltip is about, your unit frames, target and party frames, action bars, cast bars and raid frames.
   - *Important:* the minimap, quest trackers, buffs, open windows, SimplePanel's bar, the Waypoint arrow, and the middle of the screen where your character stands.
   - *Minor:* chat, the micro menu and bags, and the nameplates over people and creatures.
 - **How far it is from what it's about.** Close is better, so your eyes don't have to travel. A very tall tooltip cares less, because beside the cursor it would cover a lot.

@@ -19,6 +19,13 @@ local MESA = 700        -- yards from a lift's top that its mesa may reach
 local LEVEL = 20        -- yards under the top of a lift that still count as up there
 local MIN_RISE = 40     -- yards a lift has to climb to reach somewhere only it goes (not a step or a dock)
 local KEEP_WALKS = 12   -- stops whose walks stay unpacked
+-- The first and last stretch (you to the first stop, the last stop to the target) are guessed: a
+-- straight line DETOUR longer. A far stop's guess can look cheaper than the stored walks, and the way
+-- then ends in a long straight line (over a ridge, in Stonetalon). So stops within END_YARDS of you
+-- and of the target go first; farther ones only when none is that near.
+local END_YARDS = 600
+local END_DETOUR = 2.5  -- ...and, choosing the last stop, its straight stretch counts this much longer: the
+                        -- stop right by the target wins over one a little cheaper with more guessed
 Z.LONG = LONG
 
 local costs = {}        -- ["continent:mode"] = { [from] = { to, secs, to, secs, ... } }
@@ -85,8 +92,10 @@ function Z.ZoneAt(c, n, w)
 end
 
 -- The height of the ground at a point, from the land map, or nil.
+-- (Second: true when the land map there isn't unpacked yet; it is being, in the background.)
 function Z.HeightAt(c, n, w)
     local G = ns.Grid
+    if G and G.HeightSoon then return G:HeightSoon(c, n, w) end
     return G and G.Height and G:Height(c, n, w) or nil
 end
 
@@ -136,12 +145,15 @@ local function From(c, n, w, mode)
     local dist, prev, heap = {}, {}, {}
     -- Out of your zone by its own exits: the stop nearest on the map may be down a cliff from you.
     local zone = Z.ZoneAt(c, n, w)
-    for i, e in ipairs(exits) do
-        local d = Yards(n, w, e[3], e[4])
-        if (e[1] == zone or e[2] == zone) or (zone == 0 and d <= REACH) then
-            dist[i] = d * DETOUR / RUN
-            Push(heap, dist[i], i)
+    for pass = 1, 2 do
+        for i, e in ipairs(exits) do
+            local d = Yards(n, w, e[3], e[4])
+            if ((e[1] == zone or e[2] == zone) or (zone == 0 and d <= REACH)) and (pass == 2 or d <= END_YARDS) then
+                dist[i] = d * DETOUR / RUN
+                Push(heap, dist[i], i)
+            end
         end
+        if #heap > 0 then break end
     end
     while #heap > 0 do
         local top = Pop(heap)
@@ -167,39 +179,75 @@ local function From(c, n, w, mode)
 end
 
 local function Last(from, c, tn, tw)
-    local best, last
+    local best, last, secs
     local zone = Z.ZoneAt(c, tn, tw)
-    for i, d in pairs(from.dist) do
-        local e = from.exits[i]
-        local out = Yards(tn, tw, e[3], e[4])
-        if e[1] == zone or e[2] == zone or (zone == 0 and out <= REACH) then
-            local total = d + out * DETOUR / RUN
-            if not best or total < best then best, last = total, i end
+    for pass = 1, 2 do
+        for i, d in pairs(from.dist) do
+            local e = from.exits[i]
+            local out = Yards(tn, tw, e[3], e[4])
+            if (e[1] == zone or e[2] == zone or (zone == 0 and out <= REACH)) and (pass == 2 or out <= END_YARDS) then
+                local total = d + out * END_DETOUR / RUN
+                if not best or total < best then best, last, secs = total, i, d + out * DETOUR / RUN end
+            end
         end
+        if last then break end
     end
-    return last, best
+    -- (The time: the usual guess for the last stretch. END_DETOUR only chooses the stop.)
+    return last, secs
 end
 
 -- The lift to a point that's up where only lifts go (a mesa: Thunder Bluff, Freewind Post), the
 -- nearest of them; nil when the point isn't up there. A place a lift's top is level with, within
 -- MESA yards, and well above its bottom.
+-- (Remembered by place: the ground's height comes off the land map, and unpacking a far place's
+-- tile for it took 50-100 ms each time a plan asked.)
+local liftMemo, liftCount = {}, 0
 function Z:LiftFor(c, n, w)
+    local lifts = ns.ZoneLifts and ns.ZoneLifts[c]
+    if not lifts then return nil end
+    -- Only a place near a lift can be up on its mesa: no height needed for the rest.
+    local near
+    for _, lift in ipairs(lifts) do
+        if Yards(n, w, lift[1], lift[2]) <= MESA and lift[4] - lift[3] >= MIN_RISE then near = true break end
+    end
+    if not near then return nil end
+    local key = ("%d:%d:%d"):format(c, n, w)
+    local known = liftMemo[key]
+    if known ~= nil then return known or nil end
     local best, bd
-    local h = self.HeightAt(c, n, w)
-    if not h then return nil end
-    for _, lift in ipairs(ns.ZoneLifts and ns.ZoneLifts[c] or {}) do
-        local d = Yards(n, w, lift[1], lift[2])
-        if d <= MESA and h >= lift[4] - LEVEL and lift[4] - lift[3] >= MIN_RISE and (not bd or d < bd) then
-            best, bd = lift, d
+    local h, pending = self.HeightAt(c, n, w)
+    if pending then return nil end -- asked again once the ground's unpacked (not remembered)
+    if h then
+        for _, lift in ipairs(lifts) do
+            local d = Yards(n, w, lift[1], lift[2])
+            if d <= MESA and h >= lift[4] - LEVEL and lift[4] - lift[3] >= MIN_RISE and (not bd or d < bd) then
+                best, bd = lift, d
+            end
         end
     end
+    if liftCount > 1000 then wipe(liftMemo); liftCount = 0 end
+    liftMemo[key], liftCount = best or false, liftCount + 1
     return best
 end
 
 -- Seconds on foot at run speed from (n, w) to (tn, tw) through the stops, or nil. The lifts on the way
 -- count: from down at the first one, and on to the last one.
+-- (Remembered: a plan asks this every second for each flight master and dock to the target, the
+-- same places each time, and each answer is a search over the stops.)
+local secsMemo, secsCount = {}, 0
+local SecsUncached
 function Z:Secs(c, n, w, tn, tw, mode)
     if Yards(n, w, tn, tw) < LONG then return nil end
+    local key = ("%d:%s:%d:%d:%d:%d"):format(c, mode, n, w, tn, tw)
+    local known = secsMemo[key]
+    if known ~= nil then return known or nil end
+    local secs = SecsUncached(self, c, n, w, tn, tw, mode)
+    if secsCount > 2000 then wipe(secsMemo); secsCount = 0 end
+    secsMemo[key], secsCount = secs or false, secsCount + 1
+    return secs
+end
+
+function SecsUncached(self, c, n, w, tn, tw, mode)
     local up, down = self:LiftFor(c, n, w), self:LiftFor(c, tn, tw)
     local extra = 0
     if up and up ~= down then
@@ -214,6 +262,14 @@ function Z:Secs(c, n, w, tn, tw, mode)
     if not from then return nil end
     local _, secs = Last(from, c, tn, tw)
     return secs and secs + extra
+end
+
+-- Under the loading screen (Flight.lua's warm-up): the stops' costs unpacked and the walks from where
+-- you stand worked out, not in the first plan after a reload (ZoneWays:Secs, ~80 ms).
+function Z:Warm(c, n, w, mode)
+    if not (c and Costs(c, mode)) then return end
+    self:LiftFor(c, n, w)
+    From(c, n, w, mode)
 end
 
 -- Whether this continent has stored walks.

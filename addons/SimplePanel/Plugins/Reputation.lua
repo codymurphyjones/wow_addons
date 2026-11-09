@@ -25,6 +25,29 @@ local function PerHour(name, id)
     return s.gained / hours
 end
 
+-- The faction name on the panel stops at NAME_MAX letters: a longer one is cut and ends in "...",
+-- so a name like "Bloodsail Buccaneers" doesn't push the bar's other text along. (The tooltip and
+-- the drop-down keep the full name.) Counted in letters, not bytes: a letter like "é" counts once.
+local NAME_MAX = 18
+local function Fit(name)
+    local letters = 0
+    for i = 1, #name do
+        local c = name:byte(i)
+        if c < 128 or c >= 192 then letters = letters + 1 end -- (not a UTF-8 continuation byte)
+    end
+    if letters <= NAME_MAX then return name end
+    local keep, n = NAME_MAX - 3, 0 -- (room for the "...")
+    local cut = #name
+    for i = 1, #name do
+        local b = name:byte(i)
+        if b < 128 or b >= 192 then
+            n = n + 1
+            if n > keep then cut = i - 1; break end
+        end
+    end
+    return (name:sub(1, cut):gsub("%s+$", "")) .. "..."
+end
+
 local SHORT = { tiers = ns.Format.TIERS_K, round = true, abs = false }
 local function Short(n) return ns.Format.Short(n, SHORT) end
 
@@ -47,7 +70,7 @@ SimplePanel.RegisterPlugin({
         local name, standing, min, max, value = C.WatchedFaction()
         if not name then return { { text = "No faction watched", color = T.muted } } end
         local segs = {}
-        if p:Get("showName") then segs[#segs + 1] = { text = name } end
+        if p:Get("showName") then segs[#segs + 1] = { text = Fit(name) } end
         local span = math.max(1, max - min)
         local done = value - min
         segs[#segs + 1] = { text = p:Get("showPct") and ("%d%%"):format(done / span * 100) or (Short(done) .. "/" .. Short(span)),

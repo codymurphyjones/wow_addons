@@ -209,7 +209,7 @@ local function OnMerchant()
     for i = 1, (GetMerchantNumItems and GetMerchantNumItems() or 0) do
         local itemID = ItemID(GetMerchantItemLink(i))
         if itemID and Wanted(itemID) and not Known("V", npc, itemID) then
-            local _, _, price, _, _, _, _, extendedCost = GetMerchantItemInfo(i)
+            local price, _, extendedCost = ns.Items.MerchantItemInfo(i)
             local cost
             if extendedCost and GetMerchantItemCostInfo then
                 local parts = {}
@@ -580,12 +580,13 @@ events:SetScript("OnEvent", function(_, event, prefix, msg, _, sender)
     end
 end)
 
--- Using a recipe item from your bags (what teaches you the recipe you learn next).
-if C_Container and C_Container.UseContainerItem then
-    hooksecurefunc(C_Container, "UseContainerItem", function(bag, slot) Safe(function() OnRecipeItemUsed(bag, slot) end) end)
-elseif UseContainerItem then
-    hooksecurefunc("UseContainerItem", function(bag, slot) Safe(function() OnRecipeItemUsed(bag, slot) end) end)
-end
+-- Using a recipe item from your bags (what teaches you the recipe you learn next). Followed by
+-- its click (shared Items.lua): a hook on UseContainerItem itself would block every item used
+-- from the bags on the 12.x engine.
+-- (Guarded: anything failing here would stop the rest of this file loading.)
+Safe(function()
+    ns.Items.OnBagItemUsed(function(bag, slot) Safe(function() OnRecipeItemUsed(bag, slot) end) end)
+end)
 
 -- The first time SpyGlass loads: ask whether to share. Sharing goes both
 -- ways: without it, nothing is sent and nothing from others is received.

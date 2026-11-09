@@ -6,7 +6,7 @@ local _, ns = ...
 -- error toasts (Reporter.lua), and the density presets (Density.lua). Settings: Options >
 -- AddOns > WallyHUD, or /whud.
 WallyHUD = WallyHUD or {}
-ns.VERSION = "0.1.3"
+ns.VERSION = "0.1.9"
 WallyHUD.VERSION = 1             -- the API's version (a number, as every suite API has)
 WallyHUD.RELEASE = ns.VERSION    -- the addon's release ("0.1.0")
 
@@ -19,8 +19,16 @@ ns.DEFAULTS = {
     minimapButtons = true, -- strip the gold rings off minimap buttons: monochrome icons, colour on hover
     hideReporter = true,   -- keep Blizzard's Issue Reporter out of the play field (keybind and toast instead)
     errorToast = true,     -- a small notice when an addon error happens, with Report and Dismiss
-    maxCamera = true,      -- the camera zooms out as far as the game allows (Camera.lua)
     questieSkin = true,    -- Questie's tracker in the suite's look (Questie.lua; a /reload to switch off)
+    hitchWatch = true,     -- a frame of 250 ms or more says in chat what took the time (Hitches.lua; /whud hitches)
+    emoteCategories = { -- the emote wheel's three categories you fill, eight emotes each, clockwise from the top (EmoteWheel.lua)
+        fun = { "DANCE", "CHEER", "LAUGH", "FLEX", "CHICKEN", "TRAIN", "JOKE", "ROAR" },
+        social = { "WAVE", "HELLO", "BOW", "THANK", "SALUTE", "YES", "NO", "BYE" },
+        battle = { "CHARGE", "ATTACKTARGET", "HELPME", "HEALME", "INCOMING", "OOM", "FOLLOWME", "WAIT" },
+    },
+    emoteUsage = {}, -- emote token -> { n = uses from the wheel, t = last use }: what the wheel's Quick category learns from
+    partyQuests = true,      -- a Party part on Questie's quest cards: each member's state for the quest (PartyQuests.lua)
+    questieAutoTrack = nil, -- Questie's map icons only for tracked quests (QuestieIcons.lua); nil: not chosen yet (the wizard asks)
     vitals = false,          -- the tideline: health and power drawn into the screen (Vitals.lua); with it on, the orb tracks your resource only
     vitalsPlayerFrame = "orb", -- your unit frame: "orb" (Orb.lua) | "blizzard" (Blizzard's player frame)
     orbSize = 100,           -- the orb's diameter
@@ -29,7 +37,10 @@ ns.DEFAULTS = {
     vitalsFilm = true,       -- the cold film over the health you've lost
     vitalsRim = true,        -- the bruised edges and the beat when you're low for you
     vitalsRhythm = true,     -- the five-second rule sweep and the tick ripples
+    moveFrames = false,      -- boxes in Edit Mode for the frames it can't move (Movers.lua); off by default, not in a wizard
     movers = {},             -- [key] = { point, x, y }: where you put a frame Edit Mode can't move (Movers.lua)
+    targetButton = true,     -- the PvE / PvP targeting button left of the menu bar (TargetMode.lua)
+    targetMode = "pve",      -- "pve": Tab targets creatures | "pvp": enemy players
 }
 ns.CHAR_DEFAULTS = {}
 
@@ -52,6 +63,10 @@ ns:OnLoad(function()
     end)
     -- The in-combat size went (the orb keeps one size).
     db.orbCombatSize = nil
+    -- The camera option went (OneForAll's "Farther camera zoom" does it): its saved values with it.
+    db.maxCamera, db.cameraBefore = nil, nil
+    -- The emote wheel's one list of eight became categories (emoteCategories) plus a learned Quick.
+    db.emoteWheel = nil
 end)
 
 function ns:Print(msg)
@@ -116,6 +131,12 @@ SlashCmdList.WALLYHUD = function(msg)
         ns.Density:Set(cmd)
     elseif cmd == "report" then
         ns.Reporter:Open()
+    elseif cmd == "hitches" then
+        ns.Hitches:Toggle()
+    elseif cmd == "hitches list" then
+        ns.Hitches:List()
+    elseif cmd == "questie" then
+        ns.QuestieIcons:Report()
     elseif cmd == "help" then
         Help()
     elseif cmd == "debug" then

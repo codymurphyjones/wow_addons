@@ -2,10 +2,37 @@ local _, ns = ...
 
 -- First-run setup (shared\Wizard.lua). ns.db is the active profile, so the "it ran" flag sits in the
 -- saved table above the profiles.
+--
+-- "Set character options" gives this character a profile of its own, named after it and copied from
+-- the one it used; going back to the account's switches to that one again and deletes the copy.
+
+local Profiles = ns.Profiles
+
+local own = {
+    is = function() return ns.char.ownProfile ~= nil and Profiles:Active() == ns.char.ownProfile end,
+    set = function(on)
+        if on then
+            local base = ns.Units.Me()
+            local name, n = base, 1
+            while SmartPlatesDB.profiles[name] do
+                n = n + 1
+                name = ("%s (%d)"):format(base, n)
+            end
+            ns.char.sharedProfile = Profiles:Active()
+            if Profiles:Create(name, true) then ns.char.ownProfile = name end
+        else
+            local name = ns.char.ownProfile
+            Profiles:Switch(ns.char.sharedProfile or "Default")
+            if name then Profiles:Delete(name) end
+            ns.char.ownProfile, ns.char.sharedProfile = nil, nil
+        end
+    end,
+}
 
 ns.setup = ns.NewWizard({
     name = "SmartPlates",
     store = function() return SmartPlatesDB end,
+    own = own,
     steps = {
         {
             title = "Your role",
@@ -44,6 +71,15 @@ ns.setup = ns.NewWizard({
             choices = {
                 { true, "Always show", "See what's around you before you pull." },
                 { false, "Only in combat", "A cleaner screen while you travel." },
+            },
+        },
+        {
+            title = "Health text",
+            text = "How should health read on the bar? (Both, Missing and Off are on the settings page.)",
+            path = "db.general.healthText",
+            choices = {
+                { "value", "Number", "Health left, e.g. 1.2K. Units with over 5,000 health show a percent instead." },
+                { "percent", "Percent", "Health left as a percent, e.g. 85%." },
             },
         },
         {

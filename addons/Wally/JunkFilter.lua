@@ -6,7 +6,6 @@ local C = ns.Compat
 local JF = {}
 ns.JunkFilter = JF
 
-local CLASS_QUEST = ns.Items.CLASS.QUEST
 local POOR, UNCOMMON = 0, 2
 
 function JF:ClearCache() end
@@ -24,7 +23,10 @@ function JF:Evaluate(link, info, skipOneOff)
     if info and info.noValue then return false, "Can't be sold", "none" end
     if price == nil then return false, "Loading item data", "none" end
     if price == 0 then return false, "Can't be sold", "none" end
-    if classID == CLASS_QUEST then return false, "Quest item", "none" end
+    -- Quest items are never junk, whatever their colour: many are white or grey but not of the
+    -- Quest class (Cactus Apples), so ask every sign the game gives.
+    local isQuest, questWhy = ns.Items.IsQuestItem(link, info and info.bag, info and info.slot)
+    if isQuest then return false, questWhy, "keep" end
     if info and info.locked then return false, "Locked", "none" end
 
     -- Queued once to sell to a vendor (Wealth Planner's Go liquid): sold this time, never listed.
@@ -40,7 +42,7 @@ function JF:Evaluate(link, info, skipOneOff)
     -- Grey is vendor trash: no learning, no selling it by hand first. It's kept only to wear it.
     if opt.sellGreys and quality == POOR then
         local verdict, detail = ns.Gear:GreyVerdict(link)
-        if not verdict then return false, "Checking gear", "upgrade" end
+        if not verdict then return false, detail or "Checking gear", "upgrade" end
         if verdict == "wear" then return false, "Better than what you wear: " .. detail, "upgrade" end
         return true, detail, "junk"
     end

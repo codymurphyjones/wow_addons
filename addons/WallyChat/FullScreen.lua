@@ -7,7 +7,8 @@ local _, ns = ...
 -- (the header's switch, remembered) leaves out colours and links, so what you copy is only the
 -- words. New messages come in while it's open, except while you're selecting (the text has the
 -- focus): the view stays at the bottom if it was there. A tab per chat window, as in chat; Escape
--- or the corner button closes it.
+-- or the corner button closes it. The CHANNELS button lists the numbered channels (General, Trade,
+-- LocalDefense...): untick one to hide it here, or pop it out into a tab of its own.
 local FS = {}
 ns.FullScreen = FS
 
@@ -43,17 +44,42 @@ local function Shown(s)
     return Chars(s)
 end
 
+-- The channel a chat line came in on, by its base name ("Trade", "General", "LocalDefense": the zone
+-- or language after " - " left off, so it's the same channel in every zone), and its number now;
+-- nil for a line that isn't on a numbered channel. Chat starts such a line with the channel's link,
+-- "|Hchannel:channel:2|h[2. Trade - English 5]|h".
+local function Base(label)
+    label = label:gsub("^%d+%.%s*", ""):gsub("%s+%-%s+.*$", "")
+    return label ~= "" and label or nil
+end
+local function ChannelOf(msg)
+    local num, label = msg:match("|Hchannel:[^|]*:(%d+)|h%[(.-)%]|h")
+    if not label then return nil end
+    return Base(label), tonumber(num)
+end
+
+-- Channels hidden here, and the ones with tabs of their own (in the order they were popped out).
+local function Hidden()
+    ns.db.hiddenChannels = ns.db.hiddenChannels or {}
+    return ns.db.hiddenChannels
+end
+local function Popped()
+    ns.db.poppedChannels = ns.db.poppedChannels or {}
+    return ns.db.poppedChannels
+end
+
 -- The box's text for a chat window, and where its links are: each { link, display, byte range,
 -- character range, shown-character range } (which of the three the box's cursor counts in isn't
 -- the same on every client; a click checks all of them).
 local function Build(cf)
     local lines, links = {}, {}
     local plain = ns.db.plainCopy
+    local hidden = not cf.channel and next(Hidden()) and Hidden() or nil
     local n = cf.GetNumMessages and cf:GetNumMessages() or 0
     local text = ""
     for i = 1, n do
         local msg, r, g, b = cf:GetMessageInfo(i)
-        if type(msg) == "string" and not Secret(msg) then
+        if type(msg) == "string" and not Secret(msg) and not (hidden and hidden[ChannelOf(msg) or ""]) then
             msg = Clean(msg)
             msg = ns.Links.Mark(msg)
             if plain then
@@ -105,7 +131,13 @@ function FS:Fill(toBottom)
     local bottom = toBottom or AtBottom()
     content, spans = Build(current)
     box:SetText(content)
-    if measure then measure:SetText(content) end
+    if measure then
+        -- Laid out exactly as the box: same font, size and outline, same spacing.
+        local file, size, flags = box:GetFont()
+        if file and size then pcall(measure.SetFont, measure, file, size, flags or "") end
+        if box.GetSpacing and measure.SetSpacing then pcall(measure.SetSpacing, measure, box:GetSpacing() or 0) end
+        measure:SetText(content)
+    end
     box:SetCursorPosition(0)
     box:ClearFocus()
     if bottom then
@@ -115,7 +147,8 @@ end
 
 -- New messages: once a moment, unless you're selecting.
 local function Changed(cf)
-    if not (frame and frame:IsShown()) or cf ~= current or dirty then return end
+    if not (frame and frame:IsShown()) or dirty then return end
+    if cf ~= current and not (current and current.channel and not cf.virtual) then return end
     dirty = true
     C_Timer.After(0.3, function()
         dirty = false
@@ -178,7 +211,50 @@ for _, v in ipairs(VIRTUAL) do
     end
 end
 
-local function Windows()
+-- A channel popped out into a tab of its own: its lines from the chat window that has the most of
+-- them (the history chat already has, not only what came in since), and typing there says it on
+-- the channel.
+local ChannelSource = {}
+ChannelSource.__index = ChannelSource
+function ChannelSource:available() return true end
+function ChannelSource:GetFont() return (DEFAULT_CHAT_FRAME or ChatFrame1):GetFont() end
+function ChannelSource:GetMessageInfo(i) local l = self.lines[i]; return l[1], l[2], l[3], l[4] end
+local Windows
+function ChannelSource:GetNumMessages()
+    local best
+    for _, cf in ipairs(Windows()) do
+        local lines = {}
+        for i = 1, cf.GetNumMessages and cf:GetNumMessages() or 0 do
+            local msg, r, g, b = cf:GetMessageInfo(i)
+            if type(msg) == "string" and not Secret(msg) then
+                local base, num = ChannelOf(msg)
+                if base == self.channel then
+                    lines[#lines + 1] = { msg, r, g, b }
+                    self.num = num
+                end
+            end
+        end
+        if not best or #lines > #best then best = lines end
+    end
+    self.lines = best or {}
+    if self.num then
+        self.send = "/" .. self.num .. " "
+        self.header = ("[%d. %s]: "):format(self.num, self.channel)
+    end
+    return #self.lines
+end
+
+local channelTabs = {}
+local function ChannelTab(base)
+    local v = channelTabs[base]
+    if not v then
+        v = setmetatable({ virtual = true, channel = base, label = base, lines = {} }, ChannelSource)
+        channelTabs[base] = v
+    end
+    return v
+end
+
+function Windows()
     local out = {}
     for _, cf in ipairs(ns.Skin.Frames()) do
         local tab = _G[cf:GetName() .. "Tab"]
@@ -204,6 +280,7 @@ local function Sources()
         for _, cf in ipairs(out) do if not cf.virtual and OnlyShows(cf, v.set) then own = true; break end end
         if v.available() and not own then out[#out + 1] = v end
     end
+    for _, base in ipairs(Popped()) do out[#out + 1] = ChannelTab(base) end
     return out
 end
 
@@ -226,6 +303,7 @@ function FS:Tabs()
         if not b then
             b = CreateFrame("Button", nil, tabs)
             b:SetHeight(26)
+            b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
             b.text = b:CreateFontString(nil, "OVERLAY")
             b.text:SetFontObject(GameFontHighlightSmall)
             b.text:SetPoint("CENTER", 0, 1)
@@ -242,7 +320,17 @@ function FS:Tabs()
         local on = cf == current
         b.text:SetTextColor(ns.RGBA(on and T.text.primary or T.text.secondary))
         b.line:SetShown(on)
-        b:SetScript("OnClick", function() FS:Show(cf) end)
+        b:SetScript("OnClick", function(_, button)
+            if button == "RightButton" and cf.channel then return FS:PopOut(cf.channel, false) end
+            FS:Show(cf)
+        end)
+        b:SetScript("OnEnter", cf.channel and function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+            GameTooltip:AddLine(cf.channel, ns.RGBA(T.text.primary))
+            GameTooltip:AddLine("Only this channel. Typing here says it on the channel. Right-click to close the tab.", 0.8, 0.85, 0.9, true)
+            GameTooltip:Show()
+        end or nil)
+        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
         b:Show()
     end
 end
@@ -330,11 +418,13 @@ local function Build_()
     end)
     frame.PaintPlain = PaintPlain
 
+    local filter = FS:BuildFilter(plain)
+
     local hint = frame:CreateFontString(nil, "OVERLAY")
     hint:SetFontObject(GameFontDisableSmall)
     ns.Skin.Face(hint, "regular", 11)
     hint:SetTextColor(ns.RGBA(T.text.tertiary))
-    hint:SetPoint("RIGHT", plain, "LEFT", -14, 0)
+    hint:SetPoint("RIGHT", filter, "LEFT", -14, 0)
     hint:SetText("Drag to select, Ctrl+C to copy, click a link to open it")
 
     local line = frame:CreateTexture(nil, "BORDER")
@@ -359,9 +449,15 @@ local function Build_()
     -- Hovering a link shows its tooltip, as in chat. The box can't say what's under the mouse, so an
     -- invisible copy of its text, laid out the same (font, width, wrapping) over it, does
     -- (FindCharacterIndexAtCoordinate). Not while the button is down: that's selecting.
-    measure = box:CreateFontString(nil, "OVERLAY")
+    -- (In a frame of its own at alpha 0: the copy's own SetAlpha(0) didn't hide it, and it was drawn
+    -- over the box at another size, every line twice. FS:Fill gives it the box's exact font.)
+    local ghost = CreateFrame("Frame", nil, box)
+    ghost:SetAllPoints(box)
+    ghost:SetAlpha(0)
+    ghost:EnableMouse(false)
+    measure = ghost:CreateFontString(nil, "OVERLAY")
     measure:SetFontObject(ChatFontNormal or GameFontHighlight)
-    measure:SetPoint("TOPLEFT")
+    measure:SetPoint("TOPLEFT", box, "TOPLEFT")
     measure:SetJustifyH("LEFT"); measure:SetJustifyV("TOP")
     measure:SetWordWrap(true)
     measure:SetAlpha(0)
@@ -444,6 +540,168 @@ local function Build_()
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- The channel filter: the CHANNELS button opens a list of the numbered channels, each with a box
+-- (shown here or hidden) and a pop-out button (a tab of its own, as Guild has; again, or a
+-- right-click on the tab, closes it). Both are remembered. Hiding is only here: chat itself keeps
+-- showing the channel.
+-- ---------------------------------------------------------------------------------------------
+
+local filterButton, filterPanel
+local ROW_H, PANEL_W = 24, 240
+
+-- Every channel worth listing: the ones you're in, and any hidden or popped out (so you can undo it
+-- after leaving one), sorted by number, then name.
+local function KnownChannels()
+    local seen, list = {}, {}
+    local function Add(base, num)
+        if base and not seen[base] then
+            seen[base] = true
+            list[#list + 1] = { base = base, num = num or 99 }
+        end
+    end
+    if GetChannelList then
+        local all = { GetChannelList() }
+        for i = 1, #all - 1, 3 do
+            if type(all[i + 1]) == "string" then Add(Base(all[i + 1]), all[i]) end
+        end
+    end
+    for base in pairs(Hidden()) do Add(base) end
+    for _, base in ipairs(Popped()) do Add(base) end
+    table.sort(list, function(a, b) if a.num ~= b.num then return a.num < b.num end return a.base < b.base end)
+    return list
+end
+
+local function IsPopped(base)
+    for _, b in ipairs(Popped()) do if b == base then return true end end
+    return false
+end
+
+local function PaintFilter()
+    local T = ns.T()
+    local n = 0
+    for _ in pairs(Hidden()) do n = n + 1 end
+    filterButton.text:SetText(n > 0 and ("CHANNELS: %d HIDDEN"):format(n) or "CHANNELS")
+    filterButton.text:SetTextColor(ns.RGBA(n > 0 and T.accent or T.text.secondary))
+    filterButton:SetWidth(filterButton.text:GetStringWidth() + 18)
+end
+
+local function FillPanel()
+    local T = ns.T()
+    local list = KnownChannels()
+    filterPanel.rows = filterPanel.rows or {}
+    for _, r in ipairs(filterPanel.rows) do r:Hide() end
+    for i, ch in ipairs(list) do
+        local r = filterPanel.rows[i]
+        if not r then
+            r = CreateFrame("Button", nil, filterPanel)
+            r:SetHeight(ROW_H)
+            r.box = CreateFrame("Frame", nil, r, "BackdropTemplate")
+            r.box:SetSize(14, 14); r.box:SetPoint("LEFT", 10, 0)
+            ns.Panel(r.box, "sunken")
+            r.tick = r.box:CreateTexture(nil, "OVERLAY")
+            r.tick:SetPoint("TOPLEFT", 3, -3); r.tick:SetPoint("BOTTOMRIGHT", -3, 3)
+            r.tick:SetColorTexture(ns.RGBA(T.accent))
+            r.label = r:CreateFontString(nil, "OVERLAY")
+            r.label:SetFontObject(GameFontHighlightSmall)
+            ns.Skin.Face(r.label, "medium", 12)
+            r.label:SetPoint("LEFT", r.box, "RIGHT", 8, 0)
+            r.label:SetJustifyH("LEFT")
+            r.hl = r:CreateTexture(nil, "BACKGROUND")
+            r.hl:SetAllPoints(); r.hl:SetColorTexture(1, 1, 1, 0.05); r.hl:Hide()
+            r.pop = ns.IconButton(r, "PopOut", 14, "Pop out", "Open this channel in a tab of its own (click again to close the tab).")
+            r.pop:SetPoint("RIGHT", -10, 0)
+            r.label:SetPoint("RIGHT", r.pop, "LEFT", -8, 0)
+            r:SetScript("OnEnter", function(self) self.hl:Show() end)
+            r:SetScript("OnLeave", function(self) self.hl:Hide() end)
+            filterPanel.rows[i] = r
+        end
+        local base = ch.base
+        local shown = not Hidden()[base]
+        local popped = IsPopped(base)
+        r:ClearAllPoints()
+        r:SetPoint("TOPLEFT", 0, -6 - (i - 1) * ROW_H)
+        r:SetPoint("TOPRIGHT", 0, -6 - (i - 1) * ROW_H)
+        r.label:SetText(ch.num < 99 and ("%d. %s"):format(ch.num, base) or base)
+        r.label:SetTextColor(ns.RGBA(shown and T.text.primary or T.text.tertiary))
+        r.tick:SetShown(shown)
+        local function PaintPop() r.pop.icon:SetVertexColor(ns.RGBA(popped and T.accent or T.text.secondary)) end
+        PaintPop()
+        r.pop:SetScript("OnLeave", function() PaintPop(); GameTooltip:Hide() end)
+        r:SetScript("OnClick", function()
+            Hidden()[base] = shown and true or nil
+            PaintFilter(); FillPanel(); FS:Fill(false)
+        end)
+        r.pop:SetScript("OnClick", function() FS:PopOut(base, not popped) end)
+        r:Show()
+    end
+    if #list == 0 then
+        filterPanel.empty = filterPanel.empty or filterPanel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        filterPanel.empty:SetPoint("TOPLEFT", 12, -12)
+        filterPanel.empty:SetText("You're not in any channels.")
+        filterPanel.empty:Show()
+    elseif filterPanel.empty then
+        filterPanel.empty:Hide()
+    end
+    filterPanel:SetHeight(math.max(1, #list) * ROW_H + 12)
+end
+
+function FS:BuildFilter(rightOf)
+    local T = ns.T()
+    filterButton = CreateFrame("Button", nil, frame, "BackdropTemplate")
+    filterButton:SetSize(92, 20)
+    filterButton:SetPoint("RIGHT", rightOf, "LEFT", -8, 0)
+    ns.Panel(filterButton, "sunken")
+    filterButton.text = filterButton:CreateFontString(nil, "OVERLAY")
+    filterButton.text:SetFontObject(GameFontHighlightSmall)
+    ns.Skin.Face(filterButton.text, "medium", 11)
+    filterButton.text:SetPoint("CENTER")
+    filterButton:SetScript("OnEnter", function(self)
+        self:SetBackdropBorderColor(ns.RGBA(T.border.strong))
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine("Channels", ns.RGBA(T.text.primary))
+        GameTooltip:AddLine("Hide channels here, or pop one out into a tab of its own.", 0.8, 0.85, 0.9, true)
+        GameTooltip:Show()
+    end)
+    filterButton:SetScript("OnLeave", function(self)
+        self:SetBackdropBorderColor(ns.RGBA(T.border.hairline))
+        GameTooltip:Hide()
+    end)
+
+    filterPanel = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+    filterPanel:SetWidth(PANEL_W)
+    filterPanel:SetPoint("TOPRIGHT", filterButton, "BOTTOMRIGHT", 0, -4)
+    filterPanel:SetFrameLevel(frame:GetFrameLevel() + 20)
+    filterPanel:EnableMouse(true)
+    ns.Panel(filterPanel, "raised", 0.98)
+    filterPanel:Hide()
+
+    filterButton:SetScript("OnClick", function()
+        if filterPanel:IsShown() then filterPanel:Hide() else FillPanel(); filterPanel:Show() end
+    end)
+    frame:HookScript("OnHide", function() filterPanel:Hide() end)
+    PaintFilter()
+    return filterButton
+end
+
+-- Pops channel base out into a tab of its own (and shows it), or closes its tab (back to chat).
+function FS:PopOut(base, on)
+    local list = Popped()
+    for i = #list, 1, -1 do if list[i] == base then table.remove(list, i) end end
+    if on then list[#list + 1] = base end
+    if filterPanel and filterPanel:IsShown() then FillPanel() end
+    if on then return self:Show(ChannelTab(base)) end
+    if current and current.channel == base then return self:Show(DEFAULT_CHAT_FRAME) end
+    self:Tabs()
+end
+
+-- A click in the window but off the list closes the list.
+ns:On("GLOBAL_MOUSE_DOWN", function()
+    if filterPanel and filterPanel:IsShown() and not filterPanel:IsMouseOver() and not filterButton:IsMouseOver() then
+        filterPanel:Hide()
+    end
+end)
+
+-- ---------------------------------------------------------------------------------------------
 -- Typing here: a line along the bottom, said through the game's own chat box (so /2, /w name, /g,
 -- emotes and every other slash command work as in chat), with where it goes beside it as the chat
 -- box shows it ("Say:", "[2. Trade]:"). Enter (the game's key for chat) types here while this is
@@ -460,7 +718,7 @@ end
 
 -- Where a message goes now, as the chat box says it.
 local function Target()
-    if current and current.virtual then return current.header end
+    if current and current.virtual and current.header then return current.header end
     local eb = ChatBox()
     if not eb then return "" end
     if ChatEdit_UpdateHeader then pcall(ChatEdit_UpdateHeader, eb) end
@@ -473,7 +731,7 @@ local function Say(text)
     local eb = ChatBox()
     if not (eb and ChatEdit_SendText) or text == "" then return end
     -- On the Guild or Raid tab a line goes there (a slash command still goes where it says).
-    if current and current.virtual and not text:find("^/") then text = current.send .. text end
+    if current and current.virtual and current.send and not text:find("^/") then text = current.send .. text end
     sending = true
     local ok, err = pcall(function()
         if ChatEdit_ActivateChat then ChatEdit_ActivateChat(eb) end

@@ -126,8 +126,13 @@ local function IsReagentBag(bag) return bag > I.NUM_BAGS end
 
 -- Can this item go in that bag? Reagent bags take crafting reagents; special bags their own family;
 -- bags themselves only go in normal bags.
+-- Moves the game refused this time ("id:bag"): never tried again, so a bag that won't take an item
+-- can't loop (cleared each time a bag is emptied).
+local refused = {}
+
 local function Fits(id, bag, family)
     if not id then return family == 0 and not IsReagentBag(bag) end
+    if refused[id .. ":" .. bag] then return false end
     if IsReagentBag(bag) then return select(17, I.GetItemInfo(id)) == true end
     local _, _, _, _, _, classID = I.GetItemInfoInstant(id)
     if classID == I.CLASS.CONTAINER or classID == I.CLASS.QUIVER then return family == 0 end
@@ -185,6 +190,18 @@ local function FindEmpty(id, src, taken)
             end
         end
     end
+end
+
+-- Puts the item at (bag, slot) into (db, ds). false when the game refused it (it's still on the
+-- cursor): that's remembered, so it's never tried again.
+local function Move(bag, slot, id, db, ds)
+    I.PickupItem(bag, slot); I.PickupItem(db, ds)
+    if CursorHasItem() then
+        ClearCursor()
+        if id then refused[id .. ":" .. db] = true end
+        return false
+    end
+    return true
 end
 
 local function AnyLocked()
@@ -268,12 +285,10 @@ local function FrontStep(m, taken)
             Finish(("Couldn't make room at the front of your backpack for %s."):format(a.link or "the anchored item"))
             return true
         end
-        I.PickupItem(0, m.target); I.PickupItem(db, ds)
+        Move(0, m.target, here.id, db, ds)
     else
-        I.PickupItem(m.bag, a.slot); I.PickupItem(0, m.target)
-        m.placed = true
+        m.placed = Move(m.bag, a.slot, a.id, 0, m.target) or nil
     end
-    if CursorHasItem() then ClearCursor() end
     m.settle = GetTime() + 0.3
     return true
 end
@@ -283,6 +298,29 @@ local function Step()
     if InCombatLockdown() then return Finish(("Stopped emptying %s: you entered combat."):format(m.name)) end
     if GetTime() > m.deadline then return Finish(("Stopped emptying %s: the items didn't move in time. Try again."):format(m.name)) end
     if CursorHasItem() or GetTime() < m.settle or AnyLocked() then return end
+    -- The moves sent last time, now settled: an item that isn't where it was sent was refused (the
+    -- game can hand it back after the drop, not just leave it on the cursor). That bag never gets
+    -- that item again; with room short now, stop with one message rather than try again.
+    if m.sent then
+        local refusedNow
+        for _, s in ipairs(m.sent) do
+            local there = I.GetSlotInfo(s.db, s.ds)
+            if s.id and not (there and there.id == s.id) then
+                refused[s.id .. ":" .. s.db] = true
+                m.fails = (m.fails or 0) + 1
+                refusedNow = s
+            end
+        end
+        m.sent = nil
+        if refusedNow then
+            local need = Shortfall(m.bag)
+            if need > 0 or m.fails >= 3 then
+                return Finish(("Stopped emptying %s: %s won't go in %s%s."):format(m.name, refusedNow.link or "an item",
+                    C.GetBagName(refusedNow.db) or "that bag",
+                    need > 0 and (", and your other bags need %d more free slot%s for the rest"):format(need, need == 1 and "" or "s") or ""))
+            end
+        end
+    end
     if FrontStep(m, {}) then return end
     local taken, moved = {}, false
     for slot = 1, I.GetNumSlots(m.bag) do
@@ -290,8 +328,10 @@ local function Step()
         if info then
             local db, ds = FindEmpty(info.id or -1, m.bag, taken)
             if not db then return Finish(("Couldn't empty %s: no room left for %s."):format(m.name, info.link or "an item")) end
-            I.PickupItem(m.bag, slot); I.PickupItem(db, ds)
-            if CursorHasItem() then ClearCursor() end
+            if Move(m.bag, slot, info.id, db, ds) then
+                m.sent = m.sent or {}
+                m.sent[#m.sent + 1] = { id = info.id, link = info.link, db = db, ds = ds }
+            end
             moved = true
         end
     end
@@ -325,6 +365,7 @@ local function EmptyBag(bag)
             for _, a in ipairs(anchored) do W.SetAnchor(bag, a.slot, false) end
         end
         if W then W.HoldSorting("SimplePanel", true) end
+        wipe(refused)
         moving = { bag = bag, inv = inv, name = name, deadline = GetTime() + 30, settle = 0, front = front and anchored or {} }
         moving.ticker = C_Timer.NewTicker(0.1, Step)
     end

@@ -16,6 +16,12 @@ P.RACES = {
 
 local completed = {} -- questId -> true, refreshed on quest events
 local doable = {}    -- questId -> Questie's verdict, until quests change
+local handedIn = {}  -- questId -> GetTime() it was handed in this session (see P:Doable)
+local LAG = 5        -- seconds Questie may take to hear of a hand-in
+-- Answers that only change with your quest log, kept until it changes (the quest events below):
+-- in your log or not, and "not done" (done is kept in completed). A plan asks these of hundreds
+-- of quests at a time, each one a game call and a walk through Questie's data.
+local inLog, notDone = {}, {}
 
 -- Questie from the outside: shared Questie.lua (guarded; answers nil / false without Questie).
 local K = ns.QuestieKit
@@ -39,6 +45,8 @@ end
 function P:Refresh()
     wipe(completed)
     wipe(doable)
+    wipe(inLog)
+    wipe(notDone)
     K.CompletedIDs(completed)
 end
 
@@ -78,6 +86,7 @@ end
 --     the record says).
 function P:Done(id)
     if Flagged(id) then return true end
+    if notDone[id] then return false end
     if self:InLog(id) then return false end
     local inferred = false
     for _, other in ipairs(Questie_(id, "exclusiveTo") or {}) do
@@ -91,12 +100,12 @@ function P:Done(id)
             if Flagged(later) or self:InLog(later) then inferred = true; break end
         end
     end
-    if inferred then completed[id] = true end
+    if inferred then completed[id] = true else notDone[id] = true end
     return inferred
 end
 
 -- In your quest log (the modern lookup, else the older one, else a walk through the log).
-function P:InLog(id)
+local function InLogNow(self, id)
     if C_QuestLog and C_QuestLog.GetLogIndexForQuestID then
         local index = Call(C_QuestLog.GetLogIndexForQuestID, id)
         return index ~= nil and index > 0
@@ -109,6 +118,15 @@ function P:InLog(id)
         if q == id then return true end
     end
     return false
+end
+
+function P:InLog(id)
+    local known = inLog[id]
+    if known == nil then
+        known = InLogNow(self, id) and true or false
+        inLog[id] = known
+    end
+    return known
 end
 
 -- The quest IDs in your log.
@@ -167,10 +185,25 @@ end
 
 -- Questie's verdict on whether you could take the quest at all (ignores level). True when
 -- Questie can't tell.
+-- A quest that follows one handed in moments ago is doable whatever Questie says: Questie hears of
+-- the hand-in late and calls it not doable until then (the guide dropped the quests it had planned
+-- next, Tirisfal at level 1).
+local function FollowsHandIn(id)
+    local q = ns.Quests and ns.Quests[id]
+    if not (q and q.pre) then return false end
+    local now = GetTime()
+    for _, p in ipairs(q.pre) do
+        if handedIn[p] and now - handedIn[p] < LAG then return true end
+    end
+    return false
+end
+
 function P:Doable(id)
     if doable[id] ~= nil then return doable[id] end
-    doable[id] = self:AskQuestie(id)
-    return doable[id]
+    local yes = self:AskQuestie(id)
+    if not yes and FollowsHandIn(id) then return true end -- (not kept: asked again once Questie knows)
+    doable[id] = yes
+    return yes
 end
 
 function P:AskQuestie(id)
@@ -188,14 +221,22 @@ ns:On("PLAYER_LOGIN", function() P:Refresh(); ns:Changed() end)
 for _, event in ipairs({ "QUEST_TURNED_IN", "QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP",
     "ZONE_CHANGED_NEW_AREA" }) do
     ns:On(event, function()
+        wipe(inLog); wipe(notDone)
         if event ~= "QUEST_LOG_UPDATE" and event ~= "ZONE_CHANGED_NEW_AREA" then wipe(doable) end
         -- Zone, level and quests taken or handed in can change which section fits.
         if event ~= "QUEST_LOG_UPDATE" and ns.Engine then ns.Engine:Invalidate() end
         ns:Changed()
     end)
 end
--- The game marks a turn-in done a moment after the event.
+-- The game marks a turn-in done a moment after the event, and Questie later still (P:Doable covers
+-- the quests that follow it meanwhile). Once both know, the answers are read again. (The leveling
+-- plan isn't chosen again for a hand-in that was on it: Tasks.lua.)
 ns:On("QUEST_TURNED_IN", function(id)
-    if id then completed[id] = true end
-    C_Timer.After(1, function() P:Refresh(); ns:Changed() end)
+    if id then completed[id], handedIn[id] = true, GetTime() end
+    C_Timer.After(LAG, function()
+        P:Refresh()
+        if id then completed[id] = true end
+        if ns.Engine then ns.Engine:Invalidate() end
+        ns:Changed()
+    end)
 end)

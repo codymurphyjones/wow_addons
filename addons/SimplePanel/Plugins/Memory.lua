@@ -51,7 +51,16 @@ SimplePanel.RegisterPlugin({
     end,
 
     tooltip = function(p, tt)
-        local list, total, cpu = Usage(p:Get("mode"))
+        -- (Measuring every add-on is slow, and the tooltip redraws every few seconds while it's open:
+        -- measured when it opens, then again only after 30 seconds.)
+        local mode, now = p:Get("mode"), GetTime()
+        local u = p.usage
+        if not (u and u.mode == mode and now - u.at < 30) then
+            local list, total, cpu = Usage(mode)
+            u = { mode = mode, at = now, list = list, total = total, cpu = cpu }
+            p.usage = u
+        end
+        local list, total, cpu = u.list, u.total, u.cpu
         tt:AddDouble("All add-ons", cpu and ("%.0f ms"):format(total) or MB(total))
         tt:AddDouble("Lua heap (incl. Blizzard UI)", MB(collectgarbage("count")))
         local items = {}
@@ -87,12 +96,23 @@ SimplePanel.RegisterPlugin({
     end,
 
     onClick = function(p, button)
-        if button ~= "LeftButton" then return end
-        local before = collectgarbage("count")
-        collectgarbage("collect")
-        local after = collectgarbage("count")
-        p:Print(("freed %s."):format(MB(math.max(0, before - after))))
-        p:Flash()
-        p:Refresh()
+        if button ~= "LeftButton" or p.freeing then return end
+        -- A full collection at once freezes the game for seconds with a big heap: it's done a few
+        -- milliseconds a frame instead, until the collector finishes a whole cycle.
+        local before, size, started = collectgarbage("count"), 64, GetTime()
+        p.freeing = C_Timer.NewTicker(0, function(ticker)
+            local t0 = debugprofilestop()
+            local done = collectgarbage("step", size)
+            local spent = debugprofilestop() - t0
+            if spent < 1 and size < 512 then size = size * 2 elseif spent > 3 and size > 8 then size = size / 2 end
+            if done or GetTime() - started > 30 then
+                ticker:Cancel()
+                p.freeing = nil
+                p.usage = nil
+                p:Print(("freed %s."):format(MB(math.max(0, before - collectgarbage("count")))))
+                p:Flash()
+                p:Refresh()
+            end
+        end)
     end,
 })

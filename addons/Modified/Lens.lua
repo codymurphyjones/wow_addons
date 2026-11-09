@@ -22,6 +22,8 @@ The Lens: one button's shape, bloomed out of the button itself (the veil, Veil.l
       * Wheel on a petal: its temperament. With the right button held: orbit it to another WHO.
       * Backspace on a petal: let it go.
       * Rest on a lone catch-all: it shows what it could grow into. Enter or click to let it.
+      * The shapes down the left (the ready-made patterns, MacroBuilder.lua's B.PATTERNS): point
+        at one to see it around the lens, click to add it to the shown set. "/shape heal" too.
       * Hold the core: seal (apply). Hold it with the right button: unravel (revert).
     The petal you touch never moves; when the shape changes, the lens slides around it.
 ]]
@@ -42,6 +44,9 @@ local WILT = 0.5         -- seconds away from a growing petal and its ghosts bef
 local HOP = 3.2          -- pulse hops per second
 local REST = 2.2         -- seconds the pulse rests on its answer
 local QUESTION = "Interface\\Icons\\INV_Misc_QuestionMark"
+local SHELF_W = 150      -- the shapes column at the lens area's left (its chips are 140 wide)
+L.SHELF_W = SHELF_W
+local TYPE_H = 46         -- the type bar across the top of the lens area (where your typing shows)
 
 local UNITS = {
     { key = "default",      label = "target",          angle = 90 },
@@ -75,6 +80,7 @@ local COMMANDS = {
     { "/tooltip", "#showtooltip on or off" },
     { "/ranks",   "offer every spell rank" },
     { "/clear",   "silence this world" },
+    { "/shape",   "add a ready-made shape: /shape smart heal (alone: list them)" },
     { "/classic", "the old editor window" },
 }
 
@@ -461,6 +467,75 @@ function L:Create(veil)
     self.incant:SetJustifyH("LEFT")
     self.incant:SetTextColor(0.75, 0.9, 1)
 
+    -- The shapes: the ready-made patterns, down the left of the lens area (on the desk, so they
+    -- don't scale with the lens). Point at one to see it around the lens; click to add it.
+    local desk = V.desk
+    local shelf = CreateFrame("Frame", nil, desk)
+    shelf.modifiedOwn = true
+    shelf:SetPoint("TOPLEFT", desk, "TOPLEFT", V.PAD, -V.STRIP_H)
+    shelf:SetSize(SHELF_W - 10, 20 + #B.PATTERNS * 34)
+    shelf:SetFrameLevel(desk:GetFrameLevel() + 20)
+    shelf.title = shelf:CreateFontString(nil, "OVERLAY", "ModifiedGameFontNormalSmall")
+    shelf.title:SetPoint("TOPLEFT", 2, 0)
+    shelf.title:SetText("START FROM A SHAPE")
+    shelf:Hide()
+    self.shelf = shelf
+    self.shapeChips = {}
+    for i, pattern in ipairs(B.PATTERNS) do
+        local c = CreateFrame("Frame", nil, shelf)
+        c.modifiedOwn = true
+        c:SetSize(SHELF_W - 10, 30)
+        c:SetPoint("TOPLEFT", 0, -16 - (i - 1) * 34)
+        c.pattern = pattern
+        c.bg = c:CreateTexture(nil, "BACKGROUND")
+        c.bg:SetAllPoints()
+        c.edge = c:CreateTexture(nil, "BORDER")
+        c.edge:SetPoint("TOPLEFT")
+        c.edge:SetPoint("BOTTOMLEFT")
+        c.edge:SetWidth(3)
+        c.label = c:CreateFontString(nil, "OVERLAY", "ModifiedGameFontHighlightSmall")
+        c.label:SetPoint("LEFT", 9, 0)
+        c.label:SetWidth(SHELF_W - 24)
+        c.label:SetJustifyH("LEFT")
+        c.label:SetText(pattern.label)
+        self.shapeChips[i] = c
+    end
+
+    -- The type bar: the edit box below is invisible, so this is where typing shows. It sits across
+    -- the top of the lens area and pulses while empty, so it's plain that the lens wants a spell
+    -- name typed (there's no box to click first: just type).
+    local bar = CreateFrame("Frame", nil, desk)
+    bar.modifiedOwn = true
+    bar:SetPoint("TOPLEFT", desk, "TOPLEFT", V.PAD + SHELF_W, -V.STRIP_H)
+    bar:SetPoint("TOPRIGHT", desk, "TOPRIGHT", -(V.PANEL_W + 2 * V.PAD), -V.STRIP_H)
+    bar:SetHeight(TYPE_H - 6)
+    bar:SetFrameLevel(desk:GetFrameLevel() + 20)
+    bar:EnableMouse(true)
+    bar:SetScript("OnMouseDown", function() V.touched = true; L.eb:SetFocus() end)
+    bar.border = bar:CreateTexture(nil, "BACKGROUND")
+    bar.border:SetAllPoints()
+    bar.bg = bar:CreateTexture(nil, "BORDER")
+    bar.bg:SetPoint("TOPLEFT", 2, -2)
+    bar.bg:SetPoint("BOTTOMRIGHT", -2, 2)
+    bar.bg:SetColorTexture(0.05, 0.05, 0.08, 0.97)
+    bar.icon = bar:CreateTexture(nil, "ARTWORK")
+    bar.icon:SetSize(24, 24)
+    bar.icon:SetPoint("LEFT", 9, 0)
+    bar.icon:SetTexture("Interface\\Icons\\INV_Misc_Book_09")
+    bar.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    bar.text = bar:CreateFontString(nil, "OVERLAY", "ModifiedGameFontNormalLarge")
+    bar.text:SetPoint("TOPLEFT", bar.icon, "TOPRIGHT", 9, 2)
+    bar.text:SetPoint("RIGHT", -10, 0)
+    bar.text:SetJustifyH("LEFT")
+    bar.text:SetWordWrap(false)
+    bar.hint = bar:CreateFontString(nil, "OVERLAY", "ModifiedGameFontHighlightSmall")
+    bar.hint:SetPoint("BOTTOMLEFT", bar.icon, "BOTTOMRIGHT", 9, -3)
+    bar.hint:SetPoint("RIGHT", -10, 0)
+    bar.hint:SetJustifyH("LEFT")
+    bar.hint:SetWordWrap(false)
+    bar:Hide()
+    self.typeBar = bar
+
     -- The lens listens: an invisible edit box holds the keyboard while it is open.
     local eb = CreateFrame("EditBox", nil, f)
     eb:SetFontObject("ModifiedGameFontHighlightSmall")
@@ -472,12 +547,6 @@ function L:Create(veil)
     eb:SetScript("OnTextChanged", function(box)
         L.text = box:GetText() or ""
         L.pick = 1
-        -- The world holds still while you type (Veil.lua's V:World).
-        if L.text == "" then
-            L.frozen = nil
-        elseif not L.frozen then
-            L.frozen = V:World()
-        end
     end)
     eb:SetScript("OnChar", function() V.touched = true end)
     eb:SetScript("OnEnterPressed", function() L:Commit() end)
@@ -492,6 +561,11 @@ function L:Create(veil)
         end
     end)
     eb:SetScript("OnKeyDown", function(box, key)
+        -- Shift, Ctrl and Alt come here too: alone they're not typing (holding one previews what
+        -- the button casts, Veil.lua), so they don't count as a key pressed in the box.
+        if key == "LSHIFT" or key == "RSHIFT" or key == "LCTRL" or key == "RCTRL" or key == "LALT" or key == "RALT" then
+            return
+        end
         V.touched = true
         if (key == "BACKSPACE" or key == "DELETE") and (box:GetText() or "") == "" then L:LetGo() end
         if (key == "UP" or key == "DOWN") and (box:GetText() or "") == "" and L.hover then
@@ -513,18 +587,23 @@ function L:Bloom(slot, reflection)
     self.draft = V.drafts[slot] or self:Load(slot)
     V.drafts[slot] = self.draft
     self.pick, self.sprout, self.props = 1, false, nil
+    self.shape, self.shadowed = nil, nil
     self.hover, self.prop, self.ghostAt, self.onCore, self.hold, self.orbiting = nil, nil, nil, nil, nil, nil
     self.away, self.sproutWait = 0, 0
-    -- The lens opens in the middle of the desk's lens area (Veil.lua's PlaceDesk), and Place
-    -- keeps it there, shrinking it when a big shape wouldn't fit.
+    -- The lens opens in the middle of the desk's lens area (Veil.lua's PlaceDesk), right of the
+    -- shapes, and Place keeps it there, shrinking it when a big shape wouldn't fit.
     self.floor = (V.deskBottom or 0) + 8
-    local top = V.frame:GetHeight() - (V.safeTop or 30)
-    self.cx = ((V.safeLeft or 0) + (V.safeRight or V.frame:GetWidth())) / 2
+    local top = V.frame:GetHeight() - (V.safeTop or 30) - TYPE_H
+    local left, right = self:Room()
+    self.cx = (left + right) / 2
     self.cy = (self.floor + top) / 2
+    self.shelf:Show()
+    self.typeBar:Show()
     self.frame:Show()
     self.frame.bloom:Play()
     self.eb:SetText("")
     self.text = ""
+    self.pins, self.world = {}, V:World()
     self.eb:SetFocus()
     self:Layout()
     self:RestartPulse()
@@ -534,10 +613,14 @@ function L:Dissolve()
     if not self.frame then return end
     self.slot = nil
     self.hold = nil
-    self.frozen = nil
     self.lock = nil
     self.pin = nil
+    self.pins, self.world = nil, nil
+    self.shape, self.shadowed = nil, nil
+    self.sprout, self.props = false, nil
     self.frame:Hide()
+    self.shelf:Hide()
+    self.typeBar:Hide()
     self.eb:SetText("")
     self.eb:ClearFocus()
     for rule in pairs(self.petals) do self:FreePetal(rule) end
@@ -548,9 +631,25 @@ function L:Dissolve()
     end
 end
 
+-- The modifier keys held changed: only the core follows them (Animate paints it).
+function L:PreviewChanged()
+    if not self:IsOpen() then return end
+    self.coreKey = nil
+end
+
 function L:WorldChanged()
     if not self:IsOpen() then return end
+    -- A selected rule belongs to its set: switching sets keeps it for when you come back, and
+    -- brings back the one you'd selected in the new set (if any).
+    local now = V:World()
+    self.pins = self.pins or {}
+    if self.world and self.world ~= now then
+        self.pins[self.world] = self.pin
+        self.pin = self.pins[now]
+    end
+    self.world = now
     self.sprout, self.props = false, nil
+    self.shape, self.shadowed = nil, nil
     self:Layout()
     self:RestartPulse()
 end
@@ -582,12 +681,19 @@ end
 
 -- Keeps the lens between the guide panels, below the modifier strip and above its button,
 -- shrinking it when a big shape wouldn't fit.
+-- The lens's room across the screen: the desk's lens area (Veil.lua's PlaceDesk) right of the shapes.
+function L:Room()
+    local w = V.frame:GetWidth()
+    local left, right = (V.safeLeft or 0) + SHELF_W, V.safeRight or w
+    if right - left < 300 then left, right = 0, w end
+    return left, right
+end
+
 function L:Place()
     local veil = V.frame
-    local w, h = veil:GetWidth(), veil:GetHeight()
-    local left, right = V.safeLeft or 0, V.safeRight or w
-    if right - left < 300 then left, right = 0, w end
-    local top = h - (V.safeTop or 30)
+    local h = veil:GetHeight()
+    local left, right = self:Room()
+    local top = h - (V.safeTop or 30) - TYPE_H
     local floor = self.floor or 0
     local needW, needH = 2 * (self.outer + 60), 2 * (self.outer + 72)
     local s = math.max(0.55, math.min(1, (right - left) / needW, (top - floor) / needH))
@@ -610,7 +716,10 @@ function L:Layout()
     B:Normalize(draft.rules)
     local list = {}
     for _, rule in ipairs(self.sprout and self.props or {}) do list[#list + 1] = { rule = rule, growth = true } end
-    for _, rule in ipairs(self:WorldRules()) do list[#list + 1] = { rule = rule } end
+    for _, rule in ipairs(self:WorldRules()) do
+        -- A shape being previewed hides the lone row it would replace.
+        if rule ~= self.shadowed then list[#list + 1] = { rule = rule } end
+    end
     local order = 0
     for k, p in ipairs(list) do
         if not p.growth then
@@ -645,6 +754,89 @@ function L:Layout()
     end
     self:Place()
     self:Paint()
+    self:PaintShelf()
+end
+
+---------------------------------------------------------------------------
+-- Shapes: the ready-made patterns (B.PATTERNS)
+---------------------------------------------------------------------------
+
+-- Spell A of a shape: the shown set's own spell, else the button's original spell or item.
+function L:ShapeSeed()
+    for _, rule in ipairs(self:WorldRules()) do
+        if B:RuleHasAction(rule) then
+            return { kind = rule.kind, id = rule.id, name = rule.name, rank = rule.rank }
+        end
+    end
+    local o = self.draft.original
+    if o and (o.type == "spell" or o.type == "item") and o.id then
+        return { kind = o.type, id = o.id, name = o.name }
+    end
+end
+
+-- Where `pattern` would go in the shown set: its rules and the row they'd replace, or nil.
+function L:FitShape(pattern)
+    local new, _, lone = B:FitPattern(self.draft.rules, pattern, { seed = self:ShapeSeed(), mod = V:World() })
+    return new, lone
+end
+
+-- Point at a shape: show it around the lens (as suggested petals); nil puts the lens back.
+function L:PreviewShape(pattern)
+    if pattern == self.shape then return end
+    self.shape = pattern
+    if pattern then
+        local new, lone = self:FitShape(pattern)
+        self.sprout, self.props, self.shadowed = new ~= nil, new, lone
+    else
+        self.sprout, self.props, self.shadowed = false, nil, nil
+    end
+    self.sproutWait = 0
+    self:Layout()
+    ns.Guide:Refresh()
+end
+
+function L:AddShape(pattern)
+    local new = B:PlacePattern(self.draft.rules, pattern, { seed = self:ShapeSeed(), mod = V:World() })
+    if not new then
+        return self:Flash(("|cffff9040%s doesn't fit here:|r a rule in %s already covers one of its spots. "
+            .. "Clear the set (/clear) or try another modifier."):format(pattern.label, WorldName(V:World())))
+    end
+    self.shape, self.sprout, self.props, self.shadowed = nil, false, nil, nil
+    local empty = 0
+    for _, rule in ipairs(new) do
+        if not B:RuleHasAction(rule) then empty = empty + 1 end
+    end
+    if empty > 0 then
+        self:Flash(("|cffffd100%s added.|r Type a spell on a |cffffffff?|r rule: it fills every rule waiting for that spell."):format(pattern.label))
+    else
+        self:Flash(("|cffffd100%s added.|r Hold the centre to save."):format(pattern.label))
+    end
+    self:Edited()
+end
+
+-- "/shape heal": the first shape whose name starts with (or else holds) the words.
+function L:FindShape(words)
+    words = strtrim((words or ""):lower())
+    if words == "" then return end
+    for _, p in ipairs(B.PATTERNS) do
+        if p.label:lower():sub(1, #words) == words then return p end
+    end
+    for _, p in ipairs(B.PATTERNS) do
+        if p.label:lower():find(words, 1, true) then return p end
+    end
+end
+
+function L:PaintShelf()
+    if not self.shelf or not self.slot then return end
+    local c = V.WorldColor(V:World())
+    for _, chip in ipairs(self.shapeChips) do
+        local fits = self:FitShape(chip.pattern) ~= nil
+        local hot = self.raw and self.raw.shape == chip
+        chip.fits = fits
+        chip.bg:SetColorTexture(c[1] * 0.2, c[2] * 0.2, c[3] * 0.2, hot and 1 or 0.75)
+        chip.edge:SetColorTexture(c[1], c[2], c[3], fits and (hot and 1 or 0.6) or 0.15)
+        chip.label:SetTextColor(fits and 1 or 0.5, fits and (hot and 0.85 or 1) or 0.5, fits and (hot and 0.3 or 1) or 0.55)
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -872,7 +1064,6 @@ function L:Paint()
         d:SetAlpha(here and 1 or used and 0.75 or 0.18)
     end
     local name = WorldName(world)
-    if V.latched ~= 0 then name = name .. "  ·  locked (tap again to unlock)" end
     self.worldName:SetText("SET:  " .. name:upper())
     self.worldName:SetTextColor(color[1], color[2], color[3])
     self.worldName:SetPoint("CENTER", self.top, "CENTER", 0, self.outer + 52)
@@ -892,13 +1083,14 @@ end
 -- The core is the button as it would be right now: the answering rule's spell, its ring
 -- (friendly, hostile, dead) and its halo (combat), or a greyed button when nothing answers.
 -- It follows your target, focus and modifier keys as they change, before anything is saved.
-function L:PaintCore(rule)
+function L:PaintCore(rule, shownWorld)
+    shownWorld = shownWorld or V:World()
     local order = rule and self:OrderOf(rule)
     local key = rule and (tostring(rule) .. (rule.name or "") .. rule.reaction .. rule.state .. rule.combat .. (order or "")) or "none"
-    key = key .. V:World()
+    key = key .. shownWorld
     if key == self.coreKey then return end
     self.coreKey = key
-    local world = V.WorldColor(V:World())
+    local world = V.WorldColor(shownWorld)
     if not rule then
         self.core:SetTexture(GetActionTexture(self.slot) or QUESTION)
         self.core:SetDesaturated(true)
@@ -972,7 +1164,18 @@ function L:Animate(elapsed)
     local fade = (hops == 0 or (resting and not hit)) and 0.2 or 1
     self.pulseGlow:SetAlpha(fade)
     self.pulseDot:SetAlpha(fade)
-    self:PaintCore(hit and path[hit + 1].rule or nil)
+    -- Holding Shift, Ctrl or Alt: the core shows what the button casts with those keys, from that
+    -- set's rules; the petals stay on the set you're editing.
+    local preview = V:Preview()
+    if preview and preview ~= V:World() then
+        local answer
+        for _, rule in ipairs(self.draft.rules or {}) do
+            if rule.mod == preview and B:RuleHasAction(rule) and self:Match(rule) == true then answer = rule break end
+        end
+        self:PaintCore(answer, preview)
+    else
+        self:PaintCore(hit and path[hit + 1].rule or nil)
+    end
     local litRule = resting and hit and path[hit + 1].rule or nil
     if litRule ~= self.lit then
         self.lit = litRule
@@ -1029,7 +1232,25 @@ end
 -- Returns true while the cursor is the lens's: near enough to touch it.
 function L:Point(x, y, elapsed)
     self:Animate(elapsed)
+    self:PaintTypeBar()
     if not self.eb:HasFocus() and not GetCurrentKeyBoardFocus() then self.eb:SetFocus() end
+
+    -- The shapes, at the left of the lens area: pointing at one shows it around the lens.
+    local chip
+    for _, c in ipairs(self.shapeChips) do
+        if c:IsVisible() and c:IsMouseOver() then chip = c break end
+    end
+    if chip then
+        self.raw = { shape = chip }
+        self:SetTouch(nil, nil, nil, false)
+        self:PreviewShape(chip.pattern)
+        self:Say(x, y)
+        return true
+    elseif self.shape then
+        self.raw = nil
+        self:PreviewShape(nil)
+    end
+
     local s = self.scale or 1
     local dx, dy = (x - self.cx) / s, (y - self.cy) / s
     local r = math.sqrt(dx * dx + dy * dy)
@@ -1171,6 +1392,7 @@ end
 -- spot again places what you typed there, or unselects it.
 function L:Click()
     local raw = self.raw or {}
+    if raw.shape then return self:AddShape(raw.shape.pattern) end
     if raw.order then
         local rule = self.pin and self.pin.rule
         if rule then self:MoveOrder(rule, raw.order.delta) end
@@ -1276,6 +1498,38 @@ end
 -- Whispers: the words near the cursor
 ---------------------------------------------------------------------------
 
+-- What you type, big, with a blinking caret; below it, where Enter will put it. Empty, it pulses
+-- gold and asks for a spell name.
+function L:PaintTypeBar()
+    local bar = self.typeBar
+    if not bar or not bar:IsShown() then return end
+    local text = self.text or ""
+    local now = GetTime()
+    local caret = (now % 1 < 0.55) and "|cffffffff|||r" or " "
+    local target
+    if self.pin then
+        target = "|cffffd100Enter:|r it goes on the selected spot (gold ring)."
+    elseif self.hover then
+        target = ("|cffffd100Enter:|r it replaces rule %d's spell."):format(self:OrderOf(self.hover) or 0)
+    elseif self.ghostAt then
+        target = ("|cffffd100Enter:|r a new rule on %s."):format(L.WHO[self.ghostAt.unit] or "?")
+    end
+    if text == "" then
+        local pulse = 0.55 + 0.45 * math.sin(now * 4)
+        bar.border:SetColorTexture(1, 0.82, 0, 0.45 + 0.5 * pulse)
+        bar.icon:SetAlpha(0.6 + 0.4 * pulse)
+        bar.text:SetText("|cffffd100Type a spell name...|r" .. caret)
+        bar.hint:SetText(target and ("|cff8090a0Just start typing (no need to click here).|r  " .. target)
+            or "|cff8090a0Just start typing: point at a spot around the centre for where it goes, then press Enter.|r")
+    else
+        bar.border:SetColorTexture(1, 0.82, 0, 1)
+        bar.icon:SetAlpha(1)
+        bar.text:SetText("|cffffffff" .. text:gsub("|", "||") .. "|r" .. caret)
+        bar.hint:SetText(target and (target .. "  |cff8090a0Tab: next match  ·  Escape: clear|r")
+            or "|cffff9040Point at a rule or at empty space around the centre, then press Enter.|r")
+    end
+end
+
 function L:Flash(text)
     self.flash, self.flashUntil = text, GetTime() + 2.6
 end
@@ -1349,6 +1603,18 @@ function L:Say(x, y)
         local now, nextHalo = HaloOf(self.raw.chip.value)
         out = ("Halo: this rule fires |cffffffff%s|r.\n|cffffd100Click: %s|r  |cff8090a0(any time > in combat > out of combat)|r")
             :format(now.label, nextHalo.label)
+    elseif self.raw and self.raw.shape then
+        local chip = self.raw.shape
+        local lines = { "|cffffffff" .. chip.pattern.label .. "|r", "|cff8f9bb0" .. chip.pattern.tip .. "|r" }
+        if chip.fits then
+            lines[#lines + 1] = ("|cffffd100Click: add it to %s.|r"):format(WorldName(V:World()))
+            if not self:ShapeSeed() then
+                lines[#lines + 1] = "|cff8090a0Its rules start empty (?): type a spell on one to fill them all.|r"
+            end
+        else
+            lines[#lines + 1] = ("|cffff9040Doesn't fit in %s:|r a rule there already covers one of its spots."):format(WorldName(V:World()))
+        end
+        out = table.concat(lines, "\n")
     elseif self.hold then
         out = self.hold.button == "RightButton" and "Keep holding to |cffff8080revert|r..." or "Keep holding to |cffffd100save|r..."
     elseif self.prop then
@@ -1485,7 +1751,16 @@ function L:Commit()
     else
         return self:Flash("Point at a rule, or at empty space around the centre.")
     end
+    -- A shape's empty rules wait for the same spell: filling one fills the others in this set.
+    local role = not B:RuleHasAction(rule) and rule.role
     Give(rule, actions)
+    if role then
+        for _, other in ipairs(self:WorldRules()) do
+            if other ~= rule and other.role == role and not B:RuleHasAction(other) then
+                Give(other, ns.DeepCopy(actions))
+            end
+        end
+    end
     self.eb:SetText("")
     self:Edited()
     if self.merged then
@@ -1707,6 +1982,17 @@ function L:Command(text)
         for i = #self.draft.rules, 1, -1 do
             if self.draft.rules[i].mod == world then table.remove(self.draft.rules, i) end
         end
+    elseif cmd == "shape" or cmd == "shapes" then
+        local pattern = self:FindShape(rest)
+        if not pattern then
+            local names = {}
+            for _, p in ipairs(B.PATTERNS) do names[#names + 1] = p.label end
+            self.eb:SetText("")
+            return self:Flash((strtrim(rest) ~= "" and ("|cffff6060No shape \"%s\".|r "):format(rest) or "")
+                .. "Shapes: |cffffffff" .. table.concat(names, "|r  ·  |cffffffff") .. "|r")
+        end
+        self.eb:SetText("")
+        return self:AddShape(pattern)
     elseif cmd == "classic" then
         local slot = self.slot
         V:Close()
@@ -1727,28 +2013,71 @@ local function ReloadIfNeeded()
     end
 end
 
-function L:Seal()
-    local slot = self.slot
-    local _, length = B:Build(self.draft)
-    if length == 0 then return self:Flash("Nothing to save yet: add a spell first.") end
-    local design = ns.DeepCopy(self.draft)
+-- Saves one button's draft as its macro. Returns true, "queued" or false and why, and the design.
+function L:SaveSlot(slot)
+    local draft = V.drafts[slot]
+    if not draft then return false, "Nothing changed." end
+    local _, length = B:Build(draft)
+    if length == 0 then return false, "Nothing to save yet: add a spell first." end
+    local design = ns.DeepCopy(draft)
     for _, rule in ipairs(design.rules) do rule.role = nil end
     local ok, err = ns.Manager:Apply(slot, design)
+    if ok and ok ~= "queued" then
+        V.dirty[slot] = nil
+        V.drafts[slot] = nil
+        if slot == self.slot then
+            self.draft = self:Load(slot)
+            V.drafts[slot] = self.draft
+        end
+    end
+    return ok, err, design
+end
+
+-- Holding the centre: saves the open button only. (The desk's Save Changes saves them all.)
+function L:Seal()
+    local slot = self.slot
+    local ok, err, design = self:SaveSlot(slot)
     if ok == "queued" then
         ns:Print("In combat. The macro will be saved when combat ends.")
     elseif ok then
-        V.dirty[slot] = nil
-        V.drafts[slot] = nil
-        self.draft = self:Load(slot)
-        V.drafts[slot] = self.draft
         ns:Print(("Saved %s (%s)."):format(ns.Bars:Describe(slot), design.macroName))
-        self:Flash("|cffffd100Saved.|r Your button now uses this macro.")
+        self:Flash(("|cffffd100Saved as %s.|r Your button now uses this macro."):format(design.macroName))
         self:Layout()
         V:Paint()
         ReloadIfNeeded()
     elseif err then
         self:Flash("|cffff6060" .. err .. "|r")
     end
+end
+
+-- The desk's Save Changes: every button with unsaved changes, the open one too. One reload (when
+-- Auto reload is on) after all of them, not one per button.
+function L:SaveAll()
+    local slots = {}
+    for slot in pairs(V.dirty) do slots[#slots + 1] = slot end
+    if #slots == 0 then return end
+    table.sort(slots)
+    local saved, queued, failed = 0, 0, 0
+    for _, slot in ipairs(slots) do
+        local ok, err, design = self:SaveSlot(slot)
+        if ok == "queued" then
+            queued = queued + 1
+        elseif ok then
+            saved = saved + 1
+            ns:Print(("Saved %s (%s)."):format(ns.Bars:Describe(slot), design.macroName))
+        else
+            failed = failed + 1
+            ns:Print(("|cffff5555Not saved: %s: %s|r"):format(ns.Bars:Describe(slot), err or "unknown error"))
+        end
+    end
+    if queued > 0 then ns:Print(("In combat. %d macro(s) will be saved when combat ends."):format(queued)) end
+    if self:IsOpen() then
+        self:Flash(failed > 0 and ("|cffff6060%d saved, %d not saved (see chat).|r"):format(saved, failed)
+            or ("|cffffd100Saved %d button(s).|r"):format(saved))
+        self:Layout()
+    end
+    V:Paint()
+    if saved > 0 then ReloadIfNeeded() end
 end
 
 function L:Unravel()

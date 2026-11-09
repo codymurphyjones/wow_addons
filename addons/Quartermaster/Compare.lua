@@ -169,29 +169,92 @@ function Compare:Summary(list)
 end
 
 -- ---------------------------------------------------------------------------
--- Quiet price check: one search per unchecked cart item, while nothing is being bought
+-- Price check: one auction house search per Cart item still to buy, in the background, so the Cart
+-- knows this visit's prices before it buys (it waits for them: Buyer:ButtonState) and both tabs show
+-- them up to date. Only what the list needs: never the whole auction house. Your own searches come
+-- first: one pauses it (Pause, from the Buying tab's Claim and the Buyer), and the item it was on is
+-- searched again later; it carries on once the auction house has been quiet RESUME_IDLE seconds.
+-- Never while the Cart is buying, or while a Buying view shows an item's listings (a classic auction
+-- house's bid needs that page). Driven once a second while the auction house is open, with the Cart
+-- or Buying tab showing. Progress: Compare:Progress(), the bars (Compare:MakeBar).
 -- ---------------------------------------------------------------------------
 
 local token = 0
+local RESUME_IDLE = 1.5 -- seconds of quiet after your own search before the check carries on
+local quietSince = 0
+local driver
 
-function Compare:StopCheck()
-    token = token + 1
-    self.queue, self.checking = nil, nil
+-- The Cart's items still to buy that can be searched: { id, key, name }.
+function Compare:Items()
+    local out = {}
+    for _, entry in ipairs(ns.Buyer:List().entries) do
+        local name = entry.itemID and (entry.name or (ns.Catalog:Get(entry.itemID) or {}).name)
+        if name and ns.Lists:Remaining(entry) > 0 and not ns.Buyer:IsSetAside(entry) then
+            out[#out + 1] = { id = entry.itemID, key = ns.Lists:Key(entry), name = name }
+        end
+    end
+    return out
 end
 
-local function Next(self)
-    local item = table.remove(self.queue, 1)
-    if not item then
-        self.queue, self.checking = nil, nil
-        return Refresh()
+-- How many of them have this visit's price (or were searched and found nothing to read), of how many.
+function Compare:Progress()
+    local items, done = self:Items(), 0
+    for _, it in ipairs(items) do
+        if self.live[it.key] or self.failed[it.key] then done = done + 1 end
     end
-    local mine = token
+    return done, #items
+end
+
+function Compare:Pending()
+    local done, total = self:Progress()
+    return done < total
+end
+
+-- Your own search (or the Cart buying) takes the auction house: the check steps aside.
+function Compare:Pause()
+    token = token + 1
+    self.running = nil
+    quietSince = GetTime()
+end
+Compare.StopCheck = Compare.Pause -- (the old name: the Buyer's)
+
+local function TabShown()
+    local cart = ns.CartTab and ns.CartTab.Shown and ns.CartTab:Shown()
+    local buying = ns.AuctionTab and ns.AuctionTab.Shown and ns.AuctionTab:Shown()
+    return cart or buying
+end
+
+local function CanRun()
+    if not (ns.Scanner:Legacy() or ns.Scanner:Modern()) then return false end
+    if ns.Buyer.state ~= "idle" or ns.Scanner:Busy() or ns.Purchase.state ~= "idle" then return false end
+    if ns.AuctionSearch and ns.AuctionSearch.Holding and ns.AuctionSearch:Holding() then return false end
+    return GetTime() - quietSince >= RESUME_IDLE and TabShown()
+end
+
+-- One search at a time, and never from inside another's answer: the next starts a frame later. (An
+-- answer can come back at once, from what the auction house has cached; each answer starting the next
+-- straight away, and the Cart's redraw starting one too, doubled the searches with every answer and
+-- froze the game for 8 seconds.) Next never redraws the Cart either: the Cart's redraw calls Check.
+local function Next(self)
+    if self.running or not CanRun() then return end
+    local item
+    for _, it in ipairs(self:Items()) do
+        if not (self.live[it.key] or self.failed[it.key]) then item = it; break end
+    end
+    if not item then return end
+    self.running = item
+    local mine, answered = token, false
     local function Done(listings)
-        if token ~= mine then return end
+        if token ~= mine or answered then return end
+        answered = true
         if listings then self.live[item.key] = listings else self.failed[item.key] = true end
-        self.checking.done = self.checking.done + 1
-        Refresh()
-        Next(self)
+        C_Timer.After(0, function()
+            if token ~= mine or self.running ~= item then return end
+            self.running = nil
+            Next(self)
+            Refresh()
+            if ns.AuctionTab and ns.AuctionTab.Refresh then ns.AuctionTab:Refresh() end
+        end)
     end
     -- Only copies of the entry's own variant: an enchanted one isn't the item on the list.
     if ns.Scanner:Modern() then ns.Scanner:SearchModern(item.id, Done, item.key)
@@ -199,19 +262,54 @@ local function Next(self)
 end
 
 function Compare:Check()
-    if self.queue or ns.Buyer.state ~= "idle" or ns.Scanner:Busy() then return end
-    -- Low priority: never pause the background full scan for this; it runs once the scan is over.
-    if ns.FullScan and ns.FullScan:Busy() then return end
-    if not (ns.Scanner:Legacy() or ns.Scanner:Modern()) then return end
-    local todo = {}
-    for _, entry in ipairs(ns.Buyer:List().entries) do
-        local name = entry.itemID and (entry.name or (ns.Catalog:Get(entry.itemID) or {}).name)
-        local key = entry.itemID and ns.Lists:Key(entry)
-        if ns.Lists:Remaining(entry) > 0 and name and not self.live[key] and not self.failed[key] then
-            todo[#todo + 1] = { id = entry.itemID, key = key, name = name }
-        end
-    end
-    if #todo == 0 then return end
-    self.queue, self.checking = todo, { done = 0, total = #todo }
     Next(self)
 end
+
+ns:On("AUCTION_HOUSE_SHOW", function()
+    if driver then driver:Cancel() end
+    driver = C_Timer.NewTicker(1, function() Compare:Check() end)
+end)
+ns:On("AUCTION_HOUSE_CLOSED", function()
+    if driver then driver:Cancel(); driver = nil end
+end)
+
+-- A progress bar for the check: "Checking prices 5/12", then "Prices checked" once all are in.
+-- bar:Update() reads Progress; hidden when the Cart has nothing to price.
+function Compare:MakeBar(parent, width)
+    local W = ns.Widgets
+    local bar = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    bar:SetSize(width or 200, 14)
+    W.SetBackdrop(bar, 0.9)
+    bar.fill = bar:CreateTexture(nil, "ARTWORK")
+    bar.fill:SetPoint("TOPLEFT", 1, -1); bar.fill:SetPoint("BOTTOMLEFT", 1, 1)
+    bar.fill:SetColorTexture(1, 1, 1, 1)
+    bar.text = bar:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
+    bar.text:SetPoint("CENTER")
+    function bar:Update()
+        local done, total = Compare:Progress()
+        if total == 0 then return self:Hide() end
+        self:Show()
+        local share = done / total
+        self.fill:SetWidth(math.max(1, (self:GetWidth() - 2) * share))
+        if done >= total then
+            self.fill:SetVertexColor(0.35, 0.95, 0.55, 0.45)
+            self.text:SetText(("Prices checked (%d)"):format(total))
+        else
+            self.fill:SetVertexColor(1, 0.82, 0.3, 0.45)
+            self.text:SetText(("Checking prices %d/%d%s"):format(done, total,
+                Compare.running and "" or (CanRun() and "" or " (paused)")))
+        end
+    end
+    bar:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine("Today's prices", 1, 0.82, 0)
+        GameTooltip:AddLine("Quartermaster searches the auction house for each item on the Cart's list, one at a time, "
+            .. "so you buy at what's listed now. Your own searches go first; it carries on when they're done. "
+            .. "The Cart waits until every item has been checked.", 0.8, 0.85, 0.9, true)
+        GameTooltip:Show()
+    end)
+    bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    bar:Hide()
+    return bar
+end
+

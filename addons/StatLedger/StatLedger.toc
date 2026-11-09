@@ -2,7 +2,7 @@
 ## Title: StatLedger
 ## Notes: One place to set your stat priority for each class and spec. Other addons read it from here. /statledger
 ## Author: Dinoblankie + Claude
-## Version: 1.0.5
+## Version: 1.0.8
 ## SavedVariables: StatLedgerDB
 ## IconTexture: Interface\AddOns\StatLedger\Media\Icon
 ## Category: Equipment

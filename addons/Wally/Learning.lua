@@ -118,6 +118,6 @@ function Learn:List(text)
 end
 
 ns:OnLoad(function()
-    C.HookUseContainerItem(function(bag, slot) Learn:OnSold(bag, slot) end)
+    C.OnBagItemUsed(function(bag, slot) Learn:OnSold(bag, slot) end)
     if BuybackItem then hooksecurefunc("BuybackItem", function(index) Learn:OnBuyback(index) end) end
 end)

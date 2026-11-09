@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.3"
+ns.VERSION = "0.1.12"
 ns.PREFIX = "|cff55d6beWealth Planner|r"
 -- Built from the folder name so the path survives renaming the folder.
 ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon"
@@ -14,6 +14,7 @@ ns.SAVED = { db = "WealthPlannerDB", char = "WealthPlannerCharDB" }
 ns.DEFAULTS = {
     options = {
         chat = true,
+        poolTooltip = true,  -- item tooltips: the price at each auction pool (Pools.lua)
         historyDays = 120,   -- days of price history kept per item
         investTarget = 50,   -- % of your wealth to keep invested (goods and auctions)
         cashReserve = 5,     -- gold that's never counted as available to invest

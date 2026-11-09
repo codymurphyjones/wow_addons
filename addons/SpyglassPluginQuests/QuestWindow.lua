@@ -300,7 +300,8 @@ end
 -- Marks where to go next on the world map and names the quest in the
 -- tracker: the giver of the next step, or whoever takes it back once it's in
 -- your quest log.
-function W:Track(reward, quiet)
+-- ask: a click in the window, so SpyGlass asks before the arrow changes.
+function W:Track(reward, quiet, ask)
     local target = ns.Quests:Target(reward)
     local loc = ns.Location:ForPerson(target.person, target.quest)
     if not (loc and loc.uiMapID) then
@@ -310,7 +311,8 @@ function W:Track(reward, quiet)
         return false
     end
     local where = loc.subzone and (loc.subzone .. ", " .. loc.zone) or loc.zone
-    SpyGlass:SetWaypoint({
+    local set = ask and SpyGlass.ConfirmWaypoint and SpyGlass.ConfirmWaypoint or SpyGlass.SetWaypoint
+    set(SpyGlass, {
         uiMapID = loc.uiMapID, x = loc.x, y = loc.y,
         title = (target.action == "turnin" and "Turn in: " or "Pick up: ") .. ns.Quests:Title(target.quest),
         subtitle = ActionText(target) .. (where and (", " .. where) or ""),
@@ -327,7 +329,7 @@ function W:ToggleTrack()
     if IsTracked(shown.reward) then
         SpyGlass:ClearWaypoint()
     else
-        self:Track(shown.reward)
+        self:Track(shown.reward, false, true)
     end
     Draw()
 end

@@ -47,7 +47,8 @@ local VERB = { -- icon and color of each kind of step
 }
 local function VerbOf(verb) return VERB[verb] or VERB["Do"] end
 
-local STAGES = { 0.5, 1.4, 2.8 } -- seconds of stillness to each stage, before the learned pace
+local DELAY = 2                  -- seconds of stillness before the field starts to surface
+local STAGES = { 0.5, 1.4, 2.8 } -- seconds to each stage after DELAY, before the learned pace
 local CENTER_Y = -10             -- where your character stands, from the screen's center
 local BOTTOM = 0.3               -- the share of the screen at the bottom the field never uses
 local INNER = 0.3                -- how far out (of the field's edge) a step right here sits
@@ -65,6 +66,9 @@ local live = {}      -- key -> hotspot on the field
 local pool = {}
 local route = {}     -- the hotspots' keys in the order you'll walk to them (a place you come back to, again)
 local dots, chevrons = {}, {}
+local MAX_DOTS = 160 -- the most dots the path draws
+local shownDots, shownChevrons, pathDirty, waveAcc = 0, 0, true, 0
+local titleText, whisperText = "", ""
 local stillSince, episode, forcedTrail, pulseUntil, lastCurrentKey
 local hovered        -- the hotspot under the cursor
 local samples = {}   -- the cursor's last positions while it rests on a hotspot
@@ -156,18 +160,43 @@ local function Reach(d) return math.min(1, math.log(1 + d / 40) / math.log(1 + 3
 -- Drawing
 -- ---------------------------------------------------------------------------------------------
 
+-- A round light: the round mask drawn as a plain white disc and tinted (no mask texture on each: the
+-- path alone has hundreds of these, and a mask apiece costs the game far more to draw).
 local function Disc(parent, layer, size, sub)
     local t = parent:CreateTexture(nil, layer, nil, sub or 0)
     t:SetSize(size, size)
-    t:SetColorTexture(1, 1, 1, 1)
-    if parent.CreateMaskTexture then
-        local m = parent:CreateMaskTexture()
-        m:SetTexture(MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-        m:SetAllPoints(t)
-        t:AddMaskTexture(m)
-    end
+    t:SetTexture(MASK)
     return t
 end
+
+-- Setters that skip what hasn't changed: the field runs every frame, and moving or re-tinting a
+-- texture makes the game lay it out and draw it again even when nothing visible changed.
+local function Place(r, x, y)
+    if r.px and math.abs(r.px - x) < 0.3 and math.abs(r.py - y) < 0.3 then return false end
+    r.px, r.py = x, y
+    r:ClearAllPoints()
+    r:SetPoint("CENTER", field, "CENTER", x, y)
+    return true
+end
+local function Alpha(r, a)
+    if r.pa and math.abs(r.pa - a) < 0.005 then return end
+    r.pa = a
+    r:SetAlpha(a)
+end
+local function Tint(r, cr, cg, cb, ca)
+    if r.tr == cr and r.tg == cg and r.tb == cb and r.ta and math.abs(r.ta - ca) < 0.005 then return end
+    r.tr, r.tg, r.tb, r.ta = cr, cg, cb, ca
+    r:SetVertexColor(cr, cg, cb, ca)
+end
+local function Ease(r, target, k) -- an alpha gliding to a target, set exactly once it's there
+    local a = r.pa or r:GetAlpha()
+    if a == target then return end
+    a = a + (target - a) * k
+    if math.abs(target - a) < 0.01 then a = target end
+    r.pa = a
+    r:SetAlpha(a)
+end
+local function Fade(n, g) return math.max(0.3, 1 - (n - 1) * 0.15) * (g.alpha or 0) end -- a leg further along fades
 
 local function Shadow(fs)
     fs:SetShadowOffset(1, -1)
@@ -325,7 +354,9 @@ local function Release(g)
     live[g.key] = nil
     g.key, g.steps, g.entry, g.role, g.x, g.y, g.tx, g.ty, g.alpha, g.charge, g.ghostUntil, g.closedAt = nil
     g.flashUntil, g.lastClick, g.armedUntil, g.overHint = nil
+    g.px, g.py, g.pa, g.painted, g.worded, g.hinted, g.laid = nil -- (drawn afresh when it's used again)
     pool[#pool + 1] = g
+    pathDirty = true
 end
 
 -- A step on one line: its icon, its name, and icons for what's special about it.
@@ -365,6 +396,8 @@ local function Paint(g)
     end
     local big = role == "current" or role == "pulse" or role == "moon"
     local size = (hovered == g and 34) or (big and 30) or (role == "town" and 20) or 24
+    if g.painted == iconName .. role .. size then return end -- (as it is already)
+    g.painted = iconName .. role .. size
     g.icon:SetSize(size, size)
     g.icon:SetDesaturated(role == "ghost")
     g.halo:SetSize(big and 64 or 44, big and 64 or 44)
@@ -430,6 +463,10 @@ local function LayoutBlock(g)
     if right and g.x + 24 + Room("right") + w > geo.xmax then right = false end
     if not right and g.x - 24 - Room("left") - w < -geo.xmax then right = true end
     local low = (g.y + 20 - h) < geo.floor
+    -- (Laid out like this already: nothing to move.)
+    local laid = ("%s%s%.1f %.1f %.1f%s"):format(tostring(right), tostring(low), w, h, lh, tostring(g.wantKeep))
+    if g.laid == laid and g.block:GetNumPoints() > 0 then PlaceBlock(g); return end
+    g.laid = laid
     g.blockRight, g.blockLow, g.blockGap = right, low, nil
     PlaceBlock(g)
     local just = right and "LEFT" or "RIGHT"
@@ -499,15 +536,17 @@ local function Words(g, stage)
     end
     -- While the cursor rests on another hotspot, the step to do now steps back.
     local dim = hovered and hovered ~= g and role == "current"
-    g.block:SetAlpha(dim and 0.25 or 1)
+    Alpha(g.block, dim and 0.25 or 1)
     if label ~= g.saidLabel or detail ~= g.saidDetail then
         g.saidLabel, g.saidDetail = label, detail
         g.label:SetText(label)
         g.detail:SetText(detail)
     end
     -- The number on the light: where this place comes in the order (and how many steps are here).
-    g.num:SetText((role == "next" and tostring(e.n)) or (role == "town" and not resting and ("|cffbfa560" .. e.name .. "|r")) or "")
-    g.count:SetText(#(g.steps or {}) > 1 and ("x" .. #g.steps) or "")
+    local num = (role == "next" and tostring(e.n)) or (role == "town" and not resting and ("|cffbfa560" .. e.name .. "|r")) or ""
+    if (g.num:GetText() or "") ~= num then g.num:SetText(num) end
+    local count = #(g.steps or {}) > 1 and ("x" .. #g.steps) or ""
+    if (g.count:GetText() or "") ~= count then g.count:SetText(count) end
     LayoutBlock(g)
 end
 
@@ -574,7 +613,7 @@ local function SetWaypoint(g)
         return
     end
     local p = Nearest(e.points)
-    local title = e.verb and (e.verb .. ": " .. e.name) or e.name
+    local title = (e.verb and not e.plain) and (e.verb .. ": " .. e.name) or e.name
     Waypoint:Request("FieldGuide", { title = title, mapID = p.mapID, x = p.x, y = p.y, arrive = 15,
         color = g.role == "moon" and not e.leveling and "purple" or "green" })
     g.flashUntil = GetTime() + 0.7
@@ -758,7 +797,7 @@ local function Rebuild()
         local current = i == (demo and 1 or E.current)
         -- (Zone Clear's quests above your level don't count toward the section, but they're listed.)
         if current or demo or ((E:Counts(s) or s.later) and not E:StepDone(s) and (not E.current or i > E.current)) then
-            local verb, name, detail, pts = E:Describe(s)
+            local verb, name, detail, pts, plain = E:Describe(s)
             local points
             if pts then
                 points = {}
@@ -769,7 +808,7 @@ local function Rebuild()
             local needs, xp, place, how = Split(s[1], detail)
             n = n + 1
             model[#model + 1] = {
-                n = n, key = StepKey(s), id = s[2], verb = verb, name = name, place = place, how = how,
+                n = n, key = StepKey(s), id = s[2], verb = verb, name = name, plain = plain, place = place, how = how,
                 needs = needs, xp = xp, points = points, current = current,
                 catchup = s.catchup, exit = s.exit, detour = s.detour, here = s[1] == "G",
                 canDone = s[1] ~= "G" and s[1] ~= "Z" and s[1] ~= "I",
@@ -875,6 +914,10 @@ end
 
 local function Still()
     if InCombatLockdown() or UnitAffectingCombat("player") then return false end
+    -- Busy with a cast bar (casting, channeling, fishing, crafting): not reading.
+    local cast = Call(UnitCastingInfo, "player") or Call(UnitChannelInfo, "player")
+    if issecretvalue and issecretvalue(cast) then cast = true end -- can't tell: treat it as busy
+    if cast then return false end
     local inside, kind = Call(IsInInstance)
     if inside and QUIET[kind] then return false end
     local moving = Call(IsPlayerMoving)
@@ -920,8 +963,11 @@ local function Compose(stage, pulsing, now)
             if visits[#visits] ~= merged then visits[#visits + 1] = merged end
         end
     end
-    wipe(route)
-    for i, s in ipairs(visits) do route[i] = s.steps[1].key end
+    if #route ~= #visits then pathDirty = true end
+    for i, s in ipairs(visits) do
+        if route[i] ~= s.steps[1].key then route[i] = s.steps[1].key; pathDirty = true end
+    end
+    for i = #route, #visits + 1, -1 do route[i] = nil end
     for _, s in ipairs(spots) do
         local first = s.steps[1]
         local role = first.current and (stage >= 1 and "current" or "pulse") or "next"
@@ -969,15 +1015,23 @@ function UI:Tick(elapsed)
         forcedTrail = nil
         EndEpisode()
     end
-    local stillFor = UI.demo and 60 or stillSince and now - stillSince or 0
+    local stillFor = UI.demo and 60 or stillSince and now - stillSince - DELAY or 0
     local stage = 0
     for i = 1, #STAGES do if stillFor >= StageAt(i) then stage = i end end
     if forcedTrail and still then stage = 3 end
     if stage >= 1 then
-        episode = episode or { start = stillSince, stage = 0 }
+        -- (Timed from when the field could surface, so the wait doesn't skew the learned pace.)
+        episode = episode or { start = math.min(now, (stillSince or now) + DELAY), stage = 0 }
         episode.stage = math.max(episode.stage, stage)
     end
     local pulsing = visible and pulseUntil and now < pulseUntil and not UnitAffectingCombat("player")
+
+    -- Nothing up and nothing fading: nothing to draw this frame (moving, fighting, or the guide hidden).
+    if stage == 0 and not pulsing and next(live) == nil and shownDots == 0 and shownChevrons == 0
+        and (field.title.pa or 0) == 0 and (field.whisper.pa or 0) == 0 then
+        if #route > 0 then wipe(route) end
+        return
+    end
 
     -- The cursor resting on a hotspot: its ring closes (a ghost's: it comes back).
     if hovered then
@@ -1000,10 +1054,11 @@ function UI:Tick(elapsed)
 
     -- Places move at 10 Hz; everything glides between them every frame.
     acc = acc + elapsed
-    if acc >= 0.1 then
+    local tick = acc >= 0.1
+    if tick then
         acc = 0
         for _, g in pairs(live) do g.want = false end
-        if stage >= 1 or pulsing then Compose(stage, pulsing, now) else wipe(route) end
+        if stage >= 1 or pulsing then Compose(stage, pulsing, now) elseif #route > 0 then wipe(route); pathDirty = true end
         -- Ghosts linger, then go.
         for _, g in pairs(live) do
             if g.role == "ghost" and g.ghostUntil and now < g.ghostUntil and visible then
@@ -1012,7 +1067,10 @@ function UI:Tick(elapsed)
         end
     end
 
+    -- Each light: moved, repainted and reworded only when something about it changed (the words at
+    -- 10 Hz at most, or at once when the cursor comes or goes, or the stage moves on).
     local k = math.min(1, elapsed * 8)
+    local hoverOther = hovered ~= nil
     for _, g in pairs(live) do
         if g.tx then
             if not g.x then g.x, g.y = g.tx, g.ty end
@@ -1024,50 +1082,59 @@ function UI:Tick(elapsed)
         if not g.want and g.alpha < 0.02 then
             Release(g)
         elseif g.x then
-            g:ClearAllPoints()
-            g:SetPoint("CENTER", field, "CENTER", g.x, g.y + CENTER_Y)
+            if Place(g, g.x, g.y + CENTER_Y) then pathDirty = true end
             Paint(g)
-            Words(g, stage)
-            g:SetAlpha(g.alpha)
-            g:Show()
+            local hover = hovered == g and 1 or (hoverOther and 2 or 0)
+            if tick or g.worded ~= g.role or g.wStage ~= stage or g.wHover ~= hover then
+                g.worded, g.wStage, g.wHover = g.role, stage, hover
+                Words(g, stage)
+            end
+            Alpha(g, g.alpha)
+            if not g:IsShown() then g:Show() end
             local touchable = g.alpha > 0.4
             if g:IsMouseEnabled() ~= touchable then g:EnableMouse(touchable) end
             -- The ring: closing while the cursor rests; a slow breath on the step to do now.
             local charge = (hovered == g or Armed(g)) and (g.charge or 0) or 0
             if g.flashUntil and now < g.flashUntil then charge = 1 end -- a waypoint was just set here
             local lit = math.floor(charge * 12 + 0.5)
+            local breath = g.role == "current" and stage >= 1
             for i, d in ipairs(g.ring) do
-                d:SetAlpha(i <= lit and 0.95 or ((g.role == "current" and stage >= 1) and (0.12 + 0.1 * math.sin(now * 2 + i)) or 0))
+                Alpha(d, i <= lit and 0.95 or (breath and (0.12 + 0.1 * math.sin(now * 2 + i)) or 0))
             end
-            Hints(g, charge >= 1 and (g.role == "current" or g.role == "moon"))
+            local show = charge >= 1 and (g.role == "current" or g.role == "moon")
+            if tick or g.hinted ~= show then
+                g.hinted = show
+                Hints(g, show)
+            end
         end
     end
 
     -- The path: from your feet to the step to do now, then on through the hotspots in the order you'll
     -- walk them. Dots, a chevron on each leg pointing the way, and a slow pulse running forward along
-    -- it; legs further along fade.
-    local nd, nc = 0, 0
-    if (stage >= 1 or pulsing) and #route > 0 then
-        local col = ns.char.instance and PURPLE or GREEN
+    -- it; legs further along fade. Laid out again only when a light moved or the order changed; the
+    -- pulse and the fades only re-tint (20 times a second), nothing moves.
+    local onPath = (stage >= 1 or pulsing) and #route > 0
+    local nd, nc = shownDots, shownChevrons
+    if not onPath then
+        nd, nc = 0, 0
+    elseif pathDirty then
+        nd, nc = 0, 0
         local px, py, along = 0, 0, 0
         for i, key in ipairs(route) do
             local g = live[key]
-            if g and g.x and g.role ~= "ghost" then
-                local dx, dy = g.x - px, g.y - py
+            if g and g.px and g.role ~= "ghost" then
+                local gx, gy = g.px, g.py - CENTER_Y
+                local dx, dy = gx - px, gy - py
                 local len = math.sqrt(dx * dx + dy * dy)
                 if len > 60 then
                     local ux, uy = dx / len, dy / len
-                    local fade = math.max(0.3, 1 - (i - 1) * 0.15) * (g.alpha or 0)
                     local d = i == 1 and 36 or 28
-                    while d < len - 28 and nd < 400 do
+                    while d < len - 28 and nd < MAX_DOTS do
                         nd = nd + 1
                         local dot = dots[nd]
                         if not dot then dot = Disc(field, "BACKGROUND", 5, 1); dots[nd] = dot end
-                        dot:ClearAllPoints()
-                        dot:SetPoint("CENTER", field, "CENTER", px + ux * d, py + uy * d + CENTER_Y)
-                        local wave = 0.5 + 0.5 * math.sin((along + d) / 22 - now * 3)
-                        dot:SetVertexColor(col[1], col[2], col[3], fade * (0.3 + 0.55 * wave ^ 6))
-                        dot:Show()
+                        Place(dot, px + ux * d, py + uy * d + CENTER_Y)
+                        dot.leg, dot.legN, dot.along = g, i, along + d
                         d = d + 12
                     end
                     if field.CreateLine and nc < 40 then
@@ -1083,50 +1150,77 @@ function UI:Tick(elapsed)
                             local a = (math.atan2 or math.atan)(uy, ux) + math.pi + (j == 1 and 0.6 or -0.6)
                             l:SetStartPoint("CENTER", field, mx + ux * 5, my + uy * 5)
                             l:SetEndPoint("CENTER", field, mx + ux * 5 + math.cos(a) * 9, my + uy * 5 + math.sin(a) * 9)
-                            l:SetColorTexture(col[1], col[2], col[3], math.min(1, fade * 0.9))
-                            l:Show()
                         end
+                        ch.leg, ch.legN = g, i
                     end
                     along = along + len
                 end
-                px, py = g.x, g.y
+                px, py = gx, gy
+            end
+        end
+        waveAcc = 1 -- (tinted below, this frame)
+    end
+    pathDirty = false
+    for i = nd + 1, shownDots do dots[i]:Hide() end
+    for i = nc + 1, shownChevrons do chevrons[i][1]:Hide(); chevrons[i][2]:Hide() end
+    for i = shownDots + 1, nd do dots[i]:Show() end
+    for i = shownChevrons + 1, nc do chevrons[i][1]:Show(); chevrons[i][2]:Show() end
+    shownDots, shownChevrons = nd, nc
+    waveAcc = waveAcc + elapsed
+    if nd + nc > 0 and waveAcc >= 0.05 then
+        waveAcc = 0
+        local col = ns.char.instance and PURPLE or GREEN
+        for i = 1, nd do
+            local dot = dots[i]
+            local wave = 0.5 + 0.5 * math.sin(dot.along / 22 - now * 3)
+            Tint(dot, col[1], col[2], col[3], Fade(dot.legN, dot.leg) * (0.3 + 0.55 * wave ^ 6))
+        end
+        for i = 1, nc do
+            local ch = chevrons[i]
+            local a = math.min(1, Fade(ch.legN, ch.leg) * 0.9)
+            if not ch.a or math.abs(ch.a - a) >= 0.005 or ch.col ~= col then
+                ch.a, ch.col = a, col
+                ch[1]:SetColorTexture(col[1], col[2], col[3], a)
+                ch[2]:SetColorTexture(col[1], col[2], col[3], a)
             end
         end
     end
-    for i = nd + 1, #dots do dots[i]:Hide() end
-    for i = nc + 1, #chevrons do chevrons[i][1]:Hide(); chevrons[i][2]:Hide() end
 
     -- At the top, just under SimplePanel's bar (where it usually sits when it's elsewhere or not
     -- there), only when there's no step to do now to say it: nothing here, or the zone done. At
-    -- first, how the field works.
-    local title, whisper = "", ""
-    if visible and stage >= 1 then
-        if not E.section then
-            title = "|cff8a948eNothing worth doing here at your level. Head to a zone for your level.|r"
-        elseif not E.current then
-            title = Icon("done", 18) .. " |cff8fd16a" .. E.section.title .. "|r"
+    -- first, how the field works. (Worked out at 10 Hz; placed again only when the bar's height changes.)
+    if tick then
+        titleText, whisperText = "", ""
+        if visible and stage >= 1 then
+            if not E.section then
+                titleText = "|cff8a948eNothing worth doing here at your level. Head to a zone for your level.|r"
+            elseif not E.current then
+                titleText = Icon("done", 18) .. " |cff8fd16a" .. E.section.title .. "|r"
+            end
+            -- Zone Clear, on the whole trail: how much of the zone is finished.
+            local done, total = E:ZoneProgress()
+            if done and forcedTrail then
+                titleText = ("%s |cff8fd16a%s: %d of %d quests|r"):format(titleText, E.section.title, done, total)
+            end
+            if (L().episodes or 0) < 4 then
+                whisperText = "Stand still to read.  Move to let go.  Rest the cursor on a light."
+            end
         end
-        -- Zone Clear, on the whole trail: how much of the zone is finished.
-        local done, total = E:ZoneProgress()
-        if done and forcedTrail then
-            title = ("%s |cff8fd16a%s: %d of %d quests|r"):format(title, E.section.title, done, total)
+        -- Below the bar's full height (it sits at the top and may auto-hide by sliding up: its edge
+        -- moves, so the text goes by its height instead, and stays put either way).
+        local bar = _G.SimplePanelFrame
+        local barH = bar and bar:IsShown() and bar:GetHeight() * bar:GetEffectiveScale() / UIParent:GetEffectiveScale() or 0
+        local top = -(math.max(barH, 22) + 12)
+        if math.abs((field.title.top or 1) - top) > 0.5 then
+            field.title.top = top
+            field.title:ClearAllPoints()
+            field.title:SetPoint("TOP", UIParent, "TOP", 0, top)
         end
-        if (L().episodes or 0) < 4 then
-            whisper = "Stand still to read.  Move to let go.  Rest the cursor on a light."
-        end
+        if (field.title:GetText() or "") ~= titleText then field.title:SetText(titleText) end
+        if (field.whisper:GetText() or "") ~= whisperText then field.whisper:SetText(whisperText) end
     end
-    field.title:ClearAllPoints()
-    -- Below the bar's full height (it sits at the top and may auto-hide by sliding up: its edge
-    -- moves, so the text goes by its height instead, and stays put either way).
-    local bar = _G.SimplePanelFrame
-    local barH = bar and bar:IsShown() and bar:GetHeight() * bar:GetEffectiveScale() / UIParent:GetEffectiveScale() or 0
-    field.title:SetPoint("TOP", UIParent, "TOP", 0, -(math.max(barH, 22) + 12))
-    if field.title:GetText() ~= title then field.title:SetText(title) end
-    if field.whisper:GetText() ~= whisper then field.whisper:SetText(whisper) end
-    local ta = title ~= "" and 0.9 or 0
-    field.title:SetAlpha(field.title:GetAlpha() + (ta - field.title:GetAlpha()) * k)
-    local wa = whisper ~= "" and 0.85 or 0
-    field.whisper:SetAlpha(field.whisper:GetAlpha() + (wa - field.whisper:GetAlpha()) * k)
+    Ease(field.title, titleText ~= "" and 0.9 or 0, k)
+    Ease(field.whisper, whisperText ~= "" and 0.85 or 0, k)
 end
 
 -- ---------------------------------------------------------------------------------------------

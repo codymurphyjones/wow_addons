@@ -217,6 +217,31 @@ function Nv:ToItems(itemIDs, title, owner, auction)
     return ns.Targets:SetRequest(owner or OWNER, { title = title or "Vendor", points = stops, ordered = #stops > 1 })
 end
 
+-- Yards from you to the nearest of these places friendly to you, on your continent, and the uiMapID
+-- it's on; nil when there's none.
+local function NearestYards(ids)
+    local c, n, w = ns.Nav:Player()
+    if not c then return nil end
+    local best, map
+    for _, p in ipairs(Points(ids or {})) do
+        local d = ns.Nav:To(p, c, n, w)
+        if d and (not best or d < best) then best, map = d, p.mapID end
+    end
+    return best, map
+end
+
+-- Yards to the nearest vendor selling an item (friendly, your continent) and the uiMapID it's on, or nil.
+function Nv:VendorYards(itemID)
+    local s = self:Available() and ns.Places.sells[itemID]
+    return s and NearestYards(s) or nil
+end
+
+-- Yards to the nearest auctioneer (friendly, your continent), or nil.
+function Nv:AuctioneerYards()
+    local ah = self:Available() and Find("Auctioneer")
+    return ah and NearestYards(ah[2]) or nil
+end
+
 -- How many vendors sell an item (any faction), or 0.
 function Nv:SoldBy(itemID)
     local s = self:Available() and ns.Places.sells[itemID]
@@ -226,7 +251,8 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- Vendor items another addon was about to buy elsewhere (Quartermaster's reagent panel): one
 -- popup for the lot. Navigate leads to the nearest vendor selling them; "Add anyway" hands them
--- back to the addon (onAddAnyway(items)); Cancel does neither.
+-- back to the addon (onAddAnyway(items)); Cancel does neither. onNavigate(items), when given, hears that
+-- Navigate was chosen (Quartermaster remembers the answer while the profession window is open).
 -- items = { { id, qty, name } }
 -- ---------------------------------------------------------------------------------------------
 
@@ -237,7 +263,7 @@ StaticPopupDialogs["WAYPOINT_VENDOR"] = {
     timeout = 0, whileDead = 1, hideOnEscape = 1, preferredIndex = 3,
 }
 
-function Nv:PromptVendors(items, onAddAnyway, owner, auction)
+function Nv:PromptVendors(items, onAddAnyway, owner, auction, onNavigate)
     if not self:Available() or type(items) ~= "table" or #items == 0 then return false end
     local ids, names, parts = {}, {}, {}
     for _, it in ipairs(items) do
@@ -250,7 +276,10 @@ function Nv:PromptVendors(items, onAddAnyway, owner, auction)
     StaticPopup_Show("WAYPOINT_VENDOR",
         ("%s %s sold by vendors.\n\nNavigate to the nearest vendor selling %s?"):format(
             table.concat(parts, ", "), one and "is" or "are", one and "it" or "them"), nil, {
-            navigate = function() Nv:ToItems(ids, "Vendor: " .. table.concat(names, ", "), owner, auction) end,
+            navigate = function()
+                Nv:ToItems(ids, "Vendor: " .. table.concat(names, ", "), owner, auction)
+                if onNavigate then onNavigate(items) end
+            end,
             add = onAddAnyway and function() onAddAnyway(items) end,
         })
     return true

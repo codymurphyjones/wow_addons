@@ -120,17 +120,102 @@ function W.Hex(c)
     return ("|cff%02x%02x%02x"):format(math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
 end
 
--- Yes/No question; fn runs on Yes. The popup is this addon's own (<ADDON>_CONFIRM).
-local CONFIRM = addonName:upper() .. "_CONFIRM"
-function W.Confirm(text, fn)
-    if not StaticPopupDialogs[CONFIRM] then
-        StaticPopupDialogs[CONFIRM] = {
-            text = "%s", button1 = YES or "Yes", button2 = NO or "No",
-            OnAccept = function(_, data) if data and data.fn then data.fn() end end,
-            timeout = 0, whileDead = 1, hideOnEscape = 1, showAlert = 1, preferredIndex = 3,
-        }
+-- A question in this addon's own popup window, never the game's StaticPopup: those frames are shared
+-- with the game's own dialogs, and an addon showing one leaves it tainted, so the game's next dialog
+-- in that frame gets blocked (buying a bank tab: "The game forbade Wally's call to PurchaseBankTab()").
+--   W.Ask{ text = "...", buttons = { { "Yes", fn }, { "No", fn }, { "Never", fn } }, onCancel = fn,
+--          onHide = fn, wide = true }
+-- One question at a time: asking while one is open waits for it to close. Escape (or a reload of the
+-- window) counts as onCancel. A button's fn runs before onHide.
+local askFrame
+local askQueue = {}
+local ShowAsk
+
+local function BuildAsk()
+    local f = CreateFrame("Frame", addonName .. "AskPopup", UIParent, "BackdropTemplate")
+    W.SetBackdrop(f, 0.97)
+    f:SetFrameStrata("DIALOG"); f:SetToplevel(true); f:SetClampedToScreen(true); f:EnableMouse(true)
+    f:SetPoint("TOP", UIParent, "TOP", 0, -135)
+    f.text = f:CreateFontString(nil, "OVERLAY", FONT)
+    f.text:SetPoint("TOP", 0, -16); f.text:SetJustifyH("CENTER"); f.text:SetSpacing(2)
+    f.buttons = {}
+    f:SetScript("OnHide", function(self)
+        local q = self.q
+        self.q = nil
+        if q and not q.answered and q.onCancel then pcall(q.onCancel) end
+        if q and q.onHide then pcall(q.onHide) end
+        C_Timer.After(0, ShowAsk)
+    end)
+    tinsert(UISpecialFrames, f:GetName()) -- Escape closes it
+    f:Hide()
+    return f
+end
+
+function ShowAsk()
+    if askFrame and askFrame:IsShown() then return end
+    local q = table.remove(askQueue, 1)
+    if not q then return end
+    askFrame = askFrame or BuildAsk()
+    local f = askFrame
+    local width = q.wide and 420 or 340
+    f.text:SetWidth(width - 32)
+    f.text:SetText(q.text or "")
+    for _, b in ipairs(f.buttons) do b:Hide() end
+    local n = #q.buttons
+    local bw = n >= 3 and 104 or 120
+    local total = n * bw + (n - 1) * 8
+    for i, def in ipairs(q.buttons) do
+        local b = f.buttons[i]
+        if not b then
+            b = W.MakeButton(f, "", bw, 22)
+            b:SetScript("OnClick", function(self)
+                local cur = f.q
+                if not cur then return f:Hide() end
+                cur.answered = true
+                local fn = cur.buttons[self.index] and cur.buttons[self.index][2]
+                if fn then
+                    local ok, err = pcall(fn)
+                    if not ok then geterrorhandler()(err) end
+                end
+                f:Hide()
+            end)
+            f.buttons[i] = b
+        end
+        b.index = i
+        b:SetWidth(bw)
+        b.text:SetText(def[1])
+        b:ClearAllPoints()
+        b:SetPoint("BOTTOMLEFT", f, "BOTTOM", -total / 2 + (i - 1) * (bw + 8), 14)
+        b:Show()
     end
-    StaticPopup_Show(CONFIRM, text, nil, { fn = fn })
+    f:SetSize(math.max(width, total + 32), (f.text:GetStringHeight() or 14) + 16 + 16 + 22 + 14)
+    f.q = q
+    f:Show()
+end
+
+function W.Ask(q)
+    askQueue[#askQueue + 1] = q
+    ShowAsk()
+end
+
+-- Takes back the questions with this tag (q.tag), shown or waiting, without answering them: no
+-- button's fn and no onCancel run (onHide still does).
+function W.CloseAsk(tag)
+    for i = #askQueue, 1, -1 do
+        if askQueue[i].tag == tag then table.remove(askQueue, i) end
+    end
+    if askFrame and askFrame:IsShown() and askFrame.q and askFrame.q.tag == tag then
+        askFrame.q.answered = true
+        askFrame:Hide()
+    end
+end
+
+-- Whether this addon's popup is up (or questions are waiting).
+function W.Asking() return (askFrame ~= nil and askFrame:IsShown()) or #askQueue > 0 end
+
+-- Yes/No question; fn runs on Yes.
+function W.Confirm(text, fn)
+    W.Ask({ text = text, buttons = { { YES or "Yes", fn }, { NO or "No" } } })
 end
 
 -- ---------------------------------------------------------------------------

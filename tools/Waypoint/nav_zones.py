@@ -12,6 +12,12 @@ border is several entrances, a mountain pass one. A group's middle link stands f
 
     python -I tools/Waypoint/nav_zones.py [map ...]     (default: both continents)
 
+Intersections: the walks between those stops, laid over each other, are each zone's ways (valleys,
+passes, ramps, roads). Where three or more of them branch apart (in JUNCTION_CELL squares, each branch
+going on for JUNCTION_BRANCH squares or to a stop) is an intersection, and a stop too (zone, zone,
+node), within JUNCTION_REACH yards of the stops it's walked to. So a long trip's last stop is near
+where it's going, and the straight stretch from it to the target short.
+
 Out, per map: exits = { { zoneA, zoneB, north, west }, ... }, and for each road mode { costs, ways }:
 costs, zlib then base64: "to,seconds,to,seconds,...;" a line for each exit in order, all a route needs
 to choose its way. ways[from], the same: "to,n,w,n,w,...;" the walks themselves, unpacked in the game
@@ -49,6 +55,11 @@ TOLERANCE = 6         # yards the simplified walk may be off
 PLACE_YARDS = 60      # yards from a dock or flight master its floor may be
 LIMIT = 900           # seconds on foot: no walk inside one zone is longer (a road mode weighs ground more)
 MODES = {"safe": 2.5, "balanced": 1.4, "speed": 1.08}  # Route.lua's ROAD_MODES
+JUNCTION_CELL = 60    # yards: the squares the walks are laid over each other in
+JUNCTION_BRANCH = 3   # squares each of an intersection's ways has to go on for (or end at a stop)
+JUNCTION_MERGE = 150  # yards: intersections this close are one
+JUNCTION_CLEAR = 120  # yards from another stop an intersection has to be
+JUNCTION_REACH = 1200 # yards: an intersection's walks go to the stops this near (the others' to their whole zone)
 
 
 def zone_of_nodes(mapid, N):
@@ -118,6 +129,65 @@ def transit(mapid, N, zone, pn, pw):
     return out
 
 
+def junctions(exits, G, pn, pw, N, zone):
+    """The intersections of the walks between the stops: [(zone, zone, node)]."""
+    by_zone = collections.defaultdict(set)
+    for i, (x, y, _) in enumerate(exits):
+        by_zone[x].add(i)
+        by_zone[y].add(i)
+    adj = collections.defaultdict(set)   # square -> neighbouring squares the walks go to
+    node_of = {}                         # square -> a node of a walk in it
+    stop_cells = set()
+    def cell(u):
+        return (int(pn[u] // JUNCTION_CELL), int(pw[u] // JUNCTION_CELL))
+    for i, (x, y, node) in enumerate(exits):
+        stop_cells.add(cell(node))
+        want = (by_zone[x] | by_zone[y]) - {i}
+        dist, pred = dijkstra(G, indices=node, return_predecessors=True, limit=LIMIT * MODES["balanced"])
+        for j in want:
+            to = exits[j][2]
+            if not np.isfinite(dist[to]):
+                continue
+            u, last = to, None
+            while u >= 0:
+                c = cell(u)
+                if c != last:
+                    node_of.setdefault(c, u)
+                    if last is not None:
+                        adj[c].add(last)
+                        adj[last].add(c)
+                    last = c
+                u = int(pred[u])
+    def branch_ok(start, first):
+        prev, at = start, first
+        for _ in range(JUNCTION_BRANCH):
+            if at in stop_cells:
+                return True
+            nxt = [c for c in adj[at] if c != prev]
+            if not nxt:
+                return False
+            prev, at = at, nxt[0]
+        return True
+    found = []
+    for c, ns_ in adj.items():
+        if len(ns_) >= 3 and c not in stop_cells:
+            if sum(1 for d in ns_ if branch_ok(c, d)) >= 3:
+                found.append(node_of[c])
+    # One for each place; none on top of a stop already there, nor in water.
+    stops = np.array([[pn[n], pw[n]] for _, _, n in exits]) if exits else np.zeros((0, 2))
+    tree = cKDTree(stops) if len(stops) else None
+    kept = []
+    for u in sorted(found, key=lambda u: (pn[u], pw[u])):
+        if N[u, 4] != 0 or zone[u] <= 0:
+            continue
+        if tree is not None and tree.query((pn[u], pw[u]))[0] < JUNCTION_CLEAR:
+            continue
+        if any((pn[u] - pn[k]) ** 2 + (pw[u] - pw[k]) ** 2 < JUNCTION_MERGE ** 2 for k in kept):
+            continue
+        kept.append(u)
+    return [(int(zone[u]), int(zone[u]), int(u)) for u in kept]
+
+
 def simplify(pts):
     """Douglas-Peucker, without recursion."""
     keep = [False] * len(pts)
@@ -164,7 +234,19 @@ def build(mapid):
         mapid, len(N), gates, len(exits) - gates, time.time() - t0), flush=True)
     A, B = LD[usable, 0], LD[usable, 1]
     wv, sv, fv = walk[usable].astype(np.float64), swim[usable].astype(np.float64), fixed[usable]
+    # The intersections of the walks between those stops (balanced mode's walks).
+    A0, B0 = LD[usable, 0], LD[usable, 1]
     rp = roads(mapid)
+    on_road0 = np.zeros(len(N), dtype=bool)
+    if len(rp):
+        d0, _ = cKDTree(rp).query(np.column_stack([pn, pw]), k=1, distance_upper_bound=ROAD_YARDS)
+        on_road0 = np.isfinite(d0)
+    w0 = walk[usable].astype(np.float64) * np.where(on_road0[A0] & on_road0[B0], 1, MODES["balanced"])         + swim[usable].astype(np.float64) + fixed[usable] + 0.001
+    G0 = csr_matrix((w0, (A0, B0)), shape=(len(N), len(N)))
+    first = len(exits)
+    exits += junctions(exits, G0, pn, pw, N, zone)
+    print("map %d: %d intersections (%.0fs)" % (mapid, len(exits) - first, time.time() - t0), flush=True)
+    junction = set(range(first, len(exits)))
     on_road = np.zeros(len(N), dtype=bool)
     if len(rp):
         d, _ = cKDTree(rp).query(np.column_stack([pn, pw]), k=1, distance_upper_bound=ROAD_YARDS)
@@ -181,6 +263,9 @@ def build(mapid):
         costs, ways = [], []
         for i, (x, y, node) in enumerate(exits):
             want = (by_zone[x] | by_zone[y]) - {i}
+            # (An intersection's walks: to the stops near it, not its whole zone.)
+            want = {j for j in want if not (i in junction or j in junction)
+                    or (pn[node] - pn[exits[j][2]]) ** 2 + (pw[node] - pw[exits[j][2]]) ** 2 <= JUNCTION_REACH ** 2}
             dist, pred = dijkstra(G, indices=node, return_predecessors=True, limit=LIMIT * off)
             cost, walk_rows = [], []
             for j in sorted(want):

@@ -24,10 +24,19 @@ S.page = ns.NewOptionsPage({ name = "WallyHUD", build = function(p)
             .. "quest titles in plain text with the level after them, the focused quest marked with an accent bar, thin "
             .. "progress bars under goals with a count, and Ready to turn in for finished quests. A /reload to switch off.",
         apply = function(on) if on and ns.Questie then ns.Questie:Apply() end end })
-    p:Check({ id = "maxCamera", path = "db.maxCamera", label = "Maximum camera distance",
-        tooltip = "Lets the camera zoom out as far as the game allows, past the limit in the game's own settings. "
-            .. "Switching it off puts back the limit you had before.",
-        apply = function() ns.Camera:Apply() end })
+    p:Check({ id = "questieAutoTrack", path = "db.questieAutoTrack", label = "Questie Auto Track",
+        tooltip = "Questie's quest icons on the world map and minimap only for the quests you're tracking (Shift+click a "
+            .. "quest in your log to track it). Sets Questie's own \"Hide icons of untracked quests\".",
+        apply = function() ns.QuestieIcons:Apply() end })
+    p:Check({ id = "partyQuests", path = "db.partyQuests", label = "Party on quest cards",
+        tooltip = "A Party part under Questie's quest card (a quest link clicked or hovered): for each group member, whether "
+            .. "they're on it, done with it, need an earlier quest, or can pick it up. Members with WallyHUD answer for "
+            .. "themselves; for the others, what Questie shares (only quests in their log)." })
+    p:Check({ id = "moveFrames", path = "db.moveFrames", label = "Move the frames Edit Mode can't",
+        tooltip = "Opening Edit Mode puts a box over each game frame neither Edit Mode nor Bartender4 moves (the minimap, "
+            .. "buffs, the quest tracker, the talking head...): drag a box to move its frame, right-click it to put it back. "
+            .. "/whud move does it without Edit Mode. Off by default.",
+        apply = function(on) ns.Movers:OptionChanged(on) end })
     p:Header("Vitals: your health and power, drawn into the screen")
     p:Check({ id = "vitals", path = "db.vitals", label = "The line (health and power across the screen)",
         tooltip = "One faint line across the screen: its height is your health (it sinks as you're hurt), and how far it's "
@@ -62,6 +71,11 @@ S.page = ns.NewOptionsPage({ name = "WallyHUD", build = function(p)
         apply = function() ns.Vitals:UpdateHealth() end })
     p:Check({ id = "vitalsRhythm", path = "db.vitalsRhythm", label = "Rhythm: the five-second rule and regen ticks",
         tooltip = "After a spell costs mana, a sweep round the star counts down the five seconds without regen. Energy and mana ticks ripple off the star." })
+    p:Check({ id = "targetButton", path = "db.targetButton", label = "PvE / PvP targeting button",
+        tooltip = "A button left of the menu bar (the Character button): PvE, Tab targets creatures; PvP, Tab targets enemy "
+            .. "players. It works on whatever keys you've bound to Target Nearest / Previous Enemy, without changing your "
+            .. "key bindings. Also in Key Bindings > AddOns > WallyHUD. Off: the button goes and Tab is the game's again.",
+        apply = function() ns.TargetMode:OptionChanged() end })
     p:Button({ label = "What it has learned", text = "Forget", fn = function() ns.Vitals.Forget(); ns:Print("Vitals forgot what it learned about you.") end })
     p:Header("Issue reporting")
     p:Check({ id = "hideReporter", path = "db.hideReporter", label = "Keep the Issue Reporter out of the way",
@@ -70,6 +84,8 @@ S.page = ns.NewOptionsPage({ name = "WallyHUD", build = function(p)
         apply = function(on) if on then ns.Reporter:Apply() end end })
     p:Check({ id = "errorToast", path = "db.errorToast", label = "Notice on addon errors",
         tooltip = "A small notice in the bottom right when an addon error happens, with Report and Dismiss. It fades after 10 seconds." })
+    -- Options > AddOns > WallyHUD > Emote Wheel (EmoteWheel.lua): its emotes, the macro's code and buttons.
+    if ns.EmoteWheel then ns.EmoteWheel:AttachTo(p) end
 end })
 
 function S:Open()

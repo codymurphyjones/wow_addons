@@ -1,12 +1,12 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.8"
+ns.VERSION = "0.1.20"
 ns.PREFIX = "|cff55d6beWally|r"
 ns.ICON = "Interface/AddOns/Wally/Media/Wally"
 ns.HISTORY_MAX = 200
 
 -- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
-ns.SAVED = { db = "WallyDB", char = "WallyCharDB" }
+ns.SAVED = { db = "WallyDB", char = "WallyCharDB", own = { "options" } } -- own: a character may keep its own (Setup.lua)
 
 ns.DEFAULTS = {
     inclusions = {},
@@ -29,6 +29,7 @@ ns.DEFAULTS = {
         keepSessions = 30,
         autoSell = false,
         safeSell = true,
+        offerGreens = true,       -- after junk, offer greens a vendor pays more for than the auction house
         sellGreys = true,
         wearGreys = true,
         learn = true,

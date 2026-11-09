@@ -93,6 +93,11 @@ local function Build(p)
     p:Check({ path = "db.hideCharTab", invert = true, default = true, label = "Show the SpyGlass tab",
         tooltip = "The book tab on the Character window that shows your ranked gear list. /sg tab",
         apply = function() ns.CharPanel:ApplyTabSetting() end })
+    p:Check({ path = "db.autoEquip", default = true, label = "Put on gray and white upgrades automatically",
+        tooltip = "A gray or white upgrade that lands in your bags (loot, a quest reward, something bought) goes on as soon "
+            .. "as you're out of combat, when it's already soulbound. Green and better is never put on: it's worth more, "
+            .. "and your call. Nor is anything not soulbound (Bind on Equip, or gear that never binds): it may be worth "
+            .. "more sold or traded. Only new arrivals: what you take off stays off." })
 
     p:Header("Journal")
     p:Check({ path = "jdb.extendUpgrades", default = false, label = "Extend upgrade search",
@@ -103,6 +108,13 @@ local function Build(p)
         tooltip = "The Scrapbook takes a screenshot of each big moment (level-ups, first boss kills, epic loot...), "
             .. "saved in the game's Screenshots folder; the entry names the file (also on the Scrapbook tab).",
         apply = function() if ns.Scrapbook then ns.Scrapbook:Refresh() end end })
+
+    p:Header("OneForAll")
+    p:Check({ path = "db.ofaPins", default = false, label = "Mob packs on OneForAll's dungeon maps",
+        tooltip = "With OneForAll installed: SpyGlass's mob packs on its dungeon maps (Dungeons & Raids > Map, and the "
+            .. "map key inside a dungeon). A small circle for each pack with how many mobs, amber when there are elites; "
+            .. "hover one for the mobs, the packs that aggro with it and its patrol.",
+        apply = function() if ns.MobPins then ns.MobPins:Refresh() end end })
 
     p:Header("Help improve SpyGlass")
     p:Check({ path = "db.contribute", default = false, label = "Share discoveries",

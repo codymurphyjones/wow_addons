@@ -450,6 +450,17 @@ local function HearthPoint()
     return Town(bind), bind
 end
 
+-- The hearthstone for a planner (API.lua's Waypoint:Hearth): where it takes you in world yards, the
+-- seconds until it's off cooldown, and the seconds to cast it and load; nil without one, without a
+-- bind, or with the hearthstone turned off in the options.
+function R:Hearth()
+    if not ns.db.useHearth or ItemCount(HEARTHSTONE) == 0 then return nil end
+    local hp, bind = HearthPoint()
+    local c, n, w = hp and ns.Nav:World(hp)
+    if not c then return nil end
+    return { c = c, n = n, w = w, name = bind, readyIn = ItemCooldown(HEARTHSTONE), cast = CAST + LOAD }
+end
+
 local portPoints = {}
 local function TeleportPoint(id, city)
     local rec = ns.db.teleports[id]
@@ -654,6 +665,11 @@ local STREET_ENTER = 120         -- the farthest you'd walk to get onto a street
 local STREET_OFF = 1.5           -- walking to or from the street weighs this much more than along it
 local STREET_ON = 12             -- yards from a street that count as on it
 local STREET_LEFT = 25           -- yards from every street that count as having left them
+-- The streets are a flat network (no heights): in Thunder Bluff the mesa tops' paths and the ground's
+-- below meet on the map, and the rope bridges aren't roads, so the way along them went right round
+-- the town to reach the next mesa. The land map's way knows the floors and bridges: when the streets'
+-- way is more than this many times its length, the land map's way stands.
+local STREET_DETOUR = 1.5
 
 local function InCity(c, n, w, margin)
     margin = margin or 0
@@ -836,6 +852,14 @@ local function CityWay(c, sn, sw, way, en, ew, fromYou)
             local j = i
             while j < #seq and InCity(c, seq[j + 1].n, seq[j + 1].w) do j = j + 1 end
             local road = j > i and not (i == 1 and fromYou and street.free) and StreetWay(c, seq[i].n, seq[i].w, seq[j].n, seq[j].w)
+            if road then
+                local direct, along = 0, 0
+                for k = i + 1, j do direct = direct + Dist(seq[k - 1].n, seq[k - 1].w, seq[k].n, seq[k].w) end
+                local pn, pw = seq[i].n, seq[i].w
+                for _, r in ipairs(road) do along = along + Dist(pn, pw, r.n, r.w); pn, pw = r.n, r.w end
+                along = along + Dist(pn, pw, seq[j].n, seq[j].w)
+                if along > direct * STREET_DETOUR + 30 then road = nil end
+            end
             if road then
                 out[#out + 1] = seq[i]
                 for _, s in ipairs(road) do out[#out + 1] = s end
@@ -1277,7 +1301,7 @@ function R:HeightText(p)
     local c, n, w = ns.Nav:Player()
     local pc, pn, pw = ns.Nav:World(p)
     if not c or pc ~= c then return "" end
-    local mine, theirs = G:Height(c, n, w), G:Height(c, pn, pw)
+    local mine, theirs = G:HeightSoon(c, n, w), G:HeightSoon(c, pn, pw)
     if not (mine and theirs) or math.abs(theirs - mine) < LEVEL then return "" end
     return ("  -  %d yd %s you"):format(math.floor(math.abs(theirs - mine) / 5 + 0.5) * 5, theirs > mine and "above" or "below")
 end
@@ -1307,6 +1331,7 @@ function R:AheadText()
     for _, yards in ipairs(AHEAD) do
         local an, aw = n + dn * yards, w + dw * yards
         local how, down = G:Ahead(c, pn, pw, an, aw)
+        if how == "unknown" then return nil end -- that ground isn't unpacked yet: next update
         if how == "drop" then
             total = total + down
         elseif total > G.HARMLESS then
@@ -1317,7 +1342,7 @@ function R:AheadText()
         if how == nil then
             if total > G.HARMLESS then return Cliff() end
             if total > 0 then return nil end
-            local mine, theirs = G:Height(c, pn, pw), G:Height(c, an, aw)
+            local mine, theirs = G:HeightSoon(c, pn, pw), G:HeightSoon(c, an, aw)
             if mine and theirs and theirs > mine + 5 then return "|cffffa040Too steep to climb ahead|r" end
             if mine and theirs and theirs < mine - 5 then return "|cffffa040Cliff ahead|r" end
             return nil
@@ -1637,6 +1662,20 @@ function R:Plan(p, last)
                 way = {}
                 for _, s in ipairs(lead) do way[#way + 1] = s end
                 for _, s in ipairs(chained) do way[#way + 1] = s end
+            end
+            -- ...and from the last stop to the target by the target's own field, when that reaches the
+            -- stop: the stored walks end at their last stop, and a straight line from it to the target
+            -- went over the ridge from Sun Rock Retreat to Windshear Crag (580 yd straight, 1030 walked).
+            local stop = way[#way - 1]
+            if aim == p and stop and not stop.lift and targetField and targetField.continent == c then
+                local tail = G:Detail(c, G:Path(targetField, stop.n, stop.w))
+                if tail and tail[1] then
+                    local joined = {}
+                    for i = 1, #way - 1 do joined[i] = way[i] end
+                    for _, s in ipairs(tail) do joined[#joined + 1] = s end
+                    joined[#joined + 1] = way[#way]
+                    way = joined
+                end
             end
         elseif aim then
             way = WayFrom(hereField, targetField, aim == p, c, n, w, aim)
@@ -2294,9 +2333,13 @@ local function LearnStep(c, n, w, now)
         if key and hp and hc and hc >= hp - G.HARMLESS and G:Step(c, prev.n, prev.w, n, w) ~= "walk" then
             local learned = ns.db.learned
             learned[c] = learned[c] or {}
+            -- (Only something new is worth the rebuild: on the maps NavGrid knows, a learned step
+            -- doesn't change what G:Step says, so the same spot comes up every time it's crossed,
+            -- and every roads, cities and overrides table would be built again for nothing.)
+            local new = not learned[c][key] or (hc >= hp - 10 and not learned[c][back])
             learned[c][key] = true
             if hc >= hp - 10 then learned[c][back] = true end
-            Overrides()
+            if new then Overrides() end
         end
     end
     walkFrom = { c = c, n = n, w = w, at = now }

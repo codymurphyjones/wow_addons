@@ -1,0 +1,959 @@
+Dungeon quest audit (audit_dungeons.py): every dungeon quest and all it needs first.
+Roles: before = picked up before the run; after = offered once something inside is done;
+inside = started by an item found inside; follow = what one started inside leads to.
+Wowhead series read for 468 of 472 quests in scope.
+Issues: dungeon 310, missing 78, unchecked 1
+
+== Ragefire Chasm (levels 13-18)
+  Horde
+    before 5723 "Testing an Enemy's Strength"
+    before 5722 "Searching for the Lost Satchel"
+    before 5728 "Hidden Enemies"   needs: 5726 "Hidden Enemies" -> 5727 "Hidden Enemies"
+    before 5761 "Slaying the Beast"
+    inside 5724 "Returning the Lost Satchel"   needs: 5722 "Searching for the Lost Satchel"
+
+== Ruins of Lordaeron (levels 13-18)
+  Alliance
+    inside 92415 "Remember That I Love You"
+    follow 95161 "Remember That I Love You"   needs: 92415 "Remember That I Love You"
+    inside 95189 "Crest of Lordaeron"
+    inside 95195 "Bloodied Insignia"
+  Horde
+    before 92401 "A Frightened Request"
+    before 92421 "Light's Justice"
+    before 92422 "The Wrath of Rath'mael"   needs: 356 "Rear Guard Patrol" -> 99156 "Rear Guard Patrol"
+    before 95216 "The New Plague"   needs: 447 "A Recipe For Death" -> 450 "A Recipe For Death" -> 451 "A Recipe For Death"
+    inside 97288 "Unending Torment"
+    follow 97289 "Unending Torment"   needs: 97288 "Unending Torment"
+    follow 97290 "Unending Torment"   needs: 97288 "Unending Torment" -> 97289 "Unending Torment"
+    follow 97291 "Unending Torment"   needs: 97288 "Unending Torment" -> 97289 "Unending Torment" -> 97290 "Unending Torment"
+    follow 97292 "Unending Torment"   needs: 97288 "Unending Torment" -> 97289 "Unending Torment" -> 97290 "Unending Torment" -> 97291 "Unending Torment"
+    inside 95204 "Crest of Lordaeron"
+
+== The Hall of Thanes (levels 13-18)
+  Alliance
+    before 96394 "The Restless Dead"
+    before 96403 "Important Heirlooms"
+    before 96393 "Old Ironforge Incursion"   needs: 96391 "Underground Map"
+
+== Wailing Caverns (levels 17-24)
+  Alliance
+    before 1486 "Deviate Hides"
+    before 959 "Trouble at the Docks"
+    before 1491 "Smart Drinks"   needs: 865 "Raptor Horns"
+    before 1487 "Deviate Eradication"
+    inside 6981 "The Glowing Shard"
+  Horde
+    before 1489 "Hamuul Runetotem"   needs: 886 "The Barrens Oases" -> 870 "The Forgotten Pools" -> 877 "The Stagnant Oasis" -> 880 "Altered Beings"
+    before 1490 "Nara Wildmane"   needs: 886 "The Barrens Oases" -> 870 "The Forgotten Pools" -> 877 "The Stagnant Oasis" -> 880 "Altered Beings" -> 1489 "Hamuul Runetotem"
+    before 1486 "Deviate Hides"
+    before 959 "Trouble at the Docks"
+    before 962 "Serpentbloom"
+    before 1491 "Smart Drinks"   needs: 865 "Raptor Horns"
+    before 1487 "Deviate Eradication"
+    before 914 "Leaders of the Fang"   needs: 886 "The Barrens Oases" -> 870 "The Forgotten Pools" -> 877 "The Stagnant Oasis" -> 880 "Altered Beings" -> 1489 "Hamuul Runetotem" -> 1490 "Nara Wildmane"
+    inside 6981 "The Glowing Shard"
+    follow 3369 "In Nightmares"   needs: 6981 "The Glowing Shard"
+
+== The Deadmines (levels 17-26)
+  Alliance
+    before 214 "Red Silk Bandanas"   needs: 65 "The Defias Brotherhood" -> 132 "The Defias Brotherhood" -> 135 "The Defias Brotherhood" -> 141 "The Defias Brotherhood" -> 142 "The Defias Brotherhood" -> 155 "The Defias Brotherhood"
+    before 168 "Collecting Memories"
+    before 92753 "Destruction in Deadmines"   needs: 92742 "Testing the Wells" -> 92744 "Murloc Gills" -> 92745 "The State of the Mines" -> 92747 "Moonbrook Espionage" -> 92748 "Explosive Consultation" -> 92749 "A Dynamite Plan" -> 92750 "Detonation at a Distance" -> 92751 "Detonation at a Distance" -> 92752 "Explosive Consultation"
+    before 167 "Oh Brother. . ."
+    before 2040 "Underground Assault"   needs: 2041 "Speak with Shoni"
+    before 166 "The Defias Brotherhood"   needs: 65 "The Defias Brotherhood" -> 132 "The Defias Brotherhood" -> 135 "The Defias Brotherhood" -> 141 "The Defias Brotherhood" -> 142 "The Defias Brotherhood" -> 155 "The Defias Brotherhood"
+
+== Shadowfang Keep (levels 22-30)
+  Horde
+    before 1098 "Deathstalkers in Shadowfang"
+    before 1013 "The Book of Ur"
+    before 1014 "Arugal Must Die"
+
+== Excavation Site: Wetlands (levels 24-29)
+  Alliance
+    before 98815 "Highland Hides"
+    before 95646 "Horrors in the Highland"
+    before 95737 "Seeking Caitlin"
+    inside 95810 "Lost Relic Carry"
+    follow 98824 "Prehistoric Prism"   needs: 95810 "Lost Relic Carry"
+  Horde
+    before 95663 "Dragonmaw Rumors"
+    before 95697 "Changing Tastes"
+    inside 95664 "Elder Knowledge"
+    follow 98823 "Earthen Echo"   needs: 95664 "Elder Knowledge"
+    inside 95682 "Open the Maw"   needs: 95663 "Dragonmaw Rumors"
+
+== The Stockade (levels 24-32)
+  Alliance
+    before 386 "What Comes Around..."
+    before 377 "Crime and Punishment"
+    before 387 "Quell The Uprising"
+    before 388 "The Color of Blood"
+    before 378 "The Fury Runs Deep"   needs: 303 "The Dark Iron War"
+    before 391 "The Stockade Riots"   needs: 373 "The Unsent Letter" -> 389 "Bazil Thredd"
+
+== Blackfathom Deeps (levels 24-32)
+  Alliance
+    before 971 "Knowledge in the Deeps"
+    before 1198 "In Search of Thaelrid"
+    before 1275 "Researching the Corruption"   needs: 3765 "The Corruption Abroad"
+    before 1199 "Twilight Falls"
+    inside 1200 "Blackfathom Villainy"   needs: 1198 "In Search of Thaelrid"
+  Horde
+    before 6562 "Trouble in the Deeps"
+    before 6563 "The Essence of Aku'Mai"   needs: 6562 "Trouble in the Deeps"
+    before 1198 "In Search of Thaelrid"
+    before 6565 "Allegiance to the Old Gods"   needs: 6562 "Trouble in the Deeps" -> 6564 "Allegiance to the Old Gods"
+    before 6921 "Amongst the Ruins"
+    before 6564 "Allegiance to the Old Gods"   needs: 6562 "Trouble in the Deeps"
+    inside 6561 "Blackfathom Villainy"
+    inside 6922 "Baron Aquanis"
+
+== City of Dalaran (levels 28-33)
+  Alliance
+    before 92456 "A Green Sample"
+    before 92457 "Starving Arcane"   needs: 92432 "An Alarming Request"
+    before 92458 "Heart of Disruption"   needs: 92432 "An Alarming Request"
+    before 92489 "Power Overwhelming"
+  Horde
+    before 96984 "Heart of Disruption"   needs: 92434 "Blood in the Streets"
+    [unchecked] 92434 "Blood in the Streets": one of Forever's own, no prerequisite, series not read
+    before 96986 "The Grave Knight"
+    before 96988 "Source of Power"
+
+== Scarlet Monastery (levels 28-45)
+  Alliance
+    before 1050 "Mythology of the Titans"
+    before 96800 "Past Due"
+    before 1053 "In the Name of the Light"   needs: 6141 "Brother Anton" -> 261 "Down the Scarlet Path" -> 1052 "Down the Scarlet Path"
+  Horde
+    before 1113 "Hearts of Zeal"   needs: 1109 "Going, Going, Guano!"
+    [dungeon] needs 1109 "Going, Going, Guano!", a quest of Razorfen Kraul
+    before 1160 "Test of Lore"   needs: 1149 "Test of Faith" -> 1150 "Test of Endurance" -> 1151 "Test of Strength" -> 1152 "Test of Lore" -> 1154 "Test of Lore" -> 6627 "Test of Lore" -> 1159 "Test of Lore"
+    before 1049 "Compendium of the Fallen"
+    inside 1051 "Vorrel's Revenge"
+
+== Razorfen Kraul (levels 29-38)
+  Alliance
+    before 1221 "Blueleaf Tubers"
+    before 1101 "The Crone of the Kraul"   needs: 1100 "Lonebrow's Journal"
+    inside 1142 "Mortality Wanes"
+    inside 1144 "Willix the Importer"
+  Horde
+    before 1221 "Blueleaf Tubers"
+    before 1109 "Going, Going, Guano!"
+    before 1102 "A Vengeful Fate"
+    inside 1144 "Willix the Importer"
+
+== Gnomeregan (levels 29-38)
+  Alliance
+    before 2922 "Save Techbot's Brain!"   needs: 2923 "Tinkmaster Overspark"
+    before 2923 "Tinkmaster Overspark"
+    before 2926 "Gnogaine"   needs: 2927 "The Day After"
+    before 2927 "The Day After"
+    before 2931 "Castpipe's Task"
+    before 2924 "Essential Artificials"   needs: 2925 "Klockmort's Essentials"
+    before 2925 "Klockmort's Essentials"
+    before 2928 "Gyrodrillmatic Excavationators"
+    before 2930 "Data Rescue"   needs: 2931 "Castpipe's Task"
+    before 2962 "The Only Cure is More Green Glow"   needs: 2927 "The Day After" -> 2926 "Gnogaine"
+    before 2929 "The Grand Betrayal"
+    inside 2904 "A Fine Mess"
+    inside 2951 "The Sparklematic 5200!"
+    inside 2952 "The Sparklematic 5200!"   needs: 2951 "The Sparklematic 5200!"
+    inside 2945 "Grime-Encrusted Ring"
+    inside 2947 "Return of the Ring"   needs: 2945 "Grime-Encrusted Ring"
+    follow 2948 "Gnome Improvement"   needs: 2945 "Grime-Encrusted Ring" -> 2947 "Return of the Ring"
+  Horde
+    before 2841 "Rig Wars"
+    before 2842 "Chief Engineer Scooty"
+    inside 2904 "A Fine Mess"
+    inside 2951 "The Sparklematic 5200!"
+    inside 2952 "The Sparklematic 5200!"   needs: 2951 "The Sparklematic 5200!"
+    inside 2945 "Grime-Encrusted Ring"
+    inside 2949 "Return of the Ring"   needs: 2945 "Grime-Encrusted Ring"
+    follow 2950 "Nogg's Ring Redo"   needs: 2945 "Grime-Encrusted Ring" -> 2949 "Return of the Ring"
+
+== Razorfen Downs (levels 37-46)
+  Alliance
+    before 6626 "A Host of Evil"
+    before 3636 "Bring the Light"
+    inside 3523 "Scourge of the Downs"
+    inside 3525 "Extinguishing the Idol"   needs: 3523 "Scourge of the Downs"
+  Horde
+    before 6626 "A Host of Evil"
+    before 3341 "Bring the End"
+    inside 6522 "An Unholy Alliance"
+    follow 6521 "An Unholy Alliance"   needs: 6522 "An Unholy Alliance"
+    inside 3523 "Scourge of the Downs"
+    inside 3525 "Extinguishing the Idol"   needs: 3523 "Scourge of the Downs"
+
+== Uldaman (levels 41-51)
+  Alliance
+    before 721 "A Sign of Hope"   needs: 720 "A Sign of Hope"
+    before 2418 "Power Stones"
+    before 704 "Agmond's Fate"   needs: 707 "Ironband Wants You!" -> 738 "Find Agmond" -> 739 "Murdaloc"
+    before 709 "Solution to Doom"
+    before 722 "Amulet of Secrets"   needs: 720 "A Sign of Hope" -> 721 "A Sign of Hope"
+    before 2398 "The Lost Dwarves"
+    before 2199 "Lore for a Price"   needs: 2198 "The Shattered Necklace"
+    before 17 "Uldaman Reagent Run"   needs: 2500 "Badlands Reagent Run"
+    before 2200 "Back to Uldaman"   needs: 2198 "The Shattered Necklace" -> 2199 "Lore for a Price"
+    before 1360 "Reclaimed Treasures"
+    before 1139 "The Lost Tablets of Will"   needs: 720 "A Sign of Hope" -> 721 "A Sign of Hope" -> 722 "Amulet of Secrets" -> 723 "Prospect of Faith" -> 724 "Prospect of Faith" -> 725 "Passing Word of a Threat" -> 726 "Passing Word of a Threat" -> 762 "An Ambassador of Evil"
+    before 2198 "The Shattered Necklace"
+    inside 2240 "The Hidden Chamber"   needs: 2398 "The Lost Dwarves"
+    inside 2201 "Find the Gems"   needs: 2198 "The Shattered Necklace" -> 2199 "Lore for a Price" -> 2200 "Back to Uldaman"
+    inside 2204 "Restoring the Necklace"   needs: 2198 "The Shattered Necklace" -> 2199 "Lore for a Price" -> 2200 "Back to Uldaman" -> 2201 "Find the Gems"
+    follow 2361 "Restoring the Necklace"   needs: 2198 "The Shattered Necklace" -> 2199 "Lore for a Price" -> 2200 "Back to Uldaman" -> 2201 "Find the Gems" -> 2204 "Restoring the Necklace"
+    inside 2278 "The Platinum Discs"
+    inside 2279 "The Platinum Discs"   needs: 2278 "The Platinum Discs"
+    follow 2439 "The Platinum Discs"   needs: 2278 "The Platinum Discs" -> 2279 "The Platinum Discs"
+    follow 2963 "Portents of Uldum"   needs: 2278 "The Platinum Discs" -> 2279 "The Platinum Discs" -> 2439 "The Platinum Discs"
+    follow 2946 "Seeing What Happens"   needs: 2278 "The Platinum Discs" -> 2279 "The Platinum Discs" -> 2439 "The Platinum Discs" -> 2963 "Portents of Uldum"
+    follow 2954 "The Stone Watcher"   needs: 2278 "The Platinum Discs" -> 2279 "The Platinum Discs" -> 2439 "The Platinum Discs" -> 2963 "Portents of Uldum" -> 2946 "Seeing What Happens"
+    follow 2977 "Return to Ironforge"   needs: 2278 "The Platinum Discs" -> 2279 "The Platinum Discs" -> 2439 "The Platinum Discs" -> 2963 "Portents of Uldum" -> 2946 "Seeing What Happens" -> 2954 "The Stone Watcher"
+    follow 2964 "A Future Task"   needs: 2278 "The Platinum Discs" -> 2279 "The Platinum Discs" -> 2439 "The Platinum Discs" -> 2963 "Portents of Uldum" -> 2946 "Seeing What Happens" -> 2954 "The Stone Watcher" -> 2977 "Return to Ironforge"
+  Horde
+    before 2418 "Power Stones"
+    before 709 "Solution to Doom"
+    before 2283 "Necklace Recovery"
+    before 2202 "Uldaman Reagent Run"   needs: 2258 "Badlands Reagent Run"
+    before 2342 "Reclaimed Treasures"
+    after  2284 "Necklace Recovery, Take 2"   needs: 2283 "Necklace Recovery"
+    after  2340 "Deliver the Gems"   needs: 2283 "Necklace Recovery" -> 2284 "Necklace Recovery, Take 2" -> 2318 "Translating the Journal" -> 2338 "Translating the Journal" -> 2339 "Find the Gems and Power Source"
+    after  2341 "Necklace Recovery, Take 3"   needs: 2283 "Necklace Recovery" -> 2284 "Necklace Recovery, Take 2" -> 2318 "Translating the Journal" -> 2338 "Translating the Journal" -> 2339 "Find the Gems and Power Source" -> 2340 "Deliver the Gems"
+    inside 2318 "Translating the Journal"   needs: 2283 "Necklace Recovery" -> 2284 "Necklace Recovery, Take 2"
+    follow 2338 "Translating the Journal"   needs: 2283 "Necklace Recovery" -> 2284 "Necklace Recovery, Take 2" -> 2318 "Translating the Journal"
+    follow 2339 "Find the Gems and Power Source"   needs: 2283 "Necklace Recovery" -> 2284 "Necklace Recovery, Take 2" -> 2318 "Translating the Journal" -> 2338 "Translating the Journal"
+    follow 2340 "Deliver the Gems"   needs: 2283 "Necklace Recovery" -> 2284 "Necklace Recovery, Take 2" -> 2318 "Translating the Journal" -> 2338 "Translating the Journal" -> 2339 "Find the Gems and Power Source"
+    follow 2341 "Necklace Recovery, Take 3"   needs: 2283 "Necklace Recovery" -> 2284 "Necklace Recovery, Take 2" -> 2318 "Translating the Journal" -> 2338 "Translating the Journal" -> 2339 "Find the Gems and Power Source" -> 2340 "Deliver the Gems"
+    inside 2278 "The Platinum Discs"
+    inside 2280 "The Platinum Discs"   needs: 2278 "The Platinum Discs"
+    follow 2440 "The Platinum Discs"   needs: 2278 "The Platinum Discs" -> 2280 "The Platinum Discs"
+    follow 2965 "Portents of Uldum"   needs: 2278 "The Platinum Discs" -> 2280 "The Platinum Discs" -> 2440 "The Platinum Discs"
+    follow 2966 "Seeing What Happens"   needs: 2278 "The Platinum Discs" -> 2280 "The Platinum Discs" -> 2440 "The Platinum Discs" -> 2965 "Portents of Uldum"
+    follow 2954 "The Stone Watcher"   needs: 2278 "The Platinum Discs" -> 2280 "The Platinum Discs" -> 2440 "The Platinum Discs" -> 2965 "Portents of Uldum" -> 2966 "Seeing What Happens"
+    follow 2967 "Return to Thunder Bluff"   needs: 2278 "The Platinum Discs" -> 2280 "The Platinum Discs" -> 2440 "The Platinum Discs" -> 2965 "Portents of Uldum" -> 2966 "Seeing What Happens" -> 2954 "The Stone Watcher"
+    follow 2968 "A Future Task"   needs: 2278 "The Platinum Discs" -> 2280 "The Platinum Discs" -> 2440 "The Platinum Discs" -> 2965 "Portents of Uldum" -> 2966 "Seeing What Happens" -> 2954 "The Stone Watcher" -> 2967 "Return to Thunder Bluff"
+
+== Zul'Farrak (levels 44-54)
+  Alliance
+    before 2864 "Tran'rek"
+    before 2865 "Scarab Shells"   needs: 2864 "Tran'rek"
+    before 3042 "Troll Temper"
+    before 2846 "Tiara of the Deep"   needs: 2861 "Tabetha's Task"
+    before 2861 "Tabetha's Task"
+    before 2768 "Divino-matic Rod"
+    before 2991 "Nekrum's Medallion"   needs: 2988 "Witherbark Cages" -> 2989 "The Altar of Zul" -> 2990 "Thadius Grimshade"
+    before 3527 "The Prophecy of Mosh'aru"   needs: 3520 "Screecher Spirits"
+    before 2770 "Gahz'rilla"
+  Horde
+    before 2864 "Tran'rek"
+    before 2865 "Scarab Shells"   needs: 2864 "Tran'rek"
+    before 2936 "The Spider God"   needs: 2933 "Venom Bottles" -> 2934 "Undamaged Venom Sac" -> 2935 "Consult Master Gadrin"
+    before 3042 "Troll Temper"
+    before 2846 "Tiara of the Deep"   needs: 2861 "Tabetha's Task"
+    before 2861 "Tabetha's Task"
+    before 2768 "Divino-matic Rod"
+    before 3527 "The Prophecy of Mosh'aru"   needs: 3520 "Screecher Spirits"
+    before 2770 "Gahz'rilla"
+
+== Maraudon (levels 46-55)
+  Alliance
+    before 7070 "Shadowshard Fragments"
+    before 7028 "Twisted Evils"
+    before 7041 "Vyletongue Corruption"
+    before 7067 "The Pariah's Instructions"
+    before 7044 "Legends of Maraudon"
+    before 7065 "Corruption of Earth and Seed"
+    inside 7046 "The Scepter of Celebras"   needs: 7044 "Legends of Maraudon"
+    inside 7066 "Seed of Life"
+  Horde
+    before 7068 "Shadowshard Fragments"
+    before 7028 "Twisted Evils"
+    before 7029 "Vyletongue Corruption"
+    before 7067 "The Pariah's Instructions"
+    before 7044 "Legends of Maraudon"
+    before 7064 "Corruption of Earth and Seed"
+    inside 7046 "The Scepter of Celebras"   needs: 7044 "Legends of Maraudon"
+    inside 7066 "Seed of Life"
+
+== The Temple of Atal'Hakkar (levels 50-56)
+  Alliance
+    before 1475 "Into The Temple of Atal'Hakkar"   needs: 1448 "In Search of The Temple" -> 1449 "To The Hinterlands" -> 1450 "Gryphon Master Talonaxe" -> 1451 "Rhapsody Shindigger" -> 1452 "Rhapsody's Kalimdor Kocktail" -> 1469 "Rhapsody's Tale"
+    before 3446 "Into the Depths"   needs: 3445 "The Sunken Temple" -> 3444 "The Stone Circle"
+    before 3447 "Secret of the Circle"   needs: 3445 "The Sunken Temple" -> 3444 "The Stone Circle"
+    before 1446 "Jammal'an the Prophet"
+    before 3528 "The God Hakkar"   needs: 3520 "Screecher Spirits" -> 3527 "The Prophecy of Mosh'aru" -> 4787 "The Ancient Egg"
+    [dungeon] needs 3527 "The Prophecy of Mosh'aru", a quest of Zul'Farrak
+    inside 3373 "The Essence of Eranikus"
+  Horde
+    before 1445 "The Temple of Atal'Hakkar"   needs: 1424 "Pool of Tears" -> 1429 "The Atal'ai Exile" -> 1444 "Return to Fel'Zerul"
+    before 3380 "The Sunken Temple"
+    before 3446 "Into the Depths"   needs: 3380 "The Sunken Temple" -> 3444 "The Stone Circle"
+    before 3447 "Secret of the Circle"   needs: 3380 "The Sunken Temple" -> 3444 "The Stone Circle"
+    before 1446 "Jammal'an the Prophet"
+    before 3528 "The God Hakkar"   needs: 3520 "Screecher Spirits" -> 3527 "The Prophecy of Mosh'aru" -> 4787 "The Ancient Egg"
+    [dungeon] needs 3527 "The Prophecy of Mosh'aru", a quest of Zul'Farrak
+    inside 3373 "The Essence of Eranikus"
+
+== Blackrock Depths (levels 52-60)
+  Alliance
+    before 3801 "Dark Iron Legacy"
+    before 3802 "Dark Iron Legacy"   needs: 3801 "Dark Iron Legacy"
+    before 4136 "Ribbly Screwspigot"   needs: 4324 "Yuka Screwspigot"
+    before 4324 "Yuka Screwspigot"
+    before 4241 "Marshal Windsor"   needs: 4182 "Dragonkin Menace" -> 4183 "The True Masters" -> 4184 "The True Masters" -> 4185 "The True Masters" -> 4186 "The True Masters" -> 4223 "The True Masters" -> 4224 "The True Masters"
+    before 4123 "The Heart of the Mountain"
+    before 4126 "Hurley Blackbreath"   needs: 4128 "Ragnar Thunderbrew"
+    before 4128 "Ragnar Thunderbrew"
+    before 4263 "Incendius!"   needs: 4262 "Overmaster Pyron"
+    before 4286 "The Good Stuff"
+    before 4024 "A Taste of Flame"   needs: 3441 "Divine Retribution" -> 3442 "The Flawless Flame" -> 3443 "Forging the Shaft" -> 3452 "The Flame's Casing" -> 3453 "The Torch of Retribution" -> 3454 "The Torch of Retribution" -> 3462 "Squire Maltrake" -> 3463 "Set Them Ablaze!" -> 3481 "Trinkets..." -> 4022 "A Taste of Flame"
+    before 4341 "Kharan Mighthammer"   needs: 3702 "The Smoldering Ruins of Thaurissan" -> 3701 "The Smoldering Ruins of Thaurissan"
+    inside 4201 "The Love Potion"
+    inside 4242 "Abandoned Hope"   needs: 4182 "Dragonkin Menace" -> 4183 "The True Masters" -> 4184 "The True Masters" -> 4185 "The True Masters" -> 4186 "The True Masters" -> 4223 "The True Masters" -> 4224 "The True Masters" -> 4241 "Marshal Windsor"
+    follow 4264 "A Crumpled Up Note"   needs: 4182 "Dragonkin Menace" -> 4183 "The True Masters" -> 4184 "The True Masters" -> 4185 "The True Masters" -> 4186 "The True Masters" -> 4223 "The True Masters" -> 4224 "The True Masters" -> 4241 "Marshal Windsor" -> 4242 "Abandoned Hope"
+    inside 4282 "A Shred of Hope"   needs: 4182 "Dragonkin Menace" -> 4183 "The True Masters" -> 4184 "The True Masters" -> 4185 "The True Masters" -> 4186 "The True Masters" -> 4223 "The True Masters" -> 4224 "The True Masters" -> 4241 "Marshal Windsor" -> 4242 "Abandoned Hope" -> 4264 "A Crumpled Up Note"
+    inside 4322 "Jail Break!"   needs: 4182 "Dragonkin Menace" -> 4183 "The True Masters" -> 4184 "The True Masters" -> 4185 "The True Masters" -> 4186 "The True Masters" -> 4223 "The True Masters" -> 4224 "The True Masters" -> 4241 "Marshal Windsor" -> 4242 "Abandoned Hope" -> 4264 "A Crumpled Up Note" -> 4282 "A Shred of Hope"
+    follow 6402 "Stormwind Rendezvous"   needs: 4182 "Dragonkin Menace" -> 4183 "The True Masters" -> 4184 "The True Masters" -> 4185 "The True Masters" -> 4186 "The True Masters" -> 4223 "The True Masters" -> 4224 "The True Masters" -> 4241 "Marshal Windsor" -> 4242 "Abandoned Hope" -> 4264 "A Crumpled Up Note" -> 4282 "A Shred of Hope" -> 4322 "Jail Break!"
+    follow 6403 "The Great Masquerade"   needs: 4182 "Dragonkin Menace" -> 4183 "The True Masters" -> 4184 "The True Masters" -> 4185 "The True Masters" -> 4186 "The True Masters" -> 4223 "The True Masters" -> 4224 "The True Masters" -> 4241 "Marshal Windsor" -> 4242 "Abandoned Hope" -> 4264 "A Crumpled Up Note" -> 4282 "A Shred of Hope" -> 4322 "Jail Break!" -> 6402 "Stormwind Rendezvous"
+    follow 6501 "The Dragon's Eye"   needs: 4182 "Dragonkin Menace" -> 4183 "The True Masters" -> 4184 "The True Masters" -> 4185 "The True Masters" -> 4186 "The True Masters" -> 4223 "The True Masters" -> 4224 "The True Masters" -> 4241 "Marshal Windsor" -> 4242 "Abandoned Hope" -> 4264 "A Crumpled Up Note" -> 4282 "A Shred of Hope" -> 4322 "Jail Break!" -> 6402 "Stormwind Rendezvous" -> 6403 "The Great Masquerade"
+    follow 6502 "Drakefire Amulet"   needs: 4182 "Dragonkin Menace" -> 4183 "The True Masters" -> 4184 "The True Masters" -> 4185 "The True Masters" -> 4186 "The True Masters" -> 4223 "The True Masters" -> 4224 "The True Masters" -> 4241 "Marshal Windsor" -> 4242 "Abandoned Hope" -> 4264 "A Crumpled Up Note" -> 4282 "A Shred of Hope" -> 4322 "Jail Break!" -> 6402 "Stormwind Rendezvous" -> 6403 "The Great Masquerade" -> 6501 "The Dragon's Eye"
+    inside 4342 "Kharan's Tale"   needs: 3702 "The Smoldering Ruins of Thaurissan" -> 3701 "The Smoldering Ruins of Thaurissan" -> 4341 "Kharan Mighthammer"
+    inside 4361 "The Bearer of Bad News"   needs: 3702 "The Smoldering Ruins of Thaurissan" -> 3701 "The Smoldering Ruins of Thaurissan" -> 4341 "Kharan Mighthammer" -> 4342 "Kharan's Tale"
+    follow 4362 "The Fate of the Kingdom"   needs: 3702 "The Smoldering Ruins of Thaurissan" -> 3701 "The Smoldering Ruins of Thaurissan" -> 4341 "Kharan Mighthammer" -> 4342 "Kharan's Tale" -> 4361 "The Bearer of Bad News"
+    inside 4363 "The Princess's Surprise"   needs: 3702 "The Smoldering Ruins of Thaurissan" -> 3701 "The Smoldering Ruins of Thaurissan" -> 4341 "Kharan Mighthammer" -> 4342 "Kharan's Tale" -> 4361 "The Bearer of Bad News" -> 4362 "The Fate of the Kingdom"
+    inside 7604 "A Binding Contract"
+    inside 9015 "The Challenge"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+  Horde
+    before 3801 "Dark Iron Legacy"
+    before 3802 "Dark Iron Legacy"   needs: 3801 "Dark Iron Legacy"
+    before 3981 "Commander Gor'shak"   needs: 3906 "Disharmony of Flame"
+    before 4081 "KILL ON SIGHT: Dark Iron Dwarves"
+    before 4136 "Ribbly Screwspigot"   needs: 4324 "Yuka Screwspigot"
+    before 4324 "Yuka Screwspigot"
+    before 7201 "The Last Element"   needs: 3906 "Disharmony of Flame"
+    before 4123 "The Heart of the Mountain"
+    before 4133 "Vivian Lagrave"
+    before 4134 "Lost Thunderbrew Recipe"   needs: 4133 "Vivian Lagrave"
+    before 3907 "Disharmony of Fire"   needs: 3906 "Disharmony of Flame"
+    before 4024 "A Taste of Flame"   needs: 3441 "Divine Retribution" -> 3442 "The Flawless Flame" -> 3443 "Forging the Shaft" -> 3452 "The Flame's Casing" -> 3453 "The Torch of Retribution" -> 3454 "The Torch of Retribution" -> 3462 "Squire Maltrake" -> 3463 "Set Them Ablaze!" -> 3481 "Trinkets..." -> 4022 "A Taste of Flame"
+    before 4063 "The Rise of the Machines"   needs: 4061 "The Rise of the Machines" -> 4062 "The Rise of the Machines"
+    after  4082 "KILL ON SIGHT: High Ranking Dark Iron Officials"   needs: 4081 "KILL ON SIGHT: Dark Iron Dwarves"
+    after  4121 "Precarious Predicament"   needs: 4081 "KILL ON SIGHT: Dark Iron Dwarves" -> 4082 "KILL ON SIGHT: High Ranking Dark Iron Officials" -> 4122 "Grark Lorkrub"
+    after  4122 "Grark Lorkrub"   needs: 4081 "KILL ON SIGHT: Dark Iron Dwarves" -> 4082 "KILL ON SIGHT: High Ranking Dark Iron Officials"
+    after  4132 "Operation: Death to Angerforge"   needs: 4081 "KILL ON SIGHT: Dark Iron Dwarves" -> 4082 "KILL ON SIGHT: High Ranking Dark Iron Officials" -> 4122 "Grark Lorkrub" -> 4121 "Precarious Predicament"
+    inside 4001 "What Is Going On?"   needs: 3982 (not in Data.lua)
+    [missing] needs 3982, which isn't in Data.lua
+    follow 4002 "The Eastern Kingdom"   needs: 3982 (not in Data.lua) -> 4001 "What Is Going On?"
+    [missing] needs 3982, which isn't in Data.lua
+    follow 4003 "The Royal Rescue"   needs: 3982 (not in Data.lua) -> 4001 "What Is Going On?" -> 4002 "The Eastern Kingdom"
+    [missing] needs 3982, which isn't in Data.lua
+    inside 4201 "The Love Potion"
+    inside 4004 "The Princess Saved?"   needs: 3982 (not in Data.lua) -> 4001 "What Is Going On?" -> 4002 "The Eastern Kingdom" -> 4003 "The Royal Rescue"
+    [missing] needs 3982, which isn't in Data.lua
+    inside 7604 "A Binding Contract"
+    inside 9015 "The Challenge"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+
+== Blackrock Spire (levels 55-60)
+  Alliance
+    before 4788 "The Final Tablets"   needs: 3520 "Screecher Spirits" -> 3527 "The Prophecy of Mosh'aru" -> 4787 "The Ancient Egg" -> 3528 "The God Hakkar" -> 5065 "The Lost Tablets of Mosh'aru"
+    [dungeon] needs 3527 "The Prophecy of Mosh'aru", a quest of Zul'Farrak
+    [dungeon] needs 3528 "The God Hakkar", a quest of The Temple of Atal'Hakkar
+    before 4701 "Put Her Down"
+    before 4729 "Kibler's Exotic Pets"
+    before 4862 "En-Ay-Es-Tee-Why"
+    before 4734 "Egg Freezing"   needs: 4726 "Broodling Essence" -> 4808 "Felnok Steelspring" -> 4809 "Chillwind Horns" -> 4810 "Return to Tinkee" -> 4907 "Tinkee Steamboil"
+    before 4764 "Doomrigger's Clasp"   needs: 4766 "Mayara Brightwing"
+    before 4766 "Mayara Brightwing"
+    before 4866 "Mother's Milk"
+    before 4907 "Tinkee Steamboil"   needs: 4726 "Broodling Essence" -> 4808 "Felnok Steelspring" -> 4809 "Chillwind Horns" -> 4810 "Return to Tinkee"
+    before 6502 "Drakefire Amulet"   needs: 4182 "Dragonkin Menace" -> 4183 "The True Masters" -> 4184 "The True Masters" -> 4185 "The True Masters" -> 4186 "The True Masters" -> 4223 "The True Masters" -> 4224 "The True Masters" -> 4241 "Marshal Windsor" -> 4242 "Abandoned Hope" -> 4264 "A Crumpled Up Note" -> 4282 "A Shred of Hope" -> 4322 "Jail Break!" -> 6402 "Stormwind Rendezvous" -> 6403 "The Great Masquerade" -> 6501 "The Dragon's Eye"
+    [dungeon] needs 4241 "Marshal Windsor", a quest of Blackrock Depths
+    [dungeon] needs 4242 "Abandoned Hope", a quest of Blackrock Depths
+    [dungeon] needs 4264 "A Crumpled Up Note", a quest of Blackrock Depths
+    [dungeon] needs 4282 "A Shred of Hope", a quest of Blackrock Depths
+    [dungeon] needs 4322 "Jail Break!", a quest of Blackrock Depths
+    [dungeon] needs 6402 "Stormwind Rendezvous", a quest of Blackrock Depths
+    [dungeon] needs 6403 "The Great Masquerade", a quest of Blackrock Depths
+    [dungeon] needs 6501 "The Dragon's Eye", a quest of Blackrock Depths
+    before 8966 "The Left Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    before 7761 "Blackhand's Command"
+    after  4735 "Egg Collection"   needs: 4726 "Broodling Essence" -> 4808 "Felnok Steelspring" -> 4809 "Chillwind Horns" -> 4810 "Return to Tinkee" -> 4907 "Tinkee Steamboil" -> 4734 "Egg Freezing"
+    after  4765 "Delivery to Ridgewell"   needs: 4766 "Mayara Brightwing" -> 4764 "Doomrigger's Clasp"
+    after  8970 "I See Alcaz Island In Your Future..."   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  8985 "More Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..."
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  8989 "The Right Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  8994 "Final Preparations"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance" -> 8989 "The Right Piece of Lord Valthalak's Amulet"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  8995 "Mea Culpa, Lord Valthalak"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance" -> 8989 "The Right Piece of Lord Valthalak's Amulet" -> 8994 "Final Preparations"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    inside 5001 "Bijou's Belongings"
+    inside 5002 "Message to Maxwell"   needs: 5001 "Bijou's Belongings"
+    follow 5081 "Maxwell's Mission"   needs: 5001 "Bijou's Belongings" -> 5002 "Message to Maxwell"
+    inside 4742 "Seal of Ascension"
+    inside 4743 "Seal of Ascension"   needs: 4742 "Seal of Ascension"
+    inside 4867 "Urok Doomhowl"
+    inside 5047 "Pip Quickwit, At Your Service!"
+    inside 5089 "General Drakkisath's Command"
+    follow 5102 "General Drakkisath's Demise"   needs: 5089 "General Drakkisath's Command"
+    inside 5160 "The Matron Protectorate"
+    follow 5161 "Wrath of the Blue Flight"   needs: 5160 "The Matron Protectorate"
+    follow 5162 "Wrath of the Blue Flight"   needs: 5160 "The Matron Protectorate" -> 5161 "Wrath of the Blue Flight"
+    follow 5164 "Catalogue of the Wayward"   needs: 5160 "The Matron Protectorate" -> 5161 "Wrath of the Blue Flight" -> 5162 "Wrath of the Blue Flight"
+    follow 5166 "Breastplate of the Chromatic Flight"   needs: 5160 "The Matron Protectorate" -> 5161 "Wrath of the Blue Flight" -> 5162 "Wrath of the Blue Flight" -> 5164 "Catalogue of the Wayward"
+    follow 5167 "Legplates of the Chromatic Defier"   needs: 5160 "The Matron Protectorate" -> 5161 "Wrath of the Blue Flight" -> 5162 "Wrath of the Blue Flight" -> 5164 "Catalogue of the Wayward"
+  Horde
+    before 4788 "The Final Tablets"   needs: 3520 "Screecher Spirits" -> 3527 "The Prophecy of Mosh'aru" -> 4787 "The Ancient Egg" -> 3528 "The God Hakkar" -> 5065 "The Lost Tablets of Mosh'aru"
+    [dungeon] needs 3527 "The Prophecy of Mosh'aru", a quest of Zul'Farrak
+    [dungeon] needs 3528 "The God Hakkar", a quest of The Temple of Atal'Hakkar
+    before 4724 "The Pack Mistress"
+    before 4729 "Kibler's Exotic Pets"
+    before 4862 "En-Ay-Es-Tee-Why"
+    before 4981 "Operative Bijou"
+    before 4734 "Egg Freezing"   needs: 4726 "Broodling Essence" -> 4808 "Felnok Steelspring" -> 4809 "Chillwind Horns" -> 4810 "Return to Tinkee" -> 4907 "Tinkee Steamboil"
+    before 4768 "The Darkstone Tablet"   needs: 4769 "Vivian Lagrave and the Darkstone Tablet"
+    before 4769 "Vivian Lagrave and the Darkstone Tablet"
+    before 4866 "Mother's Milk"
+    before 4903 "Warlord's Command"
+    before 4907 "Tinkee Steamboil"   needs: 4726 "Broodling Essence" -> 4808 "Felnok Steelspring" -> 4809 "Chillwind Horns" -> 4810 "Return to Tinkee"
+    before 8966 "The Left Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    before 7761 "Blackhand's Command"
+    after  4735 "Egg Collection"   needs: 4726 "Broodling Essence" -> 4808 "Felnok Steelspring" -> 4809 "Chillwind Horns" -> 4810 "Return to Tinkee" -> 4907 "Tinkee Steamboil" -> 4734 "Egg Freezing"
+    after  4941 "Eitrigg's Wisdom"   needs: 4903 "Warlord's Command"
+    after  4974 "For The Horde!"   needs: 4903 "Warlord's Command" -> 4941 "Eitrigg's Wisdom"
+    after  6566 "What the Wind Carries"   needs: 4903 "Warlord's Command" -> 4941 "Eitrigg's Wisdom" -> 4974 "For The Horde!"
+    after  6567 "The Champion of the Horde"   needs: 4903 "Warlord's Command" -> 4941 "Eitrigg's Wisdom" -> 4974 "For The Horde!" -> 6566 "What the Wind Carries"
+    after  6568 "The Testament of Rexxar"   needs: 4903 "Warlord's Command" -> 4941 "Eitrigg's Wisdom" -> 4974 "For The Horde!" -> 6566 "What the Wind Carries" -> 6567 "The Champion of the Horde"
+    after  6569 "Oculus Illusions"   needs: 4903 "Warlord's Command" -> 4941 "Eitrigg's Wisdom" -> 4974 "For The Horde!" -> 6566 "What the Wind Carries" -> 6567 "The Champion of the Horde" -> 6568 "The Testament of Rexxar"
+    after  6570 "Emberstrife"   needs: 4903 "Warlord's Command" -> 4941 "Eitrigg's Wisdom" -> 4974 "For The Horde!" -> 6566 "What the Wind Carries" -> 6567 "The Champion of the Horde" -> 6568 "The Testament of Rexxar" -> 6569 "Oculus Illusions"
+    after  6582 "The Test of Skulls, Scryer"   needs: 4903 "Warlord's Command" -> 4941 "Eitrigg's Wisdom" -> 4974 "For The Horde!" -> 6566 "What the Wind Carries" -> 6567 "The Champion of the Horde" -> 6568 "The Testament of Rexxar" -> 6569 "Oculus Illusions" -> 6570 "Emberstrife"
+    after  6585 "The Test of Skulls, Axtroz"   needs: 4903 "Warlord's Command" -> 4941 "Eitrigg's Wisdom" -> 4974 "For The Horde!" -> 6566 "What the Wind Carries" -> 6567 "The Champion of the Horde" -> 6568 "The Testament of Rexxar" -> 6569 "Oculus Illusions" -> 6570 "Emberstrife" -> 6582 "The Test of Skulls, Scryer" -> 6583 "The Test of Skulls, Somnus" -> 6584 "The Test of Skulls, Chronalis"
+    after  6601 "Ascension..."   needs: 4903 "Warlord's Command" -> 4941 "Eitrigg's Wisdom" -> 4974 "For The Horde!" -> 6566 "What the Wind Carries" -> 6567 "The Champion of the Horde" -> 6568 "The Testament of Rexxar" -> 6569 "Oculus Illusions" -> 6570 "Emberstrife" -> 6582 "The Test of Skulls, Scryer" -> 6583 "The Test of Skulls, Somnus" -> 6584 "The Test of Skulls, Chronalis" -> 6585 "The Test of Skulls, Axtroz"
+    after  6602 "Blood of the Black Dragon Champion"   needs: 4903 "Warlord's Command" -> 4941 "Eitrigg's Wisdom" -> 4974 "For The Horde!" -> 6566 "What the Wind Carries" -> 6567 "The Champion of the Horde" -> 6568 "The Testament of Rexxar" -> 6569 "Oculus Illusions" -> 6570 "Emberstrife" -> 6582 "The Test of Skulls, Scryer" -> 6583 "The Test of Skulls, Somnus" -> 6584 "The Test of Skulls, Chronalis" -> 6585 "The Test of Skulls, Axtroz" -> 6601 "Ascension..."
+    after  8970 "I See Alcaz Island In Your Future..."   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  8985 "More Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..."
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  8989 "The Right Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  8994 "Final Preparations"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance" -> 8989 "The Right Piece of Lord Valthalak's Amulet"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  8995 "Mea Culpa, Lord Valthalak"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance" -> 8989 "The Right Piece of Lord Valthalak's Amulet" -> 8994 "Final Preparations"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    inside 4982 "Bijou's Belongings"   needs: 4981 "Operative Bijou"
+    inside 4983 "Bijou's Reconnaissance Report"   needs: 4981 "Operative Bijou" -> 4982 "Bijou's Belongings"
+    inside 4742 "Seal of Ascension"
+    inside 4743 "Seal of Ascension"   needs: 4742 "Seal of Ascension"
+    inside 4867 "Urok Doomhowl"
+    inside 5047 "Pip Quickwit, At Your Service!"
+    inside 5160 "The Matron Protectorate"
+    follow 5161 "Wrath of the Blue Flight"   needs: 5160 "The Matron Protectorate"
+    follow 5162 "Wrath of the Blue Flight"   needs: 5160 "The Matron Protectorate" -> 5161 "Wrath of the Blue Flight"
+    follow 5164 "Catalogue of the Wayward"   needs: 5160 "The Matron Protectorate" -> 5161 "Wrath of the Blue Flight" -> 5162 "Wrath of the Blue Flight"
+    follow 5166 "Breastplate of the Chromatic Flight"   needs: 5160 "The Matron Protectorate" -> 5161 "Wrath of the Blue Flight" -> 5162 "Wrath of the Blue Flight" -> 5164 "Catalogue of the Wayward"
+    follow 5167 "Legplates of the Chromatic Defier"   needs: 5160 "The Matron Protectorate" -> 5161 "Wrath of the Blue Flight" -> 5162 "Wrath of the Blue Flight" -> 5164 "Catalogue of the Wayward"
+
+== Dire Maul (levels 55-60)
+  Alliance
+    before 7488 "Lethtendris's Web"   needs: 7494 "Feathermoon Stronghold"
+    before 7494 "Feathermoon Stronghold"
+    before 7441 "Pusillin and the Elder Azj'Tordin"
+    before 7482 "Elven Legends"
+    before 8948 "Anthion's Old Friend"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request"
+    [missing] needs 8946, which isn't in Data.lua
+    after  8970 "I See Alcaz Island In Your Future..."   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8985 "More Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..."
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8990 "The Right Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    inside 5518 "The Gordok Ogre Suit"
+    inside 5525 "Free Knot!"
+    inside 5528 "The Gordok Taste Test"
+    inside 7461 "The Madness Within"
+    inside 7703 "Unfinished Gordok Business"
+    inside 7877 "The Treasure of the Shen'dralar"   needs: 7461 "The Madness Within"
+    inside 8949 "Falrin's Vendetta"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend"
+    [missing] needs 8946, which isn't in Data.lua
+    inside 8950 "The Instigator's Enchantment"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta"
+    [missing] needs 8946, which isn't in Data.lua
+    follow 9015 "The Challenge"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment"
+    [missing] needs 8946, which isn't in Data.lua
+    follow 8951 "Anthion's Parting Words"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    follow 8960 "Bodley's Unfortunate Fate"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    follow 8961 "Three Kings of Flame"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    follow 8962 "Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    follow 8967 "The Left Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+  Horde
+    before 7489 "Lethtendris's Web"   needs: 7492 "Camp Mojache"
+    before 7492 "Camp Mojache"
+    before 7441 "Pusillin and the Elder Azj'Tordin"
+    before 7481 "Elven Legends"
+    before 8948 "Anthion's Old Friend"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request"
+    [missing] needs 8946, which isn't in Data.lua
+    after  8970 "I See Alcaz Island In Your Future..."   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8985 "More Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..."
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8990 "The Right Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    inside 5518 "The Gordok Ogre Suit"
+    inside 5525 "Free Knot!"
+    inside 5528 "The Gordok Taste Test"
+    inside 7461 "The Madness Within"
+    inside 7703 "Unfinished Gordok Business"
+    inside 7877 "The Treasure of the Shen'dralar"   needs: 7461 "The Madness Within"
+    inside 8949 "Falrin's Vendetta"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend"
+    [missing] needs 8946, which isn't in Data.lua
+    inside 8950 "The Instigator's Enchantment"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta"
+    [missing] needs 8946, which isn't in Data.lua
+    follow 9015 "The Challenge"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment"
+    [missing] needs 8946, which isn't in Data.lua
+    follow 8961 "Three Kings of Flame"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    follow 8962 "Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    follow 8967 "The Left Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+
+== Stratholme (levels 58-60)
+  Alliance
+    before 5212 "The Flesh Does Not Lie"
+    before 5214 "The Great Ezra Grimm"
+    before 5243 "Houses of the Holy"
+    before 5251 "The Archivist"
+    before 5282 "The Restless Souls"   needs: 5281 "The Restless Souls"
+    before 5463 "Menethil's Gift"   needs: 5382 "Doctor Theolen Krastinov, the Butcher" -> 5515 "Krastinov's Bag of Horrors" -> 5384 "Kirtonos the Herald" -> 5461 "The Human, Ras Frostwhisper" -> 5462 "The Dying, Ras Frostwhisper"
+    [dungeon] needs 5382 "Doctor Theolen Krastinov, the Butcher", a quest of Scholomance
+    [dungeon] needs 5515 "Krastinov's Bag of Horrors", a quest of Scholomance
+    [dungeon] needs 5384 "Kirtonos the Herald", a quest of Scholomance
+    before 5848 "Of Love and Family"   needs: 5542 "Demon Dogs" -> 5543 "Blood Tinged Skies" -> 5544 "Carrion Grubbage" -> 5742 "Redemption" -> 5781 "Of Forgotten Memories" -> 5845 "Of Lost Honor" -> 5846 "Of Love and Family"
+    before 8945 "Dead Man's Plea"   needs: 8905 "An Earnest Proposition" -> 8922 "A Supernatural Device" -> 8921 "The Ectoplasmic Distiller" -> 8924 "Hunting for Ectoplasm" -> 8925 "A Portable Power Source" -> 8928 "A Shifty Merchant" -> 8977 "Return to Deliana" -> 8926 "Just Compensation" -> 8929 "In Search of Anthion"
+    after  5213 "The Active Agent"   needs: 5212 "The Flesh Does Not Lie"
+    after  8947 "Anthion's Strange Request"   needs: 8946 (not in Data.lua)
+    [missing] needs 8946, which isn't in Data.lua
+    after  8948 "Anthion's Old Friend"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request"
+    [missing] needs 8946, which isn't in Data.lua
+    after  8949 "Falrin's Vendetta"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    after  8950 "The Instigator's Enchantment"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    after  9015 "The Challenge"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    after  8951 "Anthion's Parting Words"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    after  8960 "Bodley's Unfortunate Fate"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    after  8961 "Three Kings of Flame"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    after  8962 "Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    after  8968 "The Left Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  8970 "I See Alcaz Island In Your Future..."   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8985 "More Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..."
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8991 "The Right Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    inside 5125 "Aurius' Reckoning"   needs: 5122 (not in Data.lua)
+    [missing] needs 5122, which isn't in Data.lua
+    inside 5262 "The Truth Comes Crashing Down"   needs: 5251 "The Archivist"
+    follow 5263 "Above and Beyond"   needs: 5251 "The Archivist" -> 5262 "The Truth Comes Crashing Down"
+    follow 5264 "Lord Maxwell Tyrosus"   needs: 5251 "The Archivist" -> 5262 "The Truth Comes Crashing Down" -> 5263 "Above and Beyond"
+    follow 5265 "The Argent Hold"   needs: 5251 "The Archivist" -> 5262 "The Truth Comes Crashing Down" -> 5263 "Above and Beyond" -> 5264 "Lord Maxwell Tyrosus"
+  Horde
+    before 5212 "The Flesh Does Not Lie"
+    before 5214 "The Great Ezra Grimm"
+    before 5243 "Houses of the Holy"
+    before 5251 "The Archivist"
+    before 5282 "The Restless Souls"   needs: 5281 "The Restless Souls"
+    before 5463 "Menethil's Gift"   needs: 5382 "Doctor Theolen Krastinov, the Butcher" -> 5515 "Krastinov's Bag of Horrors" -> 5384 "Kirtonos the Herald" -> 5461 "The Human, Ras Frostwhisper" -> 5462 "The Dying, Ras Frostwhisper"
+    [dungeon] needs 5382 "Doctor Theolen Krastinov, the Butcher", a quest of Scholomance
+    [dungeon] needs 5515 "Krastinov's Bag of Horrors", a quest of Scholomance
+    [dungeon] needs 5384 "Kirtonos the Herald", a quest of Scholomance
+    before 5848 "Of Love and Family"   needs: 5542 "Demon Dogs" -> 5543 "Blood Tinged Skies" -> 5544 "Carrion Grubbage" -> 5742 "Redemption" -> 5781 "Of Forgotten Memories" -> 5845 "Of Lost Honor" -> 5846 "Of Love and Family"
+    before 6163 "Ramstein"   needs: 6022 "To Kill With Purpose" -> 6042 "Un-Life's Little Annoyances" -> 6133 "The Ranger Lord's Behest" -> 6135 "Duskwing, Oh How I Hate Thee..." -> 6136 "The Corpulent One"
+    before 8945 "Dead Man's Plea"   needs: 8913 "An Earnest Proposition" -> 8923 "A Supernatural Device" -> 8921 "The Ectoplasmic Distiller" -> 8924 "Hunting for Ectoplasm" -> 8925 "A Portable Power Source" -> 8928 "A Shifty Merchant" -> 8978 "Return to Mokvar" -> 8927 "Just Compensation" -> 8930 "In Search of Anthion"
+    after  5213 "The Active Agent"   needs: 5212 "The Flesh Does Not Lie"
+    after  8947 "Anthion's Strange Request"   needs: 8946 (not in Data.lua)
+    [missing] needs 8946, which isn't in Data.lua
+    after  8948 "Anthion's Old Friend"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request"
+    [missing] needs 8946, which isn't in Data.lua
+    after  8949 "Falrin's Vendetta"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    after  8950 "The Instigator's Enchantment"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    after  9015 "The Challenge"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    after  8961 "Three Kings of Flame"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    after  8962 "Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    after  8968 "The Left Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  8970 "I See Alcaz Island In Your Future..."   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8985 "More Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..."
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8991 "The Right Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    inside 5125 "Aurius' Reckoning"   needs: 5122 (not in Data.lua)
+    [missing] needs 5122, which isn't in Data.lua
+    inside 5262 "The Truth Comes Crashing Down"   needs: 5251 "The Archivist"
+    follow 5263 "Above and Beyond"   needs: 5251 "The Archivist" -> 5262 "The Truth Comes Crashing Down"
+    follow 5264 "Lord Maxwell Tyrosus"   needs: 5251 "The Archivist" -> 5262 "The Truth Comes Crashing Down" -> 5263 "Above and Beyond"
+    follow 5265 "The Argent Hold"   needs: 5251 "The Archivist" -> 5262 "The Truth Comes Crashing Down" -> 5263 "Above and Beyond" -> 5264 "Lord Maxwell Tyrosus"
+
+== Scholomance (levels 58-60)
+  Alliance
+    before 5529 "Plagued Hatchlings"
+    before 4771 "Dawn's Gambit"   needs: 4726 "Broodling Essence" -> 4808 "Felnok Steelspring" -> 4809 "Chillwind Horns" -> 4810 "Return to Tinkee" -> 4907 "Tinkee Steamboil" -> 4734 "Egg Freezing" -> 4735 "Egg Collection" -> 5522 "Leonid Barthalomew" -> 5531 "Betina Bigglezink"
+    [dungeon] needs 4907 "Tinkee Steamboil", a quest of Blackrock Spire
+    [dungeon] needs 4734 "Egg Freezing", a quest of Blackrock Spire
+    [dungeon] needs 4735 "Egg Collection", a quest of Blackrock Spire
+    before 5343 "Barov Family Fortune"
+    before 5382 "Doctor Theolen Krastinov, the Butcher"
+    before 5531 "Betina Bigglezink"   needs: 4726 "Broodling Essence" -> 4808 "Felnok Steelspring" -> 4809 "Chillwind Horns" -> 4810 "Return to Tinkee" -> 4907 "Tinkee Steamboil" -> 4734 "Egg Freezing" -> 4735 "Egg Collection" -> 5522 "Leonid Barthalomew"
+    [dungeon] needs 4907 "Tinkee Steamboil", a quest of Blackrock Spire
+    [dungeon] needs 4734 "Egg Freezing", a quest of Blackrock Spire
+    [dungeon] needs 4735 "Egg Collection", a quest of Blackrock Spire
+    before 8969 "The Left Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  5384 "Kirtonos the Herald"   needs: 5382 "Doctor Theolen Krastinov, the Butcher" -> 5515 "Krastinov's Bag of Horrors"
+    after  5461 "The Human, Ras Frostwhisper"   needs: 5382 "Doctor Theolen Krastinov, the Butcher" -> 5515 "Krastinov's Bag of Horrors" -> 5384 "Kirtonos the Herald"
+    after  5462 "The Dying, Ras Frostwhisper"   needs: 5382 "Doctor Theolen Krastinov, the Butcher" -> 5515 "Krastinov's Bag of Horrors" -> 5384 "Kirtonos the Herald" -> 5461 "The Human, Ras Frostwhisper"
+    after  5463 "Menethil's Gift"   needs: 5382 "Doctor Theolen Krastinov, the Butcher" -> 5515 "Krastinov's Bag of Horrors" -> 5384 "Kirtonos the Herald" -> 5461 "The Human, Ras Frostwhisper" -> 5462 "The Dying, Ras Frostwhisper"
+    after  5465 "Soulbound Keepsake"   needs: 5464 (not in Data.lua)
+    [missing] needs 5464, which isn't in Data.lua
+    after  5466 "The Lich, Ras Frostwhisper"   needs: 5464 (not in Data.lua) -> 5465 "Soulbound Keepsake"
+    [missing] needs 5464, which isn't in Data.lua
+    after  5515 "Krastinov's Bag of Horrors"   needs: 5382 "Doctor Theolen Krastinov, the Butcher"
+    after  8970 "I See Alcaz Island In Your Future..."   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8985 "More Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..."
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8992 "The Right Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8951 "Anthion's Parting Words" -> 8960 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8951 "Anthion's Parting Words", a quest of Dire Maul
+    [dungeon] needs 8960 "Bodley's Unfortunate Fate", a quest of Dire Maul
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+  Horde
+    before 5529 "Plagued Hatchlings"
+    before 4771 "Dawn's Gambit"   needs: 4726 "Broodling Essence" -> 4808 "Felnok Steelspring" -> 4809 "Chillwind Horns" -> 4810 "Return to Tinkee" -> 4907 "Tinkee Steamboil" -> 4734 "Egg Freezing" -> 4735 "Egg Collection" -> 5522 "Leonid Barthalomew" -> 5531 "Betina Bigglezink"
+    [dungeon] needs 4907 "Tinkee Steamboil", a quest of Blackrock Spire
+    [dungeon] needs 4734 "Egg Freezing", a quest of Blackrock Spire
+    [dungeon] needs 4735 "Egg Collection", a quest of Blackrock Spire
+    before 5341 "Barov Family Fortune"
+    before 5382 "Doctor Theolen Krastinov, the Butcher"
+    before 5531 "Betina Bigglezink"   needs: 4726 "Broodling Essence" -> 4808 "Felnok Steelspring" -> 4809 "Chillwind Horns" -> 4810 "Return to Tinkee" -> 4907 "Tinkee Steamboil" -> 4734 "Egg Freezing" -> 4735 "Egg Collection" -> 5522 "Leonid Barthalomew"
+    [dungeon] needs 4907 "Tinkee Steamboil", a quest of Blackrock Spire
+    [dungeon] needs 4734 "Egg Freezing", a quest of Blackrock Spire
+    [dungeon] needs 4735 "Egg Collection", a quest of Blackrock Spire
+    before 8969 "The Left Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    after  5384 "Kirtonos the Herald"   needs: 5382 "Doctor Theolen Krastinov, the Butcher" -> 5515 "Krastinov's Bag of Horrors"
+    after  5461 "The Human, Ras Frostwhisper"   needs: 5382 "Doctor Theolen Krastinov, the Butcher" -> 5515 "Krastinov's Bag of Horrors" -> 5384 "Kirtonos the Herald"
+    after  5462 "The Dying, Ras Frostwhisper"   needs: 5382 "Doctor Theolen Krastinov, the Butcher" -> 5515 "Krastinov's Bag of Horrors" -> 5384 "Kirtonos the Herald" -> 5461 "The Human, Ras Frostwhisper"
+    after  5463 "Menethil's Gift"   needs: 5382 "Doctor Theolen Krastinov, the Butcher" -> 5515 "Krastinov's Bag of Horrors" -> 5384 "Kirtonos the Herald" -> 5461 "The Human, Ras Frostwhisper" -> 5462 "The Dying, Ras Frostwhisper"
+    after  5465 "Soulbound Keepsake"   needs: 5464 (not in Data.lua)
+    [missing] needs 5464, which isn't in Data.lua
+    after  5466 "The Lich, Ras Frostwhisper"   needs: 5464 (not in Data.lua) -> 5465 "Soulbound Keepsake"
+    [missing] needs 5464, which isn't in Data.lua
+    after  5515 "Krastinov's Bag of Horrors"   needs: 5382 "Doctor Theolen Krastinov, the Butcher"
+    after  8970 "I See Alcaz Island In Your Future..."   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8985 "More Components of Importance"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..."
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire
+    after  8992 "The Right Piece of Lord Valthalak's Amulet"   needs: 8946 (not in Data.lua) -> 8947 "Anthion's Strange Request" -> 8948 "Anthion's Old Friend" -> 8949 "Falrin's Vendetta" -> 8950 "The Instigator's Enchantment" -> 9015 "The Challenge" -> 8957 "Anthion's Parting Words" -> 9032 "Bodley's Unfortunate Fate" -> 8961 "Three Kings of Flame" -> 8962 "Components of Importance" -> 8966 "The Left Piece of Lord Valthalak's Amulet" -> 8970 "I See Alcaz Island In Your Future..." -> 8985 "More Components of Importance"
+    [missing] needs 8946, which isn't in Data.lua
+    [dungeon] needs 8948 "Anthion's Old Friend", a quest of Dire Maul
+    [dungeon] needs 8949 "Falrin's Vendetta", a quest of Dire Maul
+    [dungeon] needs 8950 "The Instigator's Enchantment", a quest of Dire Maul
+    [dungeon] needs 9015 "The Challenge", a quest of Blackrock Depths
+    [dungeon] needs 8961 "Three Kings of Flame", a quest of Dire Maul
+    [dungeon] needs 8962 "Components of Importance", a quest of Dire Maul
+    [dungeon] needs 8966 "The Left Piece of Lord Valthalak's Amulet", a quest of Blackrock Spire

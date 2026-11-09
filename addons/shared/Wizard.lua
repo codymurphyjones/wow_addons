@@ -8,6 +8,8 @@ local addonName, ns = ...
 --       store = function() ... end, -- the table that remembers it ran (default ns.db)
 --       charStore = function() ... end, -- the same for one character (default ns.char)
 --       needed = function() ... end, -- optional: false skips the automatic run; Open() still works
+--       own = { is = fn, set = fn(on) }, -- optional: how this character gets its own settings (an
+--                                  -- addon with profiles); default ns.SAVED.own (shared Core.lua)
 --       delay = 4,                 -- optional: seconds after login before it asks
 --       steps = { {
 --           title = "...", text = "...",  -- text may be a function, read again after every click
@@ -27,6 +29,13 @@ local addonName, ns = ...
 -- Later (or Escape) closes the whole window: the addons not done ask again next login, and none of
 -- the others still waiting this session interrupt again. Done on the last step closes it too.
 --
+-- Account or character: an addon whose settings a character can own (own, or ns.SAVED.own) asks a
+-- character on its first login, and every character while the account has no answers, one question
+-- before its section: "Use account defaults" or "Set character options" (no account answers yet:
+-- "Configure account defaults" or "Set character options only"). One answer covers every such addon.
+-- Account: with account answers, only the char steps; without, every step, and they become them.
+-- Character: every step, kept in this character's own copy; the account's answers stay as they were.
+--
 -- wizard:Open() (the settings page's button, slash commands) asks every step of that addon: it opens
 -- the window with just that section, or, while the window is up, adds the section and jumps to it.
 --
@@ -41,7 +50,7 @@ local addonName, ns = ...
 -- Each addon loads its own copy of this file. The newest copy builds the one window (_G.SuiteSetup) and
 -- every wizard reaches it through that global when it asks, after login, when all copies have loaded.
 
-local VERSION = 3
+local VERSION = 4
 
 local WIDTH, PAD, ROW_H, TICK_H, TAB_H, ICON, BUTTON_H = 520, 18, 46, 28, 22, 28, 24
 local BAR_H = 12 + ICON + 10 -- the title bar, down to its rule
@@ -114,13 +123,86 @@ if not _G.SuiteSetup or (_G.SuiteSetup.version or 0) < VERSION then
         return b
     end
 
-    -- { wizard = , scope = "all" or "char" (only this character's steps), done = true once passed }
+    -- { wizard = , scope = "all" or "char" (only this character's steps), done = true once passed,
+    --   ask = the opening question decides (hadDefaults: the account's answers existed when it joined) }
     local function Section() return host.sections[host.index] end
-    local function Steps(section) return section.wizard:Steps(section.scope) end
+
+    -- An asking section under "account": with account answers, only this character's steps.
+    local function Scope(section)
+        if section.ask and host.mode == "account" and section.hadDefaults then return "char" end
+        return section.scope
+    end
+    local function Steps(section) return section.wizard:Steps(Scope(section)) end
 
     local function Position(list, wanted)
         for i, s in ipairs(list) do
             if s == wanted then return i end
+        end
+    end
+
+    local function Complete(section)
+        if section.done then return end
+        section.done = true
+        section.wizard:MarkDone()
+    end
+
+    -- The opening question, as a section of its own, first in the list: does this character use the
+    -- account's settings or its own? The answer covers every asking section, those that join later too.
+    local function AllHaveDefaults()
+        for _, section in ipairs(host.sections) do
+            if section.ask and not section.hadDefaults then return false end
+        end
+        return true
+    end
+
+    local intro = { name = "This character", icon = "Interface\\Icons\\INV_Misc_Book_09", intro = true }
+    intro.step = {
+        title = "Settings for this character",
+        required = true,
+        text = function()
+            if AllHaveDefaults() then
+                return "Your other characters already share a set of settings. Use them here too, or give this character its own?"
+            end
+            return "Answers you give here can become the settings every character shares, or stay with this character only."
+        end,
+        choices = function()
+            if AllHaveDefaults() then
+                return {
+                    { "account", "Use account defaults", "Only the questions about this character. Change a setting later and every character on the account follows." },
+                    { "character", "Set character options", "Every question, answered for this character only. Your other characters keep the account's settings." },
+                }
+            end
+            return {
+                { "account", "Configure account defaults", "Your answers become the settings for every character that doesn't have its own." },
+                { "character", "Set character options only", "Your answers stay with this character. The next new character is asked again." },
+            }
+        end,
+    }
+    function intro:Steps() return { intro.step } end
+    function intro:Get() return host.mode end
+    function intro:Set(_, value)
+        host.mode = value
+        for _, section in ipairs(host.sections) do
+            if section.ask then section.wizard:SetOwn(value == "character") end
+        end
+    end
+    -- Leaving the question: it leaves the list (it isn't asked twice), and so do the sections it left
+    -- with nothing to ask, done.
+    function intro:MarkDone()
+        for i = #host.sections, 1, -1 do
+            local section = host.sections[i]
+            if section.wizard == intro then
+                table.remove(host.sections, i)
+            elseif section.ask and not Steps(section)[1] then
+                Complete(section)
+                table.remove(host.sections, i)
+            end
+        end
+    end
+
+    local function IntroIndex()
+        for i, section in ipairs(host.sections) do
+            if section.wizard == intro then return i end
         end
     end
 
@@ -130,12 +212,6 @@ if not _G.SuiteSetup or (_G.SuiteSetup.version or 0) < VERSION then
         if demoing and demoing.demo then demoing.demo(false) end
         demoing = s
         if s and s.demo then s.demo(true) end
-    end
-
-    local function Complete(section)
-        if section.done then return end
-        section.done = true
-        section.wizard:MarkDone()
     end
 
     -- The section and step one place forward (dir 1) or back (-1) from here, across sections; nil at the end.
@@ -223,8 +299,10 @@ if not _G.SuiteSetup or (_G.SuiteSetup.version or 0) < VERSION then
         tab:SetScript("OnEnter", PaintTab)
         tab:SetScript("OnLeave", PaintTab)
         tab:SetScript("OnClick", function()
-            if host.index == i then return end
-            host.index, step = i, nil
+            local to, section = i, host.sections[i]
+            if section and section.ask and not host.mode then to = IntroIndex() or i end -- answer that first
+            if host.index == to then return end
+            host.index, step = to, nil
             Render()
         end)
         frame.tabs[i] = tab
@@ -238,7 +316,7 @@ if not _G.SuiteSetup or (_G.SuiteSetup.version or 0) < VERSION then
             if not section.done then host.later = true end -- the rest wait for the next login
         end
         wipe(host.sections)
-        host.index, step = 0, nil
+        host.index, step, host.mode = 0, nil, nil
     end
 
     local function Build()
@@ -316,9 +394,10 @@ if not _G.SuiteSetup or (_G.SuiteSetup.version or 0) < VERSION then
         frame.skip:SetPoint("LEFT", frame.later, "RIGHT", 6, 0)
         frame.next = Button("Next", 84, function()
             local i, nextStep = Neighbour(1)
+            local target = host.sections[i]
             if i ~= host.index then Complete(Section()) end -- passed this section's last step
             if not nextStep then return frame:Hide() end
-            host.index, step = i, nextStep
+            host.index, step = Position(host.sections, target), nextStep -- (completing may drop sections)
             Render()
         end)
         frame.next:SetPoint("BOTTOMRIGHT", -PAD, 14)
@@ -434,8 +513,10 @@ if not _G.SuiteSetup or (_G.SuiteSetup.version or 0) < VERSION then
         frame:SetHeight(top + #choices * (height + gap) + 50)
 
         frame.back:SetEnabled(Neighbour(-1) ~= nil)
+        frame.next:SetEnabled(not step.required or value ~= nil)
         frame.next.label:SetText(Neighbour(1) and "Next" or "Done")
         frame.skip.label:SetText(#host.sections > 1 and "Skip section" or "Skip setup")
+        frame.skip:SetShown(not wizard.intro) -- the opening question needs an answer
     end
 
     -- Opens the window, after combat if need be. Already open: just redraws it.
@@ -458,17 +539,30 @@ if not _G.SuiteSetup or (_G.SuiteSetup.version or 0) < VERSION then
 
     -- A wizard joins the list. auto: the login run, which waits its turn and stays out after Later;
     -- otherwise the player asked for it, so the window jumps to it.
-    function host:Add(wizard, scope, auto)
+    -- ask: the login run of a character that hasn't said whether it uses the account's settings; the
+    -- opening question comes first (or its answer, already given, applies).
+    function host:Add(wizard, scope, auto, ask)
         if auto and self.later then return end
         for i, section in ipairs(self.sections) do
             if section.wizard == wizard then
-                if scope == "all" then section.scope = "all" end
+                if scope == "all" then section.scope, section.ask = "all", nil end
                 if not auto then self.index, step = i, nil end
                 return Show()
             end
         end
         if not wizard:Steps(scope)[1] then return end -- nothing to ask: the next login checks again
-        table.insert(self.sections, { wizard = wizard, scope = scope })
+        local section = { wizard = wizard, scope = scope }
+        if ask then
+            section.ask, section.hadDefaults = true, wizard:HasDefaults()
+            if self.mode then
+                wizard:SetOwn(self.mode == "character")
+                if not Steps(section)[1] then return Complete(section) end -- answered already: nothing left
+            elseif not IntroIndex() then
+                table.insert(self.sections, 1, { wizard = intro, scope = "all" })
+                self.index, step = 1, nil -- the question first, even if another section is up
+            end
+        end
+        table.insert(self.sections, section)
         if not auto then self.index, step = #self.sections, nil end
         Show()
     end
@@ -489,11 +583,49 @@ function ns.NewWizard(def)
         end
     end
 
-    -- "all", "char" (only this character's steps: the rest were answered on another), or nil.
+    -- How this character gets its own copy of the settings: def.own = { is = fn, set = fn(on) } (an
+    -- addon with profiles), else ns.SAVED.own through the shared Core.lua. nil: it can't.
+    local own = def.own
+    if not own and ns.CanOwnOptions then
+        own = {
+            is = function() return ns:OwnsOptions() end,
+            set = function(on) ns:SetOwnOptions(on) end,
+            can = function() return ns:CanOwnOptions() end,
+        }
+    end
+
+    function wizard:CanOwn()
+        return own ~= nil and CharStore() ~= nil and (not own.can or own.can())
+    end
+    function wizard:IsOwn() return self:CanOwn() and own.is() and true or false end
+    function wizard:SetOwn(on)
+        if self:CanOwn() and self:IsOwn() ~= (on and true or false) then own.set(on and true or false) end
+    end
+
+    -- The account's answers exist (another character, or this one, went through every step).
+    function wizard:HasDefaults()
+        local store = Store()
+        return store and store.wizardDone and true or false
+    end
+
+    -- A character on its first login asks "account defaults or its own options?" until it answers.
+    ns:OnLoad(function()
+        if not ns.charIsNew then return end
+        local charStore = CharStore()
+        if charStore and not charStore.wizardDone then charStore.wizardAsk = true end
+    end)
+
+    -- scope, ask: scope "all", "char" (only this character's steps: the rest were answered on
+    -- another) or nil; ask: put the "account defaults or this character's own" question first.
     function wizard:Pending()
         local store, charStore = Store(), CharStore()
-        if store and not store.wizardDone then return "all" end
-        if charStore and HasCharSteps() and not charStore.wizardDone then return "char" end
+        local canOwn = self:CanOwn()
+        if canOwn and charStore.wizardDone and self:IsOwn() then return end -- has its own settings
+        if store and not store.wizardDone then return "all", canOwn end
+        if charStore and not charStore.wizardDone then
+            if canOwn and charStore.wizardAsk then return "all", true end
+            if HasCharSteps() then return "char" end
+        end
     end
 
     function wizard:Steps(scope)
@@ -513,10 +645,14 @@ function ns.NewWizard(def)
         if step.set then step.set(value) else ns:SetOption(step.path, value) end
     end
 
+    -- Answers given in this character's own options don't make account defaults.
     function wizard:MarkDone()
         local store, charStore = Store(), CharStore()
-        if store then store.wizardDone = true end
-        if charStore then charStore.wizardDone = true end
+        if store and not self:IsOwn() then store.wizardDone = true end
+        if charStore then
+            charStore.wizardDone = true
+            charStore.wizardAsk = nil
+        end
     end
 
     -- Every step, now: its own window, or a new section in the one already up.
@@ -524,14 +660,39 @@ function ns.NewWizard(def)
         _G.SuiteSetup:Add(wizard, "all")
     end
 
+    -- The login run. A new character's first login plays its race's intro cinematic over a hidden UI:
+    -- the window opened behind it, and the Escape that skips the cinematic closed it as Later (asked
+    -- only on the next login: a /reload). So the delay counts from when you're really in the world (no
+    -- loading screen, cinematic or movie, the UI showing), and a wizard with nothing to ask yet (its
+    -- steps' data still loading) looks again for a while before leaving it to the next login.
+    local function InWorld()
+        if InCinematic and InCinematic() then return false end
+        if IsInCinematicScene and IsInCinematicScene() then return false end
+        if CinematicFrame and CinematicFrame:IsShown() then return false end
+        if MovieFrame and MovieFrame:IsShown() then return false end
+        return UIParent and UIParent:IsShown() and true or false
+    end
+    local CHECK, TRIES = 1, 30 -- seconds between looks, and how many looks for steps to ask
+    local function Ask(tries)
+        local mode, ask = wizard:Pending()
+        if not mode or (def.needed and not def.needed()) then return end
+        if not wizard:Steps(mode)[1] then
+            if tries > 0 then C_Timer.After(CHECK, function() Ask(tries - 1) end) end
+            return
+        end
+        _G.SuiteSetup:Add(wizard, mode, true, ask)
+    end
+    local function WhenInWorld()
+        if not InWorld() then return C_Timer.After(CHECK, WhenInWorld) end
+        C_Timer.After(def.delay or 4, function()
+            if not InWorld() then return WhenInWorld() end -- (a cinematic began meanwhile)
+            Ask(TRIES)
+        end)
+    end
     ns:On("PLAYER_ENTERING_WORLD", function()
         if wizard.started then return end
         wizard.started = true
-        C_Timer.After(def.delay or 4, function()
-            local mode = wizard:Pending()
-            if not mode or (def.needed and not def.needed()) then return end
-            _G.SuiteSetup:Add(wizard, mode, true)
-        end)
+        WhenInWorld()
     end)
 
     return wizard

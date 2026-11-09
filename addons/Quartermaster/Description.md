@@ -48,6 +48,7 @@ Click **Advanced** to open a second row of filters, like Auctionator's advanced 
 - Browse's **Add to** dropdown chooses which list (or prebuilt list) new items go on.
 - Add an item from Browse, **drag an item from your bags** onto a list, or type `/qm add <item> <qty>`.
 - Adding an item that's already on the list raises its quantity instead of adding a second row.
+- **Bought anywhere counts.** Whatever you have of an item beyond what you had when it went on the list (bags, bank, mail) counts as bought, wherever it came from: another auction addon, a vendor, a trade. A recipe you already know counts as done, even though learning it used it up.
 - Each row shows how many are bought out of how many wanted, the market price, the most the Cart will pay, a progress bar, and the estimated cost of the rest.
 - Use **−**, **+** and **X** on each row to change the amount or remove the item. Click a row to set an exact Qty or a **tolerance for that item only**.
 - **Reset bought** starts the list over. **Clear list** empties it. **Save as prebuilt** copies the list into a reusable prebuilt list.
@@ -96,6 +97,8 @@ Quartermaster adds a **Cart** tab to the auction house, next to Auctionator's ta
 - Each item shows its progress and status: pending, searching, the number of listings found, done, skipped, none listed, or how many short it is.
 - **One big button.** It always says what the next click will do, for example **"Buy 20x Linen Cloth - 1g 20s"**.
 - **One click, one purchase.** The game requires a click for every purchase, so each click buys one stack. Searching between purchases happens on its own.
+- **Today's prices first.** When the Cart or Buying tab opens, Quartermaster searches the auction house for each item still to buy, one at a time, with a progress bar at the top ("Checking prices 5/12"). The Cart's button waits until every item has been checked, so you buy at what's listed now. Only what your list needs is searched, never the whole auction house. Your own searches in the Buying tab go first: the check pauses and carries on when you're done. The search you had up in the Buying tab is run again when you come back to it.
+- **Skip** on a row passes over that item until you close the auction house (the Cart moves straight on if it was buying it); **Back** takes it again. **X** removes it from the list. So one item priced too high never holds up the rest.
 - When an item is done, the Cart moves to the next one by itself. When the list is done, it prints what it spent and anything still missing.
 - **Stop** ends the run at any time. Closing the auction house stops it too.
 

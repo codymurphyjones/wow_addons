@@ -39,6 +39,7 @@ local nextCorpseLook = 0
 local CORPSE_ARRIVE = 20 -- yards: close enough to resurrect (the game allows a little more)
 local CORPSE_LOOK = 1    -- seconds between looks for where your body is
 local lastKey
+local resumers = {}    -- owner -> fn: how an addon that owned the arrow takes it back after a pause (SetResumer)
 
 T.current, T.point = nil, nil -- the resolved entry and the point the arrow aims at
 
@@ -149,12 +150,27 @@ function T:SetManager(owner, m)
     if m == nil then
         if manager and manager.owner == owner then manager = nil end
     elseif type(m) == "table" then
-        manager = { owner = owner, name = m.name or owner, restore = m.restore, expected = m.expected, yield = m.yield, pause = m.pause, choices = m.choices }
+        manager = { owner = owner, name = m.name or owner, restore = m.restore, expected = m.expected, yield = m.yield, pause = m.pause, choices = m.choices, checks = m.checks }
     end
     ns:Changed()
 end
 
 function T:GetManager() return manager end
+
+-- How an owner takes the arrow back after it was paused (it isn't the owner while paused, so the
+-- way back is kept apart). ClassQuest.lua resumes the owner it paused once the class quest is done.
+function T:SetResumer(owner, fn)
+    if type(owner) == "string" then resumers[owner] = type(fn) == "function" and fn or nil end
+end
+
+function T:Resume(owner)
+    local fn = resumers[owner]
+    if not fn then return false end
+    local ok, err = pcall(fn)
+    if not ok then geterrorhandler()(("Waypoint resume for %s: %s"):format(owner, tostring(err))) end
+    ns:Changed()
+    return ok
+end
 
 -- Arrow menu: the owner lets go of the arrow (Field Guide pauses).
 function T:PauseManager()
@@ -260,13 +276,15 @@ end
 
 function T:GetCorpse() return corpse end
 
--- The entry the arrow follows: your body, then your waypoint path, then a request, then the
--- addon that owns the arrow, then the newest addon target, then Questie.
+-- The entry the arrow follows: your body, then your waypoint path, then a request, then a class
+-- quest (ClassQuest.lua: it pauses the owner and goes first), then the addon that owns the arrow,
+-- then the newest addon target, then Questie.
 function T:Resolve()
     if corpse then return corpse end
     local path = ns.Chain and ns.Chain:Entry()
     if path then return path end
     if request then return request end
+    if questie and questie.class and ns.ClassQuest and ns.ClassQuest:Active() then return questie end
     if manager then
         if Yields() and ns.db and ns.db.quests then return questie end
         local mine = entries[manager.owner]

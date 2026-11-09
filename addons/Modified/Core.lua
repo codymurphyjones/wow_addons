@@ -12,6 +12,7 @@ local DEFAULTS = {
     showEmpty = false, -- show bars that have no actions on them
     showAllRanks = false, -- spell picker lists every known rank
     autoReload = true, -- reload the UI after Apply/Revert to clear action bar taint
+    classicEditor = false, -- /mod and the key binding open the classic window instead of the veil
     point = nil,       -- saved window position (/mod classic)
     deskPoint = nil,   -- where the work area was dragged: { x, y } of its bottom-left (Veil.lua)
 }
@@ -136,7 +137,8 @@ end
 ---------------------------------------------------------------------------
 
 ns:Slash({ "/mod", "/modified" }, {
-    { "classic", function() ns.UI:Toggle() end, "the old editor window" },
+    { "classic", function() ns.UI:Toggle() end, "the classic editor window" },
+    { "veil", function() ns.Veil:Toggle() end, "the new editor (the veil), even with the classic editor set as the default" },
     { "reset", function()
         ns.db.point = nil
         ns.db.deskPoint = nil
@@ -152,6 +154,9 @@ ns:Slash({ "/mod", "/modified" }, {
         ns:Print("Managed macros re-synced.")
     end, "rebuild managed macros" },
     { { "settings", "options" }, function() ns.Settings:Open() end, "open settings" },
-    -- No command (or one not listed): lower or lift the veil (Veil.lua).
-    default = function() ns.Veil:Toggle() end,
+    -- No command (or one not listed): lower or lift the veil (Veil.lua), or the classic window
+    -- when that's the chosen editor (Settings.lua).
+    default = function()
+        if ns.db.classicEditor then ns.UI:Toggle() else ns.Veil:Toggle() end
+    end,
 })

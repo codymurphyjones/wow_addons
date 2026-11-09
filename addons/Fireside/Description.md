@@ -13,7 +13,7 @@ Most dungeon groups end the same way: the last boss dies, someone says "ty", and
 ## Features
 
 ### The Hearth: thanks in the moment
-While you're in a party, each member's party frame gets a small spark button on its portrait, placed clear of buffs and debuffs, and your own frame gets a small fire. If you'd rather have a slim strip of portraits at the top of the screen, turn off **Put the Hearth on the party frames** in the settings. The strip also shows on its own when another addon replaces the party frames.
+While you're in a party, each member's party frame gets a small button on its portrait, placed clear of buffs and debuffs, and your own frame gets a small fire. The button shows the member's role: the Dungeon Finder's role when there is one, else who took the hits or did the healing this run, else their specialization, else a guess from the class (one likely tank and one likely healer). Its tooltip says where the role came from. If you'd rather have a slim strip of portraits at the top of the screen, turn off **Put the Hearth on the party frames** in the settings. The strip also shows on its own when another addon replaces the party frames.
 
 - **Left-click someone** for a row of **sparks**, small thanks you send with one click: *Nice pull, Clutch heal, Good kick, Good crowd control, Thanks for the cleanse, Thanks for the buff, Thanks for the rez, Thanks for the summon, Thanks for waiting, Thanks for the quest, Good call.* Everyone in the party with Fireside sees it light up on that person's button.
 - **Sparks for you** flash on your fire, with a short note of who sent what.

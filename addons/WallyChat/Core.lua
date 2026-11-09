@@ -7,7 +7,7 @@ local _, ns = ...
 -- window over the whole screen below SimplePanel's bar, every line selectable and copyable.
 -- Without WallyHUD the same colours are used (copied below) and the game's chat font is kept.
 WallyChat = WallyChat or {}
-ns.VERSION = "0.1.1"
+ns.VERSION = "0.1.7"
 
 -- Events and saved variables: the shared Core.lua (addons/shared). Print stays here.
 ns.SAVED = { db = "WallyChatDB" }
@@ -147,12 +147,16 @@ SlashCmdList.WALLYCHAT = function(msg)
     elseif cmd == "bg" and tonumber(arg) then
         ns:SetOption("db.background", math.max(0, math.min(100, tonumber(arg))))
         ns:Print(("Chat panel at %d%% opacity."):format(ns.db.background))
+    elseif cmd == "alert" then
+        ns:Print(ns.Alert:TogglePreview() and "Showing where the layer refresh notice appears (/wchat alert again to hide)."
+            or "Layer refresh notice outline hidden.")
     elseif cmd == "debug" then
         ns.Skin:Debug()
     else
         ns:Print("/wchat full - the chat over the whole screen (select and copy any line)")
         ns:Print("/wchat font regular | medium | semibold | bold - the chat text's weight")
         ns:Print("/wchat bg 0-100 - the chat panel's opacity")
+        ns:Print("/wchat alert - show where the game's layer refresh notice appears")
         ns:Print("/wchat debug - which of the game's chat parts were found")
     end
 end

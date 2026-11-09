@@ -135,7 +135,10 @@ local function BuildPanel(parent)
     panel.compare:SetPoint("TOPLEFT", 12, -44); panel.compare:SetPoint("RIGHT", view, "LEFT", -8, 0)
     panel.compare:SetJustifyH("LEFT"); panel.compare:SetWordWrap(false)
     local holder = CreateFrame("Frame", nil, panel)
-    holder:SetPoint("TOPLEFT", 10, -68); holder:SetPoint("BOTTOMRIGHT", -6, 52)
+    -- This visit's prices (Compare's check), across the panel above the list.
+    panel.prices = ns.Compare:MakeBar(panel)
+    panel.prices:SetPoint("TOPLEFT", 12, -64); panel.prices:SetPoint("RIGHT", -12, 0)
+    holder:SetPoint("TOPLEFT", 10, -82); holder:SetPoint("BOTTOMRIGHT", -6, 52)
     panel.list = W.CreateRowList(holder, 0, { rowHeight = 34 })
     panel.list.onDrop = function() W.AddCursorItem() end
     panel.holder = holder
@@ -191,17 +194,14 @@ local function BuildPanel(parent)
     findView:Hide()
     findView.onEndEdit = function() CartTab:SetFind(false) end
     panel.findView = findView
-    panel.cartParts = { panel.compare, view, holder, buy, stop, reset, panel.money, panel.spent, panel.scan }
+    panel.cartParts = { panel.compare, view, holder, buy, stop, reset, panel.money, panel.spent, panel.scan, panel.prices }
 
-    -- The button's enabled state depends on the AH throttle, which has no event; poll it lightly.
-    local elapsed = 0
-    panel:SetScript("OnUpdate", function(_, dt)
-        elapsed = elapsed + dt
-        if elapsed < 0.25 then return end
-        elapsed = 0
-        CartTab:UpdateButton()
-    end)
-    panel:SetScript("OnShow", function() ns.FullScan:Start(); CartTab:Recount(); CartTab:Refresh() end)
+    -- The button's enabled state depends on the AH throttle, which has no event: checked every
+    -- frame. (Every quarter second left it disabled for up to 0.25 s after the auction house was
+    -- ready, and a click on it then did nothing: it took a second click.)
+    panel:SetScript("OnUpdate", function() CartTab:UpdateButton() end)
+    -- (No full auction house scan: the price check searches only what the list needs.)
+    panel:SetScript("OnShow", function() CartTab:Recount(); CartTab:Refresh() end)
 end
 
 -- Shows the Find panel (live search) in place of the cart list, or the list again.
@@ -270,11 +270,32 @@ local function TickedNames()
     return #names > 0 and table.concat(names, ", ") or "Pick prebuilt lists"
 end
 
+-- The row's buttons: Skip (passed over until the auction house closes; again to take it back) and, for
+-- a shopping list's entry, X (off the list). Edit for a search, when not buying.
+local function RowActions(entry, prebuilt, extra)
+    local out = {}
+    if ns.Buyer:IsSetAside(entry) then
+        out[#out + 1] = { "Back", function() ns.Buyer:TakeBack(entry) end, "Buy it again this visit" }
+    else
+        out[#out + 1] = { "Skip", function() ns.Buyer:SetAside(entry) end,
+            "Pass over it until you close the auction house (the Cart moves on to the next item)" }
+    end
+    if not prebuilt then
+        out[#out + 1] = { "X", function()
+            local list = ns.Buyer:List()
+            ns.Buyer:SetAside(entry)
+            ns.Lists:Remove(list, entry)
+        end, "Remove it from the list" }
+    end
+    if extra then out[#out + 1] = extra end
+    return out
+end
+
 -- A search entry: what it matches, its price cap, and what it's buying right now.
 local function SearchRow(entry, current)
     local remaining = ns.Lists:Remaining(entry)
     local f = entry.filter
-    local detail = ("%d/%d bought  ·  "):format(entry.bought or 0, entry.qty)
+    local detail = ("%d/%d bought  ·  "):format(ns.Lists:Got(entry), entry.qty)
     if f.maxPrice then detail = detail .. "pays up to " .. ns.Compat.Money(f.maxPrice) .. " each"
     else detail = detail .. ("pays up to market +%d%% (per item)"):format(ns.Lists:Tolerance(entry)) end
     if entry == current and ns.Buyer.group then
@@ -292,7 +313,8 @@ local function SearchRow(entry, current)
         dim = remaining == 0 and 0.55 or nil,
         hint = "A search: buys any items matching it, cheapest first.\n" .. ns.Search:Describe(f)
             .. "\nAuctionator: " .. (ns.Search:ToAuctionatorString(f, remaining) or "n/a"),
-        actions = not running and { { "Edit", function() CartTab:EditSearch(entry) end, "Change this search in the Find panel" } } or nil,
+        actions = RowActions(entry, false,
+            not running and { "Edit", function() CartTab:EditSearch(entry) end, "Change this search in the Find panel" } or nil),
     }
 end
 
@@ -309,7 +331,7 @@ local function EntryRow(entry, current, prebuilt)
         if entry.qty > 0 then detail = detail .. ("  ·  buying %d/%d"):format(entry.bought or 0, entry.qty) end
         detail = detail .. "  ·  " .. label .. " " .. W.Money(market)
     else
-        detail = ("%d/%d bought  ·  %s %s"):format(entry.bought or 0, entry.qty, label, W.Money(market))
+        detail = ("%d/%d bought  ·  %s %s"):format(ns.Lists:Got(entry), entry.qty, label, W.Money(market))
     end
     if market and remaining > 0 then
         detail = detail .. ("  ·  pays up to %s"):format(ns.Compat.Money(market * (1 + ns.Lists:Tolerance(entry) / 100)))
@@ -326,10 +348,11 @@ local function EntryRow(entry, current, prebuilt)
         text = ns.Lists:Describe(entry), detail = detail,
         right = stocked and "|cff59f28cstocked|r" or StatusText(entry),
         bar = prebuilt and entry.target > 0 and math.min(1, (entry.have + (entry.bought or 0)) / entry.target)
-            or (entry.qty > 0 and math.min(1, (entry.bought or 0) / entry.qty)) or nil,
+            or (entry.qty > 0 and math.min(1, ns.Lists:Got(entry) / entry.qty)) or nil,
         barText = "",
         selected = entry == current,
-        dim = (stocked or remaining == 0) and 0.55 or nil,
+        dim = (stocked or remaining == 0 or ns.Buyer:IsSetAside(entry)) and 0.55 or nil,
+        actions = not stocked and remaining > 0 and RowActions(entry, prebuilt) or nil,
         hint = prebuilt and ("From: " .. table.concat(entry.from, ", ") .. "\nHave: " .. ns.Stock:Describe(entry.itemID)
             .. "\nAuction wins count from the moment you buy them, while they wait in your mailbox.") or nil,
     }
@@ -389,13 +412,16 @@ function CartTab:Refresh()
     ns.Compare:Check()
     panel.compare:SetText(ns.Compare:Summary(list))
     panel.money:SetText("Your gold: " .. ns.Compat.Money(GetMoney()))
-    panel.scan:SetText(ns.FullScan:StatusText())
+    panel.scan:SetText(ns.FullScan.external and ns.FullScan:StatusText() or "")
+    if panel.prices then panel.prices:Update() end
     panel.spent:SetText(ns.Buyer.spent > 0 and ("Spent this run: " .. ns.Compat.Money(ns.Buyer.spent)) or "")
     self:UpdateButton()
 end
 
 -- Opens the tab if the auction house is open. Returns true on success.
 function CartTab:Select() return ns.AHTabs:Select("Cart") end
+
+function CartTab:Shown() return panel ~= nil and panel:IsShown() and not self.finding end
 
 ns.AHTabs:Add("Cart", {
     label = "Cart", title = "Quartermaster Cart",

@@ -538,14 +538,16 @@ local function Build()
     post.fill:SetColorTexture(1, 1, 1, 1); post.fill:SetVertexColor(0, 0, 0, 0)
     post:SetScript("OnClick", function()
         local A = ns.Auction
-        -- Post exactly what the card shows: apply an amount still in the box, rebuild now (the
-        -- usual rebuild waits a frame), and if what's next isn't what the card showed, only
-        -- show it this click; the next click posts it.
+        -- Post what the card shows: apply an amount still in the box and rebuild now (the usual
+        -- rebuild waits a frame). Only a different item than the card showed, or an amount you just
+        -- typed that changed the post, is shown first, for the next click to post. A count that
+        -- moved because the bags caught up with the last post isn't: holding the click back for
+        -- that made nearly every post take two clicks.
         if A:NextAction() == "post" then
-            CommitAmount(card.amount)
+            local typed = CommitAmount(card.amount)
             A:Build()
             local row = A.next
-            if not row or row.key ~= card.shownKey or row.count ~= card.shownCount then
+            if not row or row.key ~= card.shownKey or (typed and row.count ~= card.shownCount) then
                 Tab:Refresh()
                 return
             end

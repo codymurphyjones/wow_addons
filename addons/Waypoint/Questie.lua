@@ -185,7 +185,40 @@ local function IsComplete(quest)
     return complete == 1 or (complete ~= -1 and quest.isComplete)
 end
 
-local function Unfinished(o) return o and ((not o.Needed) or o.Needed ~= o.Collected) and o.spawnList end
+-- How many of an item you carry (bags), or 0.
+local function ItemCount(id)
+    local fn = (C_Item and C_Item.GetItemCount) or GetItemCount
+    if not (fn and tonumber(id)) then return 0 end
+    local ok, n = pcall(fn, tonumber(id))
+    return ok and tonumber(n) or 0
+end
+
+-- Where a required item comes from, when Questie's objective for it has no places (it doesn't for
+-- a quest's required items): the objects and NPCs that drop it, from QuestieDB, in spawnList's shape.
+local function ItemSources(itemId)
+    local QDB = Mod("QuestieDB")
+    if not (QDB and QDB.QueryItemSingle and tonumber(itemId)) then return nil end
+    local list = {}
+    for _, objId in pairs(C.Call(QDB.QueryItemSingle, tonumber(itemId), "objectDrops") or {}) do
+        local obj = C.Call(QDB.GetObject, QDB, objId)
+        if obj and obj.spawns then list[#list + 1] = { Name = obj.name, Spawns = obj.spawns } end
+    end
+    for _, npcId in pairs(C.Call(QDB.QueryItemSingle, tonumber(itemId), "npcDrops") or {}) do
+        local npc = C.Call(QDB.GetNPC, QDB, npcId)
+        if npc and npc.spawns then list[#list + 1] = { Name = npc.name, Spawns = npc.spawns } end
+    end
+    return #list > 0 and list or nil
+end
+
+-- An objective still to do, that Questie knows a place for. A special one that's an item you must
+-- carry (a quest's required item: Trial of the Lake's Shrine Bauble, fetched from the lake and used
+-- at the shrine) is done once it's in your bags: Questie keeps no count for it, so it never ticked
+-- off and the arrow stayed on where the item comes from.
+local function Unfinished(o, special)
+    if not (o and o.spawnList) then return false end
+    if special and o.Type == "item" and ItemCount(o.Id or o.ItemId or o.ItemID) > 0 then return false end
+    return (not o.Needed) or o.Needed ~= o.Collected
+end
 
 -- The target for one quest: its turn-in when complete, else an unfinished objective (prefer is
 -- the objective to keep if it's still unfinished). nil when Questie knows no place for it.
@@ -205,16 +238,29 @@ local function Build(id, quest, prefer)
         end
         if #points == 0 then return nil end
         return { key = id .. ":done", questID = id, obj = "done", title = "Turn in: " .. name,
-            subtitle = who and ("to " .. who) or nil, targetName = who, points = points, arrive = ARRIVE, byUser = ByUser(id) }
+            subtitle = who and ("to " .. who) or nil, targetName = who, points = points, arrive = ARRIVE, byUser = ByUser(id),
+            class = ns.ClassQuest and ns.ClassQuest:Is(id) or nil }
     end
 
-    -- Unfinished objectives, numbered like Questie's focus ("s1".. for special ones).
+    -- Unfinished objectives, numbered like Questie's focus ("s1".. for special ones). Items the
+    -- quest needs you to carry come first: while one is missing, only those (Trial of the Sea Lion:
+    -- the two pendant halves from their lockboxes, then the shrine to join them).
     local objectives = {}
-    for i, o in pairs(quest.Objectives or {}) do
-        if Unfinished(o) then objectives[#objectives + 1] = { idx = i, o = o } end
-    end
     for i, o in pairs(quest.SpecialObjectives or {}) do
-        if Unfinished(o) then objectives[#objectives + 1] = { idx = "s" .. i, o = o } end
+        if o.Type == "item" and ItemCount(o.Id) == 0 then
+            local list = o.spawnList or ItemSources(o.Id)
+            if list then
+                objectives[#objectives + 1] = { idx = "s" .. i, o = { spawnList = list, Description = o.Description or "Item" } }
+            end
+        end
+    end
+    if #objectives == 0 then
+        for i, o in pairs(quest.Objectives or {}) do
+            if Unfinished(o) then objectives[#objectives + 1] = { idx = i, o = o } end
+        end
+        for i, o in pairs(quest.SpecialObjectives or {}) do
+            if o.Type ~= "item" and Unfinished(o, true) then objectives[#objectives + 1] = { idx = "s" .. i, o = o } end
+        end
     end
     local chosen
     for _, ob in ipairs(objectives) do
@@ -238,7 +284,8 @@ local function Build(id, quest, prefer)
     local what = o.Description or (points[1] and points[1].label) or "Objective"
     if o.Needed and o.Collected then what = ("%s %d/%d"):format(what, o.Collected, o.Needed) end
     return { key = id .. ":" .. tostring(chosen.idx), questID = id, obj = chosen.idx, title = name,
-        subtitle = what, points = points, arrive = ARRIVE, byUser = ByUser(id) }
+        subtitle = what, points = points, arrive = ARRIVE, byUser = ByUser(id),
+        class = ns.ClassQuest and ns.ClassQuest:Is(id) or nil }
 end
 
 -- Picks the quest to point at, from scratch.
@@ -260,17 +307,33 @@ function Q:Select()
             order[#order + 1] = { id = id, quest = quest, d = d or math.huge, user = ByUser(id), at = TrackedAt(id) }
         end
     end
+    -- Class quests first while they lead (ClassQuest.lua).
+    local CQ = ns.ClassQuest
+    local classFirst = CQ and CQ:Active()
+    for _, o in ipairs(order) do o.class = classFirst and CQ:Is(o.id) or false end
     table.sort(order, function(a, b)
+        if a.class ~= b.class then return a.class end
         if a.user ~= b.user then return a.user end
         if a.at ~= b.at then return a.at > b.at end
         return a.d < b.d
     end)
     local e
-    -- Yours first (the most recently tracked); then Questie's focus; then the rest.
+    -- A class quest first while they lead (above yours and Questie's focus: it's why the guide paused).
     for _, c in ipairs(order) do
-        if not c.user then break end
+        if not c.class then break end
         e = Build(c.id, c.quest)
         if e then break end
+    end
+    -- Yours first (the most recently tracked); then Questie's focus; then the rest.
+    if not e then
+        for _, c in ipairs(order) do
+            if not c.user then
+                if not c.class then break end
+            else
+                e = Build(c.id, c.quest)
+                if e then break end
+            end
+        end
     end
     local fid, fobj = Focus()
     if not e and fid and tracked[fid] and not skipped[fid] then e = Build(fid, tracked[fid], fobj) end
@@ -292,6 +355,9 @@ end
 -- The picked quest changed (an objective done, ready to turn in): rebuild it, keeping its objective.
 function Q:Rebuild()
     if not current then return self:Select() end
+    -- A class quest leads now and this isn't it: pick again (ClassQuest.lua).
+    local CQ = ns.ClassQuest
+    if CQ and CQ:Active() and not CQ:Is(current.id) then return self:Select() end
     local quest = Tracked()[current.id]
     local e = quest and Build(current.id, quest, current.obj)
     if not e then return self:Select() end
@@ -300,12 +366,18 @@ function Q:Rebuild()
 end
 
 -- An addon tracks a quest (it's recorded as that addon's). Not one you untracked yourself.
-function Q:Track(owner, id)
+-- as: record it as someone else's instead ("user": a quest of yours the addon put away and is
+-- giving back, Field Guide's Play and Pause), so it's treated as yours again.
+function Q:Track(owner, id, as)
     if not (Available() and InLog(id)) or ns.char.untracked[id] then return false end
+    if as then owner = as end
     local tracked = Tracked()
     if tracked[id] then
+        -- Already tracked: the record names this addon unless you tracked it, or another named
+        -- addon did. (Questie tracks a quest as you accept it, recorded as just "addon"; Field
+        -- Guide's pause put away only its own, so it found none of them.)
         local h = ns.char.tracking[id]
-        if not h then ns.char.tracking[id] = { by = owner, at = ns:NextSeq() } end
+        if as or not h or h.by == "addon" then ns.char.tracking[id] = { by = owner, at = h and h.at or ns:NextSeq() } end
         return true
     end
     pendingTrack[id] = { owner = owner, t = GetTime() }
@@ -317,13 +389,15 @@ function Q:Track(owner, id)
     return true
 end
 
--- An addon untracks a quest. Never one you tracked yourself.
-function Q:Untrack(owner, id)
-    if not Available() or ByUser(id) then return false end
+-- An addon untracks a quest. Never one you tracked yourself, unless force: the addon puts it away
+-- for you and gives it back later (Track with as = "user"), as Field Guide's Play does.
+function Q:Untrack(owner, id, force)
+    if not Available() or (ByUser(id) and not force) then return false end
     if not Tracked()[id] then return true end
     pendingUntrack[id] = GetTime()
     local QT = Mod("QuestieTracker")
-    if QT and QT.UntrackQuestId then
+    -- (Questie's tracker off: the game's watches are the tracked list, so take it off there.)
+    if QT and QT.UntrackQuestId and K.TrackerOn() then
         K.Untrack(id)
     elseif C_QuestLog and C_QuestLog.RemoveQuestWatch then
         C.Call(C_QuestLog.RemoveQuestWatch, id)
@@ -391,6 +465,15 @@ ns:On("PLAYER_LOGIN", function()
     if C_QuestLog and C_QuestLog.AddQuestWatch then pcall(hooksecurefunc, C_QuestLog, "AddQuestWatch", NoteTrack) end
     if C_QuestLog and C_QuestLog.RemoveQuestWatch then pcall(hooksecurefunc, C_QuestLog, "RemoveQuestWatch", NoteUntrack) end
 end)
+-- An item looted or used: a quest's required item may now be in (or out of) your bags, which
+-- moves the arrow on (or back). Once a moment, for a burst of bag changes.
+local bagQueued = false
+ns:On("BAG_UPDATE_DELAYED", function()
+    if not ready or bagQueued then return end
+    bagQueued = true
+    C_Timer.After(0.3, function() bagQueued = false; Q:Select() end)
+end)
+
 -- Positions are known once you're in the world: the nearest quest may be a different one.
 ns:On("PLAYER_ENTERING_WORLD", function()
     if ready then C_Timer.After(1, function() Q:Select() end) end

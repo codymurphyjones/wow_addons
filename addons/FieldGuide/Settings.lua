@@ -25,26 +25,18 @@ S.page = ns.NewOptionsPage({ name = "Field Guide", icon = true, build = function
     p:Dropdown({ id = "Section", label = "Zone guide", default = AUTO, choices = SectionChoices,
         get = function() return ns.char.section or AUTO end,
         set = function(value) ns.Engine:SetSection(value ~= AUTO and value or nil) end,
-        tooltip = "Which zone's leveling guide to follow. Automatic: the zone you're in when it has quests worth "
-            .. "doing at your level, otherwise the one you were on, or the nearest one for your level. "
-            .. "Automatic looks at zones within 4 levels of yours either way, and prefers the ones whose quests "
-            .. "are at your level to 2 above. Walking into a zone that doesn't suit you now (under your level, or "
-            .. "more than 2 above it) counts as traveling: the zone you were on stays. Nothing changes while you're on a flight. "
-            .. "A zone you pick here stays until you pick Automatic again (/fg section auto)." })
+        tooltip = "Automatic: Leveling plans tasks wherever the best XP a minute is, across zone borders, and Zone Clear "
+            .. "clears the zone you're on, then the nearest zone with something left. A zone you pick here is followed zone "
+            .. "by zone instead, until you pick Automatic again (/fg section auto). Nothing changes while you're on a flight." })
     p:Dropdown({ path = "char.preference", label = "Preference",
         choices = { { "leveling", "Leveling" }, { "clear", "Zone Clear" } },
         apply = function() ns.Engine:Invalidate(); ns:Changed() end,
-        tooltip = "Leveling: experience and convenience first. Quests worth too little XP for your level are left out, "
-            .. "and a quick quest a little off the route (one with nothing to do but hand it in) is picked up on the way "
-            .. "when it's within the detour budget below.\n\nZone Clear: every quest of the zone you're on that you "
+        tooltip = "Leveling: XP a minute first. Every pick-up, objective and hand-in is a task of its own, done in the "
+            .. "quickest order wherever it is, and quests worth too little XP for your level are left out. A quest that "
+            .. "takes you to the next area of work is picked up on the way there.\n\nZone Clear: every quest of the zone you're on that you "
             .. "haven't done, gray ones too, and the quests they need first even when those are in another zone (the "
             .. "zone you're on stays meanwhile). Quests above your level wait at the end as \"Needs level N\"; once "
             .. "only those are left the zone counts as cleared and the guide moves on. (/fg mode)" })
-    p:Slider({ path = "db.detourMinutes", label = "Detour budget", min = 0, max = 5, step = 0.5,
-        format = function(v) return v == 0 and "Off" or ("%.1f min"):format(v) end,
-        apply = function() ns.Engine:Invalidate(); ns:Changed() end,
-        tooltip = "Leveling only: how many minutes of extra walking a quick quest off the route may cost "
-            .. "(and it has to pay at least the route's usual XP per minute). 0 turns detours off." })
     p:Check({ id = "Tracking", path = "db.manageTracking", label = "Manage quest tracking",
         tooltip = "The guide tracks the quests your next steps are about, and untracks the other quests addons tracked. "
             .. "Quests you track yourself stay tracked until they're done or you untrack them, and come first on the arrow "
@@ -70,6 +62,10 @@ S.page = ns.NewOptionsPage({ name = "Field Guide", icon = true, build = function
             .. "next steps and the trail come up. /fg relearn forgets it." })
     p:Check({ path = "db.focusQuestie", label = "Focus the current quest in Questie",
         tooltip = "The current step's quest goes to the top of Questie's tracker (/fg questie)." })
+    p:Button({ label = "Quest item macro", text = "Make macro", fn = function() ns.QuestMacro:Create() end,
+        tooltip = "Makes the \"FG Quest Item\" macro (General macros, shared by all your characters) and puts it on "
+            .. "your cursor: drop it on an action bar. Click uses the quest item you need now (the current step's first), "
+            .. "shift-click the next, ctrl-click the third. Field Guide keeps it up to date (/fg macro)." })
     p:Check({ path = "char.minimap.hide", invert = true, label = "Show the minimap button",
         tooltip = "Field Guide's minimap button (/fg minimap).",
         apply = function() if ns.MinimapButton then ns.MinimapButton:Refresh() end end })

@@ -69,6 +69,9 @@ local shown = false         -- the boxes are up
 local byEditMode = false    -- ... because Edit Mode opened them
 
 local function Saved() return ns.db and ns.db.movers end
+-- The option (db.moveFrames, off by default): off, no boxes and no frame is moved. The places you
+-- set are kept for when it's on again.
+local function Enabled() return ns.db and ns.db.moveFrames end
 
 local function Resolve(entry)
     for _, name in ipairs(entry.names) do
@@ -144,6 +147,7 @@ end
 local ApplyAll
 
 local function Apply(entry)
+    if not Enabled() then return end
     local saved = Saved() and Saved()[entry.key]
     if not saved then return end
     local f = Resolve(entry)
@@ -180,6 +184,7 @@ local function Hook(entry, f)
 end
 
 function ApplyAll()
+    if not Enabled() then return end
     for _, entry in ipairs(LIST) do
         local f = Resolve(entry)
         if f and not WhyNot(entry, f) then
@@ -295,6 +300,10 @@ local function MakeBox(entry)
 end
 
 function M:Show(fromEditMode)
+    if not Enabled() then
+        if not fromEditMode then ns:Print("Moving frames is off: Options > AddOns > WallyHUD > Move the frames Edit Mode can't.") end
+        return
+    end
     if InCombatLockdown() then return ns:Print("After the fight: frames can't be moved in combat.") end
     shown, byEditMode = true, fromEditMode and true or false
     for _, entry in ipairs(LIST) do
@@ -328,9 +337,22 @@ function M:Toggle()
     if shown then
         self:Hide()
         ns:Print("Frames locked where they are.")
-    else
+    elseif Enabled() then
         self:Show(false)
         ns:Print("Drag a box to move its frame; right-click it to put the frame back. /whud move again to lock.")
+    else
+        self:Show(false) -- says it's off
+    end
+end
+
+-- The option switched: on, the frames go to your places; off, the boxes go and a /reload puts the
+-- frames back where the game keeps them (your places are kept).
+function M:OptionChanged(on)
+    if on then
+        ApplyAll()
+    else
+        self:Hide()
+        ns:Print("Frames you moved go back where the game keeps them after a /reload. Your places are kept.")
     end
 end
 

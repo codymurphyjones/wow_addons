@@ -107,15 +107,22 @@ end
 
 local TWEEN = 0.3
 
--- Lays the fill, extra segment and ticks out for the current fraction.
+-- Lays the fill, the middle segment (right after the fill: the XP of finished quests), the extra
+-- one after that (rested) and the ticks out for the current fraction.
 local function DrawProgress(g)
     local inner = g.inner
     local fw = inner * g.cur
     g.fill:SetWidth(math.max(fw, 0.5)); g.fill:SetShown(fw >= 0.5)
-    local ew = math.min(inner * g.extraFrac, inner - fw)
+    local mw = math.min(inner * g.midFrac, inner - fw)
+    g.mid:ClearAllPoints()
+    g.mid:SetPoint("TOPLEFT", g.track, "TOPLEFT", fw, 0)
+    g.mid:SetPoint("BOTTOMLEFT", g.track, "BOTTOMLEFT", fw, 0)
+    g.mid:SetWidth(math.max(mw, 0.5)); g.mid:SetShown(mw >= 0.5)
+    local at = fw + math.max(mw, 0)
+    local ew = math.min(inner * g.extraFrac, inner - at)
     g.extra:ClearAllPoints()
-    g.extra:SetPoint("TOPLEFT", g.track, "TOPLEFT", fw, 0)
-    g.extra:SetPoint("BOTTOMLEFT", g.track, "BOTTOMLEFT", fw, 0)
+    g.extra:SetPoint("TOPLEFT", g.track, "TOPLEFT", at, 0)
+    g.extra:SetPoint("BOTTOMLEFT", g.track, "BOTTOMLEFT", at, 0)
     g.extra:SetWidth(math.max(ew, 0.5)); g.extra:SetShown(ew >= 0.5)
 end
 
@@ -136,6 +143,7 @@ local function EnsureProgress(b)
     g.fill = b:CreateTexture(nil, "BORDER", nil, 0)
     g.fill:SetPoint("TOPLEFT", g.track, "TOPLEFT"); g.fill:SetPoint("BOTTOMLEFT", g.track, "BOTTOMLEFT")
     g.extra = b:CreateTexture(nil, "BORDER", nil, 0)
+    g.mid = b:CreateTexture(nil, "BORDER", nil, 0)
     g.ticks = {}
     for i = 1, 9 do
         local t = b:CreateTexture(nil, "BORDER", nil, 1)
@@ -152,7 +160,7 @@ local function EnsureProgress(b)
     e[4]:SetPoint("TOPRIGHT", g.track, "TOPRIGHT"); e[4]:SetPoint("BOTTOMRIGHT", g.track, "BOTTOMRIGHT"); e[4]:SetWidth(1)
     g.anim = CreateFrame("Frame", nil, b)
     g.anim.g = g
-    g.cur, g.extraFrac, g.inner = nil, 0, 0
+    g.cur, g.extraFrac, g.midFrac, g.inner = nil, 0, 0, 0
     b.prog = g
     return g
 end
@@ -161,19 +169,20 @@ local function HideProgress(b)
     local g = b.prog
     if not g then return end
     g.anim:SetScript("OnUpdate", nil)
-    g.track:Hide(); g.fill:Hide(); g.extra:Hide()
+    g.track:Hide(); g.fill:Hide(); g.extra:Hide(); g.mid:Hide()
     for _, t in ipairs(g.ticks) do t:Hide() end
     for _, t in ipairs(g.edges) do t:Hide() end
     g.cur, g.max = nil, nil
 end
 
 -- Positions and colours the bar for a button of the given width.
-local function UpdateProgress(b, l, width, value, max, color, extra, extraColor)
+local function UpdateProgress(b, l, width, value, max, color, extra, extraColor, mid, midColor)
     local g = EnsureProgress(b)
     local underline = l.progressStyle == "underline"
     max = math.max(max or 1, 1e-9)
     local frac = math.min(1, math.max(0, (value or 0) / max))
     g.extraFrac = math.min(1, math.max(0, (extra or 0) / max))
+    g.midFrac = math.min(1, math.max(0, (mid or 0) / max))
     g.inner = math.max(1, width - 3)
 
     g.track:ClearAllPoints()
@@ -192,6 +201,8 @@ local function UpdateProgress(b, l, width, value, max, color, extra, extraColor)
     local c, ec = color or T.accent, extraColor or T.blue
     g.fill:SetColorTexture(c[1], c[2], c[3], underline and 0.95 or 0.35)
     g.extra:SetColorTexture(ec[1], ec[2], ec[3], underline and 0.6 or 0.22)
+    local mc = midColor or T.yellow
+    g.mid:SetColorTexture(mc[1], mc[2], mc[3], underline and 0.8 or 0.3)
     for i, t in ipairs(g.ticks) do
         t:ClearAllPoints()
         t:SetPoint("TOP", g.track, "TOPLEFT", g.inner * i / 10, -2)
@@ -333,7 +344,7 @@ function Bar:UpdateButton(p)
     end
     if prog then
         width = math.max(width, l.progressWidth or 140)
-        UpdateProgress(b, l, width, prog[2], prog[3], prog[4], prog[5], prog[6])
+        UpdateProgress(b, l, width, prog[2], prog[3], prog[4], prog[5], prog[6], prog[7], prog[8])
     else
         HideProgress(b)
     end
@@ -901,10 +912,14 @@ local applying, pending = false, false
 -- Strata of things that come and go over everything (menus, popups' dimming, tooltips).
 local SKIP_STRATA = { FULLSCREEN = true, FULLSCREEN_DIALOG = true, TOOLTIP = true }
 
+-- Its anchor points, or nil when the game won't say (a restricted region, like the ping pin: asking
+-- is an error, every time).
 local function CapturePoints(f)
     local pts = {}
-    for i = 1, f:GetNumPoints() do pts[i] = { f:GetPoint(i) } end
-    return pts
+    local ok = pcall(function()
+        for i = 1, f:GetNumPoints() do pts[i] = { f:GetPoint(i) } end
+    end)
+    return ok and pts or nil
 end
 
 local function Offset()
@@ -942,6 +957,11 @@ end
 -- Ours, or never to be pushed.
 local function Excluded(f)
     if f.IsForbidden and f:IsForbidden() then return true end
+    -- Restricted regions (the ping pin and other secure frames): can't be measured or moved.
+    if f.IsAnchoringRestricted then
+        local restricted = f:IsAnchoringRestricted()
+        if Secret(restricted) or restricted then return true end
+    end
     if broken[f] or f == frame or f == strip or f.isFloat then return true end
     local name = f.GetName and f:GetName()
     if name then
@@ -952,7 +972,12 @@ local function Excluded(f)
     local strata = f:GetFrameStrata()
     if Secret(strata) or SKIP_STRATA[strata] then return true end
     -- The user drags it about and the game saves where: a shift would be saved and add up.
-    if f.IsUserPlaced and f:IsMovable() and f:IsUserPlaced() then return true end
+    if f.IsUserPlaced then
+        local movable, userPlaced = f:IsMovable(), f:IsUserPlaced()
+        -- Some Blizzard frames (the aura containers) answer with secret booleans: leave those alone.
+        if Secret(movable) or Secret(userPlaced) then return true end
+        if movable and userPlaced then return true end
+    end
     -- Placed by you through WallyHUD (its Edit Mode boxes): that's where you want it.
     if WallyHUD and WallyHUD.PlacesFrame and WallyHUD.PlacesFrame(f) then return true end
     return false
@@ -1020,8 +1045,13 @@ local function Hook(f)
     hooked[f] = true
     hooksecurefunc(f, "SetPoint", function(self)
         if applying or not saved[self] then return end
-        -- Someone else moved it: that's its place now; check it again.
-        saved[self], shifted[self] = CapturePoints(self), 0
+        -- Someone else moved it: that's its place now; check it again. (It may be restricted now,
+        -- anchored to a secure frame: measuring it then is an error the game logs every time,
+        -- pcall or not, so that's asked first.)
+        if Excluded(self) then saved[self], shifted[self] = nil, nil return end
+        local pts = CapturePoints(self)
+        if not pts then saved[self], shifted[self], broken[self] = nil, nil, true return end
+        saved[self], shifted[self] = pts, 0
         if not pending then
             pending = true
             C_Timer.After(0, function() pending = false; ApplyAdjust() end)
@@ -1051,7 +1081,8 @@ function ApplyAdjust()
     for _, f in ipairs({ UIParent:GetChildren() }) do
         if not saved[f] and not Excluded(f) then
             local pts = CapturePoints(f)
-            if OnlyOnUIParent(pts) and Collides(f, off) then
+            if not pts then broken[f] = true end
+            if pts and OnlyOnUIParent(pts) and Collides(f, off) then
                 saved[f], shifted[f] = pts, 0
                 Hook(f)
                 if Place(f, off) then shifted[f] = off

@@ -10,7 +10,8 @@ local W = ns.Widgets
 -- (or each item's market price plus tolerance).
 --
 -- States: idle -> scanning -> focusing -> ready -> buying -> (focusing | next item) ... -> idle
-local Buyer = { state = "idle", status = {}, override = {}, skipped = {}, requotes = {}, spent = 0, bought = 0 }
+local Buyer = { state = "idle", status = {}, override = {}, skipped = {}, requotes = {}, spent = 0, bought = 0,
+    setAside = {} } -- entries you skipped on the Cart: passed over until the auction house closes
 ns.Buyer = Buyer
 
 local MAX_REQUOTES = 3
@@ -61,7 +62,7 @@ end
 
 local function NextEntry(self)
     for _, entry in ipairs(self:List().entries) do
-        if ns.Lists:Remaining(entry) > 0 and not self.skipped[entry] then return entry end
+        if ns.Lists:Remaining(entry) > 0 and not self.skipped[entry] and not self.setAside[entry] then return entry end
     end
 end
 
@@ -537,6 +538,11 @@ end
 function Buyer:ButtonState()
     local s = self.state
     if s == "idle" then
+        -- (This visit's prices first: Compare's check of every item still to buy.)
+        if NextEntry(self) and ns.Compare:Pending() then
+            local done, total = ns.Compare:Progress()
+            return ("Checking prices %d/%d..."):format(done, total), false
+        end
         if NextEntry(self) then return "Start buying", true end
         return "Nothing to buy", false
     end
@@ -557,7 +563,29 @@ function Buyer:ButtonState()
     return "Buy Next", false
 end
 
+-- Skip (the Cart's row button): passed over until the auction house closes; the one being bought now,
+-- and the Cart moves on to the next. Removed (X): the same, for one that's off the list.
+function Buyer:SetAside(entry)
+    self.setAside[entry] = true
+    self.status[entry] = "skipped by you"
+    if self.entry == entry and self.state ~= "idle" then
+        ns.Scanner:Abort()
+        ns.Purchase:Cancel()
+        self:Advance()
+    end
+    Changed()
+end
+
+function Buyer:IsSetAside(entry) return self.setAside[entry] == true end
+
+function Buyer:TakeBack(entry)
+    self.setAside[entry] = nil
+    if self.status[entry] == "skipped by you" then self.status[entry] = nil end
+    Changed()
+end
+
 ns:On("AUCTION_HOUSE_CLOSED", function()
+    wipe(Buyer.setAside)
     Buyer:Stop(true)
     StaticPopup_Hide("QUARTERMASTER_PROMPT3")
 end)

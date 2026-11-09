@@ -139,6 +139,7 @@ function Lists:AddItem(item, qty, list, seenUnit)
         entry = { itemID = id, name = e and e.name, link = e and e.link, qty = qty, bought = 0 }
         table.insert(list.entries, entry)
     end
+    if entry.base == nil and ns.Stock then entry.base = ns.Stock:Have(id) end -- (what you had: Got)
     ns:Print(("Added %dx %s to %s (%d %s)."):format(qty, self:Describe(entry), list.name, entry.qty,
         list.id and "target" or "wanted"))
     ns:Changed()
@@ -189,7 +190,7 @@ function Lists:Clear(list)
 end
 
 function Lists:ResetProgress(list)
-    for _, entry in ipairs(list.entries) do entry.bought, entry.finishedAt = 0, nil end
+    for _, entry in ipairs(list.entries) do entry.bought, entry.finishedAt, entry.base = 0, nil, nil end
     ns:Print("Progress on " .. list.name .. " reset.", true)
     ns:Changed()
 end
@@ -210,8 +211,42 @@ function Lists:Tolerance(entry)
     return entry.tolerance or ns.db.options.tolerance
 end
 
+-- How many you've got toward an entry: the Cart's purchases, or more when you have more of it than when
+-- it went on the list (bought elsewhere: another auction house addon, a vendor, the mailbox, a trade).
+-- entry.base: what you had then (bags, bank and mail, as Stock counts), taken the first time it's looked
+-- at for entries older than that. Using some up doesn't take back what was bought. Searches and
+-- prebuilt runs (which count what you have already) only count purchases.
+-- A recipe you already know: learning one uses it up, so your bags can't say you bought it (Recipe:
+-- Elixir of Lesser Agility, bought and learned, kept the Cart stuck on it). The tooltip's "Already known"
+-- does. Asked often (every row, every refresh): kept a few seconds, and for good once it's known.
+local RECIPE = (Enum and Enum.ItemClass and Enum.ItemClass.Recipe) or 9
+local KNOWN_SECONDS = 5
+local known = {} -- itemID -> { known, GetTime() }
+local function KnownRecipe(itemID)
+    local instant = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
+    local classID = instant and select(6, instant(itemID))
+    if classID ~= RECIPE or not (ns.Tooltip and ITEM_SPELL_KNOWN) then return false end
+    local k = known[itemID]
+    if k and (k[1] or GetTime() - k[2] < KNOWN_SECONDS) then return k[1] end
+    local lines = ns.Tooltip.Lines("item", itemID)
+    local yes = lines and ns.Tooltip.Find(lines, "^" .. ITEM_SPELL_KNOWN:gsub("%p", "%%%0")) ~= nil or false
+    known[itemID] = { yes, GetTime() }
+    return yes
+end
+
+function Lists:Got(entry)
+    if entry.itemID and not entry.filter and KnownRecipe(entry.itemID) then return math.max(entry.qty or 0, entry.bought or 0) end
+    local got = entry.bought or 0
+    if entry.itemID and not entry.filter and entry.target == nil and ns.Stock then
+        local have = ns.Stock:Have(entry.itemID)
+        if entry.base == nil then entry.base = math.max(0, have - got) end
+        got = math.max(got, have - entry.base)
+    end
+    return got
+end
+
 function Lists:Remaining(entry)
-    return math.max(0, entry.qty - (entry.bought or 0))
+    return math.max(0, entry.qty - self:Got(entry))
 end
 
 -- When an entry was finished (time()): the purchase that finished it (Buyer), or 0 for one done

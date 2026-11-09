@@ -40,7 +40,8 @@ local SMALL, NORMAL = "FiresideGameFontHighlightSmall", "FiresideGameFontNormal"
 local ROUND = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 local FIRE = "Interface\\Icons\\Spell_Fire_Fire"
 local SIZE, GAP, PAD = 36, 10, 8
-local PIN = 18 -- a button on a party frame
+local PIN = 14 -- a button on a party frame: the member's role icon
+local ROLE_LABEL = { tank = "Tank", healer = "Healer", damage = "Damage" }
 local RAID_SIZE = 30
 local FLASH, FLOAT = 0.9, 1.6
 local TOAST_SECONDS, GOT_SECONDS = 12, 3.5
@@ -315,6 +316,9 @@ local function MakeMember(parent, size, pinned)
     b:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, self.pinned and "ANCHOR_RIGHT" or "ANCHOR_BOTTOM")
         GameTooltip:AddLine(C.Colored(C.Short(self.full), self.class))
+        if self.pinned and self.role then
+            GameTooltip:AddLine(("%s (from %s)"):format(ROLE_LABEL[self.role] or self.role, self.roleWhy or "?"), 0.6, 0.65, 0.7)
+        end
         local known = M.KnownLine(self.full, 3)
         if known then GameTooltip:AddLine(known, 1, 1, 1, true) end
         local n = counts[Key(self.full)] or 0
@@ -344,6 +348,85 @@ local function SetPortrait(tex, unit, class)
     else
         tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
     end
+end
+
+-- ---------------------------------------------------------------------------
+-- Roles: the icon on a party frame's button
+-- ---------------------------------------------------------------------------
+
+-- Each member's role ("tank", "healer", "damage") and where it came from, for the whole group at
+-- once (one tank and one healer at most get guessed). In order:
+--   1. the Dungeon Finder's role (UnitGroupRolesAssigned);
+--   2. this run's data: who took the hits and who did the healing (Blame.Roles);
+--   3. their specialization, when the game has inspected it;
+--   4. a guess from the class: classes that can only deal damage deal damage; otherwise the
+--      likeliest tank (warrior, then paladin, then druid) tanks and the likeliest healer (priest,
+--      then shaman, druid, paladin) heals, when nobody already does.
+local TANK_ORDER = { WARRIOR = 1, PALADIN = 2, DRUID = 3, DEATHKNIGHT = 4, MONK = 5, DEMONHUNTER = 6 }
+local HEAL_ORDER = { PRIEST = 1, SHAMAN = 2, DRUID = 3, PALADIN = 4, MONK = 5, EVOKER = 6 }
+local ASSIGNED = { TANK = "tank", HEALER = "healer", DAMAGER = "damage" }
+local GUESSED = "a guess from the class"
+
+local function SpecRole(unit)
+    if not (GetInspectSpecialization and GetSpecializationRoleByID) then return nil end
+    local ok, spec = pcall(GetInspectSpecialization, unit)
+    if not ok or type(spec) ~= "number" or spec <= 0 then return nil end
+    local ok2, role = pcall(GetSpecializationRoleByID, spec)
+    return ok2 and ASSIGNED[C.Str(role) or ""] or nil
+end
+
+-- unit -> { role, why } for the player and every party member.
+local function GroupRoles(run)
+    local units = { "player" }
+    for _, u in ipairs(C.GroupUnits()) do units[#units + 1] = u end
+    local out, class, have = {}, {}, {}
+    local tank, healer
+    if run then tank, healer = ns.Blame.Roles(run) end
+    for _, u in ipairs(units) do
+        local _, c = C.Call(UnitClass, u)
+        class[u] = C.Str(c)
+        local role, why = ASSIGNED[C.Str(C.Call(UnitGroupRolesAssigned, u)) or ""], "the Dungeon Finder"
+        if not role then
+            local short = C.Short(C.UnitFull(u) or "")
+            if tank and short == tank then role, why = "tank", "this run: took the hits"
+            elseif healer and short == healer then role, why = "healer", "this run: did the healing" end
+        end
+        if not role then role, why = SpecRole(u), "their specialization" end
+        if role then out[u] = { role = role, why = why }; have[role] = true end
+    end
+    -- What's left: guessed from the class.
+    local function Pick(order, role)
+        if have[role] then return end
+        local best, rank
+        for _, u in ipairs(units) do
+            local r = not out[u] and order[class[u] or ""]
+            if r and (not rank or r < rank) then best, rank = u, r end
+        end
+        if best then out[best] = { role = role, why = GUESSED }; have[role] = true end
+    end
+    Pick(TANK_ORDER, "tank")
+    Pick(HEAL_ORDER, "healer")
+    for _, u in ipairs(units) do out[u] = out[u] or { role = "damage", why = GUESSED } end
+    return out
+end
+
+-- The game's small round role art on a texture.
+local ROLE_ATLAS = { tank = "roleicon-tiny-tank", healer = "roleicon-tiny-healer", damage = "roleicon-tiny-dps" }
+local ROLE_FILE = [[Interface\LFGFrame\UI-LFG-ICON-PORTRAITROLES]]
+local ROLE_COORDS = {
+    tank = { 0, 19 / 64, 22 / 64, 41 / 64 }, healer = { 20 / 64, 39 / 64, 1 / 64, 20 / 64 },
+    damage = { 20 / 64, 39 / 64, 22 / 64, 41 / 64 },
+}
+local function SetRole(tex, role)
+    local atlas = ROLE_ATLAS[role]
+    if atlas and tex.SetAtlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) then
+        tex:SetTexCoord(0, 1, 0, 1)
+        tex:SetAtlas(atlas)
+        return
+    end
+    local c = ROLE_COORDS[role] or ROLE_COORDS.damage
+    tex:SetTexture(ROLE_FILE)
+    tex:SetTexCoord(c[1], c[2], c[3], c[4])
 end
 
 -- A button's spark and jot counts.
@@ -452,12 +535,14 @@ local function PlacePins()
         end
     end
     if #placed == 0 then return "strip" end
-    local spark = M.SPARKS[1] and M.SparkIconPath(M.SPARKS[1].id) or FIRE
+    local roles = GroupRoles(run)
     for i, p in ipairs(placed) do
         local b = pins[i] or MakeMember(UIParent, PIN, true)
         pins[i] = b
         Fill(b, p.unit, p.full, run)
-        b.portrait:SetTexture(spark); b.portrait:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        local r = roles[p.unit] or { role = "damage", why = GUESSED }
+        b.role, b.roleWhy = r.role, r.why
+        SetRole(b.portrait, r.role)
         Attach(b, p.f, p.kind)
     end
     for i = #placed + 1, #pins do pins[i]:Hide() end
@@ -616,7 +701,40 @@ local function Later()
     ns:AfterCombat("FiresideHearth", function() H:Refresh() end)
 end
 
-function H:Refresh()
+-- The party frames fill in a moment after the roster changes (and after a loading screen): asked too
+-- early, a member had no frame showing yet, the strip took over, and nothing asked again until some
+-- later event, so the pins showed only sometimes. A strip for want of a frame looks again in a moment
+-- (a few times), and the party frames showing or changing who they show ask too (HookFrames).
+local RETRIES = { 0.5, 1.5, 4 }
+local retry = 0
+local function Retry()
+    retry = retry + 1
+    local wait = RETRIES[retry]
+    if wait then C_Timer.After(wait, function() H:Refresh(true) end) end
+end
+
+local hooked = {}
+local pending = false
+local function Soon()
+    if pending then return end
+    pending = true
+    C_Timer.After(0.2, function() pending = false; H:Refresh() end)
+end
+local function HookFrames()
+    for _, c in ipairs(Candidates()) do
+        local f = c[1]
+        if not hooked[f] and f.HookScript then
+            hooked[f] = true
+            f:HookScript("OnShow", Soon)
+            f:HookScript("OnHide", Soon)
+            if f.SetAttribute then hooksecurefunc(f, "SetAttribute", function(_, k) if k == "unit" then Soon() end end) end
+        end
+    end
+end
+
+function H:Refresh(retrying)
+    if not retrying then retry = 0 end
+    HookFrames()
     local m
     if Wanted() then
         if IsInRaid() then
@@ -628,6 +746,7 @@ function H:Refresh()
             m = mode or "strip"
         else
             m = PlacePins()
+            if m == "strip" then Retry() end
         end
     end
     if m ~= "pins" and PinsShown() then
@@ -684,4 +803,6 @@ ns:On("GROUP_ROSTER_UPDATE", function()
     C_Timer.After(1, PlaceButton) -- the raid frames area grows once the roster settles
 end)
 ns:On("PLAYER_ENTERING_WORLD", function() H:Refresh() end)
+ns:On("PLAYER_ROLES_ASSIGNED", function() H:Refresh() end)
+ns:On("INSPECT_READY", function() if mode == "pins" then H:Refresh() end end)
 ns:OnChanged(function() H:Refresh() end)

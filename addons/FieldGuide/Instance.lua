@@ -38,30 +38,132 @@ local function QuestsOf(inst)
     return inst[Faction()] or {}
 end
 
--- The dungeon's quests you can still do.
+-- The quests offered only once something inside is done (build_guides.py after_the_run: Earthen Echo,
+-- KILL ON SIGHT: High Ranking Dark Iron Officials): not picked up before the run.
+local function AfterOf(inst)
+    return inst.after and inst.after[Faction()] or {}
+end
+
+-- The dungeon each quest belongs to, any part of it (before or after the run, started inside, or led
+-- to from inside): questID -> inst. Your faction's.
+local owner, ownerFaction
+local function Owner(id)
+    if ownerFaction ~= Faction() then
+        owner, ownerFaction = {}, Faction()
+        for _, inst in ipairs(I.list) do
+            local function Mark(list) for _, q in ipairs(list or {}) do owner[q] = owner[q] or inst end end
+            Mark(QuestsOf(inst))
+            Mark(AfterOf(inst))
+            Mark(inst.inside and inst.inside[Faction()])
+            for _, fs in pairs(inst.follow or {}) do Mark(fs) end
+        end
+    end
+    return owner[id]
+end
+
+-- Needs another dungeon's quest first, one you haven't done (The Final Tablets needs The God Hakkar,
+-- from the Sunken Temple): that dungeon comes first, so this one's route leaves it. Returns that
+-- dungeon, or nil. (Of "any one of these", it's blocked only when every one is.)
+function I:Blocked(inst, id, depth)
+    depth = depth or 0
+    local q = ns.Quests[id]
+    if not q or not q.pre or depth > 12 then return nil end
+    local P = ns.Progress
+    local blocked
+    for _, p in ipairs(q.pre) do
+        local why
+        if not P:Done(p) then
+            local pq = ns.Quests[p]
+            local other = pq and pq.dq and Owner(p)
+            if other and other ~= inst then why = other else why = self:Blocked(inst, p, depth + 1) end
+        end
+        if q.preAny then
+            if not why then return nil end
+            blocked = blocked or why
+        elseif why then
+            return why
+        end
+    end
+    return blocked
+end
+
+-- The dungeon's quests you can still do (ones skipped for now count: you may pick it any time): the
+-- ones to pick up before the run, and the after-the-run ones once they're offered (what they need is
+-- done, or they're in your log: their work is the next run's). Not those that need another dungeon first.
 function I:Open(inst)
-    local out = {}
+    local out, P = {}, ns.Progress
     for _, id in ipairs(QuestsOf(inst)) do
-        if ns.Engine:QuestOpen(id) then out[#out + 1] = id end
+        if ns.Engine:QuestOpen(id, true) and not self:Blocked(inst, id) then out[#out + 1] = id end
+    end
+    for _, id in ipairs(AfterOf(inst)) do
+        local q = ns.Quests[id]
+        if q and ns.Engine:QuestOpen(id, true) and (P:InLog(id) or ns.Engine.lib.PrereqsDone(q))
+            and not self:Blocked(inst, id) then
+            out[#out + 1] = id
+        end
     end
     return out
 end
 
--- Quests that start inside, from an item you loot there: { questID, ... } you could take and
--- haven't done or chosen to leave.
+-- The after-the-run quests not offered yet: picked up once the run (and its turn-ins) unlock them.
+function I:After(inst)
+    local out, P = {}, ns.Progress
+    for _, id in ipairs(AfterOf(inst)) do
+        local q = ns.Quests[id]
+        if q and not P:Done(id) and not P:InLog(id) and P:RaceAllowed(q.rm) and not ns.char.ignored[id]
+            and not ns.Engine.lib.PrereqsDone(q) and not self:Blocked(inst, id) then
+            out[#out + 1] = id
+        end
+    end
+    return out
+end
+
+-- The dungeon a quest is for (your faction's), or nil.
+function I:DungeonOf(id)
+    return Owner(id)
+end
+
+-- Skips from before "not now" existed: a dungeon's quests were ignored for good, so the dungeon
+-- dropped off the list. Once, they move to "later" with a level you won't reach (999): the dungeon
+-- list offers the dungeon again, and the leveling route still leaves them (some were left on
+-- purpose, when an item didn't drop). Picking the dungeon brings them back.
+ns:On("PLAYER_LOGIN", function()
+    local char = ns.char
+    if not char or char.laterMoved then return end
+    char.later = char.later or {}
+    for id in pairs(char.ignored or {}) do
+        if I:DungeonOf(id) then
+            char.ignored[id] = nil
+            char.later[id] = 999
+        end
+    end
+    char.laterMoved = true
+end)
+
+-- Quests that start inside: from an item you loot there, or given by someone in there (gi: Commander
+-- Gor'shak's What Is Going On?): { questID, ... } you could take and haven't done or chosen to leave.
+-- (What they need first is done in there too, or isn't known: not asked here.)
 function I:Inside(inst)
-    local out, level = {}, ns.Progress:Level()
+    local P = ns.Progress
+    local out, level = {}, P:Level()
     local list = inst.inside and inst.inside[Faction()] or {}
     for _, id in ipairs(list) do
         local q = ns.Quests[id] or {}
-        if ns.Engine:QuestOpen(id) and (q.r or 1) <= level then out[#out + 1] = id end
+        if not P:Done(id) and P:RaceAllowed(q.rm) and not ns.char.ignored[id] and not ns.char.notOffered[id]
+            and not (ns.Exists and ns.Exists:Missing(id)) and (q.r or 1) <= level and not self:Blocked(inst, id) then
+            out[#out + 1] = id
+        end
     end
     return out
 end
 
--- "Damp Note (starts Allegiance to the Old Gods)"
+-- "Damp Note (starts Allegiance to the Old Gods)"; "What Is Going On? (from Commander Gor'shak)"
 function I:InsideText(id)
     local q = ns.Quests[id] or {}
+    if q.gi then
+        local who = (q.a and q.a[4] or "someone inside"):gsub(" %(inside%)$", "")
+        return ("%s (from %s)"):format(q.n or ("quest " .. id), who)
+    end
     return ("%s (starts %s)"):format(q.ia or "an item", q.n or ("quest " .. id))
 end
 
@@ -165,6 +267,8 @@ end
 -- "Guide me": the guide collects this dungeon's quests, sends you in, and turns them in.
 function I:Start(inst)
     if ns.char.instance ~= inst.id then ClearRuns(inst) end
+    -- Chosen now: its quests skipped for now are wanted again.
+    for _, id in ipairs(QuestsOf(inst)) do ns.char.later[id] = nil end
     ns.char.instance, ns.char.lastInstance = inst.id, inst.id
     currentAt = nil
     ns.Engine:Invalidate()
@@ -221,7 +325,68 @@ local function Ordered(list)
     return out
 end
 
+-- The zones around a dungeon's entrances (its wings' too).
+local function EntranceZones(inst)
+    local z = {}
+    if inst.entrance then z[inst.entrance[1]] = true end
+    for _, e in ipairs(inst.entrances or {}) do z[e[1]] = true end
+    for _, w in ipairs(inst.wings or {}) do
+        if w.entrance then z[w.entrance[1]] = true end
+    end
+    return z
+end
+
+-- The zone a step happens in, or nil.
+local function StepZone(s)
+    local q = ns.Quests[s[2]]
+    if not q then return nil end
+    local k = s[1]
+    local p = (k == "A" and q.a) or (k == "T" and q.t) or (k == "L" and q.d and q.d[1])
+        or (k == "O" and (ns.Engine.ObjectivePoint and ns.Engine.ObjectivePoint(s, q) or (q.o and q.o[1])))
+    return p and p[1] or nil
+end
+
+-- See I:Section: the steps before the run with the ones in the dungeon's zone after the rest.
+function I:ZoneLast(inst, steps)
+    local zones = EntranceZones(inst)
+    if not next(zones) then return steps end
+    local inZone = {} -- quests with a step in the zone
+    for _, s in ipairs(steps) do
+        if not s.unlock and s[1] ~= "I" then
+            local z = StepZone(s)
+            if z and zones[z] then s.zoneLast = true; inZone[s[2]] = true end
+        end
+    end
+    if not next(inZone) then return steps end
+    local function Tied(id, depth)
+        if inZone[id] then return true end
+        if depth > 10 then return false end
+        for _, p in ipairs((ns.Quests[id] or {}).pre or {}) do
+            if Tied(p, depth + 1) then return true end
+        end
+        return false
+    end
+    local head, prep, rest = {}, {}, {}
+    for _, s in ipairs(steps) do
+        if s.unlock then
+            head[#head + 1] = s
+        elseif not s.zoneLast and not Tied(s[2], 0) then
+            s.prep = true
+            prep[#prep + 1] = s
+        else
+            rest[#rest + 1] = s
+        end
+    end
+    local out = head
+    for _, s in ipairs(prep) do out[#out + 1] = s end
+    for _, s in ipairs(rest) do out[#out + 1] = s end
+    return out
+end
+
 -- The route for a dungeon, in the order that walks least:
+--   0. what unlocks its quests: the earlier quests out in the world a quest of it needs and you
+--      haven't done (Rear Guard Patrol before The Wrath of Rath'mael), each picked up, done and
+--      handed in, their own earlier ones first, so every quest of the dungeon can be taken;
 --   1. hand-offs that only send you to someone ("Speak to Je'neu Sancrea"): picked up and
 --      handed in straight away, since that someone usually gives the dungeon's quests;
 --   2. pick up every quest you can take now;
@@ -238,8 +403,14 @@ function I:Section(inst)
     local steps, after = {}, {}
     local function Q(id) return ns.Quests[id] or {} end
     local function HandOff(q)
-        return not q.o and type(q.ot) == "string" and (q.ot:find("^Speak to") or q.ot:find("^Talk to")
-            or q.ot:find("^Report to") or q.ot:find("^Go to") or q.ot:find("^Travel to")) ~= nil
+        -- (Questie's "talk" flag too, and "Speak with": Hamuul Runetotem and Nara Wildmane say that,
+        -- weren't taken for hand-offs, and their hand-ins waited until after the run.)
+        if q.o then return false end
+        -- (Handed in inside the dungeon, Guides\Data.lua's ti: part of the run, never before it.)
+        if q.ti then return false end
+        if q.talk then return true end
+        return type(q.ot) == "string" and (q.ot:find("^Speak to") or q.ot:find("^Speak with") or q.ot:find("^Talk to")
+            or q.ot:find("^Talk with") or q.ot:find("^Report to") or q.ot:find("^Go to") or q.ot:find("^Travel to")) ~= nil
     end
     -- Quests that need one of the route's item quests first (directly or further back).
     local isItem = {}
@@ -255,6 +426,47 @@ function I:Section(inst)
     local function Outside(id)
         local q = Q(id)
         return q.o and inst.before and inst.before[id]
+    end
+
+    -- 0. what unlocks them
+    local P = ns.Progress
+    local own = {}
+    for _, id in ipairs(QuestsOf(inst)) do own[id] = true end
+    local unlock, seen = {}, {}
+    local function Unlock(id, depth)
+        local q = Q(id)
+        if depth > 8 or not q.pre or #q.pre == 0 then return end
+        local needed = q.pre
+        if q.preAny then
+            for _, p in ipairs(q.pre) do if P:Done(p) then return end end -- one done is enough
+            needed = { q.pre[1] }
+            for _, p in ipairs(q.pre) do -- one you have, else one you can take now, else the first
+                if P:InLog(p) then needed = { p }; break end
+            end
+            if not P:InLog(needed[1]) then
+                for _, p in ipairs(q.pre) do
+                    if ns.Engine:QuestOpen(p) then needed = { p }; break end
+                end
+            end
+        end
+        -- The whole chain back: every earlier quest not done yet, takeable now or not (part 3 of a
+        -- chain isn't until part 2 is done, and part 1 is what to do now). Only one you skipped
+        -- yourself, or one the server doesn't have, stops it.
+        for _, p in ipairs(needed) do
+            if not own[p] and not seen[p] and ns.Quests[p] and not P:Done(p)
+                and not ns.char.ignored[p] and not (ns.Exists and ns.Exists:Missing(p)) then
+                seen[p] = true
+                Unlock(p, depth + 1) -- its own earlier quests first
+                unlock[#unlock + 1] = p
+            end
+        end
+    end
+    for _, id in ipairs(open) do Unlock(id, 0) end
+    -- (Marked: the rest of the route waits for them, Engine.lua's After.)
+    for _, p in ipairs(unlock) do
+        steps[#steps + 1] = { "A", p, unlock = true }
+        if Q(p).o then steps[#steps + 1] = { "O", p, unlock = true } end
+        steps[#steps + 1] = { "T", p, unlock = true }
     end
 
     -- 1. hand-offs
@@ -317,6 +529,14 @@ function I:Section(inst)
     for _, id in ipairs(outsideLater) do
         steps[#steps + 1] = { "O", id, before = true, inst = inst.id }
     end
+    -- The dungeon's own zone last: everything that gets you ready elsewhere comes before the first
+    -- step in the zone around the entrance (Ashenvale for Blackfathom: the Damp Note off the Tide
+    -- Priestess waits until nothing else is left to do away from there). A goal, not a rule: a step that
+    -- needs something from that zone first (the same quest, or one before it) isn't held to it, and
+    -- neither is the unlock chain, whose order is its own. Marked for the plan too (Engine.lua's After):
+    -- prep = away from the zone and free of it, zoneLast = in the zone.
+    steps = self:ZoneLast(inst, steps)
+
     -- 5. the run, then the turn-ins
     local wings = self:RouteWings(inst)
     -- Each run step lists the quests it's for (the ones turned in after it), by wing.
@@ -336,16 +556,28 @@ function I:Section(inst)
         end
     end
     for _, s in ipairs(after) do steps[#steps + 1] = s end
+    -- The after-the-run quests: offered once the run and its turn-ins are done (KILL ON SIGHT: High
+    -- Ranking Dark Iron Officials, once the first one's handed in). Picked up then; their work is often
+    -- inside, and the dungeon comes up again for it (they're its quests to pick up from then on: I:Open).
+    for _, id in ipairs(self:After(inst)) do
+        local q = Q(id)
+        steps[#steps + 1] = { "A", id, post = true }
+        if q.o then steps[#steps + 1] = { "O", id, post = true } end
+        steps[#steps + 1] = { "T", id, post = true }
+    end
     -- Items that drop inside: expected during the run, listed last. If the run ends without one,
     -- you're asked whether to leave its quest or run the dungeon again (see EndOfRun).
     local listed = {}
     for _, id in ipairs(QuestsOf(inst)) do listed[id] = true end
     for _, id in ipairs(self:Inside(inst)) do
         steps[#steps + 1] = { "L", id, inside = true, inst = inst.id, wing = self:WingOf(inst, id), again = ns.char.rerun[id] }
+        -- (Its objectives too: The Glowing Shard's talk to Sputtervalve in Ratchet was missing, and
+        -- the route went to its hand-in without it.)
+        if (ns.Quests[id] or {}).o then steps[#steps + 1] = { "O", id, inside = true } end
         steps[#steps + 1] = { "T", id, inside = true }
         for _, f in ipairs(inst.follow and inst.follow[id] or {}) do
             local fq = ns.Quests[f]
-            if fq and not listed[f] then
+            if fq and not listed[f] and ns.Progress:RaceAllowed(fq.rm) then
                 listed[f] = true
                 steps[#steps + 1] = { "A", f, inside = true, follow = true }
                 if fq.o then steps[#steps + 1] = { "O", f, inside = true, follow = true } end
@@ -603,7 +835,7 @@ function I:EndOfRun(inst, wingKey)
     local names = {}
     for _, id in ipairs(missing) do names[#names + 1] = I:InsideText(id) end
     local name = self:RunName(inst, wingKey)
-    StaticPopup_Show("FIELDGUIDE_NOLOOT", ("Your %s run is over and this didn't drop:\n\n|cffd9a066%s|r\n\nLeave the quest, or run %s again for it?"):format(
+    StaticPopup_Show("FIELDGUIDE_NOLOOT", ("Your %s run is over and you didn't get this:\n\n|cffd9a066%s|r\n\nLeave the quest, or run %s again for it?"):format(
         name, table.concat(names, "\n"), name), nil, { quests = missing, name = name, key = key })
 end
 
@@ -695,12 +927,68 @@ function I:PrintCurrent()
         ns:Print(("%d. %s (levels %d-%d): %d quest%s left, about %d XP a minute%s"):format(i, entry.inst.name, entry.inst.from, entry.inst.to,
             #entry.open, #entry.open == 1 and "" or "s", math.floor((ns.Engine:DungeonRate(entry))), ns.char.instance == entry.inst.id and "  |cff8fd16a<- guiding|r" or ""))
     end
-    ns:Print("/fg dungeon <number> to be guided there, /fg dungeon stop to go back to questing.")
+    ns:Print("/fg dungeon <number> to be guided there, /fg dungeon stop to go back to questing, /fg dungeons why for what's left out.")
+end
+
+-- /fg dungeons why: every dungeon in your level range (and a level either side), each of its quests
+-- for your faction with why it's open or not. A dungeon is on the list when one of them is open.
+-- Every earlier quest a quest needs and you haven't done, the earliest first (prerequisites of
+-- prerequisites included; of "any one of these", one you have or else the first).
+function I:ChainBefore(id)
+    local P, out, seen = ns.Progress, {}, {}
+    local function Walk(q, depth)
+        q = ns.Quests[q]
+        if depth > 10 or not (q and q.pre) then return end
+        local needed = q.pre
+        if q.preAny then
+            for _, p in ipairs(q.pre) do if P:Done(p) then return end end
+            needed = { q.pre[1] }
+            for _, p in ipairs(q.pre) do if P:InLog(p) then needed = { p }; break end end
+        end
+        for _, p in ipairs(needed) do
+            if not seen[p] and not P:Done(p) then
+                seen[p] = true
+                Walk(p, depth + 1)
+                out[#out + 1] = p
+            end
+        end
+    end
+    Walk(id, 0)
+    return out
+end
+
+function I:Why()
+    local level = ns.Progress:Level()
+    local any = false
+    for _, inst in ipairs(self.list) do
+        if level >= inst.from - 1 and level <= inst.to + 1 then
+            any = true
+            local open = #self:Open(inst)
+            local inRange = level >= inst.from and level <= inst.to
+            ns:Print(("%s (levels %d-%d): %s"):format(inst.name, inst.from, inst.to,
+                not inRange and "not your level yet / any more" or open > 0 and ("on the list, " .. open .. " open")
+                or "|cffff8866not on the list: no quest open|r"))
+            local quests = QuestsOf(inst)
+            if #quests == 0 then ns:Print("   no quests for your faction") end
+            for _, id in ipairs(quests) do
+                local q = ns.Quests[id]
+                ns:Print(("   %s [%d]: %s"):format(q and q.n or "?", id, ns.Engine:WhyClosed(id)))
+                local chain = self:ChainBefore(id)
+                if #chain > 0 then
+                    local names = {}
+                    for _, p in ipairs(chain) do names[#names + 1] = ns.Engine:QuestName(p) end
+                    ns:Print("      first: " .. table.concat(names, " > "))
+                end
+            end
+        end
+    end
+    if not any then ns:Print("No dungeon within a level of yours.") end
 end
 
 function I:Command(arg)
     arg = strlower(strtrim(arg or ""))
     if arg == "stop" or arg == "off" then return self:Stop() end
+    if arg == "why" then return self:Why() end
     local entry = self:Current()[tonumber(arg) or 0]
     if entry then return self:Start(entry.inst) end
     self:PrintCurrent()

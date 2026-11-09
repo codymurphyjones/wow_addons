@@ -29,7 +29,16 @@ local KEEP_TILES = 40     -- unpacked tiles kept, at about 0.8 MB each (long tri
 local TIDY_EVERY = 5      -- seconds between clearing out what no search is using (G:Tidy)
 local MOVE_YARDS = 150    -- yards you can move before your field is worked out again
 local JOB_KEEP = 1500     -- yards you can move before a field still being worked out is started over
-local REFINE_BUDGET = 12  -- milliseconds a path may spend walking tiles out node by node, per call
+local REFINE_BUDGET = 12  -- milliseconds a frame's paths may spend refining (walking tiles out, mending, straightening, rounding)
+local refineFrame, refineStart
+-- Whether this frame's paths still have refining time left: one budget for every path a plan asks
+-- for, and for every stage of each (each stage used to have its own, so a plan's paths added up to
+-- hundreds of milliseconds). What doesn't fit is done on a later plan, or in the background.
+local function Refining()
+    local now = GetTime()
+    if refineFrame ~= now then refineFrame, refineStart = now, debugprofilestop() end
+    return debugprofilestop() - refineStart < REFINE_BUDGET
+end
 local RUN, SWIM = 7.0, 4.72   -- the speeds the doors' times were baked at (nav_pack.py)
 local SLIDE = 1.5         -- sliding down a small drop is this much slower than walking
 local JUMP_COST = 30      -- a jump you'd take damage from (or need a safe fall for): seconds extra
@@ -64,6 +73,18 @@ local function Map(continent)
     return m
 end
 
+-- Unpacking a tile is 50-100 ms of Lua. In a background job it stops for the frame when the job's
+-- slice is used up (Pause), and carries on in the next one; asked for in the frame (a plan), it's
+-- done in one go as before. inJob: the driver is running one of this file's jobs right now.
+local inJob, sliceStart = false, 0
+local SLICE = 4 -- milliseconds a job's tile unpacking may take in one frame
+local function Pause()
+    if inJob and debugprofilestop() - sliceStart > SLICE then
+        coroutine.yield()
+        sliceStart = debugprofilestop()
+    end
+end
+
 local function I16(raw, o)
     local a, b = raw:byte(o, o + 1)
     local v = a + b * 256
@@ -90,17 +111,6 @@ local function Tile(m, t)
         m.tiles[t] = false
         return nil
     end
-    -- Too many unpacked: drop the least used.
-    if m.count >= KEEP_TILES then
-        local oldest, at
-        for k, u in pairs(m.used) do
-            if not at or u < at then oldest, at = k, u end
-        end
-        if oldest then
-            m.tiles[oldest], m.used[oldest] = nil, nil
-            m.count = m.count - 1
-        end
-    end
     local first, cnt, cellOf = {}, {}, {}
     local n = 0
     for c = 0, 4095 do
@@ -111,10 +121,12 @@ local function Tile(m, t)
             n = n + k
         end
     end
+    Pause()
     local kind, mask, h, on, ow, xo, ne, busy = {}, {}, {}, {}, {}, {}, {}, {}
     local o = 4096
     local offs = {}
     for i = 1, n do
+        if i % 2048 == 0 then Pause() end
         local f = raw:byte(o + i)
         kind[i] = f % 4
         mask[i] = floor(f / 4) % 16
@@ -123,10 +135,13 @@ local function Tile(m, t)
     end
     o = o + n
     local prev = 0
+    Pause()
     for i = 1, n do
+        if i % 2048 == 0 then Pause() end
         prev = prev + I16(raw, o + 2 * i - 1)
         h[i] = prev * 0.5
     end
+    Pause()
     o = o + 2 * n
     for i = 1, n do
         if offs[i] then
@@ -136,7 +151,9 @@ local function Tile(m, t)
         end
     end
     local p = o + n
+    Pause()
     for i = 1, n do
+        if i % 2048 == 0 then Pause() end
         ne[i] = raw:byte(o + i)
         xo[i] = p
         p = p + 3 * ne[i]
@@ -146,6 +163,22 @@ local function Tile(m, t)
     local ar = m.d.areaOf and m.d.areaOf[t] and Unpack(m.d.areaOf[t])
     if ar then
         for k = 1, #ar - 3, 4 do area[U16(ar, k) + 1] = U16(ar, k + 2) end
+    end
+    -- Unpacked meanwhile (a plan asked for it while this job had stopped for the frame): that one.
+    if m.tiles[t] then
+        m.used[t] = m.clock
+        return m.tiles[t]
+    end
+    -- Too many unpacked: drop the least used.
+    if m.count >= KEEP_TILES then
+        local oldest, at
+        for k, u in pairs(m.used) do
+            if not at or u < at then oldest, at = k, u end
+        end
+        if oldest then
+            m.tiles[oldest], m.used[oldest] = nil, nil
+            m.count = m.count - 1
+        end
     end
     T = { t = t, ty = floor(t / 64), tx = t % 64, n = n, first = first, cnt = cnt, cell = cellOf, kind = kind,
         mask = mask, h = h, on = on, ow = ow, xo = xo, ne = ne, raw = raw, packed = {}, nb = {}, rev = {}, busy = busy, area = area }
@@ -182,8 +215,10 @@ local function CellNodes(m, gr, gc)
     return T, T.first[c], T.cnt[c]
 end
 
--- The links packed for a node: { to, kind (0 walk, 1 swim, 2 drop), fall, direction } each, worked
--- out once. The direction is STEPS's, from 0; nil for a lift, portal or the tram.
+-- The links packed for a node, worked out once, flat: to, kind (0 walk, 1 swim, 2 drop), fall,
+-- direction, then the next link's four. The direction is STEPS's, from 0; -1 for a lift, portal or
+-- the tram. (One flat list a node, not a table a link: a searched tile has thousands of nodes, and
+-- every table is one more the garbage collector walks.)
 local function Packed(m, id)
     local t, i = Split(id)
     local T = Tile(m, t)
@@ -191,6 +226,7 @@ local function Packed(m, id)
     local out = T.packed[i]
     if out then return out end
     out = {}
+    local n = 0
     local c = T.cell[i]
     local gr, gc = T.ty * 64 + floor(c / 64), T.tx * 64 + c % 64
     local mk, hi, wet = T.mask[i], T.h[i], T.kind[i] == 1
@@ -204,7 +240,8 @@ local function Packed(m, id)
                     local dd = abs(U.h[j] - hi)
                     if not bd or dd < bd then best, bd = j, dd end
                 end
-                out[#out + 1] = { Id(U.t, best), (wet or U.kind[best] == 1) and 1 or 0, 0, d }
+                out[n + 1], out[n + 2], out[n + 3], out[n + 4] = Id(U.t, best), (wet or U.kind[best] == 1) and 1 or 0, 0, d
+                n = n + 4
             end
         end
     end
@@ -219,15 +256,29 @@ local function Packed(m, id)
             local s = STEPS[dir + 1]
             U, f, cnt = CellNodes(m, gr + s[1], gc + s[2])
         end
-        if U and place < cnt then out[#out + 1] = { Id(U.t, f + place), kind, fall * 0.5, dir } end
+        if U and place < cnt then
+            out[n + 1], out[n + 2], out[n + 3], out[n + 4] = Id(U.t, f + place), kind, fall * 0.5, dir
+            n = n + 4
+        end
     end
     -- A lift, portal or the tram from here: kind 3, its seconds in place of a fall.
-    for _, j in ipairs(Doors(m).jump[id] or NONE) do out[#out + 1] = { j[1], 3, j[2] } end
+    for _, j in ipairs(Doors(m).jump[id] or NONE) do
+        out[n + 1], out[n + 2], out[n + 3], out[n + 4] = j[1], 3, j[2], -1
+        n = n + 4
+    end
     T.packed[i] = out
     return out
 end
 
--- A node's links: { to, kind, fall } each (kind 3: a lift, portal or the tram), the packed ones and
+-- Going through a node's links: for _, to, kind, fall in Step3, Links(m, id), -2 do ... end
+-- (flat lists of three, Links and Into; nothing made for the loop).
+local function Step3(L, k)
+    k = k + 3
+    local to = L[k]
+    if to then return k, to, L[k + 1], L[k + 2] end
+end
+
+-- A node's links, flat: to, kind, fall each (kind 3: a lift, portal or the tram), the packed ones and
 -- the diagonals. Without diagonals open ground is walked in right angles, a third longer than it
 -- is. A diagonal is there when both ways round its corner walk (or both swim) to the same floor, so
 -- it never cuts across a wall's end. nav_pack.py's diagonals() has the same rule for the doors' times.
@@ -239,26 +290,36 @@ local function Links(m, id)
     if out then return out end
     local packed = Packed(m, id)
     out = {}
+    local n = 0
     local have = {}
-    for k, l in ipairs(packed) do
-        out[k] = l
-        have[l[1]] = true
+    for k = 1, #packed, 4 do
+        out[n + 1], out[n + 2], out[n + 3] = packed[k], packed[k + 1], packed[k + 2]
+        n = n + 3
+        have[packed[k]] = true
     end
     -- Where a step then a step across it leads: the first step's axis (0 north-south, 1 west-east),
     -- by kind and floor; true once both ways round lead there.
-    local seen = { [0] = {}, [1] = {} }
-    for _, a in ipairs(packed) do
-        if a[4] and a[4] < 4 and a[2] < 2 then
-            local axis, ways = floor(a[4] / 2), seen[a[2]]
-            for _, b in ipairs(Packed(m, a[1])) do
-                if b[4] and b[4] < 4 and b[2] == a[2] and floor(b[4] / 2) ~= axis then
-                    local p = b[1]
+    local seen0, seen1
+    for k = 1, #packed, 4 do
+        local ato, akind, adir = packed[k], packed[k + 1], packed[k + 3]
+        if adir >= 0 and adir < 4 and akind < 2 then
+            local axis = floor(adir / 2)
+            local ways
+            if akind == 0 then seen0 = seen0 or {}; ways = seen0 else seen1 = seen1 or {}; ways = seen1 end
+            local P = Packed(m, ato)
+            for j = 1, #P, 4 do
+                local bdir = P[j + 3]
+                if bdir >= 0 and bdir < 4 and P[j + 1] == akind and floor(bdir / 2) ~= axis then
+                    local p = P[j]
                     local was = ways[p]
                     if was == nil then
                         ways[p] = axis
                     elseif was ~= true and was ~= axis then
                         ways[p] = true
-                        if not have[p] then out[#out + 1] = { p, a[2], 0 } end
+                        if not have[p] then
+                            out[n + 1], out[n + 2], out[n + 3] = p, akind, 0
+                            n = n + 3
+                        end
                     end
                 end
             end
@@ -268,7 +329,7 @@ local function Links(m, id)
     return out
 end
 
--- The links into a node: { from, kind, fall } each (the nodes of its cell and the 8 around it
+-- The links into a node, flat: from, kind, fall each (the nodes of its cell and the 8 around it
 -- that link to it).
 local function Into(m, id)
     local t, i = Split(id)
@@ -277,6 +338,7 @@ local function Into(m, id)
     local out = T.rev[i]
     if out then return out end
     out = {}
+    local n = 0
     local c = T.cell[i]
     local gr, gc = T.ty * 64 + floor(c / 64), T.tx * 64 + c % 64
     for dr = -1, 1 do
@@ -285,14 +347,20 @@ local function Into(m, id)
             if U then
                 for j = f, f + k - 1 do
                     local from = Id(U.t, j)
-                    for _, l in ipairs(Links(m, from)) do
-                        if l[1] == id and l[2] ~= 3 then out[#out + 1] = { from, l[2], l[3] } end
+                    for _, to, kind, fall in Step3, Links(m, from), -2 do
+                        if to == id and kind ~= 3 then
+                            out[n + 1], out[n + 2], out[n + 3] = from, kind, fall
+                            n = n + 3
+                        end
                     end
                 end
             end
         end
     end
-    for _, j in ipairs(Doors(m).jumpIn[id] or NONE) do out[#out + 1] = { j[1], 3, j[2] } end
+    for _, j in ipairs(Doors(m).jumpIn[id] or NONE) do
+        out[n + 1], out[n + 2], out[n + 3] = j[1], 3, j[2]
+        n = n + 3
+    end
     T.rev[i] = out
     return out
 end
@@ -477,11 +545,11 @@ local function Search(m, f, t, seeds, secs0, reverse, goal, yieldable, heuristic
             done[u] = true
             if u == goal then break end
             local du = dist[u]
-            for _, l in ipairs(reverse and Into(m, u) or Links(m, u)) do
-                local v = l[1]
+            for _, l1, l2, l3 in Step3, reverse and Into(m, u) or Links(m, u), -2 do
+                local v = l1
                 if floor(v / 65536) == t and not done[v] then
                     local wgt, s
-                    if reverse then wgt, s = StepCost(m, f, v, u, l[2], l[3]) else wgt, s = StepCost(m, f, u, v, l[2], l[3]) end
+                    if reverse then wgt, s = StepCost(m, f, v, u, l2, l3) else wgt, s = StepCost(m, f, u, v, l2, l3) end
                     if wgt then
                         local nd = du + wgt
                         local old = dist[v]
@@ -755,7 +823,7 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 local fields, jobs, queue, listeners = {}, {}, {}, {}
-local TileField, LocateReached, Advance -- below
+local TileField, LocateReached, Advance, ReadyAt, Unpacked, WarmField -- below
 
 -- Whether every door of tile t the field can reach is settled (the field's search is past them).
 local function TileSettled(f, D, t)
@@ -884,7 +952,9 @@ driver:SetScript("OnUpdate", function(self)
         if key then table.remove(queue, 1) else self:Hide() end
         return
     end
+    inJob, sliceStart = true, debugprofilestop()
     local ok, err = coroutine.resume(job.co)
+    inJob = false
     if not ok then
         jobs[key] = nil
         table.remove(queue, 1)
@@ -968,8 +1038,8 @@ local function Sealed(m, id)
         local u = queue[head]
         head = head + 1
         if D.of[u] then v = false break end
-        for _, l in ipairs(Links(m, u)) do
-            local x = l[1]
+        for _, l1, l2, l3 in Step3, Links(m, u), -2 do
+            local x = l1
             if not seen[x] then
                 if floor(x / 65536) ~= t then v = false break end
                 seen[x], count = true, count + 1
@@ -1014,9 +1084,9 @@ local function Follow(m, from, n, w, reach)
         head = head + 1
         local un, uw, _, _, ur, uc = Where(m, u)
         if ur == gr and uc == gc then out[#out + 1] = u end
-        for _, l in ipairs(Links(m, u)) do
-            local x = l[1]
-            if dist[x] == nil and l[2] ~= 3 then
+        for _, l1, l2, l3 in Step3, Links(m, u), -2 do
+            local x = l1
+            if dist[x] == nil and l2 ~= 3 then
                 local xn, xw = Where(m, x)
                 if xn then
                     local d = dist[u] + sqrt((xn - un) ^ 2 + (xw - uw) ^ 2)
@@ -1040,8 +1110,14 @@ local function FloorScore(m, id, prevH)
     if Sealed(m, id) then s = s - 1000 end
     local target = fields.target
     if target and target.nav and target.m == m and target.door then
-        local tf = TileField(target, t)
-        if tf.dist[id] then s = s + 200 end
+        -- Only a tile the target's field has walked already: walking one out takes 100 ms or more,
+        -- too long for the frame you step into it (it's walked in the background for next time).
+        local tf = target.tilesDone[t]
+        if tf then
+            if tf.dist[id] then s = s + 200 end
+        else
+            WarmField(target, t)
+        end
     end
     local swimming = IsSwimming and IsSwimming()
     if not (issecretvalue and issecretvalue(swimming)) and (swimming and true or false) == (kind == 1) then s = s + 100 end
@@ -1098,12 +1174,20 @@ function G:Field(key, continent, n, w, opts)
     if not m then return Old:Field(key, continent, n, w, opts) end
     local src
     local mine = fields.here
+    -- (Each part timed for the slow-call watch: Core.lua's "Waypoint slow" lines.)
+    local Note, t0 = ns.SlowNote, debugprofilestop()
     if key == "here" then
         src = Track(m, continent, n, w)
-    elseif mine and mine.nav and mine.continent == continent and mine.version == G.version then
+        if Note then Note("Field.track", debugprofilestop() - t0) end
+    elseif mine and mine.nav and mine.continent == continent and mine.version == G.version
+        and ReadyAt(mine, n, w) then
         src = LocateReached(mine, n, w)
-    else
+        if Note then Note("Field.locateReached", debugprofilestop() - t0) end
+    elseif Unpacked(m, n, w) then
+        -- (Your field hasn't got this far yet: the tiles are worked out in the background, and
+        -- this frame makes do with the ground's own floor.)
         src = Locate(m, n, w, nil, true)
+        if Note then Note("Field.locate", debugprofilestop() - t0) end
     end
     if not src then return nil end
     local o = Settings(opts)
@@ -1127,8 +1211,11 @@ function G:Field(key, continent, n, w, opts)
     -- tile is where the door search may stop (Advance).
     local goal = opts.goal or opts.toward
     local goalTile = goal and CellAt(floor((m.max - goal[1]) / m.fine), floor((m.max - goal[2]) / m.fine))
+    local t1 = debugprofilestop()
+    local hz = Hazards(m, src, goal)
+    if Note then Note("Field.hazards", debugprofilestop() - t1) end
     local field = { nav = true, continent = continent, m = m, src = src, n = n, w = w, reverse = opts.reverse and true or false,
-        version = G.version, tilesDone = {}, steps = {}, goalTile = goalTile, hz = Hazards(m, src, goal) }
+        version = G.version, tilesDone = {}, steps = {}, goalTile = goalTile, hz = hz }
     for k, v in pairs(o) do field[k] = v end
     if not jobs[key] then
         if opts.reverse and not opts.later then table.insert(queue, 1, key) else queue[#queue + 1] = key end
@@ -1138,6 +1225,13 @@ function G:Field(key, continent, n, w, opts)
     jobs[key] = { field = field, co = coroutine.create(function() Work(field) end), started = GetTime() }
     driver:Show()
     return nil
+end
+
+-- Under the loading screen (Flight.lua's warm-up): the tile under you unpacked and your floor found
+-- now, where a frame held up can't be seen, not in the first plan after a reload (Field.track, ~80 ms).
+function G:Warm(continent, n, w)
+    local m = continent and Map(continent)
+    if m then Track(m, continent, n, w) end
 end
 
 -- A field that's no longer wanted, finished or still being worked out.
@@ -1266,21 +1360,67 @@ end
 local COST_BUDGET = 20
 local costFrame, costSpent = nil, 0
 local warm, warmHead, warmTail = {}, 1, 0
-local function Warm(m, t, f)
+local function Warm(m, t, f, whole)
     warmTail = warmTail + 1
-    warm[warmTail] = { m, t, f }
+    warm[warmTail] = { m, t, f, whole }
     if jobs.warm then return end
     jobs.warm = { field = {}, co = coroutine.create(function()
         while warm[warmHead] do
             local w = warm[warmHead]
             warm[warmHead], warmHead = nil, warmHead + 1
             Tile(w[1], w[2])
-            if w[3] then Ensure(w[3], w[2], true) end
+            if w[3] and w[4] then
+                if w[3].warming then w[3].warming[w[2]] = nil end
+                TileField(w[3], w[2], true)
+            elseif w[3] then
+                Ensure(w[3], w[2], true)
+            end
             coroutine.yield()
         end
     end) }
     queue[#queue + 1] = "warm"
     driver:Show()
+end
+
+-- Whether a point's tile is unpacked; if not, it's unpacked in the background (a tile takes 50-100 ms,
+-- too long for a frame that's planning).
+Unpacked = function(m, n, w)
+    local t = CellAt(floor((m.max - n) / m.fine), floor((m.max - w) / m.fine))
+    if m.tiles[t] ~= nil or not m.d.tiles[t] then return true end
+    Warm(m, t)
+    return false
+end
+
+-- Tile t of field f walked out in the background (once).
+WarmField = function(f, t)
+    if f.tilesDone[t] or not f.m.d.tiles[t] then return end
+    f.warming = f.warming or {}
+    if f.warming[t] then return end
+    f.warming[t] = true
+    Warm(f.m, t, f, true)
+end
+
+-- Whether field f has worked out the tiles that finding a point in it touches (its cell and the cells
+-- 3 round it: LocateReached). If not, they're worked out in the background, a tile a frame, and the
+-- plan asks again when they're done: walking a tile node by node in the plan's frame is what froze it.
+ReadyAt = function(f, n, w)
+    local m = f.m
+    local gr, gc = floor((m.max - n) / m.fine), floor((m.max - w) / m.fine)
+    local ready = true
+    for dr = -3, 3, 6 do
+        for dc = -3, 3, 6 do
+            local t = CellAt(gr + dr, gc + dc)
+            if not f.tilesDone[t] and m.d.tiles[t] and t ~= floor(f.src / 65536) then
+                ready = false
+                f.warming = f.warming or {}
+                if not f.warming[t] then
+                    f.warming[t] = true
+                    Warm(m, t, f, true)
+                end
+            end
+        end
+    end
+    return ready
 end
 
 -- Whether the work on a place's tile should wait: a door search to finish, or this frame has done enough.
@@ -1300,6 +1440,19 @@ function G:Cost(f, n, w)
     local key = floor(n) .. ":" .. floor(w)
     local known = f.costs[key]
     if known ~= nil then return known or nil end
+    local Note = ns.SlowNote
+    -- COST_BUDGET a frame for every place, not only those on tiles still to unpack: a plan weighs
+    -- every flight point, dock and town, and the field (and so this cache) is made again every
+    -- MOVE_YARDS you walk, so with every tile unpacked a plan on the move paid for all of them at
+    -- once (350 ms, following a route). Past the budget a place gets a straight-line guess, not
+    -- kept: the next plans measure the rest, a budget's worth each.
+    local now = GetTime()
+    if costFrame ~= now then costFrame, costSpent = now, 0 end
+    if costSpent >= COST_BUDGET then
+        if Note then Note("Cost.guessed", 1) end
+        return sqrt((f.n - n) ^ 2 + (f.w - w) ^ 2) * 1.2 / f.speed
+    end
+    if Note then Note("Cost.measured", 1) end
     local start = debugprofilestop()
     local tile = CellAt(floor((m.max - n) / m.fine), floor((m.max - w) / m.fine))
     if not f.tilesDone[tile] and OverBudget(m, tile, f) then
@@ -1308,14 +1461,45 @@ function G:Cost(f, n, w)
     end
     local cost
     local p = Locate(m, n, w, nil, true)
+    if Note then Note("Cost.locate", debugprofilestop() - start) end
     if p then
         local t = floor(p / 65536)
-        if f.tilesDone[t] then
-            p = LocateReached(f, n, w)
-            cost = p and TileField(f, floor(p / 65536)).secs[p]
-        else
-            local D = Doors(m)
-            Ensure(f, t)
+        -- Only work that's done already, in the plan's frame: a tile not walked out (LocateReached
+        -- searches every tile around the place, 50-100 ms each, and a place by a tile's corner has
+        -- three), or doors not settled in the floor's own tile (it can be the next tile over from
+        -- the one checked above), costs a straight-line guess now and is worked out in the
+        -- background (Warm); the next plan has the real one. Each of those ran in the frame, and a
+        -- hearthstone by a corner (Tarren Mill) cost 320 ms every plan.
+        local t1 = debugprofilestop()
+        local D = Doors(m)
+        if f.partial and not TileSettled(f, D, t) then
+            if Note then Note("Cost.doors", debugprofilestop() - t1) end
+            -- (Queued once: plans keep asking until it's done.)
+            f.costWarm = f.costWarm or {}
+            if not f.costWarm[t] then f.costWarm[t] = true; Warm(m, t, f) end
+            costSpent = costSpent + debugprofilestop() - start
+            return sqrt((f.n - n) ^ 2 + (f.w - w) ^ 2) * 1.2 / f.speed
+        end
+        if Note then Note("Cost.doors", debugprofilestop() - t1) end
+        local t2 = debugprofilestop()
+        local tf = f.tilesDone[t]
+        if tf and tf.secs[p] then
+            cost = tf.secs[p]
+        elseif tf and ReadyAt(f, n, w) then
+            -- Another floor here the field reaches: only from tiles already walked out.
+            local gr, gc = floor((m.max - n) / m.fine), floor((m.max - w) / m.fine)
+            local T, fi, k = CellNodes(m, gr, gc)
+            if T and f.tilesDone[T.t] then
+                local secs = f.tilesDone[T.t].secs
+                for j = fi, fi + k - 1 do
+                    local c = secs[Id(T.t, j)]
+                    if c and (not cost or c < cost) then cost = c end
+                end
+            end
+        end
+        if Note then Note("Cost.walked", debugprofilestop() - t2) end
+        local t3 = debugprofilestop()
+        if not cost then
             local pn, pw = Where(m, p)
             for j = 1, D.size[t] or 0 do
                 local id = D.base[t] + j
@@ -1327,8 +1511,12 @@ function G:Cost(f, n, w)
                 end
             end
         end
+        if Note then Note("Cost.estimate", debugprofilestop() - t3) end
     end
-    costSpent = costSpent + debugprofilestop() - start
+    local took = debugprofilestop() - start
+    costSpent = costSpent + took
+    -- (The slowest single place: the budget is checked between places, not inside one.)
+    if Note and took >= 5 then Note("Cost.slowest " .. floor(n) .. "," .. floor(w), took) end
     f.costs[key] = cost or false
     return cost
 end
@@ -1357,6 +1545,10 @@ end
 local refining = {}
 
 local function QueueRefine(f, t, a, b, key)
+    -- (Each plan asks again until it's done: queued once.)
+    f.queued = f.queued or {}
+    if f.queued[key] then return end
+    f.queued[key] = true
     refining[#refining + 1] = { f, t, a, b, key }
     if jobs.refine then return end
     jobs.refine = { field = {}, co = coroutine.create(function()
@@ -1412,12 +1604,10 @@ local function Nodes(f, p)
             if f.steps[key] == nil then
                 local ta, tb = a, b
                 if f.reverse then ta, tb = b, a end
-                if debugprofilestop() - start < REFINE_BUDGET then
-                    f.steps[key] = Walk(f, D.tile[prev], ta, tb) or false
-                else
-                    f.coarse = true
-                    QueueRefine(f, D.tile[prev], ta, tb, key)
-                end
+                -- (Always in the background: one tile's walk can take 100 ms, too long to start in
+                -- a frame however much budget is left.)
+                f.coarse = true
+                QueueRefine(f, D.tile[prev], ta, tb, key)
             end
         end
     end
@@ -1501,8 +1691,9 @@ end
 -- after MEND_LIMIT nodes: the nodes in order, or nil.
 local MEND_NODES = 40    -- nodes of a path looked at on each side of a tile's edge
 local MEND_LIMIT = 4000  -- nodes one search may go through
-local function Between(m, f, a, b)
+local function Between(m, f, a, b, yieldable)
     local bn, bw = Where(m, b)
+    local start = debugprofilestop()
     local function Left(id)
         local n, w = Where(m, id)
         return sqrt((n - bn) ^ 2 + (w - bw) ^ 2) / f.speed
@@ -1523,10 +1714,14 @@ local function Between(m, f, a, b)
             end
             count = count + 1
             if count > MEND_LIMIT then return nil end
-            for _, l in ipairs(Links(m, u)) do
-                local v = l[1]
+            if yieldable and count % 100 == 0 and debugprofilestop() - start > (G.rush and RUSH or BUDGET) then
+                coroutine.yield()
+                start = debugprofilestop()
+            end
+            for _, l1, l2, l3 in Step3, Links(m, u), -2 do
+                local v = l1
                 if not done[v] then
-                    local wgt = StepCost(m, f, u, v, l[2], l[3])
+                    local wgt = StepCost(m, f, u, v, l2, l3)
                     if wgt and (not dist[v] or dist[u] + wgt < dist[v]) then
                         dist[v], from[v] = dist[u] + wgt, u
                         H.push(dist[v] + Left(v), v)
@@ -1535,6 +1730,26 @@ local function Between(m, f, a, b)
             end
         end
     end
+end
+
+-- Stretches waiting to be mended, searched in the background a little each frame (one search can go
+-- through 4000 nodes: 100 ms in one go). Listeners hear "mend" when they're done, and plan again.
+local mending = {}
+local function QueueMend(f, a, b, key)
+    f.queued = f.queued or {}
+    if f.queued[key] then return end
+    f.queued[key] = true
+    mending[#mending + 1] = { f, a, b, key }
+    if jobs.mend then return end
+    jobs.mend = { field = {}, co = coroutine.create(function()
+        while mending[1] do
+            local r = table.remove(mending, 1)
+            local mf = r[1]
+            if mf.steps[r[4]] == nil then mf.steps[r[4]] = Between(mf.m, mf, r[2], r[3], true) or false end
+        end
+    end) }
+    queue[#queue + 1] = "mend"
+    driver:Show()
 end
 
 -- A route goes from tile to tile by their doors, which can stand 20 cells apart, so near a tile's
@@ -1570,9 +1785,9 @@ local function Mend(f, nodes)
             if not f.reverse then a, b = b, a end
             local key = a .. ">" .. b .. ">mend"
             way = f.steps[key]
-            if way == nil and debugprofilestop() - start < REFINE_BUDGET then
-                way = Between(m, f, a, b) or false
-                f.steps[key] = way
+            if way == nil then
+                QueueMend(f, a, b, key)
+                way = false
             end
         end
         if way then
@@ -1603,11 +1818,11 @@ local function Line(m, f, a, b)
     local way, weight, secs, climb = { a }, 0, 0, 0
     local function Go(r, c)
         local nxt, nh, nd, wt, sc
-        for _, l in ipairs(Links(m, cur)) do
-            local _, _, lh, _, lr, lc = Where(m, l[1])
-            if lr == r and lc == c and l[2] == 0 and (not nd or abs(lh - hc) < nd) then
-                local cost, took = StepCost(m, f, cur, l[1], l[2], l[3])
-                if cost then nxt, nh, nd, wt, sc = l[1], lh, abs(lh - hc), cost, took end
+        for _, l1, l2, l3 in Step3, Links(m, cur), -2 do
+            local _, _, lh, _, lr, lc = Where(m, l1)
+            if lr == r and lc == c and l2 == 0 and (not nd or abs(lh - hc) < nd) then
+                local cost, took = StepCost(m, f, cur, l1, l2, l3)
+                if cost then nxt, nh, nd, wt, sc = l1, lh, abs(lh - hc), cost, took end
             end
         end
         if not nxt then return false end
@@ -1641,20 +1856,50 @@ local function Straighten(f, nodes)
     local m, n = f.m, #nodes
     if n < 4 then return nodes end
     -- In walking order: a field to the target lists you first, one from you last.
-    local walk, index, cost, barrier = {}, {}, { 0 }, { 0 }
+    local walk, index = {}, {}
     for k = 1, n do
         walk[k] = f.reverse and nodes[k] or nodes[n - k + 1]
         index[walk[k][1]] = k
     end
-    for k = 2, n do
+    -- The cost of each step (into walk[k]), worked out only for the stretches a line is tried
+    -- against: false where it isn't a plain walk (a drop, a lift), which no line may stand in for.
+    -- (Working it out for the whole path first took 100 ms on a long one, every time it was drawn.)
+    local wts = {}
+    local function Wt(k)
+        local w = wts[k]
+        if w ~= nil then return w end
         local u, v, wt = walk[k - 1][1], walk[k][1], nil
-        for _, l in ipairs(Links(m, u)) do
-            if l[1] == v then
-                if l[2] == 0 then wt = StepCost(m, f, u, v, l[2], l[3]) end
+        -- (The packed links first: Links works out the diagonals too, from the neighbours' links,
+        -- and a long path is thousands of nodes whose caches G:Tidy has cleared.)
+        local P, found = Packed(m, u), false
+        for j = 1, #P, 4 do
+            if P[j] == v then
+                found = true
+                if P[j + 1] == 0 then wt = StepCost(m, f, u, v, 0, P[j + 2]) end
                 break
             end
         end
-        cost[k], barrier[k] = cost[k - 1] + (wt or 0), wt and barrier[k - 1] or k
+        if not found then
+            for _, l1, l2, l3 in Step3, Links(m, u), -2 do
+                if l1 == v then
+                    if l2 == 0 then wt = StepCost(m, f, u, v, l2, l3) end
+                    break
+                end
+            end
+        end
+        w = wt or false
+        wts[k] = w
+        return w
+    end
+    -- What walking from walk[from] to walk[e] costs, or nil when the stretch isn't all plain walking.
+    local function Cost(from, e)
+        local sum = 0
+        for k = from + 1, e do
+            local w = Wt(k)
+            if not w then return nil end
+            sum = sum + w
+        end
+        return sum
     end
     f.pulled = f.pulled or {}
     local start = debugprofilestop()
@@ -1666,13 +1911,14 @@ local function Straighten(f, nodes)
             way = nil -- no line ends here
         elseif known and index[known[1]] and index[known[1]] < e then
             s, way = index[known[1]], known
-        elseif debugprofilestop() - start < REFINE_BUDGET then
+        elseif Refining() then
             f.pulled[id] = false
             for _, span in ipairs(PULL_SPANS) do
                 local from = math.max(1, e - span)
-                if e - from >= 2 and barrier[e] < from + 1 then
+                local stretch = e - from >= 2 and Cost(from, e)
+                if stretch then
                     local line, weight = Line(m, f, walk[from][1], id)
-                    if line and weight <= (cost[e] - cost[from]) * PULL_SLACK then
+                    if line and weight <= stretch * PULL_SLACK then
                         -- Only its ends: the cells it crossed proved it, they'd only draw a zigzag.
                         s, way = from, { line[1], id }
                         f.pulled[id] = way
@@ -1748,7 +1994,7 @@ local function Round(f, pts, fixed)
             if not fixed[b] and not a.water and not b.water and not c.water and a.node and b.node and c.node then
                 local key = pass .. ":" .. a.node .. ":" .. b.node .. ":" .. c.node
                 cut = f.rounded[key]
-                if cut == nil and debugprofilestop() - start < REFINE_BUDGET then
+                if cut == nil and Refining() then
                     cut = Cut(a, b, c)
                     f.rounded[key] = cut
                 end
@@ -1774,11 +2020,22 @@ end
 function G:Path(f, n, w)
     if not (f and f.nav) then return Old:Path(f, n, w) end
     local m = f.m
+    if not ReadyAt(f, n, w) then return nil end
+    local Note = ns.SlowNote
+    local t0 = debugprofilestop()
     local p = LocateReached(f, n, w)
     if not p then return nil end
     local nodes = Nodes(f, p)
     if not nodes then return nil end
-    nodes = Straighten(f, Mend(f, nodes))
+    local t1 = debugprofilestop()
+    nodes = Mend(f, nodes)
+    local t2 = debugprofilestop()
+    nodes = Straighten(f, nodes)
+    if Note then
+        local t3 = debugprofilestop()
+        Note("Path.nodes", t1 - t0); Note("Path.mend", t2 - t1); Note("Path.straighten", t3 - t2)
+        Note("Path.count/100", #nodes / 100)
+    end
     local pts = {}
     for k, e in ipairs(nodes) do
         local pn, pw, h, kind = Where(m, e[1])
@@ -1790,12 +2047,15 @@ function G:Path(f, n, w)
     for k = 2, #pts do
         local a, b = pts[k - 1], pts[k]
         local wu, wv = f.reverse and a or b, f.reverse and b or a
-        for _, l in ipairs(Links(m, wu.node)) do
-            if l[1] == wv.node then
-                if l[2] == 2 then
-                    drop[k] = l[3]
+        -- (Drops and lifts are packed links; the diagonals Links adds are only walks and swims.)
+        local P = Packed(m, wu.node)
+        for j = 1, #P, 4 do
+            local l1, l2, l3 = P[j], P[j + 1], P[j + 2]
+            if l1 == wv.node then
+                if l2 == 2 then
+                    drop[k] = l3
                     keep[k - 1], keep[k] = true, true
-                elseif l[2] == 3 then
+                elseif l2 == 3 then
                     -- A lift, portal or the tram: both ends stay on the way, and the arrow goes to them.
                     keep[k - 1], keep[k] = true, true
                     a.via, b.via, a.lift, b.lift = true, true, true, true
@@ -1821,7 +2081,9 @@ function G:Path(f, n, w)
         m.stepCount = m.stepCount + 1
     end
     -- Curves are walked, whatever they cut across.
+    local t4 = debugprofilestop()
     local curved = Round(f, out, fixed)
+    if Note then Note("Path.round", debugprofilestop() - t4) end
     if curved ~= out then
         for k = 2, #curved do
             local a, b = curved[k - 1], curved[k]
@@ -1846,9 +2108,9 @@ function G:Step(continent, n1, w1, n2, w2)
     local b = a and Locate(m, n2, w2, select(3, Where(m, a)))
     if not (a and b) then return nil end
     if a == b then return "walk", 0 end
-    for _, l in ipairs(Links(m, a)) do
-        if l[1] == b then
-            if l[2] == 2 then return "drop", l[3] end
+    for _, l1, l2, l3 in Step3, Links(m, a), -2 do
+        if l1 == b then
+            if l2 == 2 then return "drop", l3 end
             return "walk", 0
         end
     end
@@ -1871,14 +2133,25 @@ function G:Ahead(continent, n1, w1, n2, w2)
         local r = floor((m.max - (n1 + (n2 - n1) * i / steps)) / m.fine)
         local c = floor((m.max - (w1 + (w2 - w1) * i / steps)) / m.fine)
         if r ~= cr or c ~= cc then
+            -- Not on the tiles unpacked yet: unpack them in the background and say so, rather than
+            -- holding up the frame (a tile takes 50-100 ms; this runs with every arrow update).
+            for dr = -2, 2, 4 do
+                for dc = -2, 2, 4 do
+                    local t = CellAt(cr + dr, cc + dc)
+                    if m.tiles[t] == nil and m.d.tiles[t] then
+                        Warm(m, t)
+                        return "unknown"
+                    end
+                end
+            end
             local nxt, nh, nd, fall
             if not m.block[StepKey(CellKey(cr, cc), CellKey(r, c))] then
-                for _, l in ipairs(Links(m, cur)) do
-                    local _, _, lh, _, lr, lc = Where(m, l[1])
-                    if lr == r and lc == c and l[2] ~= 3 then
+                for _, l1, l2, l3 in Step3, Links(m, cur), -2 do
+                    local _, _, lh, _, lr, lc = Where(m, l1)
+                    if lr == r and lc == c and l2 ~= 3 then
                         -- A walk beats a drop to the same cell.
-                        local dd = abs(lh - hc) + (l[2] == 2 and 1000 or 0)
-                        if not nd or dd < nd then nxt, nh, nd, fall = l[1], lh, dd, l[2] == 2 and l[3] or 0 end
+                        local dd = abs(lh - hc) + (l2 == 2 and 1000 or 0)
+                        if not nd or dd < nd then nxt, nh, nd, fall = l1, lh, dd, l2 == 2 and l3 or 0 end
                     end
                 end
             end
@@ -1897,6 +2170,20 @@ function G:Height(continent, n, w)
     local p = HereNode(continent, n, w) or Locate(m, n, w)
     if not p then return Old:Height(continent, n, w) end
     return (select(3, Where(m, p)))
+end
+
+-- G:Height for what's shown every update: nil while the point's tile isn't unpacked yet (it gets
+-- unpacked in the background, and the next update has it).
+function G:HeightSoon(continent, n, w)
+    local m = Map(continent)
+    if m and not HereNode(continent, n, w) then
+        local t = CellAt(floor((m.max - n) / m.fine), floor((m.max - w) / m.fine))
+        if m.tiles[t] == nil and m.d.tiles[t] then
+            Warm(m, t)
+            return nil, true
+        end
+    end
+    return self:Height(continent, n, w)
 end
 
 -- The place indoors at a world point (nav_areas.py: a cave's or a building's, the name the game
@@ -1944,11 +2231,11 @@ function G:Clear(continent, n1, w1, n2, w2, h2)
         local r, c = floor((m.max - n) / m.fine), floor((m.max - w) / m.fine)
         if r ~= cr or c ~= cc then
             local nxt, nh, nd
-            for _, l in ipairs(Links(m, cur)) do
-                local _, _, lh, k, lr, lc = Where(m, l[1])
-                if lr == r and lc == c and l[2] ~= 2 and l[2] ~= 3 and (k == 1) == swimming then
+            for _, l1, l2, l3 in Step3, Links(m, cur), -2 do
+                local _, _, lh, k, lr, lc = Where(m, l1)
+                if lr == r and lc == c and l2 ~= 2 and l2 ~= 3 and (k == 1) == swimming then
                     local dd = abs(lh - hc)
-                    if not nd or dd < nd then nxt, nh, nd = l[1], lh, dd end
+                    if not nd or dd < nd then nxt, nh, nd = l1, lh, dd end
                 end
             end
             if not nxt then return false end

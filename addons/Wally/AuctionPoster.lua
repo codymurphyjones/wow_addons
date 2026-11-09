@@ -81,9 +81,10 @@ function Auction:Build()
         row.have = row.count
         row.keep = math.min(entry.keep or 0, row.have)
         row.count = row.have - row.keep
-        row.unit, row.details = ns.Value:PostPrice(row.link)
         local status = row.location and CommodityStatus(row.location)
         row.isCommodity = status == COMMODITY
+        -- (Items that aren't commodities only take whole silver: see Value.lua.)
+        row.unit, row.details = ns.Value:PostPrice(row.link, status == ITEM)
         if not row.location then
             row.state, row.reason = "blocked", "Locked in your bags."
         elseif status ~= COMMODITY and status ~= ITEM then
@@ -186,8 +187,55 @@ local function ClearBusy()
     ns:Changed()
 end
 
+-- Whether an item Wally posts is still locked in your bags (the last post's stack on its way out,
+-- or the rest of it not yet free to post).
+local function PostLocked()
+    local db = ns.db
+    for _, _, info in C.IterateBags() do
+        if info.locked then
+            local key = ns.Key(C.NameFromLink(info.link))
+            if key and (db.auctionList[key] or (db.oneOff and db.oneOff[key])) then return true end
+        end
+    end
+    return false
+end
+
+-- A post or cancel stays "Posting..." until it has settled: the server answered it, the auction
+-- house takes another request, and your bags have let go of the items. Each of those used to
+-- free the button on its own, so it flicked between Posting... and ready a few times over two
+-- seconds before it was really ready. BUSY_SECONDS frees it whatever happens.
+-- Settled means settled twice in a row, a tenth of a second apart: the auction house can say it's
+-- ready for a moment before a request just sent (the Active view's refresh) makes it busy again.
+-- The Active view's refresh (QueryOwnedAuctions) goes out from here too, only once the auction
+-- house takes requests again: sent the moment the post was confirmed, the server answered it
+-- "Internal auction error". The button stays Posting... until that list has come back.
+local answered, steady, queryDue, queryBack = false, 0, false, true
+local QueryOwned
+local function Settle(token)
+    if not busy or token ~= busyToken then return end
+    if answered and ThrottleReady() and not PostLocked() then
+        if queryDue then
+            queryDue, queryBack, steady = false, false, 0
+            QueryOwned()
+        elseif queryBack then
+            steady = steady + 1
+            if steady >= 2 then return ClearBusy() end
+        end
+    else
+        steady = 0
+    end
+    C_Timer.After(0.1, function() Settle(token) end)
+end
+
+-- The server answered the post or cancel.
+local function Answered()
+    if not busy then return end
+    answered = true
+    Settle(busyToken)
+end
+
 local function StartBusy()
-    busy = true
+    busy, answered, steady, queryDue, queryBack = true, false, 0, false, true
     Auction.lastPost = GetTime()
     busyToken = busyToken + 1
     local token = busyToken
@@ -239,8 +287,24 @@ local function RecentlyCancelled(id)
     return cancelled[id] and GetTime() - cancelled[id] < CANCEL_GRACE
 end
 
-local function QueryOwned()
-    if C_AuctionHouse.QueryOwnedAuctions then pcall(C_AuctionHouse.QueryOwnedAuctions, {}) end
+-- Asks only while the auction house takes requests (asked while it's busy, the server answers
+-- "Internal auction error"); otherwise waits for it, a few seconds at most. Repeat asks merge.
+local queryWaiting = false
+function QueryOwned()
+    if not C_AuctionHouse.QueryOwnedAuctions or queryWaiting then return end
+    local tries = 0
+    local function Try()
+        if not Auction.open then queryWaiting = false; return end
+        tries = tries + 1
+        if ThrottleReady() or tries > 50 then
+            queryWaiting = false
+            pcall(C_AuctionHouse.QueryOwnedAuctions, {})
+        else
+            queryWaiting = true
+            C_Timer.After(0.1, Try)
+        end
+    end
+    Try()
 end
 
 function Auction:RefreshOwned()
@@ -293,30 +357,35 @@ local function RebuildCancels()
     Auction.cancels = list
 end
 
+-- Asked in Wally's own popup (W.Ask), never the game's StaticPopup frames: an addon's popup there
+-- taints them, and the game's next dialog in that frame (buying a bank tab) gets blocked.
 local ShowNextAsk
-StaticPopupDialogs["WALLY_CANCEL_AUCTIONS"] = {
-    text = "Also cancel your %s?\n\nDeposits are not refunded.", button1 = YES or "Yes", button2 = NO or "No",
-    OnAccept = function(_, data)
-        cancelKeys[data.key] = true
-        PendingRemoved()[data.key] = "cancel"
-        RebuildCancels()
-        ns:Changed()
-    end,
-    -- No (or Escape): leave its auctions up. Closing the auction house only hides the popup, so
-    -- the question stays saved and comes back next visit.
-    OnCancel = function(_, data)
-        if data then PendingRemoved()[data.key] = nil end
-    end,
-    OnHide = function() C_Timer.After(0, function() ShowNextAsk() end) end,
-    timeout = 0, whileDead = 1, hideOnEscape = 1, preferredIndex = 3,
-}
+local asking = false
 
 function ShowNextAsk()
-    if not Auction.open or StaticPopup_Visible("WALLY_CANCEL_AUCTIONS") then return end
+    if not Auction.open or asking then return end
     local a = table.remove(askQueue, 1)
     if not a then return end
     local what = ("%d auction%s of %s"):format(a.count, a.count == 1 and "" or "s", a.link or a.key)
-    StaticPopup_Show("WALLY_CANCEL_AUCTIONS", what, nil, { key = a.key })
+    asking = true
+    local function Keep() PendingRemoved()[a.key] = nil end
+    ns.Widgets.Ask({
+        tag = "cancelAuctions",
+        text = ("Also cancel your %s?\n\nDeposits are not refunded."):format(what),
+        buttons = {
+            { YES or "Yes", function()
+                cancelKeys[a.key] = true
+                PendingRemoved()[a.key] = "cancel"
+                RebuildCancels()
+                ns:Changed()
+            end },
+            { NO or "No", Keep },
+        },
+        -- No (or Escape): leave its auctions up. Closing the auction house only takes the popup
+        -- away (W.CloseAsk), so the question stays saved and comes back next visit.
+        onCancel = Keep,
+        onHide = function() asking = false; C_Timer.After(0, function() ShowNextAsk() end) end,
+    })
 end
 
 -- ---------------------------------------------------------------------------
@@ -504,8 +573,13 @@ local function OnCanceled(auctionID)
         pendingCancels[id] = nil
         ns:AddAuctionCancel(p.link or p.key, p.quantity, p.unit, p.byWally)
     end
-    ClearBusy()
-    QueryOwned()
+    -- Wally's cancel: Settle refreshes the Active view once the auction house is ready again.
+    if busy then
+        queryDue = true
+        Answered()
+    else
+        QueryOwned()
+    end
     ns:Changed()
 end
 
@@ -552,23 +626,35 @@ if Auction.supported then
         Auction.open = false
         wipe(approved); wipe(done); wipe(cancelKeys); wipe(cancelled); wipe(pendingCancels); wipe(askQueue)
         Auction.cancels, Auction.owned = {}, nil
-        StaticPopup_Hide("WALLY_CANCEL_AUCTIONS")
+        ns.Widgets.CloseAsk("cancelAuctions")
         busy, Auction.posts = false, 0
         ns:Changed()
     end)
-    ns:On("OWNED_AUCTIONS_UPDATED", OnOwnedUpdated)
+    ns:On("OWNED_AUCTIONS_UPDATED", function()
+        queryBack = true
+        OnOwnedUpdated()
+    end)
     ns:On("CHAT_MSG_SYSTEM", OnSystemMessage)
     ns:On("AUCTION_CANCELED", OnCanceled)
     if C_AuctionHouse.CancelAuction then hooksecurefunc(C_AuctionHouse, "CancelAuction", OnCancelSent) end
     -- New auctions show up in the Active view; one query covers a burst of confirmations.
     local queryToken = 0
     ns:On("AUCTION_HOUSE_AUCTION_CREATED", function()
-        ClearBusy()
+        -- Wally's own post: Settle refreshes the Active view as soon as the auction house is ready
+        -- again, while the button still says Posting... (A fixed second later, as before, the
+        -- request landed after the button was ready and flicked it back to Posting...)
+        if busy then
+            queryToken = queryToken + 1
+            queryDue = true
+            Answered()
+            return
+        end
         queryToken = queryToken + 1
         local token = queryToken
         C_Timer.After(1, function() if token == queryToken and Auction.open then QueryOwned() end end)
     end)
-    ns:On("AUCTION_HOUSE_THROTTLED_SYSTEM_READY", ClearBusy)
+    -- (The auction house ready again isn't the post done: Settle checks it along with the rest.)
+    ns:On("AUCTION_HOUSE_THROTTLED_SYSTEM_READY", function() if answered then Settle(busyToken) end end)
     ns:On("BAG_UPDATE_DELAYED", function() ns:Changed() end)
     ns:On("ITEM_LOCK_CHANGED", function()
         if Auction.open then ns:Changed() end

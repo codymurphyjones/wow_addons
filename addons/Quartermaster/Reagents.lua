@@ -217,15 +217,36 @@ end
 local function Step() return IsShiftKeyDown() and 5 or 1 end
 
 -- ---------------------------------------------------------------------------
--- Vendor reagents. Thread, wood, vials, dyes, flux...: anything a vendor sells isn't put on the
--- Cart. The Waypoint addon owns where vendors are and what they sell: Quartermaster asks it which
+-- Vendor reagents. Thread, wood, vials, dyes, flux...: anything a vendor near enough sells isn't put
+-- on the Cart (FromVendor: a far-off vendor's reagent goes to the auction house like any other). The Waypoint addon owns where vendors are and what they sell: Quartermaster asks it which
 -- reagents vendors sell (Waypoint:SoldByVendors), and hands those to its popup
 -- (Waypoint:PromptVendors): Navigate (its arrow leads to the nearest vendor selling them), Add
 -- anyway (back here, onto the Cart), or Cancel. Without Waypoint, everything goes to the Cart.
+-- The answer is kept while the profession window stays open (Cancel isn't: it asks again): Add anyway,
+-- and the next vendor reagents go straight onto the Cart; Navigate, and they join the trip, the vendors
+-- for everything chosen so far. Closing the window forgets it.
 -- ---------------------------------------------------------------------------
+
+local answer = {} -- kind name -> { how = "add" | "navigate", items = { [itemID] = name } }
 
 local function Vendors()
     return Waypoint and Waypoint.SoldByVendors and Waypoint.PromptVendors and Waypoint or nil
+end
+
+-- A vendor is the way to get it only when one is right here: on the map you're on (the same city or
+-- zone) and within VENDOR_YARDS. Anything else is bought at the auction house when it has a price there:
+-- a trip to another zone (Wild Steelbloom's few vendors) costs more than the auction house asks. Leaded
+-- Vials: a trade supplier in every town, so on your map wherever you are. No auction price: the vendor
+-- it is (it may not be on the auction house at all). The one rule for + and Add auctions alike.
+local VENDOR_YARDS = 800
+local function FromVendor(wp, item)
+    if type(item) ~= "number" or wp:SoldByVendors(item) == 0 then return false end
+    if not (ns.AuctionPrice and ns.AuctionPrice.Market(item)) then return true end
+    if not wp.VendorYards then return true end
+    local yards, map = wp:VendorYards(item)
+    if not yards then return false end
+    local here = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+    return yards <= VENDOR_YARDS and (map == nil or here == nil or map == here)
 end
 
 -- One click's additions: { { item, qty, name } }. Auction reagents go to the Cart as always;
@@ -236,7 +257,7 @@ local function AddBatch(adds, kind)
     local wp, vendor, auction, seen = Vendors(), {}, {}, {}
     for _, a in ipairs(adds) do
         if a.qty > 0 then
-            if wp and type(a.item) == "number" and wp:SoldByVendors(a.item) > 0 then
+            if wp and FromVendor(wp, a.item) then
                 vendor[#vendor + 1] = { id = a.item, qty = a.qty, name = a.name }
             else
                 Adjust(a.item, a.qty)
@@ -248,18 +269,42 @@ local function AddBatch(adds, kind)
     if #vendor > 0 and kind then
         for _, d in ipairs(ReadReagents(kind)) do
             local key = d.itemID or d.name
-            if key and not seen[key] and d.qty > 0 and not (d.itemID and wp:SoldByVendors(d.itemID) > 0) then
+            if key and not seen[key] and d.qty > 0 and not FromVendor(wp, d.itemID) then
                 auction[#auction + 1] = { id = d.itemID, name = d.name }
                 seen[key] = true
             end
         end
     end
-    if #vendor > 0 then
-        -- Navigate: the vendors, then the auction house for this recipe's reagents bought there.
-        wp:PromptVendors(vendor, function(items)
-            for _, it in ipairs(items) do Adjust(it.id, it.qty) end
-        end, "Quartermaster", auction)
+    if #vendor == 0 then return end
+    local key = kind and kind.name or "?"
+    local kept = answer[key]
+    local function Trip(items)
+        kept = answer[key] or { how = "navigate", items = {} }
+        kept.how, answer[key] = "navigate", kept
+        for _, it in ipairs(items) do kept.items[it.id] = it.name or true end
+        return kept
     end
+    if kept and kept.how == "add" then
+        for _, it in ipairs(vendor) do Adjust(it.id, it.qty) end
+        return
+    end
+    if kept and kept.how == "navigate" then
+        -- The trip grows: the vendors for everything chosen while the window's open.
+        Trip(vendor)
+        local ids, names = {}, {}
+        for id, name in pairs(kept.items) do
+            ids[#ids + 1] = id
+            names[#names + 1] = type(name) == "string" and name or ("item " .. id)
+        end
+        table.sort(names)
+        wp:NavigateToItems(ids, "Vendor: " .. table.concat(names, ", "), "Quartermaster", auction)
+        return
+    end
+    -- Navigate: the vendors, then the auction house for this recipe's reagents bought there.
+    wp:PromptVendors(vendor, function(items)
+        answer[key] = { how = "add" }
+        for _, it in ipairs(items) do Adjust(it.id, it.qty) end
+    end, "Quartermaster", auction, Trip)
 end
 
 -- ---------------------------------------------------------------------------
@@ -289,9 +334,34 @@ local function MakeRow(panel, i)
     iconBox:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     local plus = W.MakeButton(row, "+", 22, 22); plus:SetPoint("RIGHT")
-    row.count = row:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlight")
-    row.count:SetWidth(34); row.count:SetJustifyH("CENTER")
+    -- The count on the cart, typed: Enter sets it (more goes through AddBatch like +, so vendor
+    -- reagents still ask; less goes down like -, never below what's bought), Escape or clicking
+    -- away puts back what's there.
+    row.count = W.MakeNumberBox(row, 34)
+    row.count:SetHeight(22); row.count:SetNumeric(true); row.count:SetMaxLetters(5)
     row.count:SetPoint("RIGHT", plus, "LEFT", -2, 0)
+    local function Revert(self)
+        local d = row.data
+        self:SetValue(d and d.qty or 0)
+    end
+    row.count:SetScript("OnEnterPressed", function(self)
+        local d, want = row.data, self:GetValue()
+        self:ClearFocus()
+        if not (d and want) then return Revert(self) end
+        local delta = want - d.qty
+        if delta > 0 and (d.itemID or d.name) then
+            AddBatch({ { item = d.itemID or d.name, qty = delta, name = d.name } }, panel.kind)
+        elseif delta < 0 and d.itemID then
+            Adjust(d.itemID, delta)
+        end
+        Revert(self)
+        Reagents:Refresh()
+    end)
+    row.count:SetScript("OnEscapePressed", function(self) self:ClearFocus(); Revert(self) end)
+    row.count:HookScript("OnEditFocusLost", Revert)
+    row.count:HookScript("OnEditFocusGained", function(self) self:HighlightText() end)
+    W.Hint(row.count, "On the cart", "How many the Cart still has to buy. Type a number and press Enter to set it; "
+        .. "Escape keeps it as it was. Never below what you've already bought.")
     local minus = W.MakeButton(row, "-", 22, 22); minus:SetPoint("RIGHT", row.count, "LEFT", -2, 0)
     plus:SetScript("OnClick", function()
         local d = row.data
@@ -301,13 +371,26 @@ local function MakeRow(panel, i)
         local d = row.data
         if d and d.itemID then Adjust(d.itemID, -Step()) end
     end)
-    W.Hint(plus, "Add to cart", "Adds 1 (Shift: 5) to the list the Cart buys. Vendor-sold reagents ask to navigate to a vendor instead.")
+    W.Hint(plus, "Add to cart", "Adds 1 (Shift: 5) to the list the Cart buys. A reagent a vendor right here sells (on your map, close by) asks to navigate to the vendor instead; one only sold in another zone or far across town goes on the Cart for the auction house.")
     W.Hint(minus, "Take off cart", "Removes 1 (Shift: 5). Never below what you've already bought.")
+
+    -- A vendor sells it (anywhere): the arrow to the nearest one (Waypoint). Shown by Fill.
+    local nav = W.MakeButton(row, "", 22, 22); nav:SetPoint("RIGHT", minus, "LEFT", -6, 0)
+    nav.icon = nav:CreateTexture(nil, "ARTWORK"); nav.icon:SetSize(16, 16); nav.icon:SetPoint("CENTER")
+    nav.icon:SetTexture("Interface\\Icons\\INV_Misc_Map_01"); nav.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    nav:SetScript("OnClick", function()
+        local d, wp = row.data, Vendors()
+        if d and d.itemID and wp and wp.NavigateToItems then
+            wp:NavigateToItems({ d.itemID }, "Vendor: " .. (d.name or ("item " .. d.itemID)), "Quartermaster")
+        end
+    end)
+    W.Hint(nav, "To a vendor", "Points Waypoint's arrow at the nearest vendor selling this reagent.")
+    row.nav = nav
 
     -- What's left of this reagent after crafting as many as the reagents cover (bags + cart).
     row.left = row:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     row.left:SetWidth(LEFT_W); row.left:SetJustifyH("RIGHT")
-    row.left:SetPoint("RIGHT", minus, "LEFT", -10, 0)
+    row.left:SetPoint("RIGHT", nav, "LEFT", -6, 0)
 
     row.name = row:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     row.name:SetPoint("TOPLEFT", iconBox, "TOPRIGHT", 8, -1)
@@ -328,6 +411,8 @@ local function BuildPanel(kind, parent)
     panel:EnableMouse(true)
     panel:Hide()
     panel.kind = kind
+    -- (The profession window closing forgets the answer to the vendor question: AddBatch.)
+    parent:HookScript("OnHide", function() answer[kind.name] = nil end)
 
     local logo = panel:CreateTexture(nil, "ARTWORK"); logo:SetSize(20, 20)
     logo:SetPoint("TOPLEFT", 10, -7); logo:SetTexture(ns.ICON)
@@ -347,11 +432,36 @@ local function BuildPanel(kind, parent)
     end)
     W.Hint(all, "Add all reagents", "Adds what one craft needs of every reagent (Shift: five crafts).")
 
+    -- Add auctions: like Add all, but only the reagents bought at the auction house: everything but what
+    -- a vendor right here sells (FromVendor, the same rule as +: vials, thread, flux in town), skipped
+    -- with no Waypoint popup. Needs Waypoint to know what vendors sell; reagents known only by name (no
+    -- link) can't be checked and are added.
+    local auctions = W.MakeButton(panel, "Add auctions", 92, 22); auctions:SetPoint("RIGHT", all, "LEFT", -6, 0)
+    auctions:SetScript("OnClick", function()
+        local wp = Vendors()
+        if not wp then return ns:Print("Add auctions needs the Waypoint addon to tell which reagents vendors sell.", true) end
+        local times, skipped = Step(), {}
+        for _, row in ipairs(panel.rows) do
+            local d = row:IsShown() and row.data
+            if d and d.need > 0 and (d.itemID or d.name) then
+                if d.itemID and FromVendor(wp, d.itemID) then
+                    skipped[#skipped + 1] = d.name or ("item:" .. d.itemID)
+                else
+                    Adjust(d.itemID or d.name, d.need * times)
+                end
+            end
+        end
+        if #skipped > 0 then ns:Print("Skipped vendor reagents: " .. table.concat(skipped, ", ")) end
+    end)
+    W.Hint(auctions, "Add auction reagents", "Adds what one craft needs of every reagent except what a vendor right here sells "
+        .. "(on your map, close by) (Shift: five crafts). A reagent only sold in another zone or far across town goes on the Cart "
+        .. "for the auction house.")
+
     -- Add needed: evens the reagents out one craft at a time. Each reagent covers (have + on the
     -- cart) / need crafts; one click raises the fewest covered by one (Shift: five) and tops every
     -- reagent up to that, so only what's missing is added. Read fresh at the click, so fast clicks
     -- count what the previous ones added.
-    local needed = W.MakeButton(panel, "Add needed", 84, 22); needed:SetPoint("RIGHT", all, "LEFT", -6, 0)
+    local needed = W.MakeButton(panel, "Add needed", 84, 22); needed:SetPoint("RIGHT", auctions, "LEFT", -6, 0)
     needed:SetScript("OnClick", function()
         local reagents = {}
         for _, d in ipairs(ReadReagents(kind)) do
@@ -432,6 +542,10 @@ local function RefreshKind(kind)
     for i, row in ipairs(panel.rows) do
         local d = reagents[i]
         row.data = d
+        -- (The vendor button: on a row whose reagent some vendor sells.)
+        local wp = Vendors()
+        row.nav:SetShown(d ~= nil and wp ~= nil and wp.NavigateToItems ~= nil and type(d.itemID) == "number"
+            and wp:SoldByVendors(d.itemID) > 0)
         if d then
             row.icon:SetTexture(d.texture or W.UNKNOWN_ICON)
             row.icon:SetDesaturated(d.qty == 0)
@@ -450,7 +564,7 @@ local function RefreshKind(kind)
             else
                 row.left:SetText("")
             end
-            row.count:SetText(d.qty)
+            if not row.count:HasFocus() then row.count:SetValue(d.qty) end
             local color = d.qty > 0 and ACCENT or MUTED
             row.count:SetTextColor(color[1], color[2], color[3])
             row:Show()

@@ -444,6 +444,7 @@ end
 local OPTION_DEFS = {
     { "autoSell", "Sell junk automatically", "Sell as soon as you open a merchant." },
     { "safeSell", "Safe sell (12 at a time)", "Never sell more than you can buy back." },
+    { "offerGreens", "Offer greens not worth auctioning", "After junk, show green gear a vendor pays more for than the auction house. You pick what sells." },
     { "sellGreys", "Grey items are junk", "Sold without learning, unless it's more armor than a plain grey or white piece you wear." },
     { "wearGreys", "Wear better grey gear", "Put on grey gear with more armor than that plain piece, out of combat." },
     { "protectUpgrades", "Protect possible upgrades", "Keep white gear that may beat what you wear." },
@@ -618,7 +619,9 @@ end
 local function BagLabel(bag)
     local name = C.GetBagName(bag)
     if bag == 0 then return "Backpack" end
-    if bag == C.BANK then return "Bank" end
+    for i, tab in ipairs(C.BANK_TABS) do
+        if bag == tab then return "Tab " .. i end
+    end
     local n = bag > C.NUM_BAGS and (bag - C.NUM_BAGS) or bag
     return n .. ": " .. (name or "empty slot")
 end
@@ -649,7 +652,7 @@ local function BuildAuctionSettings(p)
     p.undercutOn = MakeCheckbox(p, "Undercut Auctionator's price"); p.undercutOn:SetPoint("TOPLEFT", -4, -60)
     p.undercutOn.label:SetFontObject("WallyGameFontHighlight")
     p.undercutOn:SetScript("OnClick", function(self) ns.Value:SetUndercutOn(self:GetChecked()) end)
-    Muted(Label(p, "Off: price match, 1 below Auctionator. Prices round down to whole silver, never under vendor price.", "WallyGameFontHighlightSmall", 0, -84, 400))
+    Muted(Label(p, "Off: price match, 1 copper below Auctionator, never under vendor price.", "WallyGameFontHighlightSmall", 0, -84, 400))
     p.undercut = MakeEditBox(p, 70, ""); p.undercut:SetPoint("TOPLEFT", 0, -116)
     p.undercut:SetScript("OnEnterPressed", function(self)
         local n = tonumber(self:GetText())
@@ -795,7 +798,7 @@ local function BuildSortSettings(p)
     Label(c, "top stacks", "WallyGameFontHighlightSmall", R + 164, valTop - 26)
     minus:SetScript("OnClick", function() ns.Value:SetProtectTop(ns.db.options.sort.protectTop - 1) end)
     plus:SetScript("OnClick", function() ns.Value:SetProtectTop(ns.db.options.sort.protectTop + 1) end)
-    Hint(minus, "Protect fewer", "Your most valuable stacks sort first and are never sold as junk. 0 turns this off.")
+    Hint(minus, "Protect fewer", "Your most valuable stacks are never sold as junk. 0 turns this off.")
     Hint(plus, "Protect more", "Up to 40 stacks. Worth comes from Auctionator prices, or Wally's estimate.")
     local VALUE_OPTIONS = {
         { "protectRare", "Rare and better are always protected", "Blue and purple items, whatever their rank." },
@@ -946,7 +949,7 @@ UI.page = ns.NewOptionsPage({ name = "Wally", icon = true, build = function(p)
             p:Check({ path = "db.options.auction." .. d[1], label = d[2], tooltip = d[3] })
         end
         p:Check({ path = "db.options.auction.undercutOn", label = "Undercut Auctionator's price",
-            tooltip = "Off: price match, 1 below Auctionator. Prices round down to whole silver, never under vendor price. "
+            tooltip = "Off: price match, 1 copper below Auctionator, never under vendor price. "
                 .. "Set the amount on the Auctions page under this one, or on Wally's auction house tab." })
         p:Dropdown({ path = "db.options.auction.undercutMode", label = "Undercut by",
             choices = { { "percent", "Percent" }, { "copper", "Copper" } },

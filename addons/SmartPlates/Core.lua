@@ -1,6 +1,6 @@
 local _, ns = ...
 
-ns.VERSION = "0.1.6"
+ns.VERSION = "0.1.12"
 ns.PREFIX = "|cff55d6beSmartPlates|r"
 ns.ICON = "Interface/AddOns/SmartPlates/Media/SmartPlates"
 
@@ -60,10 +60,10 @@ ns.DEFAULTS = {
         stacking = true,    -- plates stack instead of overlapping
         alwaysShow = true,  -- show plates for units out of combat too
         enemies = true,     -- enemy plates on
-        -- Stacking spacing, as multiples of the game's own plate size. SmartPlates plates are taller
-        -- than Blizzard's (name, castbar and icon rows), so they need more room than the game's 1.1.
-        spacingV = 1.8,
-        spacingH = 0.8,
+        -- Stacking spacing, as multiples of what a plate draws (name, bar and castbar room): 1 = the
+        -- boxes touch. The game stacks by that box (Plate.lua's LayoutBounds).
+        spacingV = 1.1,
+        spacingH = 1.0,
     },
     threat = {
         enabled = true,
@@ -252,6 +252,12 @@ SlashCmdList.SMARTPLATES = function(msg)
         ns.Auras:Debug()
     elseif cmd == "cvars" then
         ns.CVars:PrintColorSettings()
+    elseif cmd == "stack" and (rest == "off" or rest == "on") then
+        ns.db.general.engineStack = rest == "on"
+        ns:Print(rest == "on" and "SmartPlates hands the game its plate size and spacing box again. /reload to apply."
+            or "SmartPlates no longer hands the game its plate size or spacing box (stacking uses the game's own). /reload to apply.")
+    elseif cmd == "stack" then
+        ns.Plates:StackStatus()
     elseif cmd == "minimap" then
         ns:ToggleOption("char.minimap.hide")
     elseif cmd == "reset" then

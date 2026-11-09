@@ -40,6 +40,9 @@ local function Build(parent)
     -- Background full scan (FullScan.lua), right after the title: progress, paused, or up to date.
     panel.scan = panel:CreateFontString(nil, "OVERLAY", "QuartermasterGameFontHighlightSmall")
     panel.scan:SetPoint("LEFT", title, "RIGHT", 12, 0); panel.scan:SetJustifyH("LEFT")
+    -- This visit's prices for the Cart's items (Compare's check), at the top right.
+    panel.prices = ns.Compare:MakeBar(panel, 220)
+    panel.prices:SetPoint("TOPRIGHT", -12, -12)
     view = ns.AuctionSearch:Create(panel, {})
     view:SetPoint("TOPLEFT", 10, -34); view:SetPoint("BOTTOMRIGHT", -10, 8)
     view.onEndEdit = function() AuctionTab:Refresh() end
@@ -52,7 +55,9 @@ local function Build(parent)
             self:SetPoint("BOTTOMRIGHT", AuctionHouseFrame, "BOTTOMRIGHT", -6, 8)
             SetMoneyFramesShown(false)
         end
-        ns.FullScan:Start()
+        -- (No full auction house scan: what's shown is searched now. The search you had up is run again,
+        -- so its prices are this moment's, not when you last looked.)
+        if view.mode == "groups" and view.f and not ns.Buyer:Running() then view:Run(view.f) end
         AuctionTab:Refresh()
     end)
     panel:SetScript("OnHide", function() SetMoneyFramesShown(true) end)
@@ -61,12 +66,15 @@ end
 
 function AuctionTab:Refresh()
     if not panel or not panel:IsShown() then return end
-    panel.scan:SetText(ns.FullScan:StatusText())
+    panel.scan:SetText(ns.FullScan.external and ns.FullScan:StatusText() or "")
+    panel.prices:Update()
     view:Refresh()
 end
 
 -- Opens the tab if the auction house is open. Returns true on success.
 function AuctionTab:Select() return ns.AHTabs:Select("Buying") end
+
+function AuctionTab:Shown() return panel ~= nil and panel:IsShown() end
 
 -- /qm auction <text>: open the tab and search.
 function AuctionTab:Search(text)

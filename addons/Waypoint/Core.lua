@@ -1,13 +1,16 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.5"
+ns.VERSION = "0.1.20"
 -- Waypoint's logo, shipped in the addon (Media\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\Waypoint\\Media\\Icon"
 
 ns.PREFIX = ns.IconMarkup(14) .. " |cffffc94dWaypoint|r"
 
 -- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
-ns.SAVED = { db = "WaypointDB", char = "WaypointCharDB" }
+ns.SAVED = { db = "WaypointDB", char = "WaypointCharDB",
+    -- A character may keep its own copy of the settings (Setup.lua): every DEFAULTS key but these,
+    -- which are what Waypoint learned and the arrow's place, shared by every character.
+    ownExcept = { "learned", "blocked", "rides", "teleports", "taxi", "arrow" } }
 
 ns.DEFAULTS = {
     secondaryOpen = true, -- the box of secondary tasks under the arrow is unfolded (Secondary.lua)
@@ -203,6 +206,9 @@ SlashCmdList.WAYPOINT = function(msg)
         if ns.Settings then ns.Settings:Open() end
     elseif cmd == "flights" then
         if arg == "on" or arg == "off" then OnOff("flights", "Flight paths", arg) else ns.Flight:Status() end
+    elseif cmd == "slow" then
+        ns.db.slowWatch = ns.db.slowWatch == false
+        ns:Print(ns.db.slowWatch and "Slow-call watch on: a call that holds a frame past 100 ms is said in chat." or "Slow-call watch off.")
     elseif cmd == "why" then
         ns.Route:Why()
     elseif cmd == "where" then
@@ -232,3 +238,71 @@ SlashCmdList.WAYPOINT = function(msg)
 end
 
 ns:Compartment(function() ns:ToggleOption("db.arrowHidden") end)
+
+-- ---------------------------------------------------------------------------------------------
+-- Slow-call watch (/way slow turns it off and on): Waypoint's main calls timed, and a call that
+-- holds a frame past SLOW_MS said in chat, with the calls inside it that took the time. Work
+-- inside a background job (a coroutine) isn't timed: it gives way to the frame by itself.
+-- ---------------------------------------------------------------------------------------------
+local SLOW_MS = 100
+local depth, inner = 0, {}
+local function Done(name, t0, ...)
+    local spent = debugprofilestop() - t0
+    depth = depth - 1
+    if depth > 0 then
+        inner[name] = (inner[name] or 0) + spent
+    else
+        if spent >= SLOW_MS then
+            local parts = {}
+            for k, v in pairs(inner) do
+                if v >= 5 then parts[#parts + 1] = { k, v } end
+            end
+            table.sort(parts, function(a, b) return a[2] > b[2] end)
+            local text = {}
+            for i = 1, math.min(6, #parts) do text[i] = ("%s %d"):format(parts[i][1], parts[i][2]) end
+            print(("|cffff8c33Waypoint slow:|r %s %d ms%s%s"):format(name, spent,
+                InCombatLockdown() and " (in combat)" or "", #text > 0 and (": " .. table.concat(text, ", ")) or ""))
+        end
+        wipe(inner)
+    end
+    return ...
+end
+-- A part of a timed call, timed by the call itself (G:Path's stages): said with it when it's slow.
+function ns.SlowNote(name, ms)
+    if depth > 0 then inner[name] = (inner[name] or 0) + ms end
+end
+local function Wrap(tbl, label, only)
+    if not tbl then return end
+    local names = {}
+    if only then
+        for _, k in ipairs(only) do names[#names + 1] = k end
+    else
+        for k, fn in pairs(tbl) do
+            if type(k) == "string" and type(fn) == "function" then names[#names + 1] = k end
+        end
+    end
+    for _, k in ipairs(names) do
+        local fn = rawget(tbl, k)
+        if type(fn) == "function" then
+            local name = label .. ":" .. k
+            tbl[k] = function(...)
+                if ns.db and ns.db.slowWatch == false or coroutine.running() then return fn(...) end
+                if depth == 0 then wipe(inner) end
+                depth = depth + 1
+                return Done(name, debugprofilestop(), fn(...))
+            end
+        end
+    end
+end
+-- (An error inside a timed call leaves the count up: set right again every frame.)
+local watchFrame = CreateFrame("Frame")
+watchFrame:SetScript("OnUpdate", function() depth = 0 end)
+ns:On("PLAYER_LOGIN", function()
+    Wrap(ns.Route, "Route")
+    Wrap(ns.Flight, "Flight")
+    Wrap(ns.Targets, "Targets")
+    Wrap(ns.ZoneWays, "ZoneWays")
+    Wrap(ns.Questie, "Questie")
+    Wrap(ns.Grid, "Grid", { "Field", "Tidy", "Cost", "Path", "Ahead", "Clear", "Detail", "Height",
+        "CrossingKeys", "SetOverrides", "SetRoads", "SetCities", "PlaceWalk" })
+end)

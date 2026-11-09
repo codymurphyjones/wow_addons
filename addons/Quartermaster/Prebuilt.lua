@@ -176,8 +176,9 @@ end
 -- ---------------------------------------------------------------------------
 
 function Stock:Breakdown(itemID)
-    local bags = GetItemCount(itemID) or 0
-    local bank = ns.db.options.countBank and math.max(0, (GetItemCount(itemID, true) or 0) - bags) or 0
+    -- (The shared Items.lua's count: the global GetItemCount is gone on Forever, C_Item has it.)
+    local bags = ns.Items.ItemCount(itemID)
+    local bank = ns.db.options.countBank and math.max(0, ns.Items.ItemCount(itemID, true) - bags) or 0
     local s = ns.char.stock
     local mail = ns.db.options.countMail and ((s.mail[itemID] or 0) + (s.sinceMail[itemID] or 0)) or 0
     return bags, bank, mail

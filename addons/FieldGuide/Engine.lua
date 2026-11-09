@@ -47,8 +47,6 @@ local STRETCH = 3 -- a quest waits until you're within this many levels of it (b
 local YARDS_A_MINUTE = 420 -- on foot
 local OCEAN_MINUTES = 45   -- another continent: straight-line yards don't apply (a whole HORIZON: only if nothing's nearer)
 local MAX_LEG = 15         -- minutes: past this you'd take a flight path, not walk it
-local LONG_TRIP = 10        -- minutes: a trip this long to a zone that doesn't touch yours is asked about first
-local TOUCHING_YARDS = 1500 -- Leveling: zones whose quest areas are this close are neighbours (see Touching)
 local MIN_MINUTES = 3      -- what's left of a route takes at least this long
 local GRIND_GAP = 1        -- the levels a route can gain on its way, between quests
 local HORIZON = 45         -- minutes: a zone elsewhere is judged by what it pays in this long, the walk there included
@@ -136,12 +134,14 @@ E.QuestEarns = function(_, id) return QuestEarns(Q(id), P:Level()) end
 
 -- A death is a big chunk of time, so a quest above your level is worth less than its XP says. The
 -- deaths it can be expected to cost grow with the square of the levels it's above you (DEATH_RISK a
--- level), and fade as you level. Only with something to fight: a quest with no objectives is a walk.
+-- level), and fade as you level. Only with something to fight: its objectives, or the mobs along its
+-- walk that its XP counts on (q.k: a delivery's road through mobs of its level is no safer for being a
+-- walk, and counting their XP without their risk sent a level 3 out of Deathknell to Brill).
 local DEATH_RISK = 0.25
 local DEATH_MINUTES = 3 -- the run back, and getting going again
 local function ExpectedDeaths(q, level)
     local over = (q and q.l or level) - level
-    if over <= 0 or not (q and q.o) then return 0 end
+    if over <= 0 or not (q and (q.o or q.k)) then return 0 end
     return DEATH_RISK * over * over
 end
 
@@ -257,6 +257,9 @@ local function CanFetch(p, pq, depth)
     if not pq or not P:RaceAllowed(pq.rm) or ns.char.ignored[p] or ns.char.notOffered[p] then return false end
     if ns.Exists:Missing(p) then return false end
     if pq.ia and not pq.d then return false end
+    -- (Given inside a dungeon, gi: Commander Gor'shak's What Is Going On? is picked up during the run,
+    -- never ahead of it, and what needs it waits for the run too.)
+    if pq.gi then return false end
     return not E.Unreachable(pq, depth + 1)
 end
 
@@ -278,7 +281,7 @@ local Unreachable = E.Unreachable
 -- A quest you can't get: another race's; one that needs a quest first that no guide can send you
 -- to (see Unreachable); or one Questie says you can't take though nothing it needs is missing
 -- (your class, reputation, or a quest that rules it out).
-local function Unavailable(id)
+local function Unavailable(id, anyway)
     P = P or ns.Progress
     local q = Q(id)
     if q and not P:RaceAllowed(q.rm) then return true end
@@ -286,6 +289,10 @@ local function Unavailable(id)
     -- Skipped by hand (or left because its item didn't drop): never suggested again, even while
     -- it's in your log. It's yours to finish on your own.
     if ns.char.ignored[id] then return true end
+    -- A dungeon's quest skipped for now: not on the leveling route until you level up, but still
+    -- open for the dungeon list (anyway) and for the dungeon's own route once you pick it.
+    local later = ns.char.later and ns.char.later[id]
+    if later and not anyway and not ns.char.instance and P:Level() <= later then return true end
     if P:InLog(id) then return false end
     -- Its giver didn't offer it when you got there, or the server has no such quest (or hasn't
     -- said yet: it goes on the route once it does).
@@ -295,16 +302,38 @@ local function Unavailable(id)
 end
 
 E.Unavailable = function(_, id) return Unavailable(id) end
+
+-- Why a quest is or isn't open, in words (the same tests as Unavailable, in its order): for
+-- /fg dungeons why.
+function E:WhyClosed(id)
+    P = P or ns.Progress
+    local q = Q(id)
+    if not q then return "no data for it" end
+    if not P:RaceAllowed(q.rm) then return "not for your race" end
+    if P:Done(id) then return "done" end
+    if ns.char.ignored[id] then return "skipped (/fg unskip)" end
+    local later = ns.char.later and ns.char.later[id]
+    if later then return ("skipped for now (open on the dungeon list%s)"):format(later < 999 and (", back on the route after level " .. later) or "") end
+    if P:InLog(id) then return "open: in your log" end
+    if ns.char.notOffered[id] then return "its giver didn't offer it (/fg unskip)" end
+    if ns.Exists:Missing(id) then return "not on this server (/fg missing)" end
+    if ns.Exists:Pending(id) then return "still asking the server whether it exists" end
+    if Unreachable(q, 0) then return "out of reach for now" end
+    if PrereqsDone(q) and not P:Doable(id) then return "Questie says you can't take it (class, reputation or a quest that rules it out)" end
+    if not PrereqsDone(q) then return "open, after an earlier quest" end
+    return "open"
+end
 E.PrereqsDone = function(_, id)
     P = P or ns.Progress
     local q = Q(id)
     return not q or PrereqsDone(q)
 end
 
--- A quest you could still do: not done, and not ruled out.
-function E:QuestOpen(id)
+-- A quest you could still do: not done, and not ruled out. anyway: a dungeon quest skipped for
+-- now still counts (the dungeon list offers it).
+function E:QuestOpen(id, anyway)
     P = P or ns.Progress
-    return not P:Done(id) and not Unavailable(id)
+    return not P:Done(id) and not Unavailable(id, anyway)
 end
 
 -- "Run the dungeon" (or one wing of it): see Instance:RunDone.
@@ -314,14 +343,33 @@ local function DungeonDone(step)
     return ns.Instance:RunDone(inst, step)
 end
 
+-- Functions the slow-watch (Core.lua) mustn't time: a table, not functions on E, which it wraps.
+E.raw = {}
+
+-- (During an update the answers can't change: each step's is kept until the update ends, E.doneMemo.
+-- An update asks it several times for every step on the list.)
 function E:StepDone(step)
+    local memo = E.doneMemo
+    if memo then
+        local v = memo[step]
+        if v == nil then
+            v = E.raw.StepDoneNow(self, step) and true or false
+            memo[step] = v
+        end
+        return v
+    end
+    return E.raw.StepDoneNow(self, step)
+end
+
+function E.raw.StepDoneNow(self, step)
     local kind, id = step[1], step[2]
     if ns.char.skipped[StepKey(step)] then return true end
-    if kind == "G" then return P:Level() >= id end
+    -- (Reached, or reached once the quests you carry are handed in: the hand-ins land the level.)
+    if kind == "G" then return P:Level() >= id or (P:Level() < 60 and E.lib.XPToReach(id) <= E.lib.ReadyXP()) end
     if kind == "I" then return DungeonDone(step) end
     if kind == "L" then return P:Done(id) or P:InLog(id) or ns.char.ignored[id] == true end
-    -- A quest that starts inside the dungeon: only to turn in if you found its item.
-    if kind == "T" and step.inside and not P:InLog(id) then return true end
+    -- A quest that starts inside the dungeon: only to do and turn in if you found its item.
+    if (kind == "T" or kind == "O") and step.inside and not P:InLog(id) then return true end
     if kind == "Z" then return false end -- settled by the steps after it (see Build)
     if P:Done(id) then return true end
     if Unavailable(id) then return true end
@@ -489,14 +537,6 @@ local function Reachable(section, level, bridge)
     return set, count, xp, gaps, kills
 end
 
--- Something on this list you could do right now.
-local function HasWork(set, level)
-    for id in pairs(set) do
-        if Practical(Q(id)) <= level and PrereqsDone(Q(id)) then return true end
-    end
-    return false
-end
-
 E.BAND = 2           -- levels: a zone is judged by brackets this wide (see Value)
 E.EXIT_SECONDS = 5   -- how long the choice of hand-off out of a zone is kept (PickExit)
 E.GROUP_YARDS = 300  -- quest givers this close are one place: a bracket doesn't split them (E.Brackets)
@@ -564,6 +604,14 @@ function E.Brackets(list)
     return out
 end
 
+-- Something on this list you could do right now.
+local function HasWork(set, level)
+    for id in pairs(set) do
+        if Practical(Q(id)) <= level and PrereqsDone(Q(id)) then return true end
+    end
+    return false
+end
+
 -- What a section is worth from where you are, in XP a minute. A zone is judged a level band at a time:
 -- its quests left, from the lowest level up, in brackets E.BAND levels wide that start where the quests
 -- do (Barrens 20-22, then 23-25): a range to attend, not levels you'll gain. Quests that belong together
@@ -577,6 +625,8 @@ end
 -- from: a data point for where you stand, or nil (no walk). Also returns the XP, the minutes of walking
 -- and waiting, and the band's first and last levels.
 local function Value(section, level, from)
+    -- (The leveling planner's section, Tasks.lua: its rate was worked out when its areas were chosen.)
+    if section.tasks then return section.rate or 0, 0, 0 end
     local set, count, xp, gaps, kills = Reachable(section, level, true)
     if count == 0 then return 0, 0, 0 end
     local first
@@ -637,6 +687,7 @@ end
 function E:QuestingRate()
     local s = self.section
     if not s or s.instance or s.travel then return 0 end
+    if s.tasks then return s.rate or 0 end
     return (Value(s, P:Level()))
 end
 
@@ -682,6 +733,18 @@ local function Shown(section, level)
                 Need(p, depth + 1)
             end
         end
+    end
+    if section.tasks then
+        -- The leveling planner chose them (Tasks.lua): each one (a quest in your log has no pick-up
+        -- step, only its objectives and hand-in), and what it needs first.
+        for _, s in ipairs(section.steps) do
+            local id = s[2]
+            if s[1] ~= "G" and s[1] ~= "Z" and s[1] ~= "I" and not show[id] then
+                show[id] = true
+                Need(id, 0)
+            end
+        end
+        return show
     end
     if section.zoneClear then
         -- Zone Clear: every quest, whatever it pays (but not a dungeon's, nor one that needs one, and a
@@ -817,7 +880,7 @@ local function Build(section)
     for _, s in ipairs(section.steps) do
         if s[1] ~= "G" and s[1] ~= "Z" and s[1] ~= "I" then inSection[s[2]] = true end
     end
-    if not section.instance then TurnInsHere(section, inSection, steps) end
+    if not section.instance and not section.tasks then TurnInsHere(section, inSection, steps) end
     local missing, seen, routeRate = {}, {}, nil
     for _, s in ipairs(section.steps) do
         -- (Not for a quest you can't get yet: its missing part may only drop inside a dungeon.)
@@ -840,8 +903,14 @@ local function Build(section)
             end
             routeRate = routeRate or Value(section, level)
             if trip > 0 and pays / trip < routeRate then near = false end
-            -- Needs something first, and there's nothing the guide can send you to.
-            local stuck = #chain == 0 and not PrereqsDone(Q(s[2]))
+            -- Needs something first, and there's nothing the guide can send you to. (Not when what it
+            -- needs is in your log: finishing that is on the route. A chain's part 2 while you hold
+            -- part 1 was dropped here, and the dungeon route lost it.)
+            local holding = false
+            for _, p in ipairs(Q(s[2]).pre or {}) do
+                if P:InLog(p) then holding = true; break end
+            end
+            local stuck = #chain == 0 and not holding and not PrereqsDone(Q(s[2]))
             if (near or section.zoneClear) and not stuck then -- (Zone Clear fetches them wherever they are)
                 for _, id in ipairs(chain) do
                     seen[id] = true
@@ -865,7 +934,7 @@ local function Build(section)
         if s[1] == "G" or s[1] == "Z" or s[1] == "I" or (show[s[2]] and not farm) then steps[#steps + 1] = s end
     end
     -- The zone ends with the hand-off to the next zone for the level you'll have by then.
-    if not section.instance then
+    if not section.instance and not section.tasks then
         local e = PickExit(E.guide, section.zone, math.max(level, section.to or level))
         -- Zone Clear: they're the zone's quests too: all of them, the one leading on last.
         if section.zoneClear then
@@ -914,7 +983,7 @@ local function Build(section)
         local nxt = steps[i + 1]
         if s[1] ~= "Z" or (nxt and nxt[1] ~= "Z") then kept[#kept + 1] = s end
     end
-    return E.SplitParts(kept)
+    return E.SplitParts(kept, section.tasks)
 end
 
 -- The zone you're in (a city or cave counts as the zone around it).
@@ -934,12 +1003,34 @@ end
 -- A quest of a higher bracket taken early (E.WithEarly): its objectives and hand-in wait for its level.
 function E.Early(s) return s[1] ~= "A" and ns.char.early ~= nil and ns.char.early[s[2]] == true end
 
+-- The level a quest's fighting is safe from: the same window as picking it up (STRETCH under its
+-- level). A quest in your log with something to fight (ExpectedDeaths counts it) whose level is
+-- further above you than that has its objectives wait until then, as an unstarted one would: in
+-- your log at 25, Humbert's Sword (level 30, Dun Garok's dwarves) sent you into mobs five levels
+-- over you. nil: nothing to wait for. Picking up and handing in never wait for it.
+local function SafeLevel(q)
+    if not (q and (q.o or q.k) and q.l) then return nil end
+    local at = q.l - STRETCH
+    return at > P:Level() and at or nil
+end
+E.SafeLevel = function(_, id) return SafeLevel(Q(id)) end
+
 local function Waits(s)
-    if ns.char.instance or s[1] == "G" or s[1] == "Z" or s[1] == "I" then return false end
+    if s[1] == "G" or s[1] == "Z" or s[1] == "I" then return false end
+    if ns.char.instance then
+        -- A dungeon route: no quest is picked up before what it needs is handed in, the unlock chain's
+        -- (part 2 once part 1 is done) and the route's own alike. (Only the chain's waited: the route's
+        -- own pick-ups didn't, so anything that brings a pick-up beside you forward put Hamuul
+        -- Runetotem before Altered Beings, Tonga giving both. Every dungeon prerequisite broke that way.)
+        if s[1] ~= "A" or P:InLog(s[2]) or P:Done(s[2]) then return false end
+        local q = Q(s[2])
+        return q ~= nil and not PrereqsDone(q)
+    end
     if s[1] == "T" and E.hunting[s[2]] and not P:ReadyToTurnIn(s[2]) then return true end
     local q = Q(s[2])
     if s.early then return false end
     if E.Early(s) and q and Practical(q) > P:Level() and not P:ReadyToTurnIn(s[2]) then return true end
+    if s[1] == "O" and q and P:InLog(s[2]) and not P:ReadyToTurnIn(s[2]) and SafeLevel(q) then return true end
     if not q or P:InLog(s[2]) or P:Done(s[2]) then return false end
     return Practical(q) > P:Level() or not PrereqsDone(q)
 end
@@ -971,9 +1062,6 @@ local function Remaining(section)
     return FirstLeft(Build(section)) ~= nil
 end
 
--- Yards from you to the middle of a zone, if it's on your continent.
--- (shared WorldMap.lua)
-local function DistanceTo(zone) return ns.WorldMap.DistanceTo(zone, 0.5, 0.5) end
 
 local lastPick
 
@@ -985,94 +1073,23 @@ end
 -- The pick only changes when something it depends on does (zone, level, quests taken or handed
 -- in); objective progress just moves you along the steps.
 local pickDirty = true
-function E:Invalidate() pickDirty = true; detourCache = nil end
+function E:Invalidate() pickDirty = true end
 
 local relocate = true -- you may be anywhere (login, Play): the next choices start from where you stand
 local logReady = false -- the game has given us your quest log since login (LogIsIn)
 local holdKey         -- the step you're on: it stays yours until it's done or you skip it
 local holdStep        -- that step
 
--- The step you're on is still to do in this section.
-local function Holding(section)
-    if relocate or not holdKey or not section then return false end
-    -- On your way to another zone: the zones you cross don't change the plan.
-    if holdKey:sub(1, 2) == "Z:" then return true end
-    for _, s in ipairs(E.planSteps or Build(section)) do
-        if StepKey(s) == holdKey then return not E:StepDone(s) and not Waits(s) end
-    end
-    return false
-end
-
 -- You skipped a trip while still in the zone: { zone, section }, and the guide stays in that zone
 -- for as long as you do (see E:SkipTravel).
 local stay
 local trip -- the trip you're on: { key = its step, from = the zone it started in }
 
-local travel -- the section that hands you off from a zone that's done for your level
-local Touching   -- do two zones touch? (below)
-local offer      -- a far zone that's waiting for your answer: { section, rate, here, level }
-local moveOk     -- the section you said to go to
-local declinedAt -- the level it was last asked at (Stay here: not asked again until you level up)
-local moved -- why Leveling just left a zone: { from, from's XP a minute, to's } (for the chat line)
 
--- No zone has work left for your level, but quests can still be open off the routes: ones the planner
--- dropped, a zone's leftovers, a zone you've outgrown. The zone paying most for the trip, as a short list.
-local function LooseEnds(level, spot)
-    local zones, seen = {}, {}
-    for id, q in pairs(ns.Quests) do
-        if q.a and not q.dq and not seen[q.n] and E:QuestOpen(id) and not P:InLog(id) and Practical(q) <= level
-            and PrereqsDone(q) and Worth(id, level) and not NeedsDungeon(id, 0) and DonationReady(q) then
-            seen[q.n] = true
-            local z = q.a[1]
-            zones[z] = zones[z] or { pays = 0, quests = {} }
-            zones[z].pays = zones[z].pays + QuestEarns(q, level)
-            table.insert(zones[z].quests, id)
-        end
-    end
-    local best, bestRate
-    for z, list in pairs(zones) do
-        table.sort(list.quests)
-        local rate = list.pays / (WalkMinutes(spot, Q(list.quests[1]).a) + #list.quests * LOOSE_MINUTES)
-        if not best or rate > bestRate or (rate == bestRate and z < best) then best, bestRate = z, rate end
-    end
-    if not best then return nil end
-    local steps = { { "Z", best } }
-    for i, id in ipairs(zones[best].quests) do
-        if i > LOOSE_QUESTS then break end
-        steps[#steps + 1] = { "A", id }
-        if Q(id).o then steps[#steps + 1] = { "O", id } end
-        steps[#steps + 1] = { "T", id }
-    end
-    local info = C_Map.GetMapInfo(best)
-    return { id = "loose-" .. best, travel = true, loose = true, zone = best, from = level, to = level, steps = steps,
-        title = info and info.name or "Loose ends",
-        note = "The routes have nothing left for your level, so these are the best quests still open." }
-end
-
--- The brackets of a section at your level, for the tests: "from: quest levels" each.
-function E.BracketText(section)
-    local level, list = P:Level(), {}
-    for id in pairs((Reachable(section, level, true))) do
-        local q = Q(id)
-        local _, pays, minutes = E.QuestRate(id)
-        list[#list + 1] = { id = id, l = q.l or level, pays = pays, minutes = minutes }
-    end
-    local out = {}
-    for _, b in ipairs(E.Brackets(list)) do
-        local ls = {}
-        for i, id in ipairs(b.ids) do ls[i] = Q(id).l or 0 end
-        out[#out + 1] = b.from .. "-" .. (b.from + E.BAND) .. ": " .. table.concat(ls, " ")
-    end
-    return table.concat(out, " | ")
-end
-
--- A section's worth from where you stand (the tests, and /fg why).
-function E.ValueOf(section)
-    local x, y, map = ns.WorldMap.PlayerPos()
-    if not Fits(section, P:Level()) then return 0 end
-    return Value(section, P:Level(), x and { map, x * 100, y * 100 } or nil)
-end
-
+-- The zone sections: Zone Clear, and a section you picked yourself. (Leveling is the task planner's,
+-- Tasks.lua: it only comes here without the task areas.) Zone Clear: the zone you're on stays until it's
+-- cleared, even while you're off fetching what its quests need first, and the zone you walk into is next;
+-- with nothing to clear there, the nearest zone that has something.
 function E:PickSection(guide)
     lastPick = lastPick or ns.char.lastPick -- the zone you were on, across a /reload
     if stay and stay.section then
@@ -1080,7 +1097,6 @@ function E:PickSection(guide)
         return stay.section
     end
     if not pickDirty and lastPick then
-        if travel and travel.id == lastPick and Remaining(travel) then return travel end
         for _, s in ipairs(Sections(guide)) do
             if s.id == lastPick and Remaining(s) then return s end
         end
@@ -1093,105 +1109,35 @@ function E:PickSection(guide)
     end
     -- On a flight: nothing changes until you land.
     if lastPick and UnitOnTaxi and UnitOnTaxi("player") then
-        if travel and travel.id == lastPick then return travel end
         for _, s in ipairs(Sections(guide)) do
             if s.id == lastPick then return s end
         end
     end
     pickDirty = false
     local level, zone = P:Level(), CurrentZone()
-    local current, here
-    moved = nil
+    local current
     for _, s in ipairs(Sections(guide)) do
         if s.id == lastPick then current = s end
-        if s.zone == zone and not here and InRange(s, level) then here = s end
     end
-    -- Still asking the server which quests exist: a zone whose quests aren't answered for yet only
-    -- looks empty. Hold where you are and choose once the answers are in.
+    -- Still asking the server which quests exist: hold where you are and choose once the answers are in.
     if ns.Exists:Busy() then
         pickDirty = true
-        return here or current
+        return current
     end
-    -- Zone Clear: the zone you're on stays until it's cleared, even while you're off fetching what
-    -- its quests need first, and the zone you walk into is next.
-    if Clearing() then
-        if current and Fits(current, level) then return current end
-        for _, s in ipairs(Sections(guide)) do
-            if s.zone == zone and Fits(s, level) then return s end
-        end
-    end
-    -- The step you're on stays yours, whatever you handed in or wherever that took you: zones are
-    -- weighed when it's done, or when you've been away.
-    if travel and travel.id == lastPick and holdKey and holdKey:sub(1, 2) == "Z:" and not relocate then return travel end
-    if Holding(current) then return current end
-    -- (A short list of loose ends is worked through before anything's weighed again.)
-    if travel and travel.loose and travel.id == lastPick and Remaining(travel) and not relocate then return travel end
-    -- Every zone, the same way: XP a minute from where you stand, the walk included.
+    if current and Fits(current, level) then return current end
     local x, y, map = ns.WorldMap.PlayerPos()
     local spot = x and { map, x * 100, y * 100 } or { zone, 50, 50 }
-    local best, bestRate, currentRate
-    local function Weigh()
-        best, bestRate, currentRate = nil, 0, 0
-        for _, s in ipairs(Sections(guide)) do
-            if Fits(s, level) then
-                local rate = Value(s, level, spot)
-                if s == current then
-                    currentRate = rate
-                    rate = rate * STAY_EDGE
-                end
-                if rate > bestRate then best, bestRate = s, rate end
-            end
-        end
-        if best and HasWork((Reachable(best, level, true)), level) then return true end
-        -- Nothing to do anywhere on the routes: take what's still open anywhere else.
-        local loose = LooseEnds(level, spot)
-        if loose then best = loose end
-        return loose ~= nil
-    end
-    -- Still nothing: the game may well offer quests a little above you, and those beat waiting for a level.
-    reach = 0
-    while not Weigh() and reach < MAX_REACH do reach = reach + 1 end
-    if not best then return nil end
-    -- A long way to somewhere that doesn't touch where you are: that's yours to decide.
-    local there = current or here
-    local _, _, trip = Value(best, level, spot)
-    if best ~= current and best.zone ~= zone and trip >= LONG_TRIP and moveOk ~= best.id
-        and not (there and Touching(there, best)) and StaticPopup_Show then
-        if declinedAt ~= level then
-            declinedAt = level
-            offer = { section = best, rate = bestRate, here = there, level = level }
-            C_Timer.After(0, function() E:OfferMove() end)
-        end
-        return there
-    end
-    if best.loose then
-        travel = best
-        return best
-    end
-    if current and best ~= current then moved = { from = current, fromRate = currentRate, toRate = bestRate } end
-    -- A quest that takes you there is the way to go, unless there's work around the way there: then
-    -- that's the plan's to weigh. (A hand-off goes round the plan, which would turn back to that work
-    -- as soon as you came near it.)
-    local onTheWay = false
+    local byWalk = {}
     for _, s in ipairs(Sections(guide)) do
-        if s ~= best and s.zone ~= best.zone and s.zone ~= zone and Touching(best, s) and Fits(s, level)
-            and HasWork((Reachable(s, level, true)), level) then
-            onTheWay = true
-            break
+        if InRange(s, level) then
+            byWalk[#byWalk + 1] = { s = s, minutes = s.zone == zone and 0 or WalkMinutes(spot, { s.zone, 50, 50 }) }
         end
     end
-    if best.zone ~= zone and not onTheWay then
-        local e = PickExit(guide, zone, level)
-        if e and e[2] == best.zone then
-            local mapInfo = C_Map.GetMapInfo(e[2])
-            local name = mapInfo and mapInfo.name or "the next zone"
-            travel = { id = "exit-" .. e[1], travel = true, zone = zone, from = level, to = level,
-                title = "On to " .. name, steps = ExitSteps(e, {}),
-                note = ("%s takes you on to %s, where the quests pay best for level %d."):format(Q(e[1]).n or "A quest", name, level) }
-            return travel
-        end
+    table.sort(byWalk, function(a, b) return a.minutes < b.minutes end)
+    for _, e in ipairs(byWalk) do
+        if Remaining(e.s) then return e.s end
     end
-    return best
+    return nil
 end
 
 -- What the guide thinks of a section's quests: how many are in each state, with the first few IDs.
@@ -1243,6 +1189,7 @@ function E:Why()
         tostring(race), tostring(zone), section and section.id or "none", tostring(ns.char.lastPick),
         tostring(ns.char.preference),
         ns.Exists:Broken() and "off" or "on", tostring(ns.Exists:Busy())) }
+    if section and section.tasks and ns.Tasks then ns.Tasks:Why(lines) end
     for _, s in ipairs(guide and guide.sections or {}) do
         if s.zone == zone or (section and s.id == section.id) then
             local rate, xp, walk, band, bandTo = Value(s, level, { zone, 50, 50 })
@@ -1264,162 +1211,11 @@ function E:Why()
     return lines
 end
 
--- Natural transition (Leveling): a zone doesn't hold you. Zones that touch know each other's quests,
--- whichever of them you're in, so their plans are made from the same picture and agree: when one runs
--- short for your level the plan fills the gap from the next, and it knows to come back, because the
--- zone it came from is on the plan there too. They all compete on the same XP an hour. Zone Clear
--- stays on its zone.
-local near -- { section = id, list = { section, ... } }: worked out when the plan is
-
--- The world area of a section's quest givers: { continent, north, south, west, east }. Kept on the section.
-local function QuestArea(section)
-    if section.area ~= nil then return section.area end
-    local box = false
-    for _, st in ipairs(section.steps) do
-        local q = st[1] == "A" and Q(st[2])
-        local c, n, w
-        if q and q.a then c, n, w = ns.WorldMap.World(q.a[1], q.a[2] / 100, q.a[3] / 100) end
-        if c then
-            if not box then
-                box = { c, n, n, w, w }
-            elseif box[1] == c then
-                box[2], box[3] = math.max(box[2], n), math.min(box[3], n)
-                box[4], box[5] = math.max(box[4], w), math.min(box[5], w)
-            end
-        end
-    end
-    section.area = box
-    return box
-end
-
--- Two zones touch when their quest areas come within TOUCHING_YARDS. It goes both ways, and it doesn't
--- depend on where you are.
-Touching = function(a, b)
-    local x, y = QuestArea(a), QuestArea(b)
-    if not (x and y) or x[1] ~= y[1] then return false end
-    local dn = math.max(0, y[3] - x[2], x[3] - y[2])
-    local dw = math.max(0, y[5] - x[4], x[5] - y[4])
-    return dn * dn + dw * dw <= TOUCHING_YARDS * TOUCHING_YARDS
-end
-
-local function FindNeighbours(section, guide)
-    local list = {}
-    local level = P:Level()
-    for _, s in ipairs(guide.sections) do
-        if s ~= section and s.zone ~= section.zone and Touching(section, s) and Fits(s, level) then
-            list[#list + 1] = s
-        end
-    end
-    return list
-end
-
-local function WithNeighbours(section, steps, guide)
-    if Clearing() or not section or section.instance or section.travel or section.zoneClear or stay then return steps end
-    if pickDirty or not near or near.section ~= section.id or relocate then
-        near = { section = section.id, list = FindNeighbours(section, guide) }
-    end
-    local seen, out = {}, {}
-    for _, s in ipairs(steps) do
-        out[#out + 1] = s
-        seen[StepKey(s)] = true
-    end
-    for _, n in ipairs(near.list) do
-        for _, s in ipairs(Build(n)) do
-            if s[1] ~= "Z" and s[1] ~= "G" and not seen[StepKey(s)] then
-                seen[StepKey(s)] = true
-                out[#out + 1] = s
-            end
-        end
-    end
-    -- The step you're on stays on the list wherever it came from, even if its zone has dropped out of
-    -- the plan, and the rest of its quest with it.
-    for _, mine in ipairs({ holdKey or false, trip and trip.target or false }) do
-        if mine and not seen[mine] and mine:sub(1, 2) ~= "Z:" then
-            local found
-            for _, sec in ipairs(guide.sections) do
-                for _, s in ipairs(sec.steps) do
-                    if StepKey(s) == mine then found = sec end
-                end
-                if found then break end
-            end
-            if found then
-                local id = tonumber(mine:match(":(%d+)"))
-                for _, s in ipairs(found.steps) do
-                    if s[2] == id and s[1] ~= "G" and s[1] ~= "Z" and not seen[StepKey(s)] then
-                        seen[StepKey(s)] = true
-                        out[#out + 1] = s
-                    end
-                end
-            -- (A hand-off to the next zone isn't on any section's route: the step itself is kept.)
-            elseif holdStep and StepKey(holdStep) == mine then
-                seen[mine] = true
-                out[#out + 1] = holdStep
-            elseif trip and trip.step and StepKey(trip.step) == mine then
-                seen[mine] = true
-                out[#out + 1] = trip.step
-            end
-        end
-    end
-    return out
-end
-
--- Asking before a long trip. Says when this zone has more for you, if it does.
-StaticPopupDialogs["FIELDGUIDE_MOVE"] = {
-    text = "%s", button1 = "Take me there", button2 = "Stay here",
-    OnAccept = function() E:AcceptMove() end,
-    timeout = 0, whileDead = 1, preferredIndex = 3,
-}
-
-function E:OfferMove()
-    if not offer then return end
-    local level, next = offer.level, nil
-    for _, s in ipairs(offer.here and offer.here.steps or {}) do
-        local q = s[1] == "A" and Q(s[2])
-        if q and self:QuestOpen(s[2]) and Practical(q) > level and (not next or Practical(q) < next) then next = Practical(q) end
-    end
-    -- (The zones' own names, without a section's level: "Teldrassil", not "Teldrassil 1".)
-    local function ZoneName(s)
-        local info = s and C_Map.GetMapInfo(s.zone)
-        return info and info.name or "here"
-    end
-    StaticPopup_Show("FIELDGUIDE_MOVE", ("There are no more quests for you around %s for now.%s\n\nThe best option right now is %s. Travel there?"):format(
-        ZoneName(offer.here), next and (" More open up here at level %d."):format(next) or "", ZoneName(offer.section)))
-end
-
-function E:AcceptMove()
-    if offer then moveOk = offer.section.id end
-    offer, pickDirty, relocate, holdKey = nil, true, true, nil
-    ns:Changed()
-end
-
 -- ---------------------------------------------------------------------------------------------
--- Leveling's detours
+-- Places and walks
 -- ---------------------------------------------------------------------------------------------
 
--- A quick quest off the route: one with nothing to do but hand it in (a delivery, "talk to ...",
--- an auto turn-in), taken on the way when the extra walk to its giver and to whoever takes it
--- costs at most db.detourMinutes, and it pays at least the route's usual XP per minute. One you
--- carry already only needs the hand-in. Worked out for the section you follow (never for the
--- sections Automatic weighs), again when the pick changes (see Invalidate).
 local RUN_SPEED = 7     -- yards a second, on foot
-local MAX_DETOURS = 5
-local MIN_DETOUR = 0.25 -- minutes: talking to the giver and whoever takes it costs this much anyway
-local SAME_SPOT = 15    -- yards: a giver who takes the quest back right there
-
-local byMap -- giver's uiMapID -> { questID, ... } (quests with nothing to do but hand them in)
-local function QuestsOn(map)
-    if not byMap then
-        byMap = {}
-        for id, q in pairs(ns.Quests) do
-            if q.talk and q.a and q.t and not q.dq then
-                local list = byMap[q.a[1]]
-                if not list then list = {}; byMap[q.a[1]] = list end
-                list[#list + 1] = id
-            end
-        end
-    end
-    return byMap[map] or {}
-end
 
 -- A quest data point { uiMapID, x, y (0-100) } in the world: { continent, north, west } (cached
 -- on the point), or nil.
@@ -1429,7 +1225,16 @@ local function World(p)
         local c, n, w = ns.WorldMap.World(p[1], p[2] / 100, p[3] / 100)
         p._c, p._n, p._w = c or false, n, w
     end
-    if p._c then return { p._c, p._n, p._w } end
+    -- (The same table each time: Walked keeps what it found around a spot on it, and a new table
+    -- every call threw that away, so half of every update went on finding it again.)
+    if p._c then
+        local at = p._at
+        if not at then
+            at = { p._c, p._n, p._w }
+            p._at = at
+        end
+        return at
+    end
 end
 
 local function Yards(a, b)
@@ -1503,6 +1308,104 @@ local function Walked(a, b)
     return math.max(ThroughExits(a, b) or 0, straight)
 end
 
+-- Travel the quickest way, as Waypoint's arrow will take it (tools/FieldGuide/ROUTING_RULES.md, rule 3):
+-- on foot or mounted, the hearthstone, or a flight. What Waypoint knows (your speed, where your
+-- hearthstone goes and when it's ready, the flight points you have) is read once every TRAVEL_FRESH
+-- seconds; without Waypoint (or before it knows anything) every trip is a walk at RUN_SPEED.
+local TRAVEL_FRESH = 30
+local FLY_MIN_YARDS = 600 -- a flight is only weighed for trips at least this long
+local travelInfo
+local function TravelInfo()
+    local now = GetTime()
+    if travelInfo and now - travelInfo.at < TRAVEL_FRESH then return travelInfo end
+    local t = { at = now, speed = RUN_SPEED, points = {}, flights = {} }
+    local wp = Waypoint
+    if wp and wp.TravelSpeed then
+        t.speed = math.max(RUN_SPEED, tonumber(wp:TravelSpeed()) or RUN_SPEED)
+        local h = wp:Hearth()
+        if h and h.c then t.hearth = { h.c, h.n, h.w, readyIn = h.readyIn or 0, cast = h.cast or 25, name = h.name } end
+        for _, p in ipairs(wp:FlightPoints() or {}) do t.points[#t.points + 1] = { p.c, p.n, p.w, name = p.name } end
+    end
+    travelInfo = t
+    return t
+end
+local function Speed() return TravelInfo().speed end
+
+-- The flight point nearest a spot on its continent, and the straight yards to it.
+local function NearestFlight(t, spot)
+    local best, bestYards
+    for _, p in ipairs(t.points) do
+        if p[1] == spot[1] then
+            local d = Yards(spot, p)
+            if d and (not bestYards or d < bestYards) then best, bestYards = p, d end
+        end
+    end
+    return best, bestYards
+end
+
+local function FlightSeconds(t, a, b)
+    local key = a.name .. ">" .. b.name
+    local v = t.flights[key]
+    if v == nil then
+        v = Waypoint and Waypoint.FlightSeconds and Waypoint:FlightSeconds(a.name, b.name) or false
+        t.flights[key] = v
+    end
+    return v or nil
+end
+
+-- Minutes from a to b (world spots), and the way: "walk", "hearth" or "fly". nil when there's no way
+-- at all (another continent, and the hearthstone doesn't go there). opts.noHearth: the hearthstone is
+-- already used (a plan uses it once).
+local function TravelMinutes(a, b, opts)
+    if not (a and b) then return nil end
+    local t = TravelInfo()
+    local speed = t.speed * 60
+    local best, way
+    local walk = a[1] == b[1] and Walked(a, b)
+    if walk then best, way = walk / speed, "walk" end
+    local h = t.hearth
+    if h and not (opts and opts.noHearth) and h[1] == b[1] then
+        -- Ready now, or by the time the walk would be over (then you'd wait for it).
+        local wait = h.readyIn / 60
+        if not best or wait < best then
+            local m = wait + h.cast / 60 + (Walked(h, b) or 0) / speed
+            if not best or m < best then best, way = m, "hearth" end
+        end
+    end
+    if walk and walk >= FLY_MIN_YARDS and #t.points > 1 then
+        local fa, ya = NearestFlight(t, a)
+        local fb, yb = NearestFlight(t, b)
+        if fa and fb and fa ~= fb and (ya + yb) < walk then
+            local secs = FlightSeconds(t, fa, fb)
+            if secs then
+                local m = secs / 60 + ((Walked(a, fa) or ya) + (Walked(fb, b) or yb)) / speed
+                if m < best then best, way = m, "fly" end
+            end
+        end
+    end
+    return best, way
+end
+
+-- XP a minute from grinding at a level (KillPace: a kill, the walk to the next and a little rest), and
+-- the XP from where you are now (UnitXP) to the start of a level.
+local function GrindRate(level) return KillPace(level) end
+local function XPToReach(target, level, xpNow)
+    level = level or P:Level()
+    local need = 0
+    for lv = level, math.min(59, target - 1) do need = need + (XP_TO_LEVEL[lv] or 0) end
+    return math.max(0, need - (xpNow or (UnitXP and UnitXP("player")) or 0))
+end
+
+-- The XP waiting in your log: quests ready to hand in, at your level.
+local function ReadyXP()
+    local xp, n = 0, 0
+    local level = P:Level()
+    for _, id in ipairs(P:LogQuests()) do
+        if P:ReadyToTurnIn(id) then xp, n = xp + QuestXP(Q(id), level), n + 1 end
+    end
+    return xp, n
+end
+
 -- Where a step takes you, in the world, or nil.
 local function StepSpot(step)
     local kind = step[1]
@@ -1517,117 +1420,6 @@ local function StepSpot(step)
         or (kind == "L" and q.d and q.d[1]) or nil)
 end
 
--- The cheapest place to fit a stop at spot into the route, at index `from` or later: the index to
--- put it after, and the yards it adds. route = { { step key (nil: where you stand), spot }, ... }.
-local function Cheapest(route, spot, from)
-    local bestAt, bestCost
-    for i = from, #route do
-        local a, b = route[i], route[i + 1]
-        local cost
-        if not b then
-            cost = Yards(a[2], spot)
-        else
-            local ab, ax, xb = Yards(a[2], b[2]), Yards(a[2], spot), Yards(spot, b[2])
-            cost = ab and ax and xb and (ax + xb - ab)
-        end
-        if cost and (not bestCost or cost < bestCost) then bestAt, bestCost = i, cost end
-    end
-    return bestAt, bestCost
-end
-
-local detourCache -- { key = section id, list = what PlanDetours found }
-
--- The detours for a section's steps: { { id = quest, a = step key to pick it up after (nil and
--- aStart: before the next step; nil alone: it's in your log), t, tStart (the same for the hand-in),
--- minutes }, ... }, best XP per minute first.
-local function PlanDetours(section, steps)
-    local budget = ns.db.detourMinutes or 0
-    if budget <= 0 then return {} end
-    local level = P:Level()
-    local route = {}
-    local c, n, w = ns.WorldMap.Player()
-    if c then route[1] = { nil, { c, n, w } } end
-    local maps, onRoute, xp = { [section.zone] = true }, {}, 0
-    for _, st in ipairs(steps) do
-        local q = st[1] ~= "G" and st[1] ~= "Z" and st[1] ~= "I" and Q(st[2])
-        if q then
-            onRoute[st[2]] = true
-            if st[1] == "A" then xp = xp + QuestXP(q, level) end
-            if q.a then maps[q.a[1]] = true end
-            if q.t then maps[q.t[1]] = true end
-        end
-        if not E:StepDone(st) then
-            local spot = StepSpot(st)
-            if spot then route[#route + 1] = { StepKey(st), spot } end
-        end
-    end
-    if #route < 2 then return {} end
-    local rate = xp / math.max(1, section.minutes or 60) -- the route's usual XP per minute
-    local found = {}
-    for map in pairs(maps) do
-        for _, id in ipairs(QuestsOn(map)) do
-            local q = Q(id)
-            local carried = P:InLog(id)
-            if not onRoute[id] and not q.pvp and Practical(q) <= level and not DonationCloth(q) and Worth(id, level)
-                and E:QuestOpen(id) and (carried or PrereqsDone(q)) and not NeedsDungeon(id, 0) then
-                local aSpot, tSpot = World(q.a), World(q.t)
-                local aAt, aCost = 1, 0
-                if not carried then aAt, aCost = Cheapest(route, aSpot, 1) end
-                local tAt, tCost
-                local near = not carried and Yards(aSpot, tSpot)
-                if near and near < SAME_SPOT then
-                    tAt, tCost = aAt, 0
-                elseif aAt then
-                    tAt, tCost = Cheapest(route, tSpot, aAt) -- (handed in after it's picked up)
-                end
-                if aAt and aCost and tAt and tCost then
-                    local minutes = math.max(MIN_DETOUR, (aCost + tCost) / RUN_SPEED / 60)
-                    local gain = QuestXP(q, level)
-                    if minutes <= budget and gain / minutes >= rate then
-                        found[#found + 1] = { id = id, minutes = minutes, value = gain / minutes,
-                            a = not carried and route[aAt][1] or nil, aStart = not carried and route[aAt][1] == nil,
-                            t = route[tAt][1], tStart = route[tAt][1] == nil }
-                    end
-                end
-            end
-        end
-    end
-    table.sort(found, function(x, y) return x.value > y.value end)
-    while #found > MAX_DETOURS do table.remove(found) end
-    return found
-end
-
--- The section's steps with its detours fitted in (each marked detour = its minutes).
-local function AddDetours(section, steps)
-    if Clearing() or section.instance or section.travel then return steps end
-    if not (detourCache and detourCache.key == section.id) then
-        detourCache = { key = section.id, list = PlanDetours(section, steps) }
-    end
-    if #detourCache.list == 0 then return steps end
-    local after, start = {}, {} -- step key -> steps to put after it; start: before the next step left
-    local function Put(key, atStart, step)
-        local list = atStart and start or after[key]
-        if not list then list = {}; after[key] = list end
-        list[#list + 1] = step
-    end
-    for _, d in ipairs(detourCache.list) do
-        if d.a or d.aStart then Put(d.a, d.aStart, { "A", d.id, detour = d.minutes }) end
-        Put(d.t, d.tStart, { "T", d.id, detour = d.minutes })
-    end
-    local out, placed = {}, #start == 0
-    for _, st in ipairs(steps) do
-        if not placed and st[1] ~= "Z" and not E:StepDone(st) then
-            for _, x in ipairs(start) do out[#out + 1] = x end
-            placed = true
-        end
-        out[#out + 1] = st
-        for _, x in ipairs(after[StepKey(st)] or {}) do out[#out + 1] = x end
-    end
-    if not placed then
-        for _, x in ipairs(start) do out[#out + 1] = x end
-    end
-    return out
-end
 
 -- ---------------------------------------------------------------------------------------------
 -- The order of the next steps
@@ -1662,8 +1454,12 @@ function E:ReleaseHold() holdKey, holdStep = nil, nil end
 local function Orderable(s)
     local k = s[1]
     -- (A dungeon's route: what's done outside before the run is planned too. The run itself stops
-    -- the plan, so nothing crosses it: what comes before stays before, the hand-ins after.)
-    return (k == "A" or k == "O" or k == "T" or k == "L") and not (s.later or s.last or s.inside)
+    -- the plan, so nothing crosses it: what comes before stays before, the hand-ins after. The
+    -- hand-in of a quest from an item found inside, and what it leads to, are planned with the other
+    -- hand-ins: listed last, they sent you to Ratchet a second time for The Glowing Shard. Only the
+    -- item itself stays put: it's found during the run. A hand-in for an item you didn't find counts
+    -- as done, and what it leads to waits for it.)
+    return (k == "A" or k == "O" or k == "T" or k == "L") and not (s.later or s.last or (s.inside and k == "L"))
         and (not s.before or ns.char.instance ~= nil)
 end
 
@@ -1671,6 +1467,11 @@ end
 function E.After(a, b) return E.AfterStep(a, b) end
 local function After(a, b)
     if b[1] == "I" then return true end -- the run is where a route's plan ends
+    -- A dungeon route's unlock stage (Instance.lua): what its quests need first comes before the rest.
+    if a.unlock and not b.unlock then return true end
+    -- ...and what gets you ready away from the dungeon's zone before anything in it (Instance.lua's
+    -- ZoneLast: the Damp Note at Blackfathom's entrance waits until nothing's left elsewhere).
+    if a.prep and b.zoneLast then return true end
     if a[2] == b[2] then return not (a.part and b.part) end -- (a quest's objectives: in any order)
     local q = Q(b[2])
     for _, p in ipairs(q and q.pre or {}) do
@@ -1744,11 +1545,132 @@ local function QuestRate(id, start)
         end
     end
     To(q.t)
-    local minutes = math.max(0.25, yards / RUN_SPEED / 60 + (ready and 0 or (q.m or 0)))
+    local minutes = math.max(0.25, yards / Speed() / 60 + (ready and 0 or (q.m or 0)))
     if not ready then minutes = minutes + ExpectedDeaths(q, level) * DEATH_MINUTES end
     return xp / need / minutes * 60, xp, minutes
 end
 E.QuestRate = QuestRate
+
+-- A quest you picked up yourself (not on the guide's route) that pays less than BAD_SHARE of what
+-- questing here does: when the guide comes to it, it says so and recommends dropping or skipping it.
+-- Keep it, and it's yours: it goes first until it's done (E.Chosen). Asked once a quest.
+E.BAD_SHARE = 0.5
+StaticPopupDialogs["FIELDGUIDE_BADQUEST"] = {
+    text = "%s", button1 = "Drop it", button2 = "Do it now", button3 = "Skip it",
+    OnAccept = function(_, id) E:DecideQuest(id, "drop") end,
+    OnCancel = function(_, id, reason) if reason == "clicked" then E:DecideQuest(id, "keep") end end,
+    OnAlt = function(_, id) E:DecideQuest(id, "skip") end,
+    OnHide = function(dialog) if dialog.data and not (ns.char.chosen or {})[dialog.data] then ns.char.asked[dialog.data] = nil end end,
+    timeout = 0, whileDead = 1, hideOnEscape = 1, preferredIndex = 3,
+}
+
+-- The quests on the guide's own route (any section of it): the others in your log are ones you chose.
+function E.OnRoute(id)
+    local guide = E.guide
+    if not guide then return true end
+    if E.routeOf ~= guide then
+        E.routeOf, E.routeIds = guide, {}
+        for _, sec in ipairs(guide.sections or {}) do
+            for _, st in ipairs(sec.steps or {}) do
+                if st[1] == "A" then E.routeIds[st[2]] = true end
+            end
+        end
+    end
+    return E.routeIds[id] == true
+end
+
+-- The step you're on is a poor quest you chose: ask what to do with it (once a quest).
+function E.CheckChosen(step)
+    local id = step and (step[1] == "O" or step[1] == "T") and step[2]
+    if not (id and P:InLog(id)) or E.OnRoute(id) then return end
+    ns.char.chosen = ns.char.chosen or {}
+    ns.char.asked = ns.char.asked or {}
+    if ns.char.chosen[id] or ns.char.asked[id] or ns.char.ignored[id] then return end
+    local c, n, w = ns.WorldMap.Player()
+    if not c then return end
+    local _, pays, minutes = QuestRate(id, { c, n, w })
+    local here = E:QuestingRate()
+    if not (minutes > 0 and here > 0) or pays / minutes >= here * E.BAD_SHARE then return end
+    ns.char.asked[id] = true
+    local text = ("You picked up %s yourself. It pays about %d XP a minute (%d XP for about %d min), against about %d "
+        .. "questing here: it slows you down.\n\nDrop it (abandon), skip it (it stays in your log, off the route), "
+        .. "or do it now (it goes first)?"):format(E:QuestName(id), math.floor(pays / minutes), math.floor(pays),
+        math.max(1, math.floor(minutes + 0.5)), math.floor(here))
+    C_Timer.After(0, function()
+        -- (Put away with Escape: asked again the next time it comes up.)
+        local dialog = StaticPopup_Show("FIELDGUIDE_BADQUEST", text, nil, id)
+        if not dialog then ns.char.asked[id] = nil end
+    end)
+end
+
+function E:DecideQuest(id, how)
+    ns.char.chosen = ns.char.chosen or {}
+    if how == "keep" then
+        ns.char.chosen[id] = true
+        ns.char.carried = ns.char.carried or {}
+        ns.char.carried[id] = true
+        ns:Print(("Doing %s now, as you chose: it goes first until it's done."):format(E:QuestName(id)))
+    elseif how == "skip" then
+        ns.char.ignored[id] = true
+        if ns.char.carried then ns.char.carried[id] = nil end
+        ns:Print(("Skipped %s: it stays in your log, off the route. /fg unskip brings it back."):format(E:QuestName(id)))
+    elseif how == "drop" then
+        local ok = false
+        if C_QuestLog and C_QuestLog.SetSelectedQuest and C_QuestLog.SetAbandonQuest and C_QuestLog.AbandonQuest then
+            ok = pcall(function()
+                C_QuestLog.SetSelectedQuest(id)
+                C_QuestLog.SetAbandonQuest()
+                C_QuestLog.AbandonQuest()
+            end)
+        end
+        if not ok then
+            ns.char.ignored[id] = true
+            ns:Print(("Couldn't drop %s: abandon it in your quest log. It's off the route meanwhile."):format(E:QuestName(id)))
+        else
+            ns:Print(("Dropped %s."):format(E:QuestName(id)))
+        end
+    end
+    orderDirty, pickDirty = true, true
+    E.dirtyWhy = "you decided about " .. E:QuestName(id)
+    ns:Changed()
+end
+
+-- A quest you chose to do goes first: its steps (adding them if the route hasn't got them) where the
+-- first step left is.
+function E.Chosen(steps)
+    local chosen = ns.char.chosen
+    if not (chosen and next(chosen)) then return steps end
+    local f = FirstLeft(steps)
+    if not f then return steps end
+    local front, taken = {}, {}
+    for id in pairs(chosen) do
+        if not P:InLog(id) then
+            chosen[id] = nil
+        else
+            local q = Q(id)
+            local any = false
+            for i, st in ipairs(steps) do
+                if (st[1] == "O" or st[1] == "T") and st[2] == id and not E:StepDone(st) then
+                    front[#front + 1], taken[i], any = st, true, true
+                end
+            end
+            if not any and q then
+                local ready = P:ReadyToTurnIn(id) or not q.o
+                if not ready and q.o then front[#front + 1] = { "O", id } end
+                if q.t then front[#front + 1] = { "T", id } end
+            end
+        end
+    end
+    if #front == 0 then return steps end
+    -- (Its objectives before its hand-in.)
+    table.sort(front, function(a, b) if a[2] ~= b[2] then return a[2] < b[2] end return a[1] < b[1] end)
+    local out = {}
+    for i = 1, f - 1 do if not taken[i] then out[#out + 1] = steps[i] end end
+    for _, st in ipairs(front) do out[#out + 1] = st end
+    for i = f, #steps do if not taken[i] then out[#out + 1] = steps[i] end end
+    return out
+end
+
 function E.YardsTo(point) -- (the simulator's diagnostics)
     local c, n, w = ns.WorldMap.Player()
     local spot = c and World(point)
@@ -1920,6 +1842,14 @@ local function StepWeight(s)
     -- (A dungeon's run counts for its kills, at least: it's what the route is for.)
     if s[1] == "I" then return 1 + (45 + 5 * P:Level()) * RUN_KILL_XP end
     local xp = QuestXP(Q(s[2]), P:Level()) / (1 + ExpectedDeaths(Q(s[2]), P:Level()))
+    if E.section and E.section.tasks then
+        -- The leveling planner (Tasks.lua): a pick-up earns nothing by itself (it only has to come
+        -- before the quest's tasks), and a quest about to stop paying weighs up to three times as much,
+        -- so it's done while it still pays.
+        if s[1] == "A" or s[1] == "L" then return 1 end
+        local urgent = ns.Tasks and ns.Tasks.Urgency and ns.Tasks:Urgency(s[2]) or 1
+        return 1 + xp * urgent * (s[1] == "T" and 0.6 or 0.4)
+    end
     return 1 + xp * (s[1] == "T" and 0.5 or 0.25)
 end
 
@@ -2386,9 +2316,9 @@ local function PlanOrder(section, steps, away)
     end
     if not section.instance then
         Tuck(list, spots, seq, start, opening)
-        -- The step you're on stays first, unless that walks more than SAVE_YARDS further than this route.
-        -- The same route with it first, against the route: what it costs to do it now and not when
-        -- the route comes to it.
+        -- The step you're on stays first: you're walking to it, and a plan that turned you round
+        -- halfway there (it used to, to save as little as 40 yards) left you never finishing anything.
+        -- Only a step that something on the list must come before can't be first.
         if held then
             local first = { held }
             for _, j in ipairs(seq) do
@@ -2398,11 +2328,7 @@ local function PlanOrder(section, steps, away)
             for i = 2, #first do
                 if After(list[first[i]], list[held]) and list[first[i]][2] ~= list[held][2] then legal = false end
             end
-            local saves = legal and Walk(spots, first, start) - Walk(spots, seq, start) or 0
-            E.lastBump = ("%s: %d yd saved by moving it"):format(StepKey(list[held]), saves)
-            if saves > SAVE_YARDS then
-                ns:Print(("Moved %s later: saves %d yd."):format(E:QuestName(list[held][2]), saves))
-            else
+            if legal then
                 Tuck(list, spots, first, start, held)
                 seq, opening = first, held
             end
@@ -2418,8 +2344,11 @@ local function PlanOrder(section, steps, away)
         if j ~= i then moved = true end
     end
     if moved and Minutes(yards) < Minutes(guideYards) then
-        ns:Print(("Next %d steps put in the quickest order: about %d min of walking instead of %d."):format(
-            #list, Minutes(yards), Minutes(guideYards)))
+        -- (Once: the same news again each time the plan's looked over is only noise.)
+        local text = ("Next %d steps put in the quickest order: about %d min of walking instead of %d (why: %s)."):format(
+            #list, Minutes(yards), Minutes(guideYards), tostring(E.planWhy or "?"))
+        if text ~= E.lastPlanText then ns:Print(text) end
+        E.lastPlanText = text
     end
     return { section = section.id, keys = keys, minutes = yards / RUN_SPEED / 60 }
 end
@@ -2431,7 +2360,14 @@ local job
 local function RunJob()
     if not job then return end
     sliceStart = debugprofilestop and debugprofilestop() or nil
+    local t0 = sliceStart
     local ok, result = coroutine.resume(job.co)
+    if t0 and ns.SlowFrameNote then ns.SlowFrameNote("planner (background)", debugprofilestop() - t0) end
+    -- A slice is SLICE_MS; one far past it is a stretch of the planner with no Breathe in it.
+    if t0 and ns.db and ns.db.slowWatch ~= false then
+        local took = debugprofilestop() - t0
+        if took >= 100 then print(("|cffff8c33Field Guide slow:|r planner slice %d ms (spent so far %d)"):format(took, spent or 0)) end
+    end
     if not ok then
         job = nil
         if ns.UI and ns.UI.Planning then ns.UI:Planning(false) end
@@ -2439,6 +2375,7 @@ local function RunJob()
         return
     end
     if coroutine.status(job.co) == "dead" then
+        if type(result) == "table" then result.hold = job.hold end
         job, sliceStart = nil, nil
         order = result
         if ns.UI and ns.UI.Planning then ns.UI:Planning(false) end
@@ -2450,7 +2387,9 @@ end
 
 local function StartPlan(section, steps, away)
     spent = 0
-    job = { co = coroutine.create(function() return PlanOrder(section, steps, away) end) }
+    -- (hold: the step you were on when it was made. A plan that couldn't put it first isn't asked
+    -- again for the same step: that was planning over and over, every update.)
+    job = { hold = holdKey, co = coroutine.create(function() return PlanOrder(section, steps, away) end) }
     if ns.UI and ns.UI.Planning then ns.UI:Planning(true) end
     RunJob()
 end
@@ -2502,17 +2441,23 @@ end
 -- is a task of its own: `from` the zone you leave, `back` when the plan brings you back there (an
 -- errand) and not when you're moving on.
 local function WithTravel(steps)
+    -- (Each step's zone, and the last step left to do in each zone, worked out once: looking ahead
+    -- from every step for a way back was most of an update on a long list.)
+    local maps, last = {}, {}
+    for i, s in ipairs(steps) do
+        if s[1] ~= "Z" then
+            local live = not E:StepDone(s) and not Waits(s)
+            local map = StepMap(s)
+            if live and map then last[map] = i end
+            maps[i] = not s.later and live and map or false
+        end
+    end
     local out, at = {}, CurrentZone()
     for i, s in ipairs(steps) do
         if s[1] ~= "Z" then
-            local map = not s.later and not E:StepDone(s) and not Waits(s) and StepMap(s)
+            local map = maps[i]
             if map and map ~= at then
-                local back = false
-                for j = i + 1, #steps do
-                    local later = steps[j]
-                    if StepMap(later) == at and not E:StepDone(later) and not Waits(later) then back = true; break end
-                end
-                out[#out + 1] = { "Z", map, from = at, back = back }
+                out[#out + 1] = { "Z", map, from = at, back = at ~= nil and (last[at] or 0) > i }
                 at = map
             end
             out[#out + 1] = s
@@ -2541,6 +2486,24 @@ E.BESIDE_YARDS = BESIDE_YARDS
 local inArea = {} -- step key -> true: up front only because it's close (it doesn't become the step you're on)
 E.promised = {} -- step key -> true: came up front, and stays there until it's done (BesideYou)
 
+-- Whether the route comes back near spot later for something that needs you there then: work, or a
+-- hand-in that isn't ready (also those in your log off the route). s: the step it's asked for.
+function E.ComesBack(steps, s, spot)
+    for _, o in ipairs(steps) do
+        if o ~= s and o[2] ~= s[2] and E.NeedsLater and E.NeedsLater(o) and not E:StepDone(o) and not Waits(o) then
+            local os = StepSpot(o)
+            local d = os and Yards(spot, os)
+            if d and d <= E.CLOSE_YARDS then return true end
+        end
+    end
+    for _, id in ipairs(P:LogQuests()) do
+        local lq = id ~= s[2] and not P:ReadyToTurnIn(id) and Q(id)
+        local d = lq and lq.t and lq.o and not ns.char.ignored[id] and Yards(spot, World(lq.t))
+        if d and d <= E.CLOSE_YARDS then return true end
+    end
+    return false
+end
+
 local function BesideYou(steps)
     wipe(inArea)
     local c, n, w = ns.WorldMap.Player()
@@ -2551,7 +2514,7 @@ local function BesideYou(steps)
     -- it further on (you finished the quest sooner than it expected): it pays, and it's on your way.
     local stop
     for _, s in ipairs(steps) do
-        if s[1] == "I" then break end
+        if s[1] == "I" and not E:StepDone(s) then break end
         if Orderable(s) and not E:StepDone(s) and not Waits(s) then
             stop = StepSpot(s)
             break
@@ -2563,7 +2526,7 @@ local function BesideYou(steps)
     -- (The next few stops, not only the first: a short hop on the way out is still leaving.)
     local leaving, ahead = false, 0
     for _, s in ipairs(steps) do
-        if s[1] == "I" or ahead >= E.LOOK_STOPS then break end
+        if (s[1] == "I" and not E:StepDone(s)) or ahead >= E.LOOK_STOPS then break end
         if Orderable(s) and not E:StepDone(s) and not Waits(s) then
             ahead = ahead + 1
             local yards = Yards(at, StepSpot(s))
@@ -2577,7 +2540,8 @@ local function BesideYou(steps)
     -- to its place in the order and you'd leave without it. Let go of only once you're well away from it.
     local promised = E.promised
     for _, s in ipairs(steps) do
-        if s[1] == "I" then past = true end
+        -- (A run that's done isn't in the way: its hand-ins after it are as close as they are.)
+        if s[1] == "I" and not E:StepDone(s) then past = true end
         local here = false
         local key = StepKey(s)
         local fight = (leaving or promised[key]) and s[1] == "O" and Orderable(s) and P:InLog(s[2]) and not E:MovedOn(s)
@@ -2587,6 +2551,12 @@ local function BesideYou(steps)
             local spot = doable and StepSpot(s)
             local yards = spot and Yards(at, spot)
             here = yards and (yards <= reach or (promised[key] and yards <= E.LEAVE_YARDS))
+            -- (Leaving's wider reach is for what you'd come all the way back for. A hand-in where the
+            -- route comes back anyway, for work or another hand-in that isn't ready, waits for that visit:
+            -- Arachnophobia was handed in at Sun Rock on the way out, with two more to hand in there.)
+            if here and s[1] == "T" and yards > BESIDE_YARDS and not promised[key] and E.ComesBack(steps, s, spot) then
+                here = false
+            end
             promised[key] = here and true or nil
             dist[s] = yards
             if not here and s[1] == "T" and spot and stop then
@@ -2647,190 +2617,184 @@ local function BesideYou(steps)
     return out
 end
 
--- Finished quests in your log that aren't on the route, however you came to finish them (a dungeon's, one
--- the guide never had): the XP is earned but for the walk, so a hand-in joins the plan once that walk
--- pays what questing does, by the measure the plan uses (QuestRate). Once in, it stays until it's handed
--- in, wherever you walk: a route that dropped it again would be changing its mind. Otherwise it's looked
--- at again as you go, so one you come near gets picked up. One within CLOSE_YARDS is in whatever it pays:
--- it costs next to nothing now, and a trip back later. Only quests with a known place to hand in.
-function E.WithHandIns(section, steps)
-    if not section or section.instance or stay or Clearing() or not logReady then return steps end
-    ns.char.handIns = ns.char.handIns or {}
-    local kept = ns.char.handIns
-    for id in pairs(kept) do
-        if not P:InLog(id) then kept[id] = nil end
+E.handInAsked = {} -- (this session: asked already)
+-- The step you're walking to stays the one to do, whatever a new plan puts first, until it's done
+-- or you've gone off course (OFF_COURSE_SECONDS lets go of it): a plan made halfway there would
+-- turn you round. Not past a change of zone or a dungeon run, nor ahead of what it needs.
+function E.Committed(steps)
+    if not holdKey then return steps end
+    local f = FirstLeft(steps)
+    if not f or not Orderable(steps[f]) then return steps end
+    local h
+    for i = f + 1, #steps do
+        local s = steps[i]
+        if s[1] == "Z" or s[1] == "I" then return steps end
+        if StepKey(s) == holdKey then h = i; break end
     end
-    local listed = {}
-    for _, s in ipairs(steps) do
-        if s[1] == "T" then listed[s[2]] = true end
+    if not h then return steps end
+    local held = steps[h]
+    if not Orderable(held) or E:StepDone(held) or Waits(held) then return steps end
+    for i = f, h - 1 do
+        if After(steps[i], held) and steps[i][2] ~= held[2] and not E:StepDone(steps[i]) then return steps end
     end
-    local out, rate, start = steps, nil, nil
-    for _, id in ipairs(P:LogQuests()) do
-        local q = Q(id)
-        if q and q.t and not listed[id] and not ns.char.ignored[id] and P:ReadyToTurnIn(id) then
-            if not kept[id] then
-                if not start then
-                    local c, n, w = ns.WorldMap.Player()
-                    start = c and { c, n, w } or false
-                    rate = E:QuestingRate()
-                end
-                local _, pays, minutes = QuestRate(id, start or nil)
-                local spot = start and StepSpot({ "T", id })
-                local yards = spot and Yards(start, spot)
-                if start and ((yards and yards <= E.CLOSE_YARDS) or (minutes > 0 and pays / minutes >= rate)) then
-                    kept[id], orderDirty = true, true
-                end
-            end
-            if kept[id] then
-                if out == steps then
-                    out = {}
-                    for i, s in ipairs(steps) do out[i] = s end
-                end
-                out[#out + 1] = { "T", id }
-            end
-        end
+    local out = {}
+    for i = 1, f - 1 do out[#out + 1] = steps[i] end
+    out[#out + 1] = held
+    for i = f, #steps do
+        if i ~= h then out[#out + 1] = steps[i] end
     end
     return out
 end
 
--- A quest from a higher bracket whose giver is at a place the route stops anyway (or where you stand), and
--- that the game already lets you take: it's picked up on this visit, as you won't be back this way for a
--- while, and what it asks waits until it's your level (Waits). Only while the log has room to spare.
-function E.WithEarly(section, steps)
-    if not section or section.instance or section.travel or stay or Clearing() or not logReady then return steps end
-    ns.char.early = ns.char.early or {}
-    for id in pairs(ns.char.early) do
-        if not P:InLog(id) then ns.char.early[id] = nil end
-    end
-    if #P:LogQuests() >= E.EARLY_LOG then return steps end
-    local level = P:Level()
-    local stops
-    local out = steps
-    for i, s in ipairs(steps) do
-        local q = s[1] == "A" and Waits(s) and not E:StepDone(s) and Q(s[2])
-        if q and q.a and (q.r or 1) <= level and PrereqsDone(q) then
-            if not stops then
-                stops = {}
-                local c, n, w = ns.WorldMap.Player()
-                if c then stops[1] = { c, n, w } end
-                for _, t in ipairs(steps) do
-                    if (t[1] == "A" or (t[1] == "T" and P:ReadyToTurnIn(t[2]))) and not E:StepDone(t) and not Waits(t) then
-                        local spot = StepSpot(t)
-                        if spot then stops[#stops + 1] = spot end
-                    end
-                end
-            end
-            local spot = StepSpot(s)
-            for _, stop in ipairs(stops) do
-                local yards = spot and Yards(stop, spot)
-                if yards and yards <= BESIDE_YARDS then
-                    if out == steps then
-                        out = {}
-                        for k, v in ipairs(steps) do out[k] = v end
-                    end
-                    local copy = {}
-                    for k, v in pairs(s) do copy[k] = v end
-                    copy.early = true
-                    out[i] = copy
-                    ns.char.early[s[2]] = true
-                    break
-                end
-            end
-        end
-    end
-    return out
+-- A quest ready to hand in, a short walk away, at a place nothing else on the route brings you back
+-- to: it's handed in now. Saved for later, it's a trip back (or the end of the route, the XP held
+-- until then), and the plan's walking sum can't see that a route which turns away from a hand-in
+-- this close is one you don't finish. HANDIN_NOW_YARDS: what "a short walk" is (300: at most about
+-- 1.5 minutes there and back. At 800 it sent you 700 yards to Makaba Flathoof from Grundig Darkcloud,
+-- about 3 minutes more in all, as the route went on into the Barrens after Blood Feeders anyway).
+-- Coming back means another step to do within CLOSE_YARDS of it, other than this quest's own and
+-- what it opens, or another quest in your log handed in there (on the route or not: Arachnophobia
+-- went in early at Sun Rock while Elemental War and Boulderslide Ravine, in the log, end there too).
+E.HANDIN_NOW_YARDS = 300
+-- On the way: a ready hand-in that adds no more than ONWAY_YARDS to the walk to the step you're
+-- on is handed in as you pass, whether or not the route would come back (the camp on the Barrens
+-- border, two hand-ins beside the line, walked past on the way to Sludge Fen).
+E.ONWAY_YARDS = 150
+-- What still needs you at a place later: work there (an objective) or a hand-in that isn't ready.
+-- A ready hand-in or a quest to pick up there is done on this same visit.
+function E.NeedsLater(o)
+    if o[1] == "O" or o[1] == "L" then return true end
+    return o[1] == "T" and not (P:ReadyToTurnIn(o[2]) or not (Q(o[2]) or {}).o)
 end
-
--- All that's left of a quest in your log is within CLOSE_YARDS of you. An objective with no known place
--- isn't here: it could be anywhere. A dungeon's quest never is: its work is inside.
-function E.AllHere(id, at)
-    local q = Q(id)
-    if not q or q.dq then return false end
-    for _, left in ipairs(E:ActionsLeft(id)) do
-        local near = false
-        for _, point in ipairs(left.action.w or left.action.p or {}) do
-            local spot = World(point)
-            local yards = spot and Yards(at, spot)
-            if yards and yards <= E.CLOSE_YARDS then near = true; break end
-        end
-        if not near then return false end
-    end
-    return true
-end
-
--- A quest worth doing with its giver within CLOSE_YARDS of you, on the route or not: you're here now, and
--- anything left behind is a trip back later (the next zone's route, the loose ends). It's worth it by the
--- measure everything else uses: it pays what questing does. Once taken on, a quest stays on the plan,
--- pick-up, objectives and hand-in, until it's done, whichever zone you're following.
-function E.WithNearby(section, steps)
-    if not section or section.instance or stay or Clearing() or not logReady then return steps end
-    ns.char.adopted = ns.char.adopted or {}
-    local kept = ns.char.adopted
-    local listed = {}
-    for _, s in ipairs(steps) do listed[s[1] .. s[2]] = true end
+function E.HandInNow(steps)
     local c, n, w = ns.WorldMap.Player()
-    local zone = CurrentZone()
-    if not E.byZone then
-        E.byZone = {}
-        for id, q in pairs(ns.Quests) do
-            local map = q.a and q.a[1]
-            if map then
-                E.byZone[map] = E.byZone[map] or {}
-                table.insert(E.byZone[map], id)
-            end
-        end
+    if not c then return steps end
+    local at = { c, n, w }
+    local f = FirstLeft(steps)
+    if not f then return steps end
+    -- (Where you're headed: the first step left with a place; a zone change has none.)
+    local goal
+    for i = f, #steps do
+        local st = steps[i]
+        if st[1] == "I" then break end
+        if not E:StepDone(st) and not Waits(st) then goal = StepSpot(st) end
+        if goal then break end
     end
-    local level = P:Level()
-    if c and #P:LogQuests() < E.EARLY_LOG then
-        local start, rate = { c, n, w }, nil
-        for _, id in ipairs(E.byZone[zone] or {}) do
-            local q = Q(id)
-            if not kept[id] and not listed["A" .. id] and not q.dq and not P:InLog(id) and E:QuestOpen(id)
-                and Practical(q) <= level and PrereqsDone(q) and not NeedsDungeon(id, 0) then
-                local spot = StepSpot({ "A", id })
-                local yards = spot and Yards(start, spot)
-                if yards and yards <= E.CLOSE_YARDS then
-                    rate = rate or E:QuestingRate()
-                    local _, pays, minutes = QuestRate(id, start)
-                    if minutes > 0 and pays / minutes >= rate then
-                        kept[id], orderDirty = true, true
+    local toGoal = goal and Walked(at, goal)
+    local best, bestYards, onWay
+    for i = f, #steps do
+        local s = steps[i]
+        if s[1] == "I" then break end
+        if s[1] == "T" and P:InLog(s[2]) and not E:StepDone(s) and not Waits(s) then
+            local q = Q(s[2])
+            if q and (P:ReadyToTurnIn(s[2]) or not q.o) then
+                local spot = StepSpot(s)
+                local yards = spot and Walked(at, spot)
+                local detour = yards and toGoal and yards + Walked(spot, goal) - toGoal
+                if yards and detour and detour <= E.ONWAY_YARDS and i ~= f and (not bestYards or yards < bestYards) then
+                    best, bestYards, onWay = i, yards, true
+                elseif yards and yards <= E.HANDIN_NOW_YARDS and (not bestYards or yards < bestYards) then
+                    local back = false
+                    for j = f, #steps do
+                        local o = steps[j]
+                        if j ~= i and E.NeedsLater(o) and o[2] ~= s[2] and not E:StepDone(o)
+                            and not Waits(o) and not After(s, o) then
+                            local os = StepSpot(o)
+                            local d = os and Yards(spot, os)
+                            if d and d <= E.CLOSE_YARDS then back = true; break end
+                        end
                     end
+                    if not back then
+                        for _, id in ipairs(P:LogQuests()) do
+                            local lq = id ~= s[2] and not P:ReadyToTurnIn(id) and Q(id)
+                            local d = lq and lq.t and lq.o and not ns.char.ignored[id] and Yards(spot, World(lq.t))
+                            if d and d <= E.CLOSE_YARDS then back = true; break end
+                        end
+                    end
+                    if not back then best, bestYards, onWay = i, yards, false end
                 end
             end
         end
     end
-    local out = steps
-    local function Add(kind, id)
-        if listed[kind .. id] then return end
-        if out == steps then
-            out = {}
-            for i, s in ipairs(steps) do out[i] = s end
-        end
-        out[#out + 1] = { kind, id }
+    if not best or best == f then return steps end
+    -- (Said once, so a hand-in that comes first can be told from the plan's own choices.)
+    local id = steps[best][2]
+    if E.handInNowSaid ~= id then
+        E.handInNowSaid = id
+        ns:Print(onWay and ("Handing in %s on the way: it's %d yards from you, beside your path."):format(E:QuestName(id), bestYards)
+            or ("Handing in %s now: it's %d yards away and nothing else brings you back there."):format(E:QuestName(id), bestYards))
     end
-    -- What's unfinished in your log right here stays on the plan too, whatever leg you're on: a hand-off to
-    -- the next zone lists only itself, and would walk you away from it. "Right here" is the whole of what's
-    -- left of the quest, not one spot of it: the rest may be across the map, or inside a dungeon.
-    if c then
-        for _, id in ipairs(P:LogQuests()) do
-            local q = Q(id)
-            if q and q.o and not ns.char.ignored[id] and not P:ReadyToTurnIn(id) then
-                local step = { "O", id }
-                local spot = StepSpot(step)
-                local yards = spot and Yards({ c, n, w }, spot)
-                if yards and yards <= E.CLOSE_YARDS and E.AllHere(id, { c, n, w }) then Add("O", id) end
-            end
+    local out = {}
+    for i = 1, f - 1 do out[#out + 1] = steps[i] end
+    out[#out + 1] = steps[best]
+    for i = f, #steps do
+        if i ~= best then out[#out + 1] = steps[i] end
+    end
+    return out
+end
+
+-- A spot where the objectives of several quests in your log are together comes before a step much
+-- further away with fewer: three quests' objectives on the way beat one quest at the far end of the
+-- map (it chose that one, held as the step you were on). GROUP_YARDS: objectives this close are one
+-- spot; GROUP_NEARER: the spot has to be at most this share of the way to the step it goes before.
+E.GROUP_YARDS, E.GROUP_NEARER = 150, 0.6
+function E.GroupFirst(steps)
+    local c, n, w = ns.WorldMap.Player()
+    if not c then return steps end
+    local at = { c, n, w }
+    local f = FirstLeft(steps)
+    if not f then return steps end
+    local goal, goalStep
+    for i = f, #steps do
+        local st = steps[i]
+        if st[1] == "I" then break end
+        if not E:StepDone(st) and not Waits(st) then goal, goalStep = StepSpot(st), st end
+        if goal then break end
+    end
+    local far = goal and Walked(at, goal)
+    if not far then return steps end
+    -- The objectives left to do, with their spots.
+    local cand = {}
+    for i = f, #steps do
+        local st = steps[i]
+        if st[1] == "I" then break end
+        if st[1] == "O" and P:InLog(st[2]) and not E:StepDone(st) and not Waits(st) then
+            local spot = StepSpot(st)
+            if spot then cand[#cand + 1] = { i = i, st = st, spot = spot } end
         end
     end
-    for id in pairs(kept) do
-        if P:Done(id) or not E:QuestOpen(id) then
-            kept[id] = nil
-        else
-            if not P:InLog(id) then Add("A", id) end
-            if Q(id).o then Add("O", id) end
-            Add("T", id)
+    local function Quests(center)
+        local ids, list = {}, {}
+        for _, o in ipairs(cand) do
+            local d = Yards(center.spot, o.spot)
+            if d and d <= E.GROUP_YARDS and not ids[o.st[2]] then ids[o.st[2]] = true; list[#list + 1] = o end
         end
+        return list
     end
+    local goalCount = 1
+    if goalStep and goalStep[1] == "O" then
+        for _, o in ipairs(cand) do if o.st == goalStep then goalCount = #Quests(o) end end
+    end
+    local best, bestYards
+    for _, o in ipairs(cand) do
+        local group = Quests(o)
+        local yards = #group >= 2 and #group > goalCount and Walked(at, o.spot)
+        if yards and yards <= far * E.GROUP_NEARER and (not bestYards or yards < bestYards) then best, bestYards = group, yards end
+    end
+    if not best then return steps end
+    local taken, front = {}, {}
+    for _, o in ipairs(best) do taken[o.i] = true; front[#front + 1] = o.st end
+    table.sort(front, function(a, b) return (Walked(at, StepSpot(a)) or 0) < (Walked(at, StepSpot(b)) or 0) end)
+    local key = StepKey(front[1])
+    if E.groupSaid ~= key then
+        E.groupSaid = key
+        ns:Print(("%d of your quests' objectives together %d yards away: doing those first (the next step was %d yards)."):format(
+            #front, bestYards, far))
+    end
+    local out = {}
+    for i = 1, f - 1 do out[#out + 1] = steps[i] end
+    for _, st in ipairs(front) do out[#out + 1] = st end
+    for i = f, #steps do if not taken[i] then out[#out + 1] = steps[i] end end
     return out
 end
 
@@ -2840,15 +2804,25 @@ local function Ordered(section, steps)
         -- (A leg of travel has no plan, but what's beside you still comes first.)
         return section and BesideYou(steps) or steps
     end
+    -- (Its parts timed for the slow-call line.)
+    local mark = debugprofilestop()
+    local function Part(name)
+        local t = debugprofilestop()
+        if ns.SlowNote then ns.SlowNote("Order:" .. name, t - mark) end
+        mark = t
+    end
     local keep = order and order.section == section.id and OrderLive(steps)
+    local applied = keep and ApplyOrder(steps, order.keys) or nil
+    Part("apply")
     -- The order has to start with the step you're on, if that's still to do.
     if keep and holdKey and not job then
-        local now = FirstLeft(ApplyOrder(steps, order.keys))
-        local ordered = now and ApplyOrder(steps, order.keys)[now]
-        if ordered and StepKey(ordered) ~= holdKey then
+        local now = FirstLeft(applied)
+        local ordered = now and applied[now]
+        if ordered and StepKey(ordered) ~= holdKey and order.hold ~= holdKey then
             for _, st in ipairs(steps) do
                 if StepKey(st) == holdKey and Orderable(st) and not E:StepDone(st) and not Waits(st) then
                     orderDirty = true
+                    E.dirtyWhy = "the step you're on wasn't first"
                 end
             end
         end
@@ -2856,14 +2830,31 @@ local function Ordered(section, steps)
     -- Paused: the order isn't worked out again until Play. Still asking the server which quests
     -- exist: the steps may change in a moment (the guide's order meanwhile).
     if (orderDirty or not keep) and not job and not ns.char.paused and not ns.Exists:Busy() then
+        -- (Why, for the chat line: what asked, or the plan ran out or is for another section.)
+        E.planWhy = (not order and "no plan yet") or (order.section ~= section.id and ("now on " .. (section.title or section.id)))
+            or (not keep and "the last plan is done") or E.dirtyWhy or "asked"
+        E.dirtyWhy = nil
         orderDirty = false
         local away = relocate or not order or order.section ~= section.id
         relocate = false
         StartPlan(section, steps, away)
         keep = order and order.section == section.id and OrderLive(steps)
+        applied = keep and ApplyOrder(steps, order.keys) or nil
     end
-    local out = BesideYou(keep and ApplyOrder(steps, order.keys) or steps)
-    return section.instance and out or WithTravel(out)
+    Part("plan")
+    -- Leveling's tasks: the plan's order stands. Only a quest you chose to do goes first, then whatever
+    -- task is right where you stand (BesideYou), and the zone changes are marked where the order itself
+    -- crosses a border (WithTravel: it reorders nothing). Without those two the simulator walked twice as
+    -- far (Orc 79k yards in 150 steps, 30k with them). Zone Clear keeps its zone passes too: hand-ins
+    -- where you are, objectives grouped, the step you're walking to.
+    if section.tasks then return WithTravel(BesideYou(E.Chosen(applied or steps))) end
+    local out = E.Chosen(E.HandInNow(E.GroupFirst(E.Committed(applied or steps))))
+    Part("handins")
+    out = BesideYou(out)
+    Part("beside")
+    out = section.instance and out or WithTravel(out)
+    Part("travel")
+    return out
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -2940,6 +2931,10 @@ local function Form(section, steps, current, at, from)
         local s = steps[i]
         if s[1] == "Z" or s[1] == "G" or s[1] == "I" then break end
         if Destination(s) then dest = i; break end
+        -- The next place the plan has you be isn't a destination yet (a hand-in waiting on these very
+        -- objectives): you come back here after them, so there's no walk to take them in on. (Looking
+        -- past it sent the arrow from Deathknell to a pick-up in Brill, the Deathknell work "on the way".)
+        if not (OpenObjective(s) or s.later or E:StepDone(s) or Waits(s) or E:MovedOn(s)) then break end
     end
     local to = dest and StepSpot(steps[dest])
     local leg = to and Yards(from, to)
@@ -3018,8 +3013,25 @@ do -- (in a block: this file is at Lua's limit of 200 locals)
 -- What a quest asks, one action at a time (q.g, from tools\FieldGuide\build_guides.py)
 -- ---------------------------------------------------------------------------------------------
 
--- Where a "Do" step is: its own objective's spot when the quest is split into stops (see SplitParts).
+-- An item the quest needs you to carry (q.ri: a key, a bauble) that isn't in your bags yet: the
+-- first such { itemID, name, spots }, or nil. Until you have it, the step is to get it.
+local function ItemCount(id)
+    local fn = (C_Item and C_Item.GetItemCount) or GetItemCount
+    if not fn then return 0 end
+    local ok, n = pcall(fn, id)
+    return ok and tonumber(n) or 0
+end
+function E.NeededItem(q)
+    for _, r in ipairs(q and q.ri or {}) do
+        if r[3] and r[3][1] and ItemCount(r[1]) == 0 then return r end
+    end
+end
+
+-- Where a "Do" step is: where its required item comes from while you don't have it, else its own
+-- objective's spot when the quest is split into stops (see SplitParts), else its objective's.
 function E.ObjectivePoint(step, q)
+    local need = P and P:InLog(step[2]) and E.NeededItem(q)
+    if need then return need[3][1] end
     if step.part then return q.g[step.part].p[1] end
     return q.o and q.o[1]
 end
@@ -3028,6 +3040,7 @@ end
 local function SamePlace(q, i, j)
     local a, b = q.g[i].p, q.g[j].p
     if i == j then return true end
+    if q.solo then return false end -- (the leveling planner's: every objective is a task of its own)
     if not (a and b) then return false end
     return a[1][1] == b[1][1] and a[1][2] == b[1][2] and a[1][3] == b[1][3]
 end
@@ -3065,11 +3078,14 @@ end
 
 -- A quest whose objectives are far apart (q.sp) is a stop for each: the route picks up each one when
 -- it goes by, instead of doing them all in one trip. Before a dungeon or inside one, it stays whole.
-function E.SplitParts(steps)
+-- every (the leveling planner's section): every objective of every quest is a task of its own, wherever
+-- it is, in whatever order is quickest.
+function E.SplitParts(steps, every)
     local out = {}
     for _, s in ipairs(steps) do
         local q = s[1] == "O" and not (s.before or s.inside or s.part or s.later) and Q(s[2])
-        if q and q.sp and q.g then
+        if q and q.g then q.solo = every and #q.g > 1 or nil end
+        if q and q.g and (q.sp or q.solo) then
             for i, a in ipairs(q.g) do
                 local lead = a.p ~= nil
                 for j = 1, i - 1 do
@@ -3314,7 +3330,12 @@ function E:Describe(step)
     end
     local kind, id = step[1], step[2]
     if kind == "G" then
-        return "Grind", ("Reach level %d"):format(id), "Kill what's around you until you're level " .. id .. ".", nil
+        -- Only the XP still missing after the quests you carry: they land the level.
+        local carried, n = ReadyXP()
+        local left = math.max(0, XPToReach(id) - carried)
+        local after = n > 0 and (", then hand in your %d finished quest%s"):format(n, n == 1 and "" or "s") or ""
+        return "Grind", ("Reach level %d"):format(id),
+            ("Kill what's around you for about %d XP%s to reach level %d."):format(left, after, id), nil
     end
     if kind == "I" then
         local inst = ns.Instance:Get(id)
@@ -3333,6 +3354,14 @@ function E:Describe(step)
     if kind == "L" then
         local q = Q(id) or {}
         local item = q.ia or "the item"
+        if q.gi and q.a then
+            -- Given by someone inside (Guides\Data.lua's gi): picked up during the run.
+            local inst = step.inst and ns.Instance:Get(step.inst)
+            local name = inst and ns.Instance:RunName(inst, step.wing) or "the dungeon"
+            local who = (q.a[4] or "someone"):gsub(" %(inside%)$", "")
+            return "Pick up", E:QuestName(id), ("From %s, inside %s.%s"):format(who, name,
+                step.again and " Run it again for it." or ""), nil
+        end
         if step.inside or not q.d then
             local inst = step.inst and ns.Instance:Get(step.inst)
             local wing = inst and step.wing and ns.Instance:Wing(inst, step.wing)
@@ -3369,12 +3398,21 @@ function E:Describe(step)
         if step.detour then d = d .. ("  |cff8a948e(detour, ~%d min)|r"):format(math.max(1, math.floor(step.detour + 0.5))) end
         return "Pick up", name, d, q.a and { { q.a[1], q.a[2] / 100, q.a[3] / 100 } }
     elseif kind == "O" then
+        -- First the item it needs you to carry, when you haven't got it (a key, a bauble).
+        local need = not step.farm and P:InLog(id) and E.NeededItem(q)
+        if need then
+            local spots = {}
+            for _, o in ipairs(need[3]) do spots[#spots + 1] = { o[1], o[2] / 100, o[3] / 100 } end
+            return "Get", need[2], ("Needed for %s. %s"):format(name, q.ot or ""), spots
+        end
         local points = {}
         for _, o in ipairs(step.farm and self:FarmSpots() or step.part and q.g[step.part].p or q.o or {}) do
             points[#points + 1] = { o[1], o[2] / 100, o[3] / 100 }
         end
         local left = self:ActionsLeft(id, step.part)
         local detail = left[1] and left[1].text or q.ot or ""
+        local safe = P:InLog(id) and SafeLevel(q)
+        if safe then detail = ("Needs level %d. Its mobs are well above you for now. %s"):format(safe, detail) end
         if step.before and q.o then
             local inst = ns.Instance:Get(step.inst)
             local e, o = inst and inst.entrance, q.o[1]
@@ -3383,6 +3421,12 @@ function E:Describe(step)
             detail = ("Before you go in, %s: %s%s"):format(atEntrance and ("at the entrance, outside the portal (" .. Where(o) .. ")")
                 or ("out in the world (" .. Where(o) .. ")"), detail,
                 part and " Get what you can out here; the rest is inside." or "")
+        end
+        -- One thing left to do: that's the step's name ("Pick up 10 Resonite Crystals", not "Do:
+        -- Boulderslide Ravine"), the quest it's for underneath. The fifth value says the name stands
+        -- on its own, without "Do:" in front.
+        if #left == 1 and not step.before and not step.farm and left[1].action.l then
+            return "Do", left[1].action.l, ("For %s. %s"):format(name, left[1].text), #points > 0 and points or nil, true
         end
         return "Do", name, detail, #points > 0 and points or nil
     else
@@ -3433,7 +3477,7 @@ local SAME_STOP = 75 -- yards (as BESIDE_YARDS: what the guide calls one place)
 
 -- A step in words, for hovering the line on the map: what to do, where, and what it's for.
 local function StepInfo(s)
-    local verb, name, detail = E:Describe(s)
+    local verb, name, detail, _, plain = E:Describe(s)
     local q = s[2] and Q(s[2])
     local why
     if q and s[1] == "A" then
@@ -3444,7 +3488,7 @@ local function StepInfo(s)
     elseif q and s[1] == "T" then
         why = ("Hand in for about %d XP."):format(QuestEarns(q, P:Level()))
     end
-    return { title = verb .. ": " .. name, detail = detail, why = why }
+    return { title = plain and name or (verb .. ": " .. name), detail = detail, why = why }
 end
 
 local function NextStops()
@@ -3510,6 +3554,7 @@ function E:SecondaryTasks()
     -- The rest of what the step you're on asks: the first of it is on the arrow.
     if step[1] == "O" then
         local left = self:ActionsLeft(step[2], step.part)
+        if left[1] then listed[left[1].text] = true end
         for i = 2, #left do
             if #out < MAX_SECONDARY and not listed[left[i].text] then
                 out[#out + 1], listed[left[i].text] = { text = left[i].text, title = self:QuestName(step[2]) }, true
@@ -3524,13 +3569,12 @@ function E:SecondaryTasks()
             end
         end
     end
-    -- What you're still hunting from the areas you've moved on from.
+    -- What you're still hunting from the areas you've moved on from (the step's own quest's other
+    -- objectives too: each is a task of its own; what the arrow shows isn't said twice).
     for id in pairs(self.hunting) do
-        if id ~= step[2] then
-            for _, a in ipairs(self:ActionsLeft(id)) do
-                if #out < MAX_SECONDARY and not listed[a.text] then
-                    out[#out + 1], listed[a.text] = { text = a.text, title = self:QuestName(id) }, true
-                end
+        for _, a in ipairs(self:ActionsLeft(id)) do
+            if #out < MAX_SECONDARY and not listed[a.text] then
+                out[#out + 1], listed[a.text] = { text = a.text, title = self:QuestName(id) }, true
             end
         end
     end
@@ -3599,25 +3643,31 @@ local function PointArrow(step)
             if E.steps[i][1] ~= "Z" and E.steps[i][1] ~= "G" then target = E.steps[i]; break end
         end
     end
-    local verb, name, detail, points = E:Describe(target)
+    local verb, name, detail, points, plain = E:Describe(target)
     if not points then
         Waypoint:Clear("FieldGuide")
         E:SendSecondary(true)
         return false
     end
     if step.farm then verb, name = "Farm", "what you're still after" end
-    local wp = { key = StepKey(step), title = verb .. ": " .. name, subtitle = detail, arrive = target[1] == "O" and 30 or 12,
+    local wp = { key = StepKey(step), title = plain and not step.farm and name or (verb .. ": " .. name), subtitle = detail, arrive = target[1] == "O" and 30 or 12,
         color = ns.char.instance and "purple" or "green", -- a dungeon's route, or the leveling guide
         onClick = function() ns.db.shown = true; ns:Changed() end, points = {} }
-    -- Who to talk to (a pick-up or turn-in): Waypoint makes that line a /target button.
+    -- Who to talk to (a pick-up or turn-in), or the creature an objective is about (to kill, talk to, or
+    -- loot from: the first action left at this stop, q.g[i].m): Waypoint makes that line a /target button.
     local giver = (target[1] == "A" or target[1] == "T") and (Q(target[2]) or {})[target[1] == "A" and "a" or "t"]
     if giver and type(giver[4]) == "string" and giver[4] ~= "?" then wp.targetName = giver[4] end
+    if target[1] == "O" and not step.farm then
+        local left = E:ActionsLeft(target[2], target.part)
+        local mob = left[1] and left[1].action and left[1].action.m
+        if type(mob) == "string" then wp.targetName = mob end
+    end
     -- The step after this one, for the arrow's tooltip.
     for i = (E.current or 0) + 1, #E.steps do
         local s = E.steps[i]
         if s ~= target and s[1] ~= "Z" and not E:StepDone(s) and not Waits(s) then
-            local nVerb, nName = E:Describe(s)
-            wp.next = nVerb .. ": " .. nName
+            local nVerb, nName, _, _, nPlain = E:Describe(s)
+            wp.next = nPlain and nName or (nVerb .. ": " .. nName)
             break
         end
     end
@@ -3676,6 +3726,10 @@ end
 -- restore icon points it at the current step again. Pausing gives the arrow up.
 local function Own()
     if not (Waypoint and Waypoint.SetManager) then return end
+    -- How Waypoint brings the guide back after pausing it (a class quest done).
+    if Waypoint.SetResumer then
+        Waypoint:SetResumer("FieldGuide", function() if ns.char.paused then E:SetPaused(false) end end)
+    end
     if ns.char.paused then
         Waypoint:SetManager("FieldGuide", nil)
     else
@@ -3688,6 +3742,14 @@ local function Own()
                     select = function() E:SetPreference("leveling") end },
                 { label = "Zone Clear", selected = function() return ns.char.preference == "clear" end,
                     select = function() E:SetPreference("clear") end } },
+            -- "Stay in <zone>" in the arrow's menu (E:SetZoneLock).
+            checks = { { label = function()
+                    local zone = ns.char.zoneLock or CurrentZone()
+                    local info = zone and C_Map.GetMapInfo(zone)
+                    return "Stay in " .. (info and info.name or "this zone")
+                end,
+                checked = function() return ns.char.zoneLock ~= nil end,
+                toggle = function() E:SetZoneLock(not ns.char.zoneLock) end } },
             restore = function()
             stoppedKey = nil
             local step = E.current and E.steps[E.current]
@@ -3701,15 +3763,73 @@ function E:HidesWhilePaused()
     return ns.char.paused and Waypoint ~= nil and Waypoint.SetButton ~= nil
 end
 
+-- Paused, the guide's quests leave the tracker: the ones it tracked (never yours) are untracked and
+-- kept in ns.char.shelved (saved, so a logout keeps them), and Play tracks them again, those still
+-- in your log; SyncTracking then carries on from the steps. With "Manage quest tracking" off the
+-- guide tracked nothing, so there's nothing to shelve.
+local function ShelveTracking()
+    if not (ns.db.manageTracking and Waypoint and Waypoint.TrackedQuests and Waypoint.UntrackQuest) then return end
+    local shelved = {}
+    -- The guide's own, and those tracked by "addon" (Questie tracking a quest as you accept it):
+    -- with "Manage quest tracking" on, the guide decides those too. Never yours ("user"), nor a class
+    -- quest Waypoint is leading you through ("Waypoint").
+    for id, by in pairs(Waypoint:TrackedQuests()) do
+        if by == "FieldGuide" or by == "addon" then shelved[#shelved + 1] = id end
+    end
+    if #shelved == 0 then return end
+    table.sort(shelved)
+    for _, id in ipairs(shelved) do Waypoint:UntrackQuest("FieldGuide", id) end
+    ns.char.shelved = shelved
+end
+
+local function UnshelveTracking()
+    local shelved = ns.char.shelved
+    ns.char.shelved = nil
+    if not (shelved and Waypoint and Waypoint.TrackQuest) then return end
+    for _, id in ipairs(shelved) do
+        if P:InLog(id) then Waypoint:TrackQuest("FieldGuide", id) end
+    end
+end
+
+-- The other way round, so pausing and playing swap two sets: Play notes what's tracked then (what
+-- you followed while the guide was paused, yours included: ns.char.stashed, with who tracked each)
+-- and untracks it, and the guide tracks its own; Pause puts the guide's away and tracks the noted
+-- ones again, those still in your log, recorded as before (so yours stay yours). A class quest
+-- Waypoint is leading you through is left alone.
+local function StashTracking()
+    if not (ns.db.manageTracking and Waypoint and Waypoint.TrackedQuests and Waypoint.UntrackQuest) then return end
+    local stashed = {}
+    for id, by in pairs(Waypoint:TrackedQuests()) do
+        if by ~= "Waypoint" then stashed[#stashed + 1] = { id = id, by = by } end
+    end
+    table.sort(stashed, function(a, b) return a.id < b.id end)
+    for _, e in ipairs(stashed) do Waypoint:UntrackQuest("FieldGuide", e.id, true) end
+    ns.char.stashed = #stashed > 0 and stashed or nil
+end
+
+local function UnstashTracking()
+    local stashed = ns.char.stashed
+    ns.char.stashed = nil
+    if not (stashed and Waypoint and Waypoint.TrackQuest) then return end
+    for _, e in ipairs(stashed) do
+        if P:InLog(e.id) then
+            -- (Yours come back as yours; the rest as the guide's.)
+            Waypoint:TrackQuest("FieldGuide", e.id, e.by == "user" and "user" or nil)
+        end
+    end
+end
+
 -- Pause: the guide stops steering Waypoint's arrow (it goes back to Questie, your path or other
--- addons) and its window hides; a "Play" button on the arrow brings both back. It keeps
--- following your progress meanwhile.
+-- addons), its window hides and its quests leave the tracker; a "Play" button on the arrow brings
+-- all of it back. It keeps following your progress meanwhile.
 function E:SetPaused(paused)
     if paused == nil then paused = not ns.char.paused end
+    local was = ns.char.paused
     ns.char.paused = paused and true or false
     local play = PlayButton()
     Own()
     if paused then
+        if not was then ShelveTracking(); UnstashTracking() end
         if Waypoint and Waypoint.Clear then Waypoint:Clear("FieldGuide") end
         ns:Print(play and "Paused: the guide is hidden and leaves Waypoint's arrow alone. Press Play on the arrow (or /fg resume) to come back."
             or "Paused: the guide won't move Waypoint's arrow. Resume from the guide window, Shift+click the minimap button, or /fg resume.")
@@ -3719,6 +3839,8 @@ function E:SetPaused(paused)
         orderDirty, pickDirty, relocate = true, true, true
         group = nil
         stay, ns.char.waitZone = nil, nil
+        if was then StashTracking() end
+        UnshelveTracking()
         PointArrow(self.current and self.steps[self.current])
         ns:Print("Resumed: the arrow follows the guide again.")
     end
@@ -3803,13 +3925,23 @@ local function QuestTaken(a, b)
 end
 ns:On("QUEST_ACCEPTED", QuestTaken)
 
--- The guide has you picking this quest up: a pick-up (or an item that starts it) on your list that isn't
--- waiting for your level. (A quest taken early is on the list to take now: WithEarly marks it.)
+-- The guide has you picking this quest up: a pick-up (or an item that starts it) anywhere on your list,
+-- waiting or not. (The NPC offering it is the game saying you can take it now: Executor Zygand's three,
+-- still waiting on the list, were left on the table.)
 function E:WantsQuest(id)
     for _, s in ipairs(self.steps or {}) do
-        if (s[1] == "A" or s[1] == "L") and s[2] == id and (s.early or not Waits(s)) then return true end
+        if (s[1] == "A" or s[1] == "L") and s[2] == id then return true end
     end
     return false
+end
+
+-- The quest of a pick-up on your list with this title (an NPC's plain list may not give quest IDs), or nil.
+function E:WantedByTitle(title)
+    if type(title) ~= "string" then return nil end
+    for _, s in ipairs(self.steps or {}) do
+        if (s[1] == "A" or s[1] == "L") and Q(s[2]) and Q(s[2]).n == title then return s[2] end
+    end
+    return nil
 end
 
 -- The step you're on is a pick-up or a hand-in you can do where you stand.
@@ -3835,6 +3967,7 @@ local function CheckRun()
     if not (ns.db and RunOver()) then return end
     logChanges = 0
     orderDirty = true
+    E.dirtyWhy = "quests taken or handed in"
     ns:Changed()
 end
 
@@ -3848,7 +3981,114 @@ ns:On("PLAYER_LOGIN", function()
     C_Timer.NewTicker(1, CheckRun)
 end)
 
+-- Every quest the route picks up or hands in has its objectives on it too, when Questie knows them
+-- and they aren't done: a step that adds a pick-up or a hand-in without them (The Glowing Shard's talk
+-- to Sputtervalve was missing) gets them here, just before the hand-in (or after the pick-up). A
+-- dungeon's route is left alone: its quests' objectives are the run.
+function E.WithObjectives(section, steps)
+    if not section or section.instance then return steps end
+    local hasO, out = {}, nil
+    for _, s in ipairs(steps) do
+        if s[1] == "O" then hasO[s[2]] = true end
+    end
+    local added = {}
+    for i, s in ipairs(steps) do
+        local id = s[2]
+        local q = (s[1] == "A" or s[1] == "T") and not hasO[id] and not added[id] and Q(id)
+        if q and q.o and not P:ReadyToTurnIn(id) and not P:Done(id) then
+            if not out then
+                out = {}
+                for k = 1, i - 1 do out[k] = steps[k] end
+            end
+            added[id] = true
+            if s[1] == "T" then out[#out + 1] = { "O", id }; out[#out + 1] = s
+            else out[#out + 1] = s; out[#out + 1] = { "O", id } end
+        elseif out then
+            out[#out + 1] = s
+        end
+    end
+    return out or steps
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Travelling: on a flight, a boat or a zeppelin you're carried fast across the map, and every update
+-- on the way worked the route out again from a new spot (the nearest step, the zone, the plan all
+-- changing under you). While carried, the route you boarded with is held: no updates (what changes
+-- on the way is only noted), and when you get off it's worked out once, from where you land.
+-- ---------------------------------------------------------------------------------------------
+-- E.carriedBy: what you're on ("a flight", "zeppelin to Undercity"), while held; E.heldChanges:
+-- something asked for an update while held.
+
+-- What carries you now, or nil.
+function E:TravellingOn()
+    if UnitOnTaxi and UnitOnTaxi("player") then return "a flight" end
+    local wp = Waypoint
+    if type(wp) == "table" and wp.Riding then
+        local ok, r = pcall(wp.Riding, wp)
+        if ok and type(r) == "table" then return r.label or "a ride" end
+    end
+    local zs = ZeppelinSignsAPI
+    if zs and zs.Ride then
+        local ok, z = pcall(zs.Ride)
+        if ok and type(z) == "table" then return z.dest and ("ride to " .. z.dest) or "a ride" end
+    end
+    return nil
+end
+
+function E:Holding() return E.carriedBy end
+
+function E.CheckCarried()
+    if not ns.db then return end
+    local now = E:TravellingOn()
+    if now and not E.carriedBy then
+        E.carriedBy, E.heldChanges = now, false
+        if E.steps and #E.steps > 0 then
+            ns:Print(("On %s: the route waits until you get off."):format(now))
+        end
+    elseif E.carriedBy and not now then
+        E.carriedBy = nil
+        relocate, pickDirty = true, true
+        E.dirtyWhy = "you got off"
+        ns:Changed()
+    elseif now then
+        E.carriedBy = now
+    end
+end
+ns:On("PLAYER_LOGIN", function() C_Timer.NewTicker(1, E.CheckCarried) end)
+ns:On("PLAYER_CONTROL_LOST", function() C_Timer.After(0.5, E.CheckCarried) end)
+ns:On("PLAYER_CONTROL_GAINED", function() C_Timer.After(0.5, E.CheckCarried) end)
+
+-- What Tasks.lua (the leveling planner) uses of the engine's own.
+E.lib = {
+    Q = Q, Practical = Practical, Worth = Worth, QuestXP = QuestXP, QuestEarns = QuestEarns,
+    ExpectedDeaths = ExpectedDeaths, PrereqsDone = PrereqsDone, Unreachable = Unreachable,
+    NeedsDungeon = NeedsDungeon, DonationCloth = DonationCloth, DonationReady = DonationReady, World = World, Walked = Walked,
+    WalkMinutes = WalkMinutes, CurrentZone = CurrentZone, XP_TO_LEVEL = XP_TO_LEVEL, RUN_SPEED = RUN_SPEED, TravelMinutes = TravelMinutes,
+    Speed = Speed, GrindRate = GrindRate, XPToReach = XPToReach, ReadyXP = ReadyXP,
+    OCEAN_MINUTES = OCEAN_MINUTES, DEATH_MINUTES = DEATH_MINUTES, MIN_SHARE = MIN_SHARE, Clearing = Clearing,
+    Reorder = function(why) orderDirty = true; E.dirtyWhy = why end,
+}
+
 function E:Update()
+    -- (Carried: the route you boarded with stands. The first one is still worked out: a login on a boat.)
+    if E.carriedBy and self.steps and #self.steps > 0 then
+        E.heldChanges = true
+        return
+    end
+    E.doneMemo = {}
+    local ok, err = pcall(E.raw.UpdateNow, self)
+    E.doneMemo = nil
+    if not ok then geterrorhandler()(err) end
+end
+
+function E.raw.UpdateNow(self)
+    -- (Its stages, timed for the slow-call line: Core.lua's ns.SlowNote.)
+    local mark = debugprofilestop()
+    local function Stage(name)
+        local now = debugprofilestop()
+        if ns.SlowNote then ns.SlowNote("Update:" .. name, now - mark) end
+        mark = now
+    end
     -- (What's near you changes as you walk.)
     if GetTime() - (self.nearAt or 0) >= 2 then
         self.nearAt = GetTime()
@@ -3898,13 +4138,17 @@ function E:Update()
     elseif ns.char.instance then
         ns.char.instance = nil
     end
-    section = section or self:PickSection(guide)
+    Stage("start")
+    -- Leveling: the task planner (Tasks.lua) chooses the work, wherever it is. Zone Clear, a section
+    -- you picked yourself and "stay in this zone" keep the zone sections (PickSection).
+    section = section or (ns.Tasks and ns.Tasks:Section(guide)) or self:PickSection(guide)
+    Stage("pick")
     self.section = section
     lastPick = section and section.id
     if section and not section.instance and not section.travel then ns.char.lastPick = section.id end
-    self.steps = section and AddDetours(section, Build(section)) or {}
+    self.steps = section and Build(section) or {}
     -- A section in another zone starts with going there.
-    local away = section and not section.instance and not section.travel and section.zone ~= CurrentZone()
+    local away = section and not section.instance and not section.travel and not section.tasks and section.zone ~= CurrentZone()
     if away and self.steps[1] and self.steps[1][1] ~= "Z" then
         local steps = { { "Z", section.zone } }
         for _, s in ipairs(self.steps) do steps[#steps + 1] = s end
@@ -3919,18 +4163,23 @@ function E:Update()
         end
         self.steps = here
     end
-    self.steps = WithNeighbours(section, self.steps, guide)
-    self.steps = self.WithEarly(section, self.WithHandIns(section, self.WithNearby(section, self.steps)))
+    Stage("build")
+    self.steps = E.WithObjectives(section, self.steps)
+    Stage("extras")
     self.planSteps = self.steps
     -- A level is when quests open up and old ones pay less: the plan looks again.
     if self.planLevel ~= P:Level() then
         self.planLevel = P:Level()
         orderDirty = true
+        E.dirtyWhy = "a new level"
     end
     self.steps = Ordered(section, self.steps)
+    Stage("order")
     NumberParts(self.steps)
-    self.current = section and Consolidate(section, self.steps, FirstLeft(self.steps)) or FirstLeft(self.steps)
+    -- (Leveling's tasks: the first one left. Zone Clear groups objectives on the way to the next place.)
+    self.current = section and not section.tasks and Consolidate(section, self.steps, FirstLeft(self.steps)) or FirstLeft(self.steps)
     self.current = self:FarmFirst(self.current)
+    Stage("current")
     if stay and not stay.asked then
         local left = false
         for _, s in ipairs(self.steps) do
@@ -3952,9 +4201,6 @@ function E:Update()
         end
         if section.note then
             ns:Print(guide.name .. ": " .. section.note)
-        elseif moved then
-            ns:Print(("%s: %s is the better place to level now, walk included. On to %s."):format(
-                guide.name, section.title, section.title))
         elseif away then
             ns:Print(("%s: nothing left here for your level. Head to %s (levels %d-%d)."):format(
                 guide.name, section.title, section.from, section.to))
@@ -4007,12 +4253,16 @@ function E:Update()
         local mine = Waypoint and Waypoint.Get and Waypoint:Get("FieldGuide")
         if mine and mine.key == key then PointArrow(step) end
     end
+    Stage("trip")
     if key ~= lastKey then
+        E.CheckChosen(step)
         lastKey, stoppedKey = key, nil
         PointArrow(step)
         if step and step[1] ~= "G" and step[1] ~= "Z" and step[1] ~= "I" then P:FocusQuestie(step[2]) end
     end
+    Stage("arrow")
     self:SyncTracking()
+    Stage("tracking")
 end
 
 -- Whether a step counts toward the section's total: zone changes don't, and neither do the
@@ -4048,6 +4298,18 @@ function E:SyncTracking()
     if step and step[1] == "I" then
         for _, id in ipairs(step.needs or {}) do
             if P:InLog(id) then want[id] = true end
+        end
+    end
+    -- On a dungeon's route, every quest of it you already have is tracked from the moment you swap
+    -- to it: the dungeon's own quests and the route's steps (its pre-quests and chains), not only
+    -- the next few.
+    local inst = ns.char.instance and ns.Instance and ns.Instance:Get(ns.char.instance)
+    if inst then
+        for _, id in ipairs(inst[UnitFactionGroup("player") or ""] or {}) do
+            if P:InLog(id) then want[id] = true end
+        end
+        for _, s in ipairs(self.steps) do
+            if s[1] ~= "G" and s[1] ~= "Z" and s[1] ~= "I" and P:InLog(s[2]) then want[s[2]] = true end
         end
     end
     for id in pairs(want) do Waypoint:TrackQuest("FieldGuide", id) end
@@ -4119,7 +4381,7 @@ function E:Clock() return course and course.clock or "reset" end
 
 function E:CheckCourse(seconds)
     local step = self.current and self.steps[self.current]
-    if not step or ns.char.paused or ns.char.instance or (UnitOnTaxi and UnitOnTaxi("player")) then
+    if not step or ns.char.paused or ns.char.instance or E.carriedBy or (UnitOnTaxi and UnitOnTaxi("player")) then
         course = nil
         return
     end
@@ -4147,11 +4409,39 @@ function E:CheckCourse(seconds)
         course = nil
         group, holdKey = nil, nil
         orderDirty, pickDirty, relocate = true, true, true
+        E.dirtyWhy = "off course"
         ns:Changed()
     end
 end
 
 -- Leveling or Zone Clear: a change of aim, so everything's worked out again from where you are.
+-- Stay in this zone: on locks the guide to the zone you're in (E:PickSection), off lets it choose again.
+function E:ZoneLock() return ns.char.zoneLock end
+function E:SetZoneLock(on)
+    local zone = on and CurrentZone() or nil
+    ns.char.zoneLock = zone
+    orderDirty, pickDirty, relocate = true, true, true
+    group, stay, holdKey = nil, nil, nil
+    if zone then
+        local info = C_Map.GetMapInfo(zone)
+        ns:Print(("Staying in %s until it has nothing useful left for you."):format(info and info.name or "this zone"))
+    else
+        ns:Print("Not staying in one zone: the guide chooses the best zone again.")
+    end
+    ns:Changed()
+end
+
+-- A guide chosen from the guide list (GuidePicker.lua): everything's worked out again from where you
+-- stand, the step you were on included, and the arrow leads to the new route's first step.
+function E:FollowFromHere()
+    orderDirty, pickDirty, relocate = true, true, true
+    group, stay, holdKey, holdStep = nil, nil, nil, nil
+    ns.char.waitZone = nil
+    if ns.char.paused then return self:SetPaused(false) end
+    stoppedKey = nil
+    ns:Changed()
+end
+
 function E:SetPreference(mode)
     if ns.char.preference == mode then return end
     orderDirty, pickDirty, relocate = true, true, true
@@ -4166,7 +4456,17 @@ function E:SkipTravel(step)
     holdKey = nil
     orderDirty, pickDirty = true, true
     local from = trip and trip.from or step.from
+    -- The leveling planner (Tasks.lua): the work the trip was for waits until your next level, and
+    -- the plan is chosen again from where you are.
+    local target = trip and trip.target
     trip = nil
+    local targetQuest = type(target) == "string" and tonumber(target:match("^%a:(%d+)"))
+    if self.section and self.section.tasks and targetQuest and ns.Tasks:DeferAreaOf(targetQuest) then
+        relocate = true
+        ns:Print("Trip skipped: that area waits until your next level. Working it out from where you are.")
+        ns:Changed()
+        return
+    end
     if from and zone == from then
         stay = { zone = zone, section = self.section }
         ns:Print("Trip skipped: staying here.")
@@ -4218,6 +4518,16 @@ function E:SkipCurrent()
             return ns:Changed()
         end
         ns.char.deferred[step[2]] = nil
+        -- A dungeon's quest, skipped from the leveling route: not now, not never. The route leaves it
+        -- until you level up; the dungeon stays on the dungeon list to pick whenever you like.
+        local inst = not ns.char.instance and ns.Instance and ns.Instance:DungeonOf(step[2])
+        if inst then
+            ns.char.later[step[2]] = P:Level()
+            pickDirty, orderDirty = true, true
+            ns:Print(("Not now: %s (%s). It stays on the dungeon list, and comes back on the route when you level up.")
+                :format(self:QuestName(step[2]), inst.name))
+            return ns:Changed()
+        end
         ns.char.ignored[step[2]] = true
         pickDirty, orderDirty = true, true
         ns:Print(("Skipped %s%s. Field Guide won't suggest it again (/fg unskip brings it back)."):format(
@@ -4227,8 +4537,8 @@ function E:SkipCurrent()
     -- Grinding, travelling, a dungeon run: just this step.
     ns.char.skipped[StepKey(step)] = true
     pickDirty, orderDirty = true, true
-    local verb, name = self:Describe(step)
-    ns:Print(("Skipped %s: %s. /fg unskip brings skipped steps back."):format(strlower(verb), name))
+    local verb, name, _, _, plain = self:Describe(step)
+    ns:Print(("Skipped %s. /fg unskip brings skipped steps back."):format(plain and name or (strlower(verb) .. ": " .. name)))
     ns:Changed()
 end
 
@@ -4306,6 +4616,20 @@ function E:PrintList()
         end
     end
 end
+
+-- The item the current step needs you to carry looted (or used up): the arrow goes on to the
+-- objective (or back to the item).
+local lastNeed
+ns:On("BAG_UPDATE_DELAYED", function()
+    local step = E.current and E.steps and E.steps[E.current]
+    local q = step and step[1] == "O" and Q(step[2])
+    local need = q and q.ri and E.NeededItem(q)
+    local key = need and need[1] or false
+    if key ~= lastNeed then
+        lastNeed = key
+        if q and q.ri then ns:Changed() end
+    end
+end)
 
 -- Enough cloth for a donation in your bags (or not any more): the plan changes.
 local clothReady = {}

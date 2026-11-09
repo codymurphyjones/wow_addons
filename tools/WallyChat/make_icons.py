@@ -5,6 +5,8 @@ rest and full colour under the mouse, the suite's ghost buttons), and its logo.
 
 Writes into addons/WallyChat/Media:
   Friends.tga, Channels.tga, Menu.tga, FullScreen.tga, Exit.tga, Bottom.tga   64x64, the toolbar
+  PopOut.tga                                                                   64x64, full screen's channel filter
+  Dice.tga, Continue.tga                                                       64x64, the toolbar's Death Roll buttons
   Icon.tga                                                                     128x128, the addon list
 Each is drawn at 4x and scaled down, for smooth edges.
 """
@@ -68,6 +70,48 @@ def bottom():
     save(img, "Bottom.tga", 64)
 
 
+def popout():
+    """A box with an arrow leaving it by the top right corner: open this in a tab of its own."""
+    img, d = canvas(64)
+    w = s(5)
+    # the box, its top right corner left open for the arrow
+    d.line([(s(30), s(14)), (s(12), s(14)), (s(12), s(52)), (s(50), s(52)), (s(50), s(34))], fill=WHITE, width=w, joint="curve")
+    # the arrow: a shaft to the corner and its head
+    d.line([(s(26), s(38)), (s(52), s(12))], fill=WHITE, width=w)
+    d.polygon([(s(56), s(8)), (s(56), s(28)), (s(36), s(8))], fill=WHITE)
+    save(img, "PopOut.tga", 64)
+
+
+def dice():
+    """Two dice, the back one tilted behind the front: white faces with their pips cut out
+    (a dark gap round the front die so the two read apart)."""
+    from PIL import Image, ImageDraw
+    clear = (0, 0, 0, 0)
+    img, d = canvas(64)
+    # the back die (a three), drawn on its own square and turned
+    back = Image.new("RGBA", img.size, clear)
+    b = ImageDraw.Draw(back)
+    b.rounded_rectangle([s(30), s(6), s(58), s(34)], radius=s(6), fill=WHITE)
+    for x, y in ((36, 12), (44, 20), (52, 28)):
+        b.ellipse([s(x - 3), s(y - 3), s(x + 3), s(y + 3)], fill=clear)
+    back = back.rotate(-18, center=(s(44), s(20)), resample=Image.BICUBIC)
+    img.alpha_composite(back)
+    # the front die (a five), with a clear gap round it
+    d.rounded_rectangle([s(3), s(23), s(39), s(59)], radius=s(8), fill=clear)
+    d.rounded_rectangle([s(6), s(26), s(36), s(56)], radius=s(6), fill=WHITE)
+    for x, y in ((13, 33), (29, 33), (21, 41), (13, 49), (29, 49)):
+        d.ellipse([s(x - 3), s(y - 3), s(x + 3), s(y + 3)], fill=clear)
+    save(img, "Dice.tga", 64)
+
+
+def continue_():
+    """A die face with a play arrow cut out of it: roll on in the game you're locked onto."""
+    img, d = canvas(64)
+    d.rounded_rectangle([s(8), s(8), s(56), s(56)], radius=s(10), fill=WHITE)
+    d.polygon([(s(24), s(19)), (s(46), s(32)), (s(24), s(45))], fill=(0, 0, 0, 0))
+    save(img, "Continue.tga", 64)
+
+
 def logo():
     """A conversation: a message (a dark bubble with lines of text, tail down left) answered by a
     teal bubble with three typing dots (tail down right), overlapping it."""
@@ -99,5 +143,8 @@ if __name__ == "__main__":
     corners("FullScreen.tga", True)
     corners("Exit.tga", False)
     bottom()
+    popout()
+    dice()
+    continue_()
     logo()
     print("icons written to", OUT)

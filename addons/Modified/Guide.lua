@@ -3,7 +3,7 @@ local ADDON, ns = ...
 -- The words around the Bloom, shown while the veil is down (it covers the game anyway):
 --   * the modifier strip across the top: the eight sets of rules a button has (none, Shift, Ctrl,
 --     Alt and their mixes), which one you're looking at, what each holds, and the keys held now.
---     Click a set to switch to it, or tap / hold the keys.
+--     Click a set to edit it; holding the keys only previews what the button casts.
 --   * on the left, how to read a lens (a legend);
 --   * on the right, this button in plain words: what it casts right now, every rule in the order
 --     the macro tries them (numbered like the lens), the other sets, the macro itself, and what
@@ -218,11 +218,11 @@ function G:Legend()
         { "gap" },
         { "h", "MODIFIER KEYS" },
         { "p", "Each modifier combination has its own set of rules. The strip at the top shows which set you're in." },
-        { "def", "Tap:", "Shift, Ctrl or Alt switches to that set. Tap again to go back." },
-        { "def", "Hold:", "peeks at that set while held." },
-        { "def", "Click:", "a set in the strip to switch to it." },
+        { "def", "Click:", "a set in the strip to edit it. It stays selected while you type." },
+        { "def", "Hold:", "Shift, Ctrl or Alt shows in the centre what the button would cast with those keys." },
         { "gap" },
         { "h", "EDITING" },
+        { "def", "Shapes:", "the ready-made sets on the left (smart heal, mouseover then target, ...). Point at one to see it, click to add it to the set shown. " .. WHITE .. "/shape heal|r works too." },
         { "def", "Click a rule:", "selects it (gold ring). Typing, the wheel and Backspace then act on it, wherever the mouse is." },
         { "def", "Empty space:", "point or click, type a spell name, press Enter: a new rule there." },
         { "def", "Type on a rule:", "gives it a new spell. " .. WHITE .. "a, b, c|r makes a cast sequence." },
@@ -282,14 +282,12 @@ function G:Strip()
         if bit.band(V.held, bit_) ~= 0 then held[#held + 1] = KEYS[bit_] end
     end
     local name = L.WorldName(world)
-    local title = ("Showing the rules for  %s%s|r"):format(WHITE, name:upper())
+    local title = ("Editing the rules for  %s%s|r"):format(WHITE, name:upper())
     if #held > 0 then
-        title = title .. "   " .. GOLD .. "(peeking: holding " .. table.concat(held, "+") .. ")|r"
-    elseif V.latched ~= 0 then
-        title = title .. "   " .. GOLD .. "(locked: tap the key again, or click No modifier)|r"
+        title = title .. "   " .. GOLD .. "(holding " .. table.concat(held, "+") .. ": the centre shows what that casts)|r"
     end
     self.strip.title:SetText(title)
-    self.strip.hint:SetText(GREY .. "Tap Shift / Ctrl / Alt to switch sets  ·  hold to peek  ·  or click a set|r")
+    self.strip.hint:SetText(GREY .. "Click a set to edit it  ·  hold SHIFT, CTRL or ALT to preview what the button casts|r")
 end
 
 -- The rule that answers right now in the shown set, and the mouseover rules tried before it.
@@ -324,6 +322,9 @@ function G:DoingHere(text)
         return "You're typing a spell name. " .. WHITE .. "Enter|r uses the highlighted match, " .. WHITE .. "Tab|r picks the next, " .. WHITE .. "Escape|r clears."
     elseif L.hold then
         return "Keep holding..."
+    elseif L.raw and L.raw.shape then
+        return "You're on a shape: its rules show faintly around the centre. " .. WHITE .. "Click|r adds them to this set; "
+            .. "spells you already have here go on them, and rules marked " .. WHITE .. "?|r fill when you type a spell on one."
     elseif L.prop then
         return "You're on a suggested rule. " .. WHITE .. "Enter|r or " .. WHITE .. "click|r adds all the suggestions."
     elseif L.raw and L.raw.order then
@@ -380,7 +381,7 @@ function G:Right()
     if saved and saved.detached then
         lines[#lines + 1] = "|cffff6060Its macro was moved off this button. Hold the centre to put it back.|r"
     elseif V.dirty[slot] then
-        lines[#lines + 1] = GOLD .. "Unsaved changes.|r Hold left-click on the centre to save them."
+        lines[#lines + 1] = GOLD .. "Unsaved changes.|r Hold left-click on the centre to save this button, or click Save Changes to save every button."
     elseif saved then
         lines[#lines + 1] = "|cff33ff99Saved|r as the macro " .. saved.macroName .. "."
     else
@@ -409,7 +410,7 @@ function G:Right()
     if #rules == 0 then
         lines[#lines + 1] = ("%s%s|r has no rules. With %s the button does %s."):format(GOLD, setName:gsub("^%l", string.upper), setName,
             world == "none" and "nothing" or "nothing either (unless another set's rule covers it)")
-        lines[#lines + 1] = "Point at empty space around the centre, type a spell name and press Enter."
+        lines[#lines + 1] = "Point at empty space around the centre, type a spell name and press Enter, or click a shape on the left."
     else
         lines[#lines + 1] = ("%s%s|r: the macro tries these in order"):format(GOLD, setName:upper())
         for i, rule in ipairs(rules) do
@@ -427,7 +428,8 @@ function G:Right()
         end
     end
     if L.sprout and L.props then
-        lines[#lines + 1] = "|cff66ff99Suggested (Enter or click to add):|r"
+        lines[#lines + 1] = L.shape and ("|cff66ff99Shape \"%s\" (click it to add):|r"):format(L.shape.label)
+            or "|cff66ff99Suggested (Enter or click to add):|r"
         for _, rule in ipairs(L.props) do lines[#lines + 1] = "  |cff66ff99+  " .. L.Describe(rule) .. "|r" end
     end
 
@@ -450,7 +452,7 @@ function G:Right()
         lines[#lines + 1] = GOLD .. "OTHER SETS WITH RULES|r  " .. table.concat(others, ",  ")
         lines[#lines + 1] = GREY .. "  The macro checks sets with more keys first (Shift+Ctrl before Shift before none).|r"
     else
-        lines[#lines + 1] = GOLD .. "OTHER SETS|r  none yet. Tap Shift, Ctrl or Alt to give the button a different action with that key held."
+        lines[#lines + 1] = GOLD .. "OTHER SETS|r  none yet. Click Shift, Ctrl or Alt in the strip to give the button a different action with that key held."
     end
 
     local sets = #lines
@@ -502,8 +504,7 @@ end
 function G:Click()
     for _, c in ipairs(self.chips or {}) do
         if c:IsMouseOver() then
-            V.latched, V.held = c.bits, 0
-            wipe(V.downAt)
+            V.latched = c.bits
             V:WorldChanged()
             self:Refresh()
             return true

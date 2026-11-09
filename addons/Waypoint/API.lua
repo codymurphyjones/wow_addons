@@ -58,10 +58,13 @@ function API:ClearRequest() ns.Targets:ClearRequest(true) end
 --       house, so the last stop is the nearest auctioneer (also when a vendor item isn't in the stops)
 --   Waypoint:PlaceCategories()  { { name, ids, menu path, class, count = places for you } }
 --   Waypoint:SoldByVendors(itemID)  how many vendors sell it (any faction), or 0
---   Waypoint:PromptVendors({ { id = 2321, qty = 2, name = "Fine Thread" } }, onAddAnyway, "MyAddon", auction)
+--   Waypoint:VendorYards(itemID)  yards to the nearest vendor selling it (friendly, your continent), and
+--       the uiMapID that vendor is on; nil when there's none
+--   Waypoint:AuctioneerYards()  yards to the nearest auctioneer (friendly, your continent), or nil
+--   Waypoint:PromptVendors({ { id = 2321, qty = 2, name = "Fine Thread" } }, onAddAnyway, "MyAddon", auction, onNavigate)
 --       one popup for vendor items you were about to buy elsewhere: Navigate (to the vendors selling
---       them, then the auction house when auction lists anything), Add anyway (calls
---       onAddAnyway(items)), or Cancel
+--       them, then the auction house when auction lists anything; calls onNavigate(items) too, when
+--       given), Add anyway (calls onAddAnyway(items)), or Cancel
 function API:NavigateTo(category, owner) return ns.Navigate:To(category, owner) end
 
 -- Towns (Data/Towns.lua, the world map's town badges): your faction's and neutral ones.
@@ -96,7 +99,11 @@ function API:NavigateToUndiscoveredFlight(owner) return ns.Navigate:ToUndiscover
 function API:NavigateToItems(itemIDs, title, owner, auction) return ns.Navigate:ToItems(itemIDs, title, owner, auction) end
 function API:PlaceCategories() return ns.Navigate:Categories() end
 function API:SoldByVendors(itemID) return ns.Navigate:SoldBy(itemID) end
-function API:PromptVendors(items, onAddAnyway, owner, auction) return ns.Navigate:PromptVendors(items, onAddAnyway, owner, auction) end
+function API:VendorYards(itemID) return ns.Navigate:VendorYards(itemID) end
+function API:AuctioneerYards() return ns.Navigate:AuctioneerYards() end
+function API:PromptVendors(items, onAddAnyway, owner, auction, onNavigate)
+    return ns.Navigate:PromptVendors(items, onAddAnyway, owner, auction, onNavigate)
+end
 
 -- The arrow's frame, for an addon that docks its own window to it (Field Guide sits under it).
 function API:GetFrame()
@@ -133,9 +140,19 @@ end
 -- A button of your addon's left of the arrow, outside its frame: for a switch that isn't about the
 -- target (Field Guide's swap between its leveling and dungeon guides). One per addon; nil removes it.
 --   Waypoint:SetSide("MyAddon", { icon = texture, title = "...", text = "...", onClick = fn })
--- onClick gets the button, to anchor a popup to.
-function API:SetSide(owner, side)
-    ns.Arrow:SetSide(owner, side)
+-- onClick gets the button, to anchor a popup to. slot 2: a second button under it (Field Guide's
+-- dungeon to-do list), one per addon too.
+--   Waypoint:SetSide("MyAddon", { icon = texture, title = "...", onClick = fn }, 2)
+-- slot 3: a small button (16 px) just above the frame's top-left corner (Field Guide's guide list).
+function API:SetSide(owner, side, slot)
+    ns.Arrow:SetSide(owner, side, slot)
+end
+
+-- How your addon takes the arrow back after it was paused (while paused it isn't the arrow's owner).
+-- Waypoint pauses the owner for a class quest and calls this once the class quest is done.
+--   Waypoint:SetResumer("MyAddon", function() ... end)
+function API:SetResumer(owner, fn)
+    ns.Targets:SetResumer(owner, fn)
 end
 
 -- Quest tracking, with a history of who tracked what. Quests you track yourself are recorded as
@@ -143,8 +160,10 @@ end
 -- isn't tracked again by an addon while it's in your log.
 --   Waypoint:TrackQuest("MyAddon", questID) / Waypoint:UntrackQuest("MyAddon", questID)
 --   Waypoint:QuestTrackedBy(questID) -> "user", an addon's name, or nil
-function API:TrackQuest(owner, questID) return ns.Questie:Track(owner, questID) end
-function API:UntrackQuest(owner, questID) return ns.Questie:Untrack(owner, questID) end
+--   Waypoint:UntrackQuest("MyAddon", questID, true)  even one you tracked yourself: only to give it
+--       back later with Waypoint:TrackQuest("MyAddon", questID, "user"), which records it as yours again
+function API:TrackQuest(owner, questID, as) return ns.Questie:Track(owner, questID, as) end
+function API:UntrackQuest(owner, questID, force) return ns.Questie:Untrack(owner, questID, force) end
 function API:QuestTrackedBy(questID) return ns.Questie:TrackedBy(questID) end
 -- Tracked quests: { [questID] = "user" or an addon's name }.
 function API:TrackedQuests()
@@ -181,6 +200,41 @@ end
 -- and the point it aims at.
 function API:GetCurrent()
     return ns.Targets.current, ns.Targets.point
+end
+
+-- On a boat or zeppelin: { label = "zeppelin to Undercity", left = seconds, timed }, or nil. (A flight
+-- is UnitOnTaxi's.)
+function API:Riding()
+    return ns.Route and ns.Route.Riding and ns.Route:Riding() or nil
+end
+
+-- Travel, for an addon that plans trips ahead and wants them timed the way the arrow takes them
+-- (Field Guide's leveling plan). World positions are the shared WorldMap's (continent, north, west).
+--   Waypoint:TravelSpeed()  yards a second over ground: your mount's once you've ridden, else on foot
+--   Waypoint:Hearth()  { c, n, w, name, readyIn = seconds until it's off cooldown, cast = seconds to
+--       cast it and load }, or nil (no hearthstone, no bind, or the hearthstone is off in the options)
+--   Waypoint:FlightPoints()  { { name = , c = , n = , w = }, ... } the flight points of the network
+--       you have (a flight can start and end at any two of them that CanFly joins)
+--   Waypoint:CanFly(a, b)  whether you can fly between two of those (by name)
+--   Waypoint:FlightSeconds(a, b)  seconds a flight between them takes, talking and take-off included
+function API:TravelSpeed() return ns.Flight and ns.Flight:Speed() or 7 end
+function API:Hearth() return ns.Route and ns.Route.Hearth and ns.Route:Hearth() or nil end
+function API:FlightPoints()
+    local out = {}
+    if not ns.Flight then return out end
+    for name in pairs(ns.Flight:FlightPoints()) do
+        local node = ns.Flight.Node(name)
+        if node then out[#out + 1] = { name = name, c = node.c, n = node.n, w = node.w } end
+    end
+    return out
+end
+function API:CanFly(a, b) return ns.Flight and ns.Flight:CanFly(a, b) or false end
+function API:FlightSeconds(a, b)
+    local F = ns.Flight
+    if not (F and F:CanFly(a, b)) then return nil end
+    local na, nb = F.Node(a), F.Node(b)
+    if not (na and nb) then return nil end
+    return F:FlightTime(na, nb) + F.OVERHEAD
 end
 
 -- Yards left along the arrow's planned trip from a world position (continent, north, west), or nil.

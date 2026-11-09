@@ -218,6 +218,7 @@ function Plates:Refresh(f)
     f.barW, f.barH = self:Size(f.unit)
     f:SetSize(f.barW, f.barH)
     f.powerH = ns.Resource and ns.Resource:Height(f) or 0
+    self:LayoutBounds(f)
     if f.unit.style == "hidden" then f:Hide() return end
     f:Show()
     ns.Threat:Evaluate(f)
@@ -225,6 +226,92 @@ function Plates:Refresh(f)
         if mod.Update then mod:Update(f) end
     end
     self:ApplyScaleAlpha(f)
+end
+
+-- The box the game stacks plates by. On Forever the engine keeps plates apart by each plate's
+-- stacking bounds frame, not by our drawing, so this box covers what a plate shows: the name above
+-- the bar, the bar and power bar, and room for the castbar below (kept even when not casting, so a
+-- cast never runs into the plate under it). The spacing settings stretch it: 1 = touching.
+function Plates:LayoutBounds(f)
+    local b = f.bounds
+    if not b then return end
+    local g, c, cv = ns.db.general, ns.db.castbar, ns.db.cvars
+    local nameOnly = f.unit.style == "name"
+    local above = nameOnly and 0 or (g.nameSize + 3)
+    local below = self:BelowBar(f)
+    if c.enabled and not nameOnly then below = below + 3 + c.height end
+    local h = (nameOnly and (g.nameSize + 4) or (f.barH + above + below)) * (cv.spacingV or 1)
+    local w = (f.barW or g.width) * (cv.spacingH or 1)
+    -- Centred on what is drawn: the name sits above the bar, the castbar below.
+    local mid = nameOnly and 0 or (above - below) / 2
+    b:ClearAllPoints()
+    b:SetPoint("CENTER", f, "CENTER", 0, mid)
+    b:SetSize(math.max(1, w), math.max(1, h))
+end
+
+-- The size the game stacks every plate by. The engine keeps plates apart by one size for all of them
+-- (C_NamePlate.SetNamePlateSize), which Blizzard sets to its own small plate; SmartPlates draws far
+-- more (the name above the bar, the castbar below), so plates sat on each other. It's set here to
+-- what a SmartPlates plate draws (the same box as LayoutBounds, for an enemy at full size, with the
+-- spacing settings), in the plates' own units, and set again whenever Blizzard sets its own (its
+-- options change). Out of combat only (the call is restricted in a fight: it waits for the end).
+local stackSize -- { w, h } last set
+local function PlateScale()
+    for _, f in pairs(Plates.byUnit) do
+        if f.active and f.plate and f:IsShown() then
+            local ours, theirs = f:GetEffectiveScale(), f.plate:GetEffectiveScale()
+            if ours and theirs and theirs > 0 then return ours / theirs end
+        end
+    end
+    -- No plate up yet: about the general scale (the game's plates sit at UIParent's scale).
+    return ns.db.general.scale or 1
+end
+
+function Plates:ApplyStackSize()
+    if not (ns.db and C_NamePlate and C_NamePlate.SetNamePlateSize) then return end
+    local cv = ns.db.cvars
+    if not (cv.manage and cv.stacking) or ns.db.general.engineStack == false then return end
+    if InCombatLockdown() then return ns:AfterCombat("stackSize", function() Plates:ApplyStackSize() end) end
+    local g, c = ns.db.general, ns.db.castbar
+    local above = g.nameSize + 3
+    local below = (c.enabled and (3 + c.height) or 0)
+    local k = PlateScale()
+    local w = math.floor(g.width * (cv.spacingH or 1) * k + 0.5)
+    local h = math.floor((g.height + above + below) * (cv.spacingV or 1) * k + 0.5)
+    if stackSize and stackSize[1] == w and stackSize[2] == h then return end
+    if pcall(C_NamePlate.SetNamePlateSize, w, h) then stackSize = { w, h } end
+end
+
+-- Blizzard sets its own size when its nameplate options change: ours again right after.
+local function HookDriver()
+    local d = NamePlateDriverFrame
+    if d and d.UpdateNamePlateSize and not Plates.driverHooked then
+        Plates.driverHooked = true
+        hooksecurefunc(d, "UpdateNamePlateSize", function() stackSize = nil; C_Timer.After(0, function() Plates:ApplyStackSize() end) end)
+    end
+end
+
+-- /sp stack: what the game stacks by, for checking.
+function Plates:StackStatus()
+    local get = C_CVar and C_CVar.GetCVar or GetCVar
+    local types = get and get("nameplateStackingTypes")
+    local kinds = Enum and Enum.NamePlateStackType
+    local enemy = GetCVarBitfield and types and GetCVarBitfield("nameplateStackingTypes", kinds and kinds.Enemy or 1)
+    local friend = GetCVarBitfield and types and GetCVarBitfield("nameplateStackingTypes", kinds and kinds.Friendly or 2)
+    local w, h = C_NamePlate and C_NamePlate.GetNamePlateSize and C_NamePlate.GetNamePlateSize()
+    ns:Print(("Stacking: enemies %s, friends %s (nameplateStackingTypes = %s); old nameplateMotion = %s.")
+        :format(tostring(enemy), tostring(friend), tostring(types), tostring(get and get("nameplateMotion"))))
+    ns:Print(("The game stacks plates %s x %s; SmartPlates asked for %s."):format(tostring(w), tostring(h),
+        stackSize and (stackSize[1] .. " x " .. stackSize[2]) or "nothing yet"))
+end
+
+-- Hands the plate our bounds box (or gives Blizzard's frame back). Older clients have no stacking
+-- bounds and stack by their own settings.
+local function SetStackingBounds(plate, frame)
+    -- (/sp stack off: neither this nor the plate size is handed to the game, to test whether they
+    -- are what makes the game's unit tooltip run as SmartPlates' code.)
+    if ns.db and ns.db.general.engineStack == false then return end
+    if plate and frame and plate.SetStackingBoundsFrame then pcall(plate.SetStackingBoundsFrame, plate, frame) end
 end
 
 -- Someone joining the group may now have a class colour (see GroupClass).
@@ -262,6 +349,11 @@ function Plates:Create(plate)
     f:SetSize(120, 12)
     f:SetPoint("CENTER", plate, "CENTER")
     f:EnableMouse(false)
+    -- What the game stacks this plate by (see LayoutBounds); invisible, never takes the mouse.
+    f.bounds = CreateFrame("Frame", nil, f)
+    f.bounds:SetSize(120, 12)
+    f.bounds:SetPoint("CENTER", f, "CENTER")
+    f.bounds:EnableMouse(false)
     if f.SetIgnoreParentScale then f:SetIgnoreParentScale(true) end
     if f.SetIgnoreParentAlpha then f:SetIgnoreParentAlpha(true) end
     f:Hide()
@@ -291,6 +383,7 @@ function Plates:Activate(plate, unit)
     f.unit.unitid = unit
     self.byUnit[unit] = f
     self:Refresh(f)
+    SetStackingBounds(plate, f.bounds)
     if f.unit.guid then self.byGUID[f.unit.guid] = f end
     ns:Fire("PlateAdded", f)
     -- Blizzard's own NAME_PLATE_UNIT_ADDED handler may run after ours and show its frame again.
@@ -313,6 +406,7 @@ function Plates:Deactivate(f, showBlizzard)
     f.active = false
     f:Hide()
     if showBlizzard and f.plate.UnitFrame then SetBlizzardShown(f.plate.UnitFrame, true) end
+    SetStackingBounds(f.plate, f.plate.UnitFrame)
     ns:Fire("PlateRemoved", f)
     wipe(u)
 end
@@ -325,7 +419,14 @@ end)
 ns:On("NAME_PLATE_UNIT_ADDED", function(unit)
     local plate = C.PlateForUnit(unit)
     if plate then Plates:Activate(plate, unit) end
+    -- (the first plate tells the real scale between ours and the game's)
+    if not stackSize then Plates:ApplyStackSize() end
 end)
+ns:On("PLAYER_ENTERING_WORLD", function()
+    HookDriver()
+    C_Timer.After(1, function() Plates:ApplyStackSize() end)
+end)
+ns:Listen("SettingsChanged", function() stackSize = nil; Plates:ApplyStackSize() end)
 
 ns:On("NAME_PLATE_UNIT_REMOVED", function(unit)
     local f = Plates.byUnit[unit]

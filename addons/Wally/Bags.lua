@@ -3,25 +3,53 @@ local PAL = ns.Palette
 local C = ns.Compat
 local W = ns.Widgets
 
--- Wally's bag window: the backpack, your bags and the reagent bag in one Wally-styled grid, in place
+-- Wally's bag window: the backpack, your bags and the reagent bag in one Wally-styled window, in place
 -- of the game's bag windows (Options > AddOns > Wally > Bag window). The game's own bag windows still
--- open and close as usual (the B key, the bag bar, a vendor, the bank), only out of sight: this
+-- open and close as usual (the B key, the bag bar, a vendor, the bank), only off the screen: this
 -- window follows them, so every way of opening bags opens it. Bank bags stay the game's.
--- The slots are the game's own item buttons (ContainerFrameItemButtonTemplate), so clicks, drags,
--- tooltips and using items work exactly as in the game's bags. Reagent bag slots have a gold edge.
+-- The slots are the game's own item buttons, borrowed from its bag windows: the game made them, so
+-- clicking one to use an item is the game's own click. (Buttons Wally made from the same template
+-- were Wally's: the 12.x engine blocks UseContainerItem from them, "Wally tried to call the
+-- protected function UNKNOWN()", in combat and out.) A slot whose game window isn't open gets a
+-- button of Wally's own, which shows and moves items but can't use the ones that cast something.
+-- The reagent bag sits in a panel of its own under the bags (gold edge and heading, its own free
+-- count), its slots in the same columns, and only while its game window is open, as the game
+-- shows it: "Open All Bags" (B) opens it, the backpack button doesn't.
+-- Only the look: sorting and everything else treat its slots as before.
 local Bags = {}
 ns.BagWindow = Bags
 
 local SIZE, GAP, PAD = 37, 4, 12
 local TOP, BOTTOM = 62, 34            -- header (title, search, buttons) and footer (free slots, money)
 local GOLD = { 1, 0.82, 0.30 }
+-- The reagent panel: its space above the bags' last row, its edge out from the slots (into the
+-- window's padding, so its slots line up with the bags'), and its heading's height.
+local SECTION_GAP, INSET, HEAD = 14, 6, 20
 
-local frame, content, dock, search, freeText, moneyText, reagentLabel
-local holders, buttons, list = {}, {}, {} -- bag -> holder frame; "bag:slot" -> button; shown buttons
-local hidden = CreateFrame("Frame"); hidden:Hide()
-local original = {}                         -- Blizzard bag frame -> its parent, to give back
+local frame, content, dock, search, freeText, moneyText
+local reagentPanel, reagentLabel, reagentFree -- the reagent bag's panel, its heading and free count
+local holders, buttons, list = {}, {}, {} -- bag -> holder frame; "bag:slot" -> Wally's button; shown buttons
+local bagOf, slotOf = setmetatable({}, { __mode = "k" }), setmetatable({}, { __mode = "k" }) -- shown button -> bag, slot
+local borrowed = setmetatable({}, { __mode = "k" }) -- the game's buttons this window has shown
+local home = setmetatable({}, { __mode = "k" }) -- a borrowed button -> the game frame it came from
 
 local function Enabled() return ns.db and ns.db.options.bags.window end
+local closeSecure, closeX -- the X's secure button (a window of its own) and the X it covers (Build)
+
+-- Puts the secure button over the X while this window shows, and hides it with the window. Only
+-- out of combat (it's protected): in combat it waits, and the plain X answers clicks meanwhile.
+local function PlaceClose()
+    if not (closeSecure and closeX) then return end
+    if InCombatLockdown() then return ns:AfterCombat("wallyBagsClosePlace", PlaceClose) end
+    local show = frame ~= nil and frame:IsShown() and closeX:GetLeft() ~= nil
+    if show then
+        local s = closeX:GetEffectiveScale() / UIParent:GetEffectiveScale()
+        closeSecure:ClearAllPoints()
+        closeSecure:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", closeX:GetLeft() * s, closeX:GetBottom() * s)
+        closeSecure:SetSize(closeX:GetWidth() * s, closeX:GetHeight() * s)
+    end
+    if closeSecure:IsShown() ~= show then closeSecure:SetShown(show) end
+end
 function Bags:Enabled() return Enabled() and true or false end
 
 local function PlayerBags()
@@ -49,11 +77,34 @@ local function IsPlayerBagFrame(f)
     return type(id) == "number" and id >= 0 and id <= C.NUM_BAGS + C.NUM_REAGENT_BAGS
 end
 
--- A player bag window goes behind a hidden parent; a bank bag window comes back to its own.
-local function Park(f)
-    if not original[f] then original[f] = f:GetParent() or UIParent end
-    local want = (Enabled() and IsPlayerBagFrame(f)) and hidden or original[f]
-    if f:GetParent() ~= want then f:SetParent(want) end
+-- A player bag window goes off the screen. (Not behind a hidden parent: a window that isn't
+-- visible gets no OnShow, which is where it starts listening for bag updates, and its buttons, now
+-- in this window, would stop updating.) The game places its windows again whenever one opens or
+-- closes (UpdateContainerFrameAnchors); this runs after that. Bank bag windows that the game had
+-- stacked on top of the bags move down into their place.
+local function Away()
+    if not Enabled() then return end
+    -- (Not ContainerFrameSettingsManager:GetBagsShown(): it can rebuild its list, and a list built
+    -- while Wally's code runs would be Wally's for every later use by the game.)
+    local prev
+    for _, f in pairs(BlizzardFrames()) do
+        if f and f:IsShown() then
+            if IsPlayerBagFrame(f) then
+                f:SetClampedToScreen(false)
+                f:ClearAllPoints()
+                f:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", -2000, -2000)
+            else
+                f:ClearAllPoints()
+                if prev then
+                    f:SetPoint("BOTTOMRIGHT", prev, "TOPRIGHT", 0, CONTAINER_SPACING or 0)
+                else
+                    local right = EditModeUtil and EditModeUtil.GetRightActionBarWidth and EditModeUtil:GetRightActionBarWidth() or 0
+                    f:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -(right + 10), CONTAINER_OFFSET_Y or 70)
+                end
+                prev = f
+            end
+        end
+    end
 end
 
 -- Other addons' frames on the game's bag windows (Plumber's item tracker and the like) would be
@@ -123,11 +174,45 @@ local function Adopt()
     placing = false
 end
 
+-- Whether the game's reagent bag window is open.
+local function ReagentOpen()
+    for _, f in pairs(BlizzardFrames()) do
+        if f and f:IsShown() and f ~= _G.ContainerFrameCombinedBags and IsPlayerBagFrame(f) then
+            local id = f:GetID()
+            if type(id) == "number" and id > C.NUM_BAGS then return true end
+        end
+    end
+    return false
+end
+
 local function AnyBagOpen()
     for _, f in pairs(BlizzardFrames()) do
         if f and f:IsShown() and IsPlayerBagFrame(f) then return true end
     end
     return false
+end
+
+-- Points the X at the game's close button of every player bag window that's open: a /click macro
+-- when they all have names, else a click on the first (the combined bag window closes them all).
+-- Attributes can't change in combat; they're set again after it.
+local function SetCloseTarget()
+    if not closeSecure then return end
+    if InCombatLockdown() then return ns:AfterCombat("wallyBagsClose", SetCloseTarget) end
+    local targets, names = {}, {}
+    for _, f in pairs(BlizzardFrames()) do
+        if f and f:IsShown() and IsPlayerBagFrame(f) and f.CloseButton then
+            targets[#targets + 1] = f.CloseButton
+            local name = f.CloseButton:GetName()
+            if name then names[#names + 1] = "/click " .. name end
+        end
+    end
+    if #targets > 0 and #names == #targets then
+        closeSecure:SetAttribute("type", "macro")
+        closeSecure:SetAttribute("macrotext", table.concat(names, "\n"))
+    else
+        closeSecure:SetAttribute("type", "click")
+        closeSecure:SetAttribute("clickbutton", targets[1])
+    end
 end
 
 local syncQueued
@@ -139,6 +224,7 @@ local function Sync()
         if not frame then return end
         local open = Enabled() and AnyBagOpen()
         if open ~= frame:IsShown() then frame:SetShown(open) end
+        if open then SetCloseTarget() end
     end)
 end
 
@@ -150,6 +236,32 @@ local function Edge(b, color)
     for _, t in ipairs(b.wallyEdge) do t:SetColorTexture(color[1], color[2], color[3], 1) end
 end
 
+-- Wally's own slot, for a bag whose game window isn't open (bags opened with the backpack button):
+-- a plain button, not the game's item button template. Made by Wally, the template's click was
+-- Wally's too, and using an item through it was blocked ("Wally tried to call the protected
+-- function UseContainerItem()"). So its clicks are its own: left click and drag pick up and put
+-- down, shift-click links, right-click sells at a vendor. Using an item needs the game's own
+-- button: right-click says how to get it (open the bags with B).
+local useHintAt = 0
+local function OwnClick(self, button)
+    local bag, slot = bagOf[self], slotOf[self]
+    if not (bag and slot) then return end
+    local info = self.wallyInfo
+    if IsModifiedClick() then
+        if info and info.link and HandleModifiedItemClick and HandleModifiedItemClick(info.link) then return end
+        if button == "RightButton" then return end -- (Ctrl-right-click anchors it: Sort.lua)
+    end
+    if button == "LeftButton" then
+        C.PickupItem(bag, slot)
+    elseif MerchantFrame and MerchantFrame:IsShown() and info and not CursorHasItem() then
+        C.UseContainerItem(bag, slot)
+    elseif info and GetTime() - useHintAt > 5 then
+        useHintAt = GetTime()
+        ns:Print("This bag's own game window isn't open, so its items can't be used from here (the game "
+            .. "only lets its own buttons do that). Close your bags and open them with B: every slot works then.", true)
+    end
+end
+
 local function NewButton(bag, slot)
     local holder = holders[bag]
     if not holder then
@@ -157,15 +269,45 @@ local function NewButton(bag, slot)
         holder:SetID(bag); holder:SetAllPoints(content)
         holders[bag] = holder
     end
-    local ok, b = pcall(CreateFrame, "ItemButton", nil, holder, "ContainerFrameItemButtonTemplate")
-    if not ok then b = CreateFrame("Button", nil, holder, "ContainerFrameItemButtonTemplate") end
+    -- (The slot is its ID and the bag its holder's, as Sort.lua reads a slot.)
+    local b = CreateFrame("Button", nil, holder)
     b:SetID(slot)
-    if b.SetBagID then b:SetBagID(bag) end
     b:SetSize(SIZE, SIZE)
-    b.bag, b.slot = bag, slot
-    -- Wally's well: a dark field and a 1px edge (gold for the reagent bag) in place of the game's art.
+    b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    b:RegisterForDrag("LeftButton")
+    b.icon = b:CreateTexture(nil, "ARTWORK")
+    b.icon:SetPoint("TOPLEFT", 1, -1); b.icon:SetPoint("BOTTOMRIGHT", -1, 1)
+    b.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    b.Count = b:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    b.Count:SetPoint("BOTTOMRIGHT", -3, 3)
+    b.cooldown = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")
+    b.cooldown:SetAllPoints(b.icon)
+    b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+    b:SetScript("OnClick", OwnClick)
+    b:SetScript("OnDragStart", function(self) if bagOf[self] then C.PickupItem(bagOf[self], slotOf[self]) end end)
+    b:SetScript("OnReceiveDrag", function(self) if bagOf[self] then C.PickupItem(bagOf[self], slotOf[self]) end end)
+    b:SetScript("OnEnter", function(self)
+        if not bagOf[self] then return end
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:SetBagItem(bagOf[self], slotOf[self])
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    b.wallyOwn = true
+    return b
+end
+
+-- Wally's well on a slot (its own or the game's): a dark field and a 1px edge in place of the game's
+-- art. Only fields named wally... are written on the game's buttons: its own code never reads them.
+local function Style(b, bag)
     local normal = b:GetNormalTexture()
     if normal then normal:SetAlpha(0) end
+    if b.wallyBg then
+        b.wallyBg:Show()
+        for _, t in ipairs(b.wallyEdge) do t:Show() end
+        Edge(b, IsReagent(bag) and GOLD or PAL.border)
+        return
+    end
     b.wallyBg = b:CreateTexture(nil, "BACKGROUND", nil, -8)
     b.wallyBg:SetAllPoints(); b.wallyBg:SetColorTexture(PAL.field[1], PAL.field[2], PAL.field[3], 1)
     b.wallyEdge = {}
@@ -177,7 +319,46 @@ local function NewButton(bag, slot)
         b.wallyEdge[#b.wallyEdge + 1] = t
     end
     Edge(b, IsReagent(bag) and GOLD or PAL.border)
-    return b
+end
+
+-- The game's buttons in its open bag windows: "bag:slot" -> button.
+local function GameButtons()
+    local out = {}
+    for _, f in pairs(BlizzardFrames()) do
+        if f and f:IsShown() and IsPlayerBagFrame(f) and f.EnumerateValidItems then
+            local ok, iter, state, key = pcall(f.EnumerateValidItems, f)
+            if ok and iter then
+                for _, b in iter, state, key do
+                    local okb, bag = pcall(b.GetBagID, b)
+                    local slot = b.GetID and b:GetID()
+                    if okb and type(bag) == "number" and type(slot) == "number" and slot > 0 then
+                        out[bag .. ":" .. slot] = b
+                    end
+                end
+            end
+        end
+    end
+    return out
+end
+
+-- Gives one of the game's buttons back to its window.
+local function Return(b)
+    local h = home[b] or b.containerFrame
+    if h and b:GetParent() ~= h then b:SetParent(h) end
+    b:SetAlpha(1)
+    if b.wallyBg then
+        b.wallyBg:Hide()
+        for _, t in ipairs(b.wallyEdge) do t:Hide() end
+    end
+    local normal = b:GetNormalTexture()
+    if normal then normal:SetAlpha(1) end
+    borrowed[b], bagOf[b], slotOf[b] = nil, nil, nil
+end
+
+-- Gives the game's buttons back to their windows (the option turned off).
+local function GiveBack()
+    for b in pairs(borrowed) do Return(b) end
+    wipe(borrowed)
 end
 
 local function Matches(info, text)
@@ -187,14 +368,19 @@ local function Matches(info, text)
 end
 
 local function UpdateButton(b)
-    local info = C.GetSlotInfo(b.bag, b.slot)
-    SetItemButtonTexture(b, info and info.icon)
-    SetItemButtonCount(b, info and info.count or 0)
-    SetItemButtonDesaturated(b, info and info.locked or false)
-    if SetItemButtonQuality then SetItemButtonQuality(b, info and info.quality, info and info.link) end
-    if b.UpdateCooldown then pcall(b.UpdateCooldown, b, info and info.icon)
-    elseif ContainerFrame_UpdateCooldown then pcall(ContainerFrame_UpdateCooldown, b.bag, b) end
-    if b.UpdateNewItem then pcall(b.UpdateNewItem, b, info and info.quality) end
+    local info = C.GetSlotInfo(bagOf[b], slotOf[b])
+    b.wallyInfo = info
+    -- (The game's own buttons: the game keeps them up to date. Writing its fields would make them Wally's.)
+    if borrowed[b] then
+        Bags:Paint(b)
+        return
+    end
+    b.icon:SetTexture(info and info.icon or nil)
+    b.icon:SetDesaturated(info and info.locked or false)
+    local count = info and info.count or 0
+    b.Count:SetText(count > 1 and count or "")
+    local ok, start, duration, enable = pcall(C_Container.GetContainerItemCooldown, bagOf[b], slotOf[b])
+    if ok and CooldownFrame_Set then pcall(CooldownFrame_Set, b.cooldown, start, duration, enable) end
     b.wallyInfo = info
     Bags:Paint(b)
 end
@@ -206,9 +392,10 @@ function Bags:Paint(b)
     local text = search and search:GetText() or ""
     text = text ~= "" and text:lower() or nil
     local alpha = Matches(b.wallyInfo, text) and 1 or 0.2
-    if highlighted ~= nil and b.bag ~= highlighted then alpha = alpha * 0.3 end
+    local bag = bagOf[b]
+    if highlighted ~= nil and bag ~= highlighted then alpha = alpha * 0.3 end
     b:SetAlpha(alpha)
-    Edge(b, b.bag == highlighted and PAL.accent or (IsReagent(b.bag) and GOLD or PAL.border))
+    if bag then Edge(b, bag == highlighted and PAL.accent or (IsReagent(bag) and GOLD or PAL.border)) end
 end
 
 -- Lights up one bag's slots (nil: none), e.g. while its button on the bag bar is under the mouse.
@@ -244,6 +431,8 @@ function Layout()
     Adopt()
     for _, b in pairs(buttons) do b:Hide() end
     wipe(list)
+    local game = GameButtons()
+    local used = {}
     local cols = ns.db.options.bags.columns or 12
     -- Lays out one section's slots from y (below the content's top); returns the rows used.
     local function Section(bags, y)
@@ -251,8 +440,18 @@ function Layout()
         for _, bag in ipairs(bags) do
             for slot = 1, C.GetNumSlots(bag) do
                 local key = bag .. ":" .. slot
-                local b = buttons[key] or NewButton(bag, slot)
-                buttons[key] = b
+                local b = game[key]
+                if b then
+                    borrowed[b], used[b] = true, true
+                    if b:GetParent() ~= content then home[b] = b:GetParent(); b:SetParent(content) end
+                    b:SetFrameLevel(content:GetFrameLevel() + 2)
+                    b:SetSize(SIZE, SIZE)
+                else
+                    b = buttons[key] or NewButton(bag, slot)
+                    buttons[key] = b
+                end
+                bagOf[b], slotOf[b] = bag, slot
+                Style(b, bag)
                 b:ClearAllPoints()
                 b:SetPoint("TOPLEFT", content, "TOPLEFT", (n % cols) * (SIZE + GAP), -y - math.floor(n / cols) * (SIZE + GAP))
                 b:Show()
@@ -262,19 +461,33 @@ function Layout()
         end
         return math.ceil(n / cols)
     end
-    -- The backpack and bags, then the reagent bag on rows of its own under a heading.
-    local mainRows = Section(C.BagList("bags"), 0)
-    local labelY = mainRows * (SIZE + GAP) + 2
-    local reagentRows = Section(C.BagList("reagent"), labelY + 18)
-    reagentLabel:SetShown(reagentRows > 0)
-    reagentLabel:ClearAllPoints()
-    reagentLabel:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -labelY)
+    -- The backpack and bags, then the reagent bag in a panel of its own below them.
     local w = cols * (SIZE + GAP) - GAP
+    local mainRows = Section(C.BagList("bags"), 0)
     local h = mainRows * (SIZE + GAP) - GAP
-    if reagentRows > 0 then h = labelY + 18 + reagentRows * (SIZE + GAP) - GAP end
+    local panelY = h + SECTION_GAP
+    -- The reagent bag shows only while its own game window is open, as the game does: B bound to
+    -- "Open All Bags" opens it with the rest, the backpack button doesn't. (Shown without it, its
+    -- slots were Wally's own and couldn't use items.)
+    local reagentRows = ReagentOpen() and Section(C.BagList("reagent"), panelY + HEAD + INSET) or 0
+    -- A game button from before that its window no longer shows (the window closed, as when a trade
+    -- or loot window opens and shuts the bags, or the game moved the button to another slot): the
+    -- game stopped updating it, so left here it shows an old item over the slot. It goes home.
+    for b in pairs(borrowed) do
+        if not used[b] then Return(b) end
+    end
+    reagentPanel:SetShown(reagentRows > 0)
+    if reagentRows > 0 then
+        local panelH = HEAD + INSET + reagentRows * (SIZE + GAP) - GAP + INSET
+        reagentPanel:ClearAllPoints()
+        reagentPanel:SetPoint("TOPLEFT", content, "TOPLEFT", -INSET, -panelY)
+        reagentPanel:SetSize(w + INSET * 2, panelH)
+        h = panelY + panelH - INSET -- (its bottom edge sits in the gap above the dock and footer)
+    end
     content:SetSize(w, math.max(1, h))
     local dockH = PlaceDock(w)
     frame:SetSize(w + PAD * 2, math.max(1, h) + (dockH > 0 and dockH + GAP * 2 or 0) + TOP + BOTTOM)
+    PlaceClose() -- (the X moves when the window's size changes)
     Bags:Refresh()
 end
 
@@ -289,6 +502,11 @@ function Bags:Refresh()
         if family == 0 then free, total = free + f, total + C.GetNumSlots(bag) end
     end
     freeText:SetText(("%d / %d free"):format(free, total))
+    local rFree, rTotal = 0, 0
+    for _, bag in ipairs(C.BagList("reagent")) do
+        rFree, rTotal = rFree + (C.GetFreeSlots(bag) or 0), rTotal + C.GetNumSlots(bag)
+    end
+    reagentFree:SetText(("%d / %d free"):format(rFree, rTotal))
     moneyText:SetText(W.Money(GetMoney()))
     if ns.Sorter and ns.Sorter.RefreshAnchors then ns.Sorter:RefreshAnchors() end
 end
@@ -313,7 +531,7 @@ local function Build()
     frame:SetClampedToScreen(true); frame:EnableMouse(true); frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing(); SavePosition() end)
+    frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing(); SavePosition(); PlaceClose() end)
     local p = ns.char.bagWindow or {}
     frame:SetPoint(p.point or "BOTTOMRIGHT", UIParent, p.rel or p.point or "BOTTOMRIGHT", p.x or -10, p.y or 85)
     frame:Hide()
@@ -326,7 +544,26 @@ local function Build()
 
     local close = W.MakeButton(frame, "X", 24, 22)
     close:SetPoint("TOPRIGHT", -PAD + 2, -10)
-    close:SetScript("OnClick", function() CloseAllBags() end)
+    -- The click itself is a secure button over it that clicks the game's own close button(s)
+    -- (SetCloseTarget): closing then runs as the game's click. CloseAllBags() called from Wally's
+    -- code made the game's bag state Wally's: the next time the bags opened, every item button was
+    -- built from it, and right-clicking one was blocked ("The game forbade Wally's call to
+    -- UseContainerItem()").
+    -- That secure button is NOT part of this window: a secure button inside it made the whole
+    -- window protected, and the game then refused to show it in combat ("The game blocked Wally's
+    -- call to WallyBagFrame:SetShown()"). It's a window of its own, placed over the X and shown or
+    -- hidden only out of combat (PlaceClose). Bags opened in combat get this plain X, which says
+    -- how to close them until combat ends.
+    close:SetScript("OnClick", function()
+        ns:Print("In combat the X can't close the game's bags: press B or Escape (it works again after combat).", true)
+    end)
+    closeSecure = CreateFrame("Button", "WallyBagsCloseButton", UIParent, "SecureActionButtonTemplate")
+    closeSecure:SetFrameStrata("HIGH")
+    closeSecure:RegisterForClicks("AnyUp", "AnyDown")
+    closeSecure:Hide()
+    closeSecure:SetScript("OnEnter", function() local f = close:GetScript("OnEnter"); if f then f(close) end end)
+    closeSecure:SetScript("OnLeave", function() local f = close:GetScript("OnLeave"); if f then f(close) end end)
+    closeX = close
 
     local sort = W.MakeButton(frame, "Sort", 56, 22)
     sort:SetPoint("RIGHT", close, "LEFT", -6, 0)
@@ -341,8 +578,18 @@ local function Build()
     content = CreateFrame("Frame", nil, frame)
     content:SetPoint("TOPLEFT", PAD, -TOP)
 
-    reagentLabel = W.Muted(W.Label(content, "Reagent bag", "WallyGameFontHighlightSmall", 0, 0))
+    -- The reagent bag's panel: under the slot buttons (the content's own level; their holders
+    -- sit above it), a darker well with a gold edge, the heading and free count along its top.
+    reagentPanel = CreateFrame("Frame", nil, content, "BackdropTemplate")
+    reagentPanel:SetFrameLevel(content:GetFrameLevel())
+    W.SetBackdrop(reagentPanel)
+    reagentPanel:SetBackdropColor(PAL.panel[1], PAL.panel[2], PAL.panel[3], 0.9)
+    reagentPanel:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 0.45)
+    reagentPanel:Hide()
+    reagentLabel = W.Label(reagentPanel, "REAGENT BAG", "WallyGameFontHighlightSmall", INSET, -INSET)
     reagentLabel:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
+    reagentFree = W.Muted(W.Label(reagentPanel, "", "WallyGameFontHighlightSmall", 0, 0))
+    reagentFree:ClearAllPoints(); reagentFree:SetPoint("TOPRIGHT", -INSET, -INSET)
 
     dock = CreateFrame("Frame", "WallyBagDock", frame)
     dock:SetPoint("TOPLEFT", content, "BOTTOMLEFT", 0, -GAP * 2)
@@ -355,33 +602,85 @@ local function Build()
     frame:SetScript("OnShow", function() Layout() end)
     frame:SetScript("OnHide", function()
         search:SetText(""); search:ClearFocus()
-        if AnyBagOpen() then CloseAllBags() end
+        PlaceClose()
+        -- (No CloseAllBags() here: run from Wally's code it made the game's bag state Wally's, and
+        -- the bags' item buttons were blocked after. This window follows the game's: Escape, B and
+        -- the X close those, and this one hides with them.)
     end)
 end
 
 -- Turns the window on or off (the option); the game's bag windows come back when it's off.
 function Bags:Apply()
     if not frame then Build() end
-    for _, f in pairs(BlizzardFrames()) do if f then Park(f) end end
-    if not Enabled() then frame:Hide() else Sync() end
+    if Enabled() then
+        Away()
+        Sync()
+    else
+        frame:Hide()
+        GiveBack()
+        -- Only moved back on screen: calling the game's UpdateContainerFrameAnchors or
+        -- UpdateItemLayout from here would make its bag state Wally's (and the item buttons blocked).
+        -- The game places them properly itself the next time a bag opens or closes.
+        local y = 100
+        for _, f in pairs(BlizzardFrames()) do
+            if f then
+                f:SetClampedToScreen(true)
+                if f:IsShown() and IsPlayerBagFrame(f) then
+                    f:ClearAllPoints()
+                    f:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -60, y)
+                    y = y + (f:GetHeight() or 0) + 10
+                end
+            end
+        end
+    end
 end
 
 ns:On("PLAYER_LOGIN", function()
     Build()
     HookBagBar()
-    -- A frame under a hidden parent gets no OnShow or OnHide (it never becomes visible), so its
-    -- Show and Hide calls are what's followed. A bank bag window shown there is moved back out.
-    local function Shown(self) Park(self); Sync() end
+    -- The game's windows open and close as usual: this one follows, and they go off the screen.
+    if UpdateContainerFrameAnchors then hooksecurefunc("UpdateContainerFrameAnchors", Away) end
+    local relayoutQueued
+    local function Relayout()
+        if relayoutQueued then return end
+        relayoutQueued = true
+        C_Timer.After(0, function()
+            relayoutQueued = false
+            if Enabled() and frame and frame:IsShown() then Layout() end
+        end)
+    end
+    local function Closed() Sync(); Relayout() end
+    local function Shown() Away(); Sync(); Relayout() end
     for _, f in pairs(BlizzardFrames()) do
         if f then
             hooksecurefunc(f, "Show", Shown)
-            hooksecurefunc(f, "Hide", Sync)
-            hooksecurefunc(f, "SetShown", function(self, show) if show then Shown(self) else Sync() end end)
+            hooksecurefunc(f, "Hide", Closed)
+            hooksecurefunc(f, "SetShown", function(_, show) if show then Shown() else Closed() end end)
             f:HookScript("OnShow", Shown)
-            f:HookScript("OnHide", Sync)
-            Park(f)
+            f:HookScript("OnHide", Closed)
+            -- It lays its buttons out again in its own window (opening, a bag changing size):
+            -- they come back here.
+            if f.UpdateItemLayout then
+                hooksecurefunc(f, "UpdateItemLayout", function()
+                    if Enabled() and frame and frame:IsShown() then Layout() end
+                end)
+            end
         end
     end
+    Away()
+end)
+
+-- If the game still blocks an item used from this window, say which kind of slot it was (the game's
+-- button or Wally's own), so the cause can be found.
+local lastBlocked = 0
+ns:On("ADDON_ACTION_FORBIDDEN", function(addon, fn)
+    if addon ~= "Wally" or GetTime() - lastBlocked < 2 then return end
+    local foci = GetMouseFoci and GetMouseFoci()
+    local focus = (type(foci) == "table" and foci[1]) or (GetMouseFocus and GetMouseFocus())
+    if not (focus and bagOf[focus]) then return end
+    lastBlocked = GetTime()
+    ns:Print(("The game blocked %s from bag %d slot %d, a %s button. Please report this line."):format(
+        tostring(fn), bagOf[focus], slotOf[focus] or 0, borrowed[focus] and "game's" or "Wally's own"), true)
 end)
 
 local refreshQueued

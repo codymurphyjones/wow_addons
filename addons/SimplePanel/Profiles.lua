@@ -90,6 +90,36 @@ function P:Use(name)
     ReloadUI()
 end
 
+-- This character takes the profile in use under a new name, with no reload: the live tables become
+-- the new profile, and a copy of them stays behind under the old name for everyone else using it.
+function P:Fork(name)
+    local err
+    name, err = self:CheckName(name)
+    if not name then return nil, err end
+    local current = ns.db.activeProfile
+    ns.db.profiles[current] = Copy(self:Data(current))
+    ns.db.activeProfile = name
+    ns.db.profileKeys[ns.CharKey()] = name
+    return name
+end
+
+-- Undoes Fork: profile `back` becomes live again, its settings poured into the live tables (other
+-- files hold them), and the forked profile `name` is gone.
+function P:Unfork(name, back)
+    if not name or ns.db.activeProfile ~= name or not back or not ns.db.profiles[back] then return end
+    local stored = ns.db.profiles[back]
+    for _, k in ipairs(KEYS) do
+        local live = ns.db[k]
+        wipe(live)
+        for kk, v in pairs(type(stored[k]) == "table" and stored[k] or {}) do live[kk] = v end
+    end
+    ns.db.profiles[back] = nil
+    ns.db.activeProfile = back
+    ns.db.profileKeys[ns.CharKey()] = back
+    ns.Merge(ns.db, ns.DEFAULTS)
+    ns:Changed()
+end
+
 function P:New(name)
     local err
     name, err = self:CheckName(name)

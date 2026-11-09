@@ -184,6 +184,45 @@ local function ShowMarks()
     end
 end
 
+-- OneForAll's landmark icons (OneForAll.lua) are never hidden: one a badge would sit on at this zoom
+-- is pushed just clear of it, the shortest way out, and goes back to its own spot once the zoom
+-- leaves room. OneForAll places its icons again whenever the map changes or zooms; the push is
+-- worked out from that spot (kept while the icon still stands where the push put it).
+local NUDGE_GAP = 2 -- pixels between a pushed icon and the badge
+local function Nudge(f, boxes)
+    if f:GetNumPoints() ~= 1 then return end
+    local point, rel, relPoint, x, y = f:GetPoint(1)
+    if not (x and y) then return end
+    local push = f.wpPush
+    local bx, by = x, y
+    if push and math.abs(x - push.x) < 0.01 and math.abs(y - push.y) < 0.01 then bx, by = push.bx, push.by end
+    local s = f:GetEffectiveScale()
+    local l, r, b, t = Rect(f)
+    if not l then return end
+    -- Where it is in OneForAll's own spot, in screen pixels.
+    local ox, oy = (bx - x) * s, (by - y) * s
+    l, r, b, t = l + ox, r + ox, b + oy, t + oy
+    local dx, dy = 0, 0
+    for _, box in ipairs(boxes) do
+        if l < box[3] and r > box[2] and b < box[5] and t > box[4] then
+            -- The shortest way out: right, left, up or down.
+            local right, left = box[3] - l + NUDGE_GAP, r - box[2] + NUDGE_GAP
+            local up, down = box[5] - b + NUDGE_GAP, t - box[4] + NUDGE_GAP
+            local least = math.min(right, left, up, down)
+            if least == right then dx = right
+            elseif least == left then dx = -left
+            elseif least == up then dy = up
+            else dy = -down end
+            break
+        end
+    end
+    local nx, ny = bx + dx / s, by + dy / s
+    if math.abs(nx - x) < 0.01 and math.abs(ny - y) < 0.01 then return end
+    f:ClearAllPoints()
+    f:SetPoint(point, rel, relPoint, nx, ny)
+    f.wpPush = (dx ~= 0 or dy ~= 0) and { x = nx, y = ny, bx = bx, by = by } or nil
+end
+
 -- Hides every other icon touching a shown badge, and gives back the ones that stopped touching.
 function Towns:Cover()
     for _, h in pairs(hidden) do h.seen = false end
@@ -195,9 +234,15 @@ function Towns:Cover()
             local l, r, b, t = Rect(pins[i])
             if l then boxes[#boxes + 1] = { pins[i], l - PAD, r + PAD, b - PAD, t + PAD } end
         end
-        -- An icon: shown, hoverable (or hidden by us), icon-sized, not Waypoint's own.
+        -- An icon: shown, hoverable (or hidden by us), icon-sized, not Waypoint's own. OneForAll's
+        -- landmarks (its flight masters and docks sit in towns) are pushed aside instead (Nudge).
+        local ofa = ns.OneForAll and ns.OneForAll:Loaded() and ns.OneForAll
         local function Check(f)
             if f.wpTown or f.waypoint or not f:IsShown() or not (f:IsMouseEnabled() or hidden[f]) then return false end
+            if ofa and ofa:Owns(f) then
+                pcall(Nudge, f, boxes)
+                return true
+            end
             local l, r, b, t = Rect(f)
             if not (l and r > l and r - l <= MAX_ICON and t - b <= MAX_ICON) then return false end
             for _, box in ipairs(boxes) do
@@ -490,8 +535,7 @@ function Towns:Givers(t)
     local doable = M and M.DB and M.DB.IsDoable
     if not doable then return nil, t[7] end
     local me = UnitLevel and UnitLevel("player")
-    local player = K.Mod("QuestiePlayer")
-    local log = player and player.currentQuestlog
+    local log = K.QuestLog()
     local n, ids = 0, {}
     for _, quests in ipairs(t.g) do
         local counted = false

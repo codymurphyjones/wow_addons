@@ -44,6 +44,17 @@ function CV:Desired()
     }
 end
 
+-- Forever's engine stacks by plate kind, a bitfield setting: one bit for enemies, one for friends.
+local STACKING = "nameplateStackingTypes"
+
+local function SetStacking(on)
+    if Get(STACKING) == nil or not SetCVarBitfield then return end
+    local kinds = Enum and Enum.NamePlateStackType
+    for _, kind in ipairs({ kinds and kinds.Enemy or 1, kinds and kinds.Friendly or 2 }) do
+        if GetCVarBitfield(STACKING, kind) ~= on then pcall(SetCVarBitfield, STACKING, kind, on) end
+    end
+end
+
 local pending, lastKey
 
 local function SettingsKey()
@@ -78,6 +89,11 @@ function CV:Apply()
                 if tostring(current) ~= tostring(value) then Set(name, value) end
             end
         end
+        local stacking = Get(STACKING)
+        if stacking ~= nil then
+            if backup[STACKING] == nil then backup[STACKING] = stacking end
+            SetStacking(ns.db.cvars.stacking and true or false)
+        end
     end
     self.distance = tonumber(Get("nameplateMaxDistance"))
 end
@@ -91,11 +107,15 @@ function CV:Status()
         text = text .. (" |cffff8866The game capped it below %d.|r"):format(self:Distance())
     end
     local motion = Get("nameplateMotion")
-    if motion ~= nil then
+    if Get(STACKING) ~= nil and GetCVarBitfield then
+        local kinds = Enum and Enum.NamePlateStackType
+        local enemy = GetCVarBitfield(STACKING, kinds and kinds.Enemy or 1)
+        local friend = GetCVarBitfield(STACKING, kinds and kinds.Friendly or 2)
+        text = text .. ((enemy and friend) and " Plates stack." or enemy and " Enemy plates stack."
+            or friend and " Friendly plates stack." or " Plates overlap.")
+    elseif motion ~= nil then
         text = text .. (tostring(motion) == "0" and " Plates overlap." or " Plates stack.")
     end
-    local v = tonumber(Get("nameplateOverlapV"))
-    if v then text = text .. (" Vertical spacing %.1f."):format(v) end
     if pending then text = text .. " Changes apply when you leave combat." end
     return text
 end
@@ -106,6 +126,13 @@ ns:On("PLAYER_LOGIN", function()
         if type(profile.cvars) == "table" and not profile.cvars.maxMigrated then
             if profile.cvars.distance == 41 then profile.cvars.distance = 0 end
             profile.cvars.maxMigrated = true
+        end
+        -- Spacing used to be a multiple of the game's small plate; it is now a multiple of what a
+        -- SmartPlates plate draws, so the old defaults would leave big gaps.
+        if type(profile.cvars) == "table" and not profile.cvars.boundsMigrated then
+            if profile.cvars.spacingV == 1.8 then profile.cvars.spacingV = 1.1 end
+            if profile.cvars.spacingH == 0.8 then profile.cvars.spacingH = 1.0 end
+            profile.cvars.boundsMigrated = true
         end
     end
     C_Timer.After(1, function() CV:Apply() end)

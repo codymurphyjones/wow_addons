@@ -2,7 +2,7 @@
 ## Title: Field Guide
 ## Notes: Leveling guides for WoW Forever, planned by XP against travel. Picks the next best route from your level and finished quests, adds any prerequisite you missed, and points the way with Waypoint. /fg
 ## Author: Dinoblankie + Claude
-## Version: 0.1.5
+## Version: 0.1.19
 ## Dependencies: Waypoint, Questie
 ## SavedVariables: FieldGuideDB
 ## SavedVariablesPerCharacter: FieldGuideCharDB
@@ -23,15 +23,21 @@ Guides\Gates.lua
 Guides\Alliance.lua
 Guides\Horde.lua
 Guides\Instances.lua
+Guides\Areas.lua
 Guides\DungeonArt.lua
 Progress.lua
 Exists.lua
 Engine.lua
+Tasks.lua
 Instance.lua
 DungeonPicker.lua
+DungeonTodo.lua
+GuidePicker.lua
+DungeonPaths.lua
 UI.lua
 QuestLog.lua
 AutoQuest.lua
+QuestMacro.lua
 ..\shared\MinimapButton.lua
 Minimap.lua
 ..\shared\OptionsPage.lua

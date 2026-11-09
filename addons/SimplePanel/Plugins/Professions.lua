@@ -59,12 +59,19 @@ local function WindowSpell(s)
     return IsCrafting(s.name) and s.name or nil
 end
 
+-- On WoW Forever every profession crafts (campfires and camp gear: camping), gathering ones too, so
+-- every one has a recipe window. One without a spell that opens it (Herbalism, Skinning, Fishing)
+-- opens through C_TradeSkillUI.OpenTradeSkill, from the click (onClick, below).
+local function OpensByLine(s)
+    return s and s.skillLine and C_TradeSkillUI and C_TradeSkillUI.OpenTradeSkill and true or false
+end
+
 -- What a left-click opens: the profession on the bar, or with both shown, the first with a window.
 local function ClickTarget(p)
     local list = Skills()
     if p:Get("showAll") then
         for _, s in ipairs(list) do
-            if s.primary and WindowSpell(s) then return s, WindowSpell(s) end
+            if s.primary and (WindowSpell(s) or OpensByLine(s)) then return s, WindowSpell(s) end
         end
     end
     local s = Shown(p, list)
@@ -169,6 +176,8 @@ SimplePanel.RegisterPlugin({
         local target, spell = ClickTarget(p)
         if spell then
             tt:AddHint(("Click: open %s  ·  Right-click: options"):format(spell))
+        elseif OpensByLine(target) then
+            tt:AddHint(("Click: open %s (its recipes: camping too)  ·  Right-click: options"):format(target.name))
         else
             tt:AddHint(((target and target.name) or "This skill") .. " has no window  ·  Right-click: options")
         end
@@ -192,9 +201,15 @@ SimplePanel.RegisterPlugin({
         if ns.db.options.ownPanels and ns.ProfessionsPanel and not IsModifierKeyDown() then
             return ns.ProfessionsPanel:Toggle(p.button)
         end
-        local _, spell = ClickTarget(p)
+        local target, spell = ClickTarget(p)
         if spell and InCombatLockdown() then
             return p:Print("can't open " .. spell .. " from SimplePanel right now; use your spellbook.")
+        end
+        -- No spell opens it (a gathering profession): its recipe window by its skill line. Only the
+        -- menu when the game won't open it (nothing to craft there yet).
+        if not spell and not IsModifierKeyDown() and OpensByLine(target) and not InCombatLockdown() then
+            local ok, opened = pcall(C_TradeSkillUI.OpenTradeSkill, target.skillLine)
+            if ok and opened ~= false then return end
         end
         local m = ns.Menu:New(p.button)
         m:Title("Professions", p.icon)

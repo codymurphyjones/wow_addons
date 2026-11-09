@@ -325,6 +325,14 @@ function AuctionSearch:CurrentItem()
     end
 end
 
+-- A view showing an item's listings (to buy from) needs the auction house left as it is.
+function AuctionSearch:Holding()
+    for _, v in ipairs(self.views) do
+        if v:IsVisible() and v.mode == "listings" then return true end
+    end
+    return false
+end
+
 function AuctionSearch:StopAll(except)
     for _, v in ipairs(self.views) do if v ~= except then v:Stop() end end
 end
@@ -339,7 +347,7 @@ local function Claim(self)
         ns:Print("Open the auction house first.", true)
         return false
     end
-    ns.Compare:StopCheck()
+    ns.Compare:Pause() -- (the price check steps aside, and carries on after)
     AuctionSearch:StopAll(self)
     ns.Scanner:Abort()
     ns.Purchase:Cancel()

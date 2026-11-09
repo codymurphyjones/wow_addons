@@ -7,43 +7,53 @@ ns.Prompt = Prompt
 local queue = {}
 local showing = false
 
-StaticPopupDialogs["WALLY_LEARN"] = {
-    text = "|cff55d6beWally|r noticed you keep selling %s\n(%s times so far).\n\nTreat it as junk from now on?",
-    button1 = "Yes, it's junk",
-    button2 = "Ask later",
-    button3 = "Never sell",
-    OnAccept = function(_, data) ns.Lists:Add("inclusions", data.link or data.key, "learned") end,
-    OnCancel = function(_, data) ns.Learning:Snooze(data.key) end,
-    OnAlt = function(_, data) ns.Lists:Add("exclusions", data.link or data.key, "manual") end,
-    OnHide = function() showing = false; C_Timer.After(0.2, function() Prompt:Next() end) end,
-    timeout = 0, whileDead = 1, hideOnEscape = 1, preferredIndex = 3,
-}
+-- Asked in Wally's own popup (W.Ask), never the game's StaticPopup frames: an addon's popup there
+-- taints them, and the game's next dialog in that frame gets blocked ("The game forbade Wally's
+-- call to PurchaseBankTab()" when buying a bank tab).
+local BLUE = "|cff55d6beWally|r"
+local function Done() showing = false; C_Timer.After(0.2, function() Prompt:Next() end) end
 
-StaticPopupDialogs["WALLY_BUYBACK"] = {
-    text = "You bought back %s, which is on your |cff55d6beWally|r Junk List.\n\nStop selling it?",
-    button1 = "Never sell",
-    button2 = "Keep as junk",
-    button3 = "Remove from list",
-    OnAccept = function(_, data) ns.Lists:Add("exclusions", data.link or data.key, "manual") end,
-    OnAlt = function(_, data)
-        ns.Lists:Remove("inclusions", data.key)
-        ns:Print((data.link or data.key) .. " removed from the Junk List.", true)
-    end,
-    OnHide = function() showing = false; C_Timer.After(0.2, function() Prompt:Next() end) end,
-    timeout = 0, whileDead = 1, hideOnEscape = 1, preferredIndex = 3,
-}
+local function AskLearn(key, link, times)
+    ns.Widgets.Ask({
+        text = ("%s noticed you keep selling %s\n(%s times so far).\n\nTreat it as junk from now on?"):format(BLUE, link, times),
+        buttons = {
+            { "Yes, it's junk", function() ns.Lists:Add("inclusions", link or key, "learned") end },
+            { "Ask later", function() ns.Learning:Snooze(key) end },
+            { "Never sell", function() ns.Lists:Add("exclusions", link or key, "manual") end },
+        },
+        onCancel = function() ns.Learning:Snooze(key) end,
+        onHide = Done,
+    })
+end
 
-StaticPopupDialogs["WALLY_AUCTION_LEARN"] = {
-    text = "|cff55d6beWally|r noticed you keep auctioning %s\n(%s times so far).\n\nAdd it to your Auction List so Wally posts it for you?",
-    button1 = "Yes, auction it",
-    button2 = "Ask later",
-    button3 = "Never auction",
-    OnAccept = function(_, data) ns.Lists:Add("auctionList", data.link or data.key, "learned") end,
-    OnCancel = function(_, data) ns.AuctionLearning:Snooze(data.key) end,
-    OnAlt = function(_, data) ns.Lists:Add("neverAuction", data.link or data.key, "manual") end,
-    OnHide = function() showing = false; C_Timer.After(0.2, function() Prompt:Next() end) end,
-    timeout = 0, whileDead = 1, hideOnEscape = 1, preferredIndex = 3,
-}
+local function AskBuyback(key, link)
+    ns.Widgets.Ask({
+        text = ("You bought back %s, which is on your %s Junk List.\n\nStop selling it?"):format(link, BLUE),
+        buttons = {
+            { "Never sell", function() ns.Lists:Add("exclusions", link or key, "manual") end },
+            { "Keep as junk" },
+            { "Remove from list", function()
+                ns.Lists:Remove("inclusions", key)
+                ns:Print(link .. " removed from the Junk List.", true)
+            end },
+        },
+        onHide = Done,
+    })
+end
+
+local function AskAuction(key, link, times)
+    ns.Widgets.Ask({
+        text = ("%s noticed you keep auctioning %s\n(%s times so far).\n\nAdd it to your Auction List so Wally posts it for you?"):format(BLUE, link, times),
+        buttons = {
+            { "Yes, auction it", function() ns.Lists:Add("auctionList", link or key, "learned") end },
+            { "Ask later", function() ns.AuctionLearning:Snooze(key) end },
+            { "Never auction", function() ns.Lists:Add("neverAuction", link or key, "manual") end },
+        },
+        onCancel = function() ns.AuctionLearning:Snooze(key) end,
+        onHide = Done,
+        wide = true,
+    })
+end
 
 local function Enqueue(kind, key)
     for _, q in ipairs(queue) do if q.kind == kind and q.key == key then return end end
@@ -87,20 +97,17 @@ function Prompt:Next()
         local h = ns.db.habits[q.key]
         if not h or ns.db.inclusions[q.key] or ns.db.exclusions[q.key] then return self:Next() end
         showing = true
-        local dialog = StaticPopup_Show("WALLY_LEARN", h.link or h.name or q.key, tostring(h.sold or 0), { key = q.key, link = h.link })
-        if not dialog then showing = false end
+        AskLearn(q.key, h.link or h.name or q.key, tostring(h.sold or 0))
     elseif q.kind == "auction" then
         local h = ns.db.auctionHabits[q.key]
         if not h or ns.db.auctionList[q.key] or ns.db.neverAuction[q.key] then return self:Next() end
         showing = true
-        local dialog = StaticPopup_Show("WALLY_AUCTION_LEARN", h.link or h.name or q.key, tostring(h.posted or 0), { key = q.key, link = h.link })
-        if not dialog then showing = false end
+        AskAuction(q.key, h.link or h.name or q.key, tostring(h.posted or 0))
     else
         local e = ns.db.inclusions[q.key]
         if not e then return self:Next() end
         showing = true
-        local dialog = StaticPopup_Show("WALLY_BUYBACK", e.link or e.name or q.key, nil, { key = q.key, link = e.link })
-        if not dialog then showing = false end
+        AskBuyback(q.key, e.link or e.name or q.key)
     end
 end
 

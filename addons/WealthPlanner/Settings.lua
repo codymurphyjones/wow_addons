@@ -32,6 +32,10 @@ S.page = ns.NewOptionsPage({ name = "Wealth Planner", build = function(p)
     p:Slider({ path = "db.options.historyDays", label = "Keep price history for", min = 30, max = 365, step = 5, apply = Jobs,
         format = function(v) return ("%d days"):format(v) end,
         tooltip = "Older days are dropped at login." })
+    p:Check({ path = "db.options.poolTooltip", label = "Auction prices by auction house on item tooltips",
+        tooltip = "Each auction pool's price on its own line: your faction's cities, Steamwheedle (Booty Bay, Gadgetzan, "
+            .. "Everlook) and Forever's new auctioneers. Auctionator keeps one price for all of them, so a visit to "
+            .. "Booty Bay would replace your own city's price; these are kept apart." })
     p:Check({ path = "db.options.alerts", label = "Chat alerts for watched prices",
         tooltip = "When a scan sees a watched item cross the buy or sell price you set on its chart." })
     p:Check({ path = "db.options.chat", label = "Print messages in chat" })

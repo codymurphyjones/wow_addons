@@ -6,20 +6,20 @@
 
 ## Features
 
-### Planned from the real quest data
-Every quest in each zone is weighed: the XP it pays against the time it takes to walk there and do it. Low-value detours are cut, and quests are batched at each hub. The order follows prerequisites and level requirements.
+### Tasks, not zones
+Leveling treats every pick-up, objective and hand-in as a task of its own, wherever it is. Each objective of a quest is its own step, done in whatever order is quickest. Field Guide picks the areas of work that pay the most XP a minute from where you are, travel included, across zone borders, and puts their tasks in the quickest order. The work near you comes first: a long walk only wins when it pays for itself. A delivery that takes you to the next area of work is picked up on your way there. Steps tick off as you pick up, complete and hand in quests.
+
+### Done while it still pays
+Every quest on the plan is finished and handed in before it stops paying at your level. Quests close to that point move up the list.
 
 ### Level anywhere
-Every zone from 1 to 60 has a guide for each faction. Walk into a zone and, if it has quests worth doing at your level, its guide takes over. Steps tick off as you pick up, complete and hand in quests. Your race doesn't decide anything: go anywhere your faction can quest and the guide follows.
-
-### Leads you to the next zone
-When a zone is done for your level, Field Guide hands you the quest that sends you on to the next zone that suits you. No such quest? It points you at the nearest zone with quests for your level. You never have to plan a route.
+Every quest your faction can do, levels 1 to 60, is in reach. Your race doesn't decide anything: go anywhere your faction can quest and the guide follows. You never have to plan a route.
 
 ### Only quests worth your time
 Each quest's XP at your level is weighed against what your next level needs. Gray and nearly gray quests drop out as you outlevel them, unless a better quest needs them first.
 
 ### Leveling or Zone Clear
-Choose how you play under **Preference**. **Leveling** goes for XP and convenience, and takes quick detours: an easy hand-in quest a minute or two off the route (you set the detour budget). **Zone Clear** finishes every quest in the zone you're on, gray ones included, and takes you out of the zone for any prerequisite before moving on.
+Choose how you play under **Preference**. **Leveling** goes for XP a minute: any quest that pays, wherever it is, easy hand-in quests included. **Zone Clear** works zone by zone: it finishes every quest in the zone you're on, gray ones included, takes you out of the zone for any prerequisite, then hands you the quest that leads to the next zone.
 
 ### Only quests that are really there
 Before a quest goes on your route, Field Guide checks with the server that it exists. If a quest giver doesn't offer the quest when you get there, that step drops off the route.

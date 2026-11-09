@@ -13,6 +13,8 @@ local SWAPS_PER_TICK = 4
 local MAX_MOVES = 600
 local MAX_SECONDS = 30
 local CURSOR_PATIENCE = 20 -- ticks
+local STALL_SECONDS = 5    -- no slot came right for this long: the game isn't moving items, so stop
+local AUTO_REST = 60       -- after an automatic sort fails, no automatic sort for this long
 local CLASS = ns.Items.CLASS
 local CLASS_CONTAINER, CLASS_QUIVER = CLASS.CONTAINER, CLASS.QUIVER
 
@@ -30,17 +32,20 @@ Sorter.CRITERIA = {
     { key = "count", label = "Stack size", dir = { "Small first", "Big first" }, desc = true },
 }
 
+-- The default order: what you use at the top, then gear (best quality first), then the rest, and
+-- trade goods and reagents last. Junk (what Wally would sell) goes after all of them.
 Sorter.CATEGORIES = {
     { key = "hearth", label = "Hearthstone & keys" },
     { key = "consumable", label = "Consumables" },
     { key = "quest", label = "Quest items" },
     { key = "gear", label = "Weapons & armor" },
-    { key = "trade", label = "Trade goods & reagents" },
-    { key = "recipe", label = "Recipes" },
     { key = "container", label = "Bags & quivers" },
     { key = "ammo", label = "Ammo" },
+    { key = "recipe", label = "Recipes" },
     { key = "misc", label = "Everything else" },
+    { key = "trade", label = "Trade goods & reagents" },
 }
+local OLD_DEFAULT_GROUPS = "hearth,consumable,quest,gear,trade,recipe,container,ammo,misc"
 
 Sorter.PRESETS = {
     { label = "Blizzard", hint = "Group, then best quality, then most valuable, then highest item level, then name.",
@@ -124,6 +129,15 @@ ns:OnLoad(function()
         local o = db.options.sort
         o.onMerchantClose, o.onBagsClose, o.onMailClose = true, true, true
     end)
+    -- Reagents moved to the bottom of the default group order: once, settings still on the old
+    -- default order get the new one (an order the user changed stays theirs).
+    ns:Migrate("reagentsLast", function(db)
+        local o = db.options.sort
+        if table.concat(o.categories, ",") == OLD_DEFAULT_GROUPS then
+            o.categories = {}
+            Sorter:Validate()
+        end
+    end)
 end)
 
 function Sorter:CriterionInfo(key)
@@ -189,7 +203,6 @@ function Sorter:Describe()
     local opt = ns.db.options.sort
     local parts = {}
     if #opt.pinned > 0 then parts[#parts + 1] = "pinned items" end
-    if (opt.protectTop or 0) > 0 or opt.protectRare then parts[#parts + 1] = "protected valuables" end
     if opt.reagentsByWorth then parts[#parts + 1] = "reagents by worth" end
     for _, c in ipairs(opt.criteria) do
         if c.on then
@@ -393,10 +406,11 @@ end
 
 local function Compare(a, b)
     if a.pin ~= b.pin then return a.pin < b.pin end
-    -- Protected valuables come straight after pinned items, most valuable first.
-    if a.protected ~= b.protected then return a.protected end
-    if a.protected and a.v.worth ~= b.v.worth then return a.v.worth > b.v.worth end
+    -- (Protected valuables sort with their group like anything else: protection keeps them from
+    -- being sold, it doesn't pull them out of place.)
     if a.junk ~= b.junk then return not a.junk end
+    -- Junk: by what the whole stack sells for, most first.
+    if a.junk and a.v.value ~= b.v.value then return a.v.value > b.v.value end
     if a.reagent and b.reagent and a.v.worth ~= b.v.worth then return a.v.worth > b.v.worth end
     for _, c in ipairs(a.criteria) do
         if c.on then
@@ -504,15 +518,15 @@ function Sorter:MergeStacks(slots)
     return acted, waiting
 end
 
--- Moves items toward their planned slots. Returns done, acted, waiting.
+-- Moves items toward their planned slots. Returns done, acted, waiting, and how many slots are wrong.
 function Sorter:Arrange(slots)
     local order, target = Plan(slots)
-    local used, swaps, mismatched, acted, waiting = {}, 0, false, false, false
+    local used, swaps, mismatched, acted, waiting = {}, 0, 0, false, false
     local function Correct(t) return t.key == (target[t] and target[t].key) end
 
     for _, s in ipairs(order) do
         if not Correct(s) then
-            mismatched = true
+            mismatched = mismatched + 1
             local want = target[s]
             if want and swaps < SWAPS_PER_TICK and not used[s] then
                 local src
@@ -539,31 +553,43 @@ function Sorter:Arrange(slots)
             end
         end
     end
-    return not mismatched, acted, waiting
+    return mismatched == 0, acted, waiting, mismatched
 end
 
 function Sorter:IsBusy() return self.ticker ~= nil end
+
+-- When the game won't move items: dead or a ghost. (Combat has its own check.)
+local function CantMove()
+    if UnitIsDeadOrGhost("player") then return "you're dead" end
+end
 
 function Sorter:Start(which, auto)
     which = which == "bank" and "bank" or "bags"
     local function Fail(msg) if not auto then ns:Print(msg, true) end end
     if self.ticker then return Fail("Already sorting.") end
     if InCombatLockdown() then return Fail("Can't sort bags in combat.") end
+    local why = CantMove()
+    if why then return Fail("Can't sort bags: " .. why .. ".") end
+    if auto and self.restUntil and GetTime() < self.restUntil then return end
     if CursorHasItem() then return Fail("Put down the item on your cursor first.") end
     if ns.Seller:IsBusy() then return Fail("Wait until Wally has finished selling.") end
     if Held() then return Fail("Wait until your items have finished moving.") end
     if which == "bank" and not self.bankOpen then return Fail("Open your bank first.") end
     cache = {}
     self.which, self.moves, self.started, self.cursorWait, self.mergeTries = which, 0, GetTime(), 0, {}
+    self.auto, self.best, self.bestAt = auto, nil, GetTime()
     self.ticker = C_Timer.NewTicker(TICK, function() Sorter:Tick() end)
     self:RefreshButtons()
     ns:Changed()
 end
 
-function Sorter:Stop(msg, force)
+-- failed: it stopped short. An automatic sort that fails rests the automatic ones (AUTO_REST), so a
+-- sort the game keeps refusing can't start itself over and over.
+function Sorter:Stop(msg, force, failed)
     if not self.ticker then return end
     self.ticker:Cancel()
     self.ticker, cache = nil, nil
+    if failed and self.auto then self.restUntil = GetTime() + AUTO_REST end
     if msg then ns:Print(msg, force) end
     self:RefreshButtons()
     ns:Changed()
@@ -571,14 +597,16 @@ end
 
 function Sorter:Tick()
     local what = self.which == "bank" and "Bank" or "Bags"
-    if InCombatLockdown() then return self:Stop("Sorting stopped: you entered combat.", true) end
-    if self.which == "bank" and not self.bankOpen then return self:Stop("Sorting stopped: the bank closed.", true) end
+    if InCombatLockdown() then return self:Stop("Sorting stopped: you entered combat.", true, true) end
+    local why = CantMove()
+    if why then return self:Stop("Sorting stopped: " .. why .. ".", true, true) end
+    if self.which == "bank" and not self.bankOpen then return self:Stop("Sorting stopped: the bank closed.", true, true) end
     if self.moves >= MAX_MOVES or GetTime() - self.started > MAX_SECONDS then
-        return self:Stop("Sorting stopped because it was taking too long. Click Sort again to carry on.", true)
+        return self:Stop("Sorting stopped because it was taking too long. Click Sort again to carry on.", true, true)
     end
     if CursorHasItem() then
         self.cursorWait = self.cursorWait + 1
-        if self.cursorWait > CURSOR_PATIENCE then self:Stop("Sorting stopped: you picked up an item.", true) end
+        if self.cursorWait > CURSOR_PATIENCE then self:Stop("Sorting stopped: you picked up an item.", true, true) end
         return
     end
     self.cursorWait = 0
@@ -586,13 +614,20 @@ function Sorter:Tick()
     local slots = Scan(self.which)
     local acted, waiting = self:MergeStacks(slots)
     if acted or waiting then return end
-    local done
-    done, acted, waiting = self:Arrange(slots)
+    local done, wrong
+    done, acted, waiting, wrong = self:Arrange(slots)
     if done then
         return self:Stop(self.moves > 0 and (what .. " sorted.") or (what .. " are already sorted."))
     end
     if not acted and not waiting then
-        self:Stop("Couldn't finish sorting: some items won't move. Try again in a moment.", true)
+        return self:Stop("Couldn't finish sorting: some items won't move. Try again in a moment.", true, true)
+    end
+    -- Moves the game silently refuses (or that undo each other) look like progress forever: stop
+    -- when no more slots have come right for a while.
+    if not self.best or wrong < self.best then
+        self.best, self.bestAt = wrong, GetTime()
+    elseif GetTime() - self.bestAt > STALL_SECONDS then
+        self:Stop("Couldn't finish sorting: the game isn't moving the items. Try again in a moment.", true, true)
     end
 end
 
@@ -755,8 +790,10 @@ function Sorter:RefreshButtons()
 end
 
 function Sorter:PlaceButtons()
-    -- (Wally's own bag window has its Sort button; this one is for the game's bag windows)
+    -- (Wally's own bag window has its Sort button; this one is for the game's bag windows. The bank
+    -- stays the game's window either way, so its button doesn't depend on that.)
     local show = ns.db.options.sort.bagButton and not (ns.BagWindow and ns.BagWindow:Enabled())
+    local showBank = ns.db.options.sort.bagButton
     local busy = self:IsBusy()
     local parent = show and BackpackFrame()
     if parent then
@@ -787,15 +824,25 @@ function Sorter:PlaceButtons()
     end
     if bagButton then bagButton:SetAlpha(busy and 0.5 or 1) end
 
+    -- The bank: in the game's own sort button's place, beside the bank's search box (BankPanel's
+    -- AutoSortButton on Forever). Only on your own bank's tabs: Wally sorts those.
     local bank = _G.BankFrame
-    if show and self.bankOpen and bank and bank:IsShown() then
+    local panel = bank and bank.BankPanel
+    local character = true
+    if bank and bank.GetActiveBankType and Enum and Enum.BankType then
+        local ok, kind = pcall(bank.GetActiveBankType, bank)
+        if ok and kind ~= nil then character = kind == Enum.BankType.Character end
+    end
+    if showBank and self.bankOpen and bank and bank:IsShown() and character then
         bankButton = bankButton or CreateSortButton("WallyBankSortButton", "bank")
-        Place(bankButton, bank, _G.BankItemAutoSortButton, function(b, p)
-            local close = _G.BankCloseButton
-            if close and close:GetParent() == p then
-                b:SetPoint("RIGHT", close, "LEFT", -2, 0)
+        local parent = (panel and panel:IsShown()) and panel or bank
+        local blizz = (panel and panel.AutoSortButton) or _G.BankItemAutoSortButton
+        Place(bankButton, parent, blizz, function(b, p)
+            local search = _G.BankItemSearchBox
+            if search and search:IsShown() then
+                b:SetPoint("LEFT", search, "RIGHT", 8, -1)
             else
-                b:SetPoint("TOPRIGHT", p, "TOPRIGHT", -60, -44)
+                b:SetPoint("TOPRIGHT", p, "TOPRIGHT", -26, -30)
             end
         end)
         bankButton:Show()

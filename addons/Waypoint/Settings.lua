@@ -47,7 +47,8 @@ S.page = ns.NewOptionsPage({ name = "Waypoint", icon = true, build = function(p)
     p:Header("World map")
     p:Check({ path = "db.towns", label = "Town icons", tooltip = "Town icons on the world map, with what's there (/way towns, or the arrow's menu)." })
     p:Check({ path = "db.transportPins", label = "Dock icons",
-        tooltip = "Zeppelin, skyship and ship docks on the world map: hover for the ride time, click to go there. On a ride, the dock you left and where it lands show the time left (/way docks)." })
+        tooltip = "Zeppelin, skyship and ship docks on the world map: hover for the ride time, click to go there. On a ride, the dock you left and where it lands show the time left (/way docks). "
+            .. "With OneForAll's map landmarks on, its icons are used instead: click one to go there." })
 
     p:Header("Planning the way there")
     p:Dropdown({ path = "db.roadMode", label = "Roads", default = "balanced", choices = RoadModes,

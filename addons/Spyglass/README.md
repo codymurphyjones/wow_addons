@@ -38,7 +38,6 @@ Click the tab again, or any other tab, to go back to your stats.
 |---|---|
 | `/sg` | Open or close the list on the Character window |
 | `/sg journal` or `/sgj` | Open or close the loot journal |
-| `/sgj maps` | The journal's Maps tab, on the dungeon you're in |
 | `/sgj minimap` | Hide or show the journal's minimap button |
 | `/sgj watch` | The dungeon watch: what it has noted (`/sgj watch on` / `off`) |
 | `/sg atlas` | Open AtlasLoot |
@@ -116,27 +115,24 @@ The tiles use only the game's own art: the Dungeon Finder backgrounds where the 
 the place. Elsewhere, a tinted generic card with the first boss's portrait. No images from other
 addons are used.
 
-The journal's **Maps** tab shows each dungeon's map floor by floor, with its mob packs and your pull
-plan on top (**Plan pulls** opens the Pulls tab on it). Inside a dungeon the map key opens the
-journal on the Maps tab, on the dungeon and floor you're in, and follows you between floors; press
-it again to close it, or click **World Map** for the game's map.
+### Mob packs on OneForAll's dungeon maps
 
-The dungeon maps (the Maps and Pulls tabs) draw Blizzard's own dungeon map art
-at full size, 12 tiles per floor straight from the game's files (`Journal/MapTiles.lua`). The list
-of tiles is built by `tools/Spyglass/build_map_tiles.py` from OpenMap's `Data/DungeonMaps.lua`
-(MIT; checked against the WoW Forever install), matched to each instance's floors by name. Where
-there's no full-size art (Naxxramas), the floor uses the smaller picture `fetch_pulls.py` makes.
-Mob packs sit on the same 0-100 map coordinates either way.
+SpyGlass knows where every mob pack stands in each dungeon (`Journal/PullData.lua`, built by
+`tools/Spyglass/fetch_pulls.py` from the world database). The dungeon maps themselves are
+OneForAll's: with OneForAll installed, the setup asks once whether to draw the packs on its maps
+(Dungeons & Raids > Map, and the map key inside a dungeon), and **Mob packs on OneForAll's dungeon
+maps** in the settings switches it later (`Journal/MobPins.lua`).
 
-On the maps:
-
+- Each pack is a small circle with how many mobs it has, amber when there are elites among them.
+  OneForAll's own boss and entrance markers stay; boss packs aren't drawn twice.
 - **Linked packs** (they aggro together, from the world database's creature links and spawn
-  groups) are joined by faint orange lines and light up together when you point at one. In the
-  Pulls tab, clicking one adds its whole group to the pull; Shift-click adds it alone.
+  groups) are joined by faint orange lines and light up together when you point at one.
 - **Patrols** are drawn as their route (purple), brighter when you point at the pack.
 - **Guesses**: a faded pack with a `?` stands where the game's map shows no ground on any floor it
   could be on. `fetch_pulls.py` lists them in `tools/Spyglass/pulls_review.txt`.
-- The tooltip says how many players were recorded pulling a pack there.
+- The tooltip lists the mobs and says how many players were recorded pulling the pack there.
+- Each floor in `PullData.lua` keeps its world rectangle, so a pack's spot turns into OneForAll's
+  canvas yards; the packs follow OneForAll's zoom and drag by its own markers.
 
 ### The dungeon watch
 
@@ -185,6 +181,13 @@ Open the settings from Options > AddOns > SpyGlass, or with `/sg options`.
   button straight away, so it needs no reload.
 - **Show SpyGlass minimap button:** the SpyGlass button that opens the journal.
 - **Show the SpyGlass tab:** the spyglass tab on the Character window.
+- **Put on gray and white upgrades automatically** (on): a gray or white item that lands in your bags
+  and is an upgrade by the same verdict as the list (or fills an empty slot) goes on once you're out of
+  combat and alive, one at a time, said in chat. Green and better is never put on (worth more, and your
+  call). Only soulbound items: Bind on Equip pieces and gear that never binds
+  are never put on. Only new arrivals (what you had at login and what you take off are left
+  alone), nothing above your level or that you can't use, and no weapon over a fishing pole.
+  `AutoEquip.lua`.
 
 ## What's shown by default
 
@@ -286,7 +289,3 @@ this API, so other addons can too; see `API.lua`. It provides:
 - the shared tooltip and click handlers;
 - a refresh callback: `SpyGlass:RegisterCallback(owner, fn)` calls `fn("REFRESH")` when the lists should be
   redrawn (dot or colon call; one callback per owner; see `addons\shared\API.md`);
-- the dungeon maps, floor by floor: `DungeonMapInstances()`, `DungeonMapFloors(instance)` (each floor's
-  name, game map ID, pack count, and whether it has full-size art), `DungeonMapFloorOf(uiMapID)`, and
-  `OpenDungeonMap(instance, floor)` (instance: SpyGlass's key, the instance ID or its name; floor: its
-  number or its game map ID; default: where you are).

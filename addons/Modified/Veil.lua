@@ -9,13 +9,13 @@ local ADDON, ns = ...
 -- Only the desk and the lit buttons take the mouse: the rest of the screen stays the game's, so
 -- you can target people and watch the lens answer for them.
 --
--- Your hands pick the world. Holding Shift, Ctrl or Alt shows that modifier's world while held;
--- a quick tap latches it (tap again to let go), so you can work in it with your hands free.
+-- The set you edit (the world) is the one you clicked in the strip at the top: it stays put until
+-- you click another, whatever keys you press or type. Holding Shift, Ctrl or Alt only previews:
+-- the lens's core and the lit buttons show what the button would cast with those keys held now.
 -- Each modifier is one axis: the eight worlds are the corners of a cube.
 local V = {}
 ns.Veil = V
 
-local TAP = 0.26   -- a modifier released faster than this (with nothing else pressed) is a tap
 local TEX = "Interface\\AddOns\\Modified\\Textures\\"
 V.TEX = TEX
 V.DESK_W, V.PANEL_W, V.STRIP_H, V.PAD = 900, 340, 100, 12
@@ -41,15 +41,24 @@ for bits = 1, 7 do
 end
 function V.WorldColor(key) return WORLD_COLOR[key] or WORLD_COLOR.none end
 
-V.latched, V.held = 0, 0
+V.latched, V.held = 0, 0 -- latched: the clicked set's bits; held: the modifier keys down now (preview)
 V.drafts = {} -- [slot] = draft the lens is shaping (kept until sealed, unravelled or /reload)
 V.dirty = {}  -- [slot] = true when the draft differs from what's sealed
 
+-- The set you're editing: the one clicked in the strip.
 function V:World()
-    -- While you type, the world holds still (Lens.lua sets frozen).
-    if ns.Lens and ns.Lens.frozen then return ns.Lens.frozen end
-    return V.WORLD[bit.bor(self.latched, self.held)]
+    return V.WORLD[self.latched]
 end
+
+-- The set your hands hold right now (Shift, Ctrl, Alt down), or nil with none held: what the
+-- button would cast now. Only the core and the lit buttons' icons follow it.
+function V:Preview()
+    if self.held == 0 then return nil end
+    return V.WORLD[self.held]
+end
+
+-- The set whose spell a button shows: the keys held now, else the set you're editing.
+function V:ShownWorld() return self:Preview() or self:World() end
 
 function V:WorldChanged()
     ns.Lens:WorldChanged()
@@ -152,7 +161,7 @@ end
 function V:VoiceIcon(slot)
     local design = self.drafts[slot] or ns.db.designs[slot]
     if design and ns.Lens then
-        local icon = ns.Lens:VoiceIcon(design, self:World())
+        local icon = ns.Lens:VoiceIcon(design, self:ShownWorld())
         if icon then return icon end
     end
     return GetActionTexture(slot)
@@ -290,7 +299,9 @@ function V:Scan()
         return r
     end
     local scale = self.frame:GetEffectiveScale()
+    self.buttonOf = {} -- [slot] = the button lit for it (MacroManager names macros after its key)
     for _, found in ipairs(FindButtons()) do
+        self.buttonOf[found.slot] = found.button
         local r = Take()
         r.slot = found.slot
         r.size = found.button:GetWidth() * found.button:GetEffectiveScale() / scale
@@ -390,6 +401,25 @@ function V:Create()
     deselect:Hide()
     self.deselect = deselect
 
+    -- Save Changes: at the bottom right of the lens area (left of the guide column), shown while
+    -- any button has unsaved changes. It saves them all; holding the centre saves the open one.
+    local saveAll = CreateFrame("Frame", nil, desk)
+    saveAll:SetSize(170, 26)
+    saveAll:SetPoint("BOTTOMRIGHT", -(V.PANEL_W + 2 * V.PAD), V.PAD)
+    saveAll:SetFrameLevel(desk:GetFrameLevel() + 20)
+    saveAll.bg = saveAll:CreateTexture(nil, "BACKGROUND")
+    saveAll.bg:SetAllPoints()
+    saveAll.bg:SetColorTexture(0.1, 0.35, 0.12, 0.9)
+    saveAll.edge = saveAll:CreateTexture(nil, "BORDER")
+    saveAll.edge:SetPoint("BOTTOMLEFT")
+    saveAll.edge:SetPoint("BOTTOMRIGHT")
+    saveAll.edge:SetHeight(2)
+    saveAll.edge:SetColorTexture(1, 0.82, 0, 0.8)
+    saveAll.label = saveAll:CreateFontString(nil, "OVERLAY", "ModifiedGameFontHighlightSmall")
+    saveAll.label:SetPoint("CENTER")
+    saveAll:Hide()
+    self.saveAll = saveAll
+
     f.fade = f:CreateAnimationGroup()
     local a = f.fade:CreateAnimation("Alpha")
     a:SetFromAlpha(0)
@@ -430,6 +460,11 @@ function V:Create()
     end)
     desk:SetScript("OnMouseDown", function(_, button)
         V.touched = true
+        if button == "LeftButton" and V.saveAll:IsShown() and V.saveAll:IsMouseOver() then
+            V.skipClick = true
+            ns.Lens:SaveAll()
+            return
+        end
         -- The deselect button: close this button's editor and go back to picking one.
         if button == "LeftButton" and V.deselect:IsShown() and V.deselect:IsMouseOver() then
             V.skipClick = true
@@ -551,47 +586,21 @@ end
 -- Hands and pointing
 ---------------------------------------------------------------------------
 
-V.downAt = {}
-
 local KEY_DOWN = { [1] = IsShiftKeyDown, [2] = IsControlKeyDown, [4] = IsAltKeyDown }
 
--- A modifier pressed and released quickly, with nothing else pressed meanwhile, is a tap: it
--- latches (or lets go of) that axis. Held alone for longer than a tap, it peeks: its world shows
--- until it's released. Held while typing or clicking (Shift for a capital), it does neither.
-ns:On("MODIFIER_STATE_CHANGED", function(key, down)
-    if not V:IsOpen() then return end
-    local axis = AXIS[key]
-    if not axis then return end
-    local before = V:World()
-    if down == 1 or down == true then
-        V.downAt[axis] = GetTime()
-        V.touched = false
-    else
-        local at = V.downAt[axis]
-        V.downAt[axis] = nil
-        if at and bit.band(V.held, axis) == 0 and GetTime() - at < TAP and not V.touched
-            and not ns.Lens:IsSpeaking() then
-            V.latched = bit.bxor(V.latched, axis)
-        end
-        V.held = bit.band(V.held, bit.bnot(axis))
-    end
-    if V:World() ~= before then V:WorldChanged() end
-end)
-
+-- The modifier keys held now, read every frame (MODIFIER_STATE_CHANGED didn't arrive here). They
+-- only preview: the set you edit changes only by a click in the strip. (Taps used to lock a set and
+-- held keys used to switch it, so typing a spell edited whatever set your hands happened to hold.)
 function V:Hands()
-    local before = self:World()
+    local held = 0
     for axis, isDown in pairs(KEY_DOWN) do
-        local at = self.downAt[axis]
-        -- Ctrl held over a rule is for Ctrl + wheel (reordering), not a peek at the Ctrl set.
-        local overRule = axis == 2 and ns.Lens:IsOpen() and ns.Lens.raw and ns.Lens.raw.hover
-        if at and bit.band(self.held, axis) == 0 and not self.touched and not overRule and GetTime() - at >= TAP then
-            self.held = bit.bor(self.held, axis) -- a peek
-        elseif bit.band(self.held, axis) ~= 0 and not isDown() then
-            self.held = bit.band(self.held, bit.bnot(axis)) -- released while we weren't looking
-            self.downAt[axis] = nil
-        end
+        if isDown() then held = bit.bor(held, axis) end
     end
-    if self:World() ~= before then self:WorldChanged() end
+    if held == self.held then return end
+    self.held = held
+    ns.Lens:PreviewChanged()
+    ns.Guide:Refresh()
+    self:Paint()
 end
 
 function V:Whisper(text, x, y)
@@ -614,12 +623,25 @@ end
 function V:Update(elapsed)
     self:Hands()
     self.deselect:SetShown(ns.Lens:IsOpen())
+    local unsaved = 0
+    for _ in pairs(self.dirty) do unsaved = unsaved + 1 end
+    self.saveAll:SetShown(unsaved > 0)
+    if unsaved > 0 and unsaved ~= self.saveAll.count then
+        self.saveAll.label:SetText(unsaved == 1 and "Save Changes" or ("Save Changes (%d)"):format(unsaved))
+    end
+    self.saveAll.count = unsaved
+    local onSave = unsaved > 0 and self.saveAll:IsMouseOver()
+    if onSave then
+        self.saveAll.bg:SetColorTexture(0.14, 0.48, 0.16, 1)
+    else
+        self.saveAll.bg:SetColorTexture(0.1, 0.35, 0.12, 0.9)
+    end
     ns.Guide:Update(elapsed)
     local x, y = self:Cursor()
     local lens = ns.Lens
     if lens:IsOpen() and lens:Point(x, y, elapsed) then
         local raw = lens.raw
-        if raw and (raw.hover or raw.prop or raw.ghostAt or raw.onCore or raw.chip or raw.order) then
+        if raw and (raw.hover or raw.prop or raw.ghostAt or raw.onCore or raw.chip or raw.order or raw.shape) then
             self:SetHover(nil)
             return
         end
@@ -647,6 +669,9 @@ function V:Update(elapsed)
             text = text .. "\n|cffffd100Click to open it.|r"
         end
         self:Whisper(text, x, y)
+    elseif onSave then
+        self:Whisper(("Save every button with unsaved changes (%d).\n|cff8090a0Holding the centre saves only the open one.|r")
+            :format(unsaved), x, y)
     elseif self.deselect:IsShown() and self.deselect:IsMouseOver() then
         self:Whisper("Close this button's editor and pick another.\n|cff8090a0Unsaved changes are kept until you save or revert.|r", x, y)
     elseif not lens:IsOpen() and self.desk:IsMouseOver() and not ns.Guide:Owns() then
@@ -666,5 +691,8 @@ function V:SetHover(r)
 end
 
 -- Key binding (Bindings.xml).
-BINDING_NAME_MODIFIED_VEIL = "Lower / lift the veil"
-function ModifiedVeil_Toggle() V:Toggle() end
+-- With "Open the classic editor" on (Settings.lua), it opens the old window instead.
+BINDING_NAME_MODIFIED_VEIL = "Open / close Modified"
+function ModifiedVeil_Toggle()
+    if ns.db and ns.db.classicEditor then ns.UI:Toggle() else V:Toggle() end
+end

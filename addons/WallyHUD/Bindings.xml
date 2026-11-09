@@ -2,4 +2,7 @@
     <Binding name="WALLYHUD_REPORT" header="WALLYHUD" category="ADDONS">
         WallyHUD_Report()
     </Binding>
+    <Binding name="WALLYHUD_TARGETMODE" category="ADDONS">
+        WallyHUD_ToggleTargetMode()
+    </Binding>
 </Bindings>

@@ -221,7 +221,8 @@ local function TrackKey(itemID)
     return "source:" .. itemID
 end
 
-function S:Track(itemID)
+-- ask: a click in the window, so SpyGlass asks before the arrow changes.
+function S:Track(itemID, ask)
     local f = Facts(itemID)
     local spot = f and NearestSpot(f)
     if not spot then
@@ -229,7 +230,8 @@ function S:Track(itemID)
         return
     end
     local info = SpyGlass:PeekItem(itemID)
-    SpyGlass:SetWaypoint({
+    local set = ask and SpyGlass.ConfirmWaypoint and SpyGlass.ConfirmWaypoint or SpyGlass.SetWaypoint
+    set(SpyGlass, {
         uiMapID = spot.map, x = spot.x / 100, y = spot.y / 100,
         title = (info and info.name or f.name or ("Item " .. itemID)),
         subtitle = Text(f), key = TrackKey(itemID),
@@ -246,7 +248,7 @@ local function OnClick(origin)
     if wp and wp.key == TrackKey(origin.item) then
         SpyGlass:ClearWaypoint()
     else
-        S:Track(origin.item)
+        S:Track(origin.item, true)
     end
 end
 

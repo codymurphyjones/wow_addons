@@ -8,6 +8,12 @@ local _, ns = ...
 --   WealthPlannerAPI.Stats(itemID)  -> { price, normal (30-day median), ma7, ma30, chg7, chg30,
 --                                      days (of history), signal = "buy"|"sell"|"hold", reason }, or nil
 --   WealthPlannerAPI.Normal(itemID) -> the 30-day normal, or nil
+--   WealthPlannerAPI.PoolPrice(item, pool) -> copper, days old (or nil): the price at one auction
+--                                      pool (Pools.lua); pool nil: the house open now, else yours
+--   WealthPlannerAPI.PoolPrices(item) -> { { pool, name, price, age, available, home, here } }
+--   WealthPlannerAPI.PoolHistory(item, pool) -> { [day] = lowest copper that day }, latest copper,
+--                                      today (days are whole days since 1970); or nil. pool nil: yours
+--   WealthPlannerAPI.HomePool() -> your faction's pool ("alliance" or "horde")
 -- Version 2: the shared registry (RegisterCallback); no events yet.
 local API = ns.NewAPI("WealthPlannerAPI", 2)
 
@@ -32,4 +38,24 @@ end
 function API.Normal(itemID)
     local s = API.Stats(itemID)
     return s and s.normal or nil
+end
+
+function API.PoolPrice(item, pool)
+    if not (ns.db and ns.Pools and item) then return nil end
+    if pool then return ns.Pools:Price(item, pool) end
+    return ns.Pools:Market(item)
+end
+
+function API.PoolHistory(item, pool)
+    if not (ns.db and ns.Pools and item) then return nil end
+    return ns.Pools:History(item, pool or ns.Pools:Home())
+end
+
+function API.HomePool()
+    return ns.Pools and ns.Pools:Home() or nil
+end
+
+function API.PoolPrices(item)
+    if not (ns.db and ns.Pools and item) then return {} end
+    return ns.Pools:Prices(item)
 end

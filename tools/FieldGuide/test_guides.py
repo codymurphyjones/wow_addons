@@ -82,8 +82,21 @@ function IsShiftKeyDown() return false end
 function IsControlKeyDown() return false end
 function GetLocale() return "enUS" end
 function GetBuildInfo() return "1.60.1", "70707", "", 16001 end
+function GetAddOnMetadata() return nil end
 function PlaySound() end
-function StaticPopup_Show(name) GAME.popup = name end
+-- Popups stack, as the game's do (one of each name): a dungeon offer can't hide a move offer.
+function StaticPopup_Show(name)
+    GAME.popups = GAME.popups or {}
+    for _, p in ipairs(GAME.popups) do if p == name then return end end
+    GAME.popups[#GAME.popups + 1] = name
+    GAME.popup = GAME.popups[1]
+end
+function NextPopup()
+    local q = GAME.popups or {}
+    local p = table.remove(q, 1)
+    GAME.popup = q[1]
+    return p
+end
 function StaticPopup_Visible() return false end
 function StaticPopup_Hide() end
 StaticPopupDialogs = {}
@@ -195,16 +208,32 @@ function EarlySteps()
     return table.concat(out, "; ")
 end
 function WhyLines()
+    -- /fg why's lines: your state, the leveling plan's areas, and the sections' quest states.
+    return ns.Engine:Why()
+end
+-- What the guide sees when it has nothing to give (with --trace): its section, and the steps left there.
+function StallInfo()
     local E, out = ns.Engine, {}
-    for _, s in ipairs(E:Guide().sections) do
-        local rate, _, walk, band = E.ValueOf(s)
-        if rate and rate > 0 then
-            out[#out + 1] = ("%s %s: %d XP a minute, band %s, %d min walk"):format(s.id, s.title, rate, tostring(band), walk or 0)
+    out[#out + 1] = ("section %s, %d steps, current %s, paused %s, instance %s, map %s, level %d, reach %s"):format(
+        tostring(E.section and E.section.id), #E.steps, tostring(E.current), tostring(ns.char.paused),
+        tostring(ns.char.instance), tostring(GAME.map), GAME.level, tostring(ns.char.lastPick))
+    local shown = 0
+    for i, st in ipairs(E.steps) do
+        if not E:StepDone(st) and shown < 12 then
+            shown = shown + 1
+            local q = ns.Quests[st[2]]
+            out[#out + 1] = ("  %d %s%s %s waits=%s r=%s l=%s"):format(i, tostring(st[1]), tostring(st[2]),
+                q and q.n or "", tostring(E.Waits(E, st)), tostring(q and q.r), tostring(q and q.l))
         end
     end
-    return out
+    for _, line in ipairs(WhyLines()) do out[#out + 1] = "  zone " .. line end
+    return table.concat(out, string.char(10))
 end
-function UseSides() Waypoint = { SetSide = function(_, owner, side) WaypointSides[owner] = side end } end
+WaypointSides2 = {}
+WaypointSides3 = {}
+function UseSides() Waypoint = { SetSide = function(_, owner, side, slot)
+    if slot == 2 then WaypointSides2[owner] = side elseif slot == 3 then WaypointSides3[owner] = side else WaypointSides[owner] = side end
+end } end
 function CreateFont() return New() end
 UIParent, WorldMapFrame, Minimap, GameTooltip, QuestFrame, GossipFrame = New(), New(), New(), New(), New(), New()
 function GameTooltip:IsOwned() return false end
@@ -523,7 +552,6 @@ def skip_rules(ns, g, game, fire, lua_table):
         if not ok:
             bad.append(what)
 
-    check("a dungeon's quest is never all here: Blueleaf Tubers", not ns.Engine.AllHere(1221, lua_table([1, 0, 0])))
     check("Accept Field Guide Quests: the guide doesn't want Blueleaf Tubers", not ns.Engine.WantsQuest(ns.Engine, 1221))
     picks = [s for s in (ns.Engine.steps[i] for i in range(1, len(ns.Engine.steps) + 1))
              if s[1] == "A" and not ns.Engine.Waits(ns.Engine, s)]
@@ -760,18 +788,35 @@ def run_race(name, opts):
                 game.done[i] = None
                 game.log[i] = True
                 game.ready[i] = True
+        # Any state by hand: quests handed in (--done), in the log (--log).
+        for i in (int(v) for v in (opts.done or "").split(",") if v):
+            game.done[i] = True
+        for i in (int(v) for v in (opts.log or "").split(",") if v):
+            game.done[i] = None
+            game.log[i] = True
         game.map, game.x, game.y = int(m), float(x) / 100, float(y) / 100
         fire("QUEST_LOG_UPDATE")
         g.Settle()
         E = ns.Engine
         keys, i = [], E.current or 1
-        while i <= len(E.steps) and len(keys) < 5:
+        while i <= len(E.steps) and len(keys) < opts.at_steps:
             st = E.steps[i]
             keys.append("%s:%s" % (st[1], st[2]))
             i += 1
         print("  at %-14s %-14s %s" % (opts.at, E.section.id if E.section else None, " ".join(keys)), flush=True)
         print("      taken early:", g.EarlySteps(), flush=True)
-        print("      brackets:", E.BracketText(E.section) if E.section else None, flush=True)
+        chosen = ns.Tasks.Chosen(ns.Tasks)
+        print("      plan quests:", " ".join(str(v) for v in chosen.values()) if chosen else None, flush=True)
+        for i in (int(v) for v in (opts.log or "").split(",") if v):
+            print("      log %d: inLog %s done %s" % (i, ns.Progress.InLog(ns.Progress, i), ns.Progress.Done(ns.Progress, i)), flush=True)
+            E_ = ns.Engine
+            for j in range(1, len(E_.steps) + 1):
+                st = E_.steps[j]
+                if st[2] == i:
+                    print("        step #%d %s:%s done %s waits %s" % (j, st[1], st[2], E_.StepDone(E_, st), E_.Waits(E_, st)), flush=True)
+            sec = E_.section
+            n = sum(1 for k in range(1, len(sec.steps) + 1) if sec.steps[k][2] == i) if sec else 0
+            print("        in section steps: %d, current #%s of %d" % (n, E_.current, len(E_.steps)), flush=True)
         for line in g.WhyLines().values():
             print("     ", str(line)[:90], flush=True)
         return {"race": name, "trip": True}
@@ -779,6 +824,14 @@ def run_race(name, opts):
         return {"race": name, "trip": picker(ns, g, game, fire)}
     if opts.trip:
         return {"race": name, "trip": trip_replay(ns, g, game, fire)}
+    if opts.unlock:
+        return {"race": name, "trip": unlock_route(ns, g, game, fire)}
+    if opts.wc:
+        return {"race": name, "trip": wc_route(ns, g, game, fire)}
+    if opts.sunrock:
+        return {"race": name, "trip": sunrock(ns, g, game, fire, opts.sunrock)}
+    if opts.handins:
+        return {"race": name, "trip": handins_route(ns, g, game, fire)}
     fire("QUEST_LOG_UPDATE")
     first = STARTS.get(name)
     game.map, game.x, game.y = first[0], first[1] / 100, first[2] / 100
@@ -790,6 +843,11 @@ def run_race(name, opts):
     parts_done = 0
     popups = collections.Counter()
     ready, taken, worked, turned, level_at = {}, {}, {}, {}, {}
+    # Carry: from picking a quest up to first working on it, the yards walked and steps done meanwhile.
+    picked, carry, peak_log, level_minutes = {}, [], 0, {}
+    # Handed in after it stopped paying (Tasks.lua's LastLevel), and each split quest's parts in the
+    # order they were done (independent tasks: any order the route likes).
+    expired, parts_seq = [], {}
     if opts.debug:
         print(lua.execute("""
             local E = ns.Engine
@@ -832,12 +890,7 @@ def run_race(name, opts):
                 kind, qid, with_part = "O", item[0], item[1]
         if kind is None or game.popup:
             # The guide's asking: a player says yes to moving on, and carries on.
-            popup, game.popup = game.popup, None
-            if popup == "FIELDGUIDE_MOVE":
-                ns.Engine.AcceptMove(ns.Engine)
-                moves += 1
-                g.Settle()
-                continue
+            popup = g.NextPopup()
             if popup == "FIELDGUIDE_STAY":
                 ns.Engine.BackToRoute(ns.Engine)
                 g.Settle()
@@ -852,6 +905,9 @@ def run_race(name, opts):
                 g.Settle()
                 continue
             stalls.append(("nothing to do", game.level, game.map))
+            if opts.trace:
+                print("NOTHING TO DO:", flush=True)
+                print(str(g.StallInfo()), flush=True)
             break
         idle = 0
         key = (kind, qid)
@@ -915,12 +971,19 @@ def run_race(name, opts):
             walked = me.yards
             if kind == "A":
                 taken[qid] = stop
+                if quest.o:
+                    picked[qid] = (me.yards, me.steps_done)
                 game.log[qid] = True
                 if not quest.o:
                     game.ready[qid] = True
                 fire("QUEST_ACCEPTED", qid)
             elif kind == "O":
+                if qid in picked:
+                    y0, s0 = picked.pop(qid)
+                    carry.append((me.yards - y0, me.steps_done - s0 - 1))
                 parts_done += 1 if part else 0
+                if part:
+                    parts_seq.setdefault(qid, []).append(part)
                 if not part or g.DonePart(qid, part):
                     game.ready[qid] = True
                 worked[qid] = stop
@@ -941,18 +1004,32 @@ def run_race(name, opts):
                 game.ready[qid] = None
                 game.done[qid] = True
                 turned[qid] = stop
+                if ns.Tasks and game.level > ns.Tasks.LastLevel(ns.Tasks, qid):
+                    expired.append(qid)
                 up = me.earn(qid)
                 level_at.setdefault(game.level, stop)
+                level_minutes.setdefault(game.level, (game.time - 1000) / 60)
                 fire("QUEST_TURNED_IN", qid)
                 if up:
                     fire("PLAYER_LEVEL_UP", game.level)
+            peak_log = max(peak_log, sum(1 for k in list(game.log.keys()) if game.log[k]))
             fire("QUEST_LOG_UPDATE")
         elif kind == "Z":
+            trail.append("    L%-2d Z %d from %d  t=%d" % (game.level, qid, game.map, (game.time - 1000) / 60))
             game.map, game.x, game.y = qid, 0.5, 0.5
             fire("ZONE_CHANGED_NEW_AREA")
         elif kind == "G":
+            # Grinding takes time: the XP still missing, at the engine's grind pace (ROUTING_RULES.md rule 7).
+            lib = ns.Engine.lib
+            if getattr(opts, "grind_report", False):
+                print(GRIND_REPORT(lua, game.level, qid, game.map, game.x, game.y), flush=True)
+            if qid > game.level:
+                grind = lib.XPToReach(qid, game.level, game.xp) / lib.GrindRate(game.level)
+                me.grind_minutes = getattr(me, "grind_minutes", 0) + grind
+                game.time = game.time + grind * 60
             game.level = max(game.level, qid)
             game.xp = 0
+            level_minutes.setdefault(game.level, (game.time - 1000) / 60)
             fire("PLAYER_LEVEL_UP", game.level)
         else:
             stalls.append(("can't do", key, game.level))
@@ -960,9 +1037,61 @@ def run_race(name, opts):
         seen[kind] += 1
         g.Settle()
     errors = sorted({str(game.errors[i])[:150] for i in range(1, len(game.errors) + 1)})
-    return {"race": name, "level": game.level, "minutes": (game.time - 1000) / 60, "steps": me.steps_done, "yards": round(me.yards),
+    return {"race": name, "level": game.level, "minutes": (game.time - 1000) / 60, "grind": getattr(me, "grind_minutes", 0), "popups": dict(popups), "seen": dict(seen), "steps": me.steps_done, "yards": round(me.yards),
             "stalls": stalls, "breaks": me.breaks, "back": backtracks(me.stops, ready), "errors": errors,
-            "seconds": round(time.time() - t0), "stops": me.stops, "trail": trail, "snaps": snaps, "states": quest_states, "follows": follows}
+            "seconds": round(time.time() - t0), "stops": me.stops, "carry": carry, "peak_log": peak_log,
+            "expired": expired, "parts_seq": parts_seq,
+            "level_minutes": level_minutes, "trail": trail, "snaps": snaps, "states": quest_states, "follows": follows}
+
+
+GRIND_LUA = r'''
+return function(level)
+    local lib, P, T = ns.Engine.lib, ns.Progress, ns.Tasks
+    local c = { done = 0, dungeon = 0, race = 0, server = 0, prereq = 0, above = 0, gray = 0, doable = 0, noarea = 0 }
+    local xp = { gray = 0, doable = 0, above1 = 0 }
+    local list, above = {}, {}
+    local here = { ns.WorldMap.Player() }
+    for id, q in pairs(ns.Quests) do
+        if P:Done(id) or P:InLog(id) then c.done = c.done + 1
+        elseif q.dq or q.pvp then c.dungeon = c.dungeon + 1
+        elseif not P:RaceAllowed(q.rm) then c.race = c.race + 1
+        elseif ns.Exists:Missing(id) then c.server = c.server + 1
+        elseif not lib.PrereqsDone(q) then c.prereq = c.prereq + 1
+        elseif lib.Practical(q) > level then
+            c.above = c.above + 1
+            if lib.Practical(q) <= level + 1 then xp.above1 = xp.above1 + lib.QuestXP(q, level + 1) end
+        elseif T:LastLevel(id) < level then
+            c.gray = c.gray + 1
+            xp.gray = xp.gray + lib.QuestXP(q, level)
+        else
+            c.doable = c.doable + 1
+            local x = lib.QuestEarns(q, level)
+            xp.doable = xp.doable + x
+            local w = q.a and lib.World(q.a)
+            local yards = (w and here[1] and w[1] == here[1]) and math.floor(lib.Walked({ here[1], here[2], here[3] }, w) or -1) or -1
+            list[#list + 1] = { id = id, n = q.n or "?", l = q.l or 0, xp = x, yards = yards, c = w and w[1] or -1 }
+        end
+    end
+    table.sort(list, function(a, b) return a.xp > b.xp end)
+    local out = {}
+    for i = 1, math.min(8, #list) do
+        local e = list[i]
+        out[#out + 1] = ("      %6d xp  L%-2d %-34s %s"):format(e.xp, e.l, tostring(e.n):sub(1, 34),
+            e.yards >= 0 and (e.yards .. " yd") or ("continent " .. e.c))
+    end
+    local need = lib.XP_TO_LEVEL[level] or 0
+    return ("  GRIND at L%d (needs %d XP a level): doable %d quests worth %d XP (%.1f levels) | gray %d (%d XP) | above %d (next level opens %d XP) | prereq %d | dungeon %d | race %d | not on server %d | done %d\n%s"):format(
+        level, need, c.doable, xp.doable, need > 0 and xp.doable / need or 0, c.gray, xp.gray, c.above, xp.above1,
+        c.prereq, c.dungeon, c.race, c.server, c.done, table.concat(out, "\n"))
+end
+'''
+
+
+def GRIND_REPORT(lua, level, target, m, x, y):
+    fn = getattr(GRIND_REPORT, "fn", None)
+    if fn is None:
+        fn = GRIND_REPORT.fn = lua.execute(GRIND_LUA)
+    return "  [map %d %.2f,%.2f -> L%d] " % (m, x, y, target) + str(fn(level))
 
 
 STARTS = {"Tauren": (1412, 44.3, 77.0), "Orc": (1411, 43.0, 68.0), "Troll": (1411, 43.0, 68.0), "Undead": (1420, 30.0, 71.0),
@@ -985,11 +1114,19 @@ def main():
     ap.add_argument("--no-group", action="store_true", help="brackets by level alone")
     ap.add_argument("--at-level", type=int, default=20)
     ap.add_argument("--at-pick", default="horde-1440-19")
+    ap.add_argument("--done", default=None, help="with --at: quest IDs handed in, as 363,364")
+    ap.add_argument("--log", default=None, help="with --at: quest IDs in the log")
+    ap.add_argument("--at-steps", type=int, default=5, help="with --at: how many steps of the plan to print")
     ap.add_argument("--at", default=None, help="only: plan fresh at map,x,y at level 20, and print it")
     ap.add_argument("--picker", action="store_true", help="only the swap to the dungeon guide (with --race Tauren)")
+    ap.add_argument("--handins", action="store_true", help="only a dungeon route's hand-ins after the run (--race Undead)")
+    ap.add_argument("--unlock", action="store_true", help="only a dungeon route that needs a chain done first (--race Undead)")
+    ap.add_argument("--sunrock", default=None, help="only: Arachnophobia ready near Sun Rock, others handed in there to do; x,y in Stonetalon (--race Tauren)")
+    ap.add_argument("--wc", action="store_true", help="only Wailing Caverns' route with Altered Beings not done (--race Tauren)")
     ap.add_argument("--trip", action="store_true", help="only a walk into a new zone: the plan must hold (--race Tauren)")
     ap.add_argument("--baseline", action="store_true", help="make this run the one later runs are held to")
     ap.add_argument("--trace", action="store_true", help="every step, and every double-back")
+    ap.add_argument("--grind-report", action="store_true", help="at each grind step: what quests there are, and why each isn't doable")
     a = ap.parse_args()
     a.watch = [x for x in a.watch.split(",") if x]
     a.follow = [x for x in a.follow.split(",") if x]
@@ -1010,11 +1147,21 @@ def main():
             continue
         back = sorted(r["back"], reverse=True)
         avoid = [b for b in back if b[3]]
-        print("%-9s level %2d  %4d min  %4d steps  %7d yd  %3d avoidable double-backs of %d returns  %d stalls  %d rule breaks  %d errors  %ds" % (
-            n, r["level"], r["minutes"], r["steps"], r["yards"], len(avoid), len(back), len(r["stalls"]),
+        print("%-9s level %2d  %4d min (%d grinding)  %4d steps  %7d yd  %3d avoidable double-backs of %d returns  %d stalls  %d rule breaks  %d errors  %ds" % (
+            n, r["level"], r["minutes"], r["grind"], r["steps"], r["yards"], len(avoid), len(back), len(r["stalls"]),
             len(r["breaks"]), len(r["errors"]), r["seconds"]), flush=True)
         results[n] = {"level": r["level"], "steps": r["steps"], "yards": r["yards"], "avoidable": len(avoid),
                       "returns": len(back), "stalls": len(r["stalls"]), "breaks": len(r["breaks"]), "errors": len(r["errors"])}
+        carry = r["carry"]
+        if carry:
+            mins = r["level_minutes"]
+            print("          carry: %d yd and %.1f steps from pick-up to first objective (mean of %d)  log peak %d  minutes to level %s" % (
+                sum(c[0] for c in carry) / len(carry), sum(c[1] for c in carry) / len(carry), len(carry), r["peak_log"],
+                " ".join("%d:%d" % (lv, mins[lv]) for lv in (10, 20, 30, 40) if lv in mins)), flush=True)
+        seqs = [v for v in r.get("parts_seq", {}).values() if len(v) > 1]
+        print("          expired: %d handed in after they stopped paying%s  parts: %d split quests, %d done out of the data's order" % (
+            len(r.get("expired", [])), (" (" + ", ".join(str(x) for x in r["expired"][:8]) + ")") if r.get("expired") else "",
+            len(seqs), sum(1 for v in seqs if v != sorted(v))), flush=True)
         if a.trace:
             for line in r["trail"]:
                 print("   ", line)
@@ -1035,6 +1182,8 @@ def main():
                     print("      %s | was: %s" % (line.strip()[:60], next((l.strip()[:60] for l in r["trail"] if l.lstrip().startswith("%d L" % j)), "")))
                     print("      at the earlier visit, %s: %s" % (key, r["snaps"].get(j + 1, {}).get(key, "NOT ON THE LIST")))
                     print("      that quest then: %s" % r["states"].get((j + 1, key), "?"))
+        if r.get("popups"):
+            print("          popups: %s  steps by kind: %s" % (r["popups"], r.get("seen")), flush=True)
         for label, rows in (("stall", r["stalls"][:4]), ("break", r["breaks"][:4]), ("error", r["errors"][:4])):
             for row in rows:
                 print("    %s: %s" % (label, str(row)[:150]))
@@ -1082,6 +1231,11 @@ def picker(ns, g, game, fire):
         check("%s has a picture" % inst.name, "Dungeons" in ns.DungeonPicker.Picture(inst))
     ns.DungeonPicker.Toggle(ns.DungeonPicker, g.UIParent)
     check("the list opens with no errors", len(game.errors) == 0)
+    todo = g.WaypointSides2.FieldGuide
+    check("a dungeon due: the to-do button is there", todo is not None)
+    print("     ", todo.text if todo else None)
+    ns.DungeonTodo.Toggle(ns.DungeonTodo, g.UIParent)
+    check("the to-do list opens with no errors", len(game.errors) == 0)
     picked = list_[1].inst
     ns.Instance.Start(ns.Instance, picked)
     g.Settle()
@@ -1090,6 +1244,86 @@ def picker(ns, g, game, fire):
     now.onClick()
     g.Settle()
     check("back on the leveling guide", ns.char.instance is None and side().title == "Dungeon guide")
+    # The guide list (slot 3): its options, and following a zone from it.
+    guides = g.WaypointSides3.FieldGuide
+    check("the guide list button is there", guides is not None)
+    got = {}
+    ns.GuidePicker.Toggle(ns.GuidePicker, g.UIParent)
+    ns.Tasks.Options(ns.Tasks, lambda opts: got.__setitem__("list", opts))
+    for _ in range(40):
+        if "list" in got:
+            break
+        g.Settle()
+    opts = got.get("list")
+    n = len(opts) if opts is not None else 0
+    check("the guide list works out its options", n >= 1 and opts[1].kind == "best")
+    check("the guide list opens with no errors", len(game.errors) == 0)
+    zone = None
+    for i in range(1, n + 1):
+        o = opts[i]
+        print("      %s %s: %.0f XP/h, %d quests" % (o.kind, o.name, (o.rate or 0) * 60, o.quests or 0))
+        if o.kind == "zone" and zone is None:
+            zone = o
+    if zone is not None:
+        ns.GuidePicker.Follow(ns.GuidePicker, zone)
+        g.Settle()
+        check("following %s pins it" % zone.name, ns.char.guideZone == zone.map and len(game.errors) == 0)
+        ns.GuidePicker.Follow(ns.GuidePicker, opts[1])
+        g.Settle()
+        check("the best plan unpins it", ns.char.guideZone is None)
+    # Dungeon paths (DungeonPaths.lua): the chains to dungeon quests, and an accepted one fitted in.
+    DP = ns.DungeonPaths
+    cands = DP.Candidates(DP)
+    nc = len(cands)
+    check("dungeon paths: the chains work out with no errors", len(game.errors) == 0)
+    print("      %d dungeon quests with a chain to walk first" % nc)
+    for i in range(1, min(nc, 6) + 1):
+        c = cands[i]
+        print("      %s (%s): %s" % (ns.Engine.QuestName(ns.Engine, c.quest), c.inst.name,
+                                     " -> ".join(ns.Engine.QuestName(ns.Engine, c.chain[j]) for j in range(1, len(c.chain) + 1))))
+    if nc > 0:
+        c = cands[1]
+        head = DP.NextOf(c.chain)
+        head = head[0] if isinstance(head, tuple) else head
+        make = (g.loadstring or g.load)("return function(h, c) return { head = h, list = { c } } end")()
+        DP.Accept(DP, make(head, c))
+        g.Settle()
+        active = DP.Active(DP)
+        check("an accepted path is followed", len(active) == 1 and active[1].quest == c.quest)
+        bonus = DP.Bonus(DP)[0]
+        check("its next quest counts extra", (bonus[head] or 0) > 0)
+        chosen = ns.Tasks.Chosen(ns.Tasks)
+        on = chosen is not None and any(chosen[j] == head for j in range(1, len(chosen) + 1))
+        print("      next step %s on the plan: %s" % (ns.Engine.QuestName(ns.Engine, head), on))
+        check("the plan works out with the path, no errors", len(game.errors) == 0)
+        DP.Command(DP, "stop")
+        g.Settle()
+        check("paths dropped", len(DP.Active(DP)) == 0)
+    # Every dungeon's route: built with no errors, and nothing offered only after the run (inst.after,
+    # what an inside quest leads to) picked up before its run step.
+    I = ns.Instance
+    faction = g.UnitFactionGroup("player")
+    bad, built = [], 0
+    for i in range(1, len(I.list) + 1):
+        inst = I.list[i]
+        sec = I.Section(I, inst)
+        built += 1
+        post = set()
+        if inst.after and inst.after[faction]:
+            post.update(inst.after[faction][j] for j in range(1, len(inst.after[faction]) + 1))
+        for fs in (inst.follow or {}).values():
+            post.update(fs[j] for j in range(1, len(fs) + 1))
+        seen_run = False
+        for j in range(1, len(sec.steps) + 1):
+            st = sec.steps[j]
+            if st[1] == "I":
+                seen_run = True
+            elif st[1] == "A" and st[2] in post and not seen_run:
+                bad.append("%s: %s" % (inst.name, ns.Engine.QuestName(ns.Engine, st[2])))
+    check("every dungeon's route builds (%d) with no errors" % built, len(game.errors) == 0)
+    check("no after-the-run quest is picked up before the run", not bad)
+    for b in bad[:10]:
+        print("      before the run:", b)
     ns.Engine.SetPaused(ns.Engine, True)
     g.Settle()
     check("paused: no button", side() is None)
@@ -1131,6 +1365,160 @@ def trip_replay(ns, g, game, fire):
     same = went[1] == now[1] and went[2] == now[2]
     print("  ok   planning again changes nothing" if same else "  FAIL planning again changes the route")
     return same
+
+
+def handins_route(ns, g, game, fire):
+    """Ruins of Lordaeron run, everything finished, standing by Theodore Griffs in Undercity: the
+    hand-in beside you (The New Plague) comes first, not the one in the Royal Quarter."""
+    E = ns.Engine
+    game.level = 22
+    for i in range(1, 100000):
+        q = ns.Quests[i]
+        if q and q.l and q.l <= 18:
+            game.done[i] = True
+    for i in (356, 99156, 447, 450, 451):
+        game.done[i] = True
+    inst = ns.Instance.Get(ns.Instance, 16611)
+    for i in (97289, 97291, 97292, 92401, 92421, 92422, 95216):
+        game.done[i] = None
+        game.log[i] = True
+        game.ready[i] = True
+    game.map, game.x, game.y = 1458, 0.462, 0.715
+    fire("QUEST_LOG_UPDATE")
+    g.Settle()
+    ns.Instance.Start(ns.Instance, inst)
+    # (the run's done, every wing of it)
+    g.loadstring("local I, inst = ...; ns.char.ran[inst.id .. ':'] = true; for _, w in ipairs(I:RouteWings(inst)) do ns.char.ran[inst.id .. ':' .. w] = true end")(ns.Instance, inst)
+    g.Settle()
+    fire("QUEST_LOG_UPDATE")
+    g.Settle()
+    keys = []
+    for i in range(1, len(E.steps) + 1):
+        st = E.steps[i]
+        keys.append("%s%s:%s" % ("*" if i == E.current else "", st[1], st[2]))
+    print("  current", E.current, "steps", " ".join(keys), flush=True)
+    now = E.steps[E.current] if E.current else None
+    good = now is not None and now[1] == "T" and now[2] == 95216
+    print("  ok   the hand-in beside you first" if good else "  FAIL not the hand-in beside you", flush=True)
+    return good
+
+
+def lua_list(g, kind, q):
+    return g.UnlockStep(kind, q)
+
+
+def unlock_route(ns, g, game, fire):
+    """Ruins of Lordaeron at level 19 with A Recipe For Death part 1 in the log: The New Plague needs
+    the whole chain (447, 450, 451) first, so the route starts with part 1's objectives."""
+    E = ns.Engine
+    g.loadstring("function UnlockStep(k, q) return { k, q } end")()
+    game.level = 19
+    for i in range(1, 100000):
+        q = ns.Quests[i]
+        if q and q.l and q.l <= 10:
+            game.done[i] = True
+    game.log[447] = True
+    game.map, game.x, game.y = 1421, 0.43, 0.41
+    fire("QUEST_LOG_UPDATE")
+    g.Settle()
+    inst = ns.Instance.Get(ns.Instance, 16611)
+    ns.Instance.Start(ns.Instance, inst)
+    g.Settle()
+    fire("QUEST_LOG_UPDATE")
+    g.Settle()
+    keys = []
+    for i in range(1, len(E.steps) + 1):
+        st = E.steps[i]
+        keys.append("%s%s:%s%s" % ("*" if i == E.current else "", st[1], st[2], "u" if st.unlock else ""))
+    print("  current", E.current, "steps", " ".join(keys), flush=True)
+    for q in (447, 450, 451, 95216):
+        print("    %d: open %s, why %s, done %s" % (q, E.QuestOpen(E, q), E.WhyClosed(E, q), E.StepDone(E, lua_list(g, "A", q))), flush=True)
+    raw = ns.Instance.Section(ns.Instance, inst)
+    print("    section:", " ".join("%s:%s" % (raw.steps[i][1], raw.steps[i][2]) for i in range(1, len(raw.steps) + 1)), flush=True)
+    # (A pick-up from a giver beside you may come first: it costs no walk.)
+    now, i = None, E.current or 1
+    while i <= len(E.steps):
+        if E.steps[i][1] != "A" and not E.StepDone(E, E.steps[i]):
+            now = E.steps[i]
+            break
+        i += 1
+    good = now is not None and now[2] == 447 and now[1] == "O"
+    print("  ok   part 1 first" if good else "  FAIL part 1 isn't first", flush=True)
+    return good
+
+
+def sunrock(ns, g, game, fire, where):
+    """Level 22 in Stonetalon near Sun Rock Retreat: Arachnophobia (6284) ready to hand in at Maggran,
+    Elemental War (6393) and Boulderslide Ravine (6421) in the log and not done, both handed in at Sun
+    Rock too. Handing Arachnophobia in first is a trip the route makes anyway: it shouldn't come first
+    unless it's where you are."""
+    E = ns.Engine
+    parts = where.split(",")
+    x, y = float(parts[0]) / 100, float(parts[1]) / 100
+    game.level = 22
+    for i in range(1, 100000):
+        q = ns.Quests[i]
+        if q and q.l and q.l <= 16:
+            game.done[i] = True
+    for q in (6284, 6393, 6421):
+        game.done[q] = None
+        game.log[q] = True
+    game.ready[6284] = True
+    # (",taken": the quests to pick up at Sun Rock are in the log already: a visit would be for the hand-in alone.)
+    if len(parts) > 2:
+        for q in (6282, 86576, 6301, 1087, 6461, 6523, 6542):
+            game.done[q] = None
+            game.log[q] = True
+    ns.char.lastPick = "horde-1442-17"
+    game.map, game.x, game.y = 1442, x, y
+    fire("QUEST_LOG_UPDATE")
+    g.Settle()
+    for _ in range(3):
+        fire("QUEST_LOG_UPDATE")
+        g.Settle()
+    keys = []
+    for i in range(1, min(len(E.steps), 14) + 1):
+        st = E.steps[i]
+        keys.append("%s%s:%s" % ("*" if i == E.current else "", st[1], st[2]))
+    print("  at %s: %s" % (where, " ".join(keys)), flush=True)
+    cur = E.current and E.steps[E.current]
+    print("  first:", cur and ("%s:%s" % (cur[1], cur[2])), flush=True)
+    return True
+
+
+def wc_route(ns, g, game, fire):
+    """Wailing Caverns at level 18 with Altered Beings (880) not done: Hamuul Runetotem (1489) needs it,
+    so the route has to do 880 before it offers 1489, and must never offer 1489 first."""
+    E = ns.Engine
+    g.loadstring("function UnlockStep(k, q) return { k, q } end")()
+    game.level = 18
+    for i in range(1, 100000):
+        q = ns.Quests[i]
+        if q and q.l and q.l <= 10:
+            game.done[i] = True
+    game.map, game.x, game.y = 1413, 0.52, 0.31
+    fire("QUEST_LOG_UPDATE")
+    g.Settle()
+    inst = ns.Instance.Get(ns.Instance, 718)
+    ns.Instance.Start(ns.Instance, inst)
+    g.Settle()
+    fire("QUEST_LOG_UPDATE")
+    g.Settle()
+    keys = []
+    for i in range(1, len(E.steps) + 1):
+        st = E.steps[i]
+        keys.append("%s%s:%s%s%s" % ("*" if i == E.current else "", st[1], st[2], "u" if st.unlock else "",
+                                     "w" if E.Waits(E, st) else ""))
+    print("  current", E.current, "steps", " ".join(keys), flush=True)
+    for q in (880, 1489, 1490):
+        print("    %d: open %s, why %s, done %s" % (q, E.QuestOpen(E, q), E.WhyClosed(E, q), E.StepDone(E, lua_list(g, "A", q))), flush=True)
+    raw = ns.Instance.Section(ns.Instance, inst)
+    print("    section:", " ".join("%s:%s%s" % (raw.steps[i][1], raw.steps[i][2], "u" if raw.steps[i].unlock else "") for i in range(1, len(raw.steps) + 1)), flush=True)
+    cur = E.current and E.steps[E.current]
+    bad = cur is not None and cur[1] == "A" and cur[2] in (1489, 1490)
+    good = cur is not None and not bad
+    print("  ok   the chain comes first" if good else "  FAIL offers %s:%s before its prerequisite" % (cur[1], cur[2]) if cur else "  FAIL no step", flush=True)
+    return good
 
 
 if __name__ == "__main__":

@@ -11,11 +11,23 @@ local PK = ns.PluginKit
 local lib
 local known = {}
 
-local function HasMinimapButton(name)
+-- The LibDBIcon button that shows a data object. Most add-ons register the icon under the
+-- object's own name, but not all (RareScanner's object is "RareScannerLDB", its icon
+-- "RareScannerMinimapIcon"), so failing the name it's the button whose dataObject is this object.
+function LDB.MinimapButtonFor(name, obj)
     local icon = LibStub and LibStub("LibDBIcon-1.0", true)
-    if icon and icon.GetMinimapButton and icon:GetMinimapButton(name) then return true end
-    return _G["LibDBIcon10_" .. name] ~= nil
+    local b = (icon and icon.GetMinimapButton and icon:GetMinimapButton(name)) or _G["LibDBIcon10_" .. name]
+    if b or not obj then return b end
+    if icon and icon.GetButtonList and icon.GetMinimapButton then
+        for _, n in ipairs(icon:GetButtonList()) do
+            local other = icon:GetMinimapButton(n)
+            if other and other.dataObject == obj then return other end
+        end
+    end
+    return nil
 end
+
+local function HasMinimapButton(name, obj) return LDB.MinimapButtonFor(name, obj) ~= nil end
 
 local function ValueText(obj)
     local text = obj.text
@@ -57,7 +69,7 @@ local function Add(name, obj)
     known[name] = obj
     local kind = obj.type
     if kind == "data source" or (kind == nil and obj.text ~= nil) then RegisterDataSource(name, obj) end
-    if kind == "launcher" or HasMinimapButton(name) then ns.Launchers:AddLDB(name, obj) end
+    if kind == "launcher" or HasMinimapButton(name, obj) then ns.Launchers:AddLDB(name, obj) end
 end
 
 local TEXT_KEYS = { text = true, value = true, suffix = true, label = true }
@@ -76,7 +88,7 @@ end
 function LDB:SyncLaunchers()
     if not lib then return end
     for name, obj in pairs(known) do
-        if obj.type == "launcher" or HasMinimapButton(name) then ns.Launchers:AddLDB(name, obj) end
+        if obj.type == "launcher" or HasMinimapButton(name, obj) then ns.Launchers:AddLDB(name, obj) end
     end
 end
 

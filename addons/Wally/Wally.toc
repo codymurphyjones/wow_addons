@@ -2,7 +2,7 @@
 ## Title: Wally
 ## Notes: Smart junk seller. Learns what you habitually sell, protects possible gear upgrades, and manages junk / never-sell lists.
 ## Author: Dinoblankie + Claude
-## Version: 0.1.8
+## Version: 0.1.20
 ## OptionalDeps: Auctionator, StatLedger
 ## SavedVariables: WallyDB
 ## SavedVariablesPerCharacter: WallyCharDB
@@ -18,6 +18,7 @@
 ..\shared\Units.lua
 ..\shared\Format.lua
 ..\shared\Items.lua
+..\shared\QuestItems.lua
 ..\shared\Player.lua
 Compat.lua
 Core.lua

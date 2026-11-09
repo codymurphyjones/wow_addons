@@ -132,35 +132,46 @@ function Plugin:On(event, fn)
     table.insert(self.handlers[event], fn)
 end
 
+-- Timers run from one OnUpdate, not C_Timer tickers: when the game cuts off addon code that ran
+-- too long ("insecure scripts exceeded execution limit", during a big hitch) the ticker being run
+-- is dropped for good (the FPS/latency text stopped updating). An OnUpdate keeps firing next frame.
+local running = {} -- [entry] = plugin
+local driver = CreateFrame("Frame")
+driver:SetScript("OnUpdate", function()
+    local now = GetTime()
+    for entry, plugin in pairs(running) do
+        if now >= entry.due then
+            entry.due = now + entry.seconds
+            local ok, err = pcall(entry.fn, plugin)
+            if not ok then plugin:Error(err) end
+        end
+    end
+end)
+
+local function Run(self, entry)
+    entry.due = GetTime() + entry.seconds
+    running[entry] = self
+end
+
 function Plugin:Every(seconds, fn)
     self.timers = self.timers or {}
     local entry = { seconds = seconds, fn = fn }
     table.insert(self.timers, entry)
-    if self.enabled then
-        entry.ticker = C_Timer.NewTicker(seconds, function()
-            local ok, err = pcall(fn, self)
-            if not ok then self:Error(err) end
-        end)
-    end
+    if self.enabled then Run(self, entry) end
     return entry
 end
 
 local function StartTimers(self)
     for event in pairs(self.handlers or {}) do pcall(self.events.RegisterEvent, self.events, event) end
     for _, entry in ipairs(self.timers or {}) do
-        if not entry.ticker then
-            entry.ticker = C_Timer.NewTicker(entry.seconds, function()
-                local ok, err = pcall(entry.fn, self)
-                if not ok then self:Error(err) end
-            end)
-        end
+        if not running[entry] then Run(self, entry) end
     end
 end
 
 local function StopTimers(self)
     if self.events then self.events:UnregisterAllEvents() end
     for _, entry in ipairs(self.timers or {}) do
-        if entry.ticker then entry.ticker:Cancel(); entry.ticker = nil end
+        running[entry] = nil
     end
 end
 

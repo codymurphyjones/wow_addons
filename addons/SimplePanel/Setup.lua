@@ -291,4 +291,26 @@ for _, page in ipairs(PAGES) do
     }
 end
 
-ns.setup = ns.NewWizard({ name = "SimplePanel", steps = steps })
+-- "Set character options" gives this character a profile of its own (Profiles:Fork, no reload),
+-- named after it; going back to the account's takes the old profile back (Profiles:Unfork).
+local own = {
+    is = function() return ns.char.ownProfile ~= nil and ns.Profiles:Active() == ns.char.ownProfile end,
+    set = function(on)
+        local P = ns.Profiles
+        if on then
+            local base = ns.Units.Me()
+            local name, n = base, 1
+            while P:Exists(name) do
+                n = n + 1
+                name = ("%s (%d)"):format(base, n)
+            end
+            local from = P:Active()
+            if P:Fork(name) then ns.char.ownProfile, ns.char.sharedProfile = name, from end
+        else
+            P:Unfork(ns.char.ownProfile, ns.char.sharedProfile)
+            ns.char.ownProfile, ns.char.sharedProfile = nil, nil
+        end
+    end,
+}
+
+ns.setup = ns.NewWizard({ name = "SimplePanel", steps = steps, own = own })

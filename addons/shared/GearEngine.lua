@@ -196,6 +196,32 @@ function E.EquipLine(text, out)
     return false
 end
 
+-- An enchant's stats, from its tooltip line ("Enchanted: Agility +4", "Enchanted: +3 Stamina",
+-- "Enchanted: Reinforced (+16 Armor)", "Enchanted: +3 All Stats"). GetItemStats leaves the enchant
+-- out, so without this an enchanted item lost to a plain one by the enchant's worth: Gemmed Copper
+-- Boots' Agility +4 went uncounted. enUS stat names; one stat per enchant, all five for All Stats.
+local ENCHANT_NAMES = {
+    ["agility"] = { "AGI" }, ["strength"] = { "STR" }, ["stamina"] = { "STA" }, ["intellect"] = { "INT" },
+    ["spirit"] = { "SPI" }, ["armor"] = { "ARMOR" }, ["attack power"] = { "AP" }, ["defense"] = { "DEF" },
+    ["ranged attack power"] = { "RAP" }, ["spell damage"] = { "SP" }, ["spell power"] = { "SP" },
+    ["healing"] = { "HEAL" }, ["healing spells"] = { "HEAL" }, ["dodge"] = { "DODGE" },
+    ["all stats"] = { "STR", "AGI", "STA", "INT", "SPI" }, ["all attributes"] = { "STR", "AGI", "STA", "INT", "SPI" },
+    ["mana regen"] = { "MP5" }, ["mana every 5 sec"] = { "MP5" },
+}
+local ENCHANTED = (ENCHANTED_TOOLTIP_LINE or "Enchanted: %s"):gsub("%%s.*$", "")
+function E.EnchantLine(text, out)
+    if not Starts(text, ENCHANTED) then return false end
+    local body = strlower(strtrim(text:sub(#ENCHANTED + 1))):gsub(",", "")
+    -- "+16 armor" inside "reinforced (+16 armor)"
+    body = body:match("%((.-)%)") or body
+    local amount, name = body:match("^%+?(%d+)%s+(.-)%.?$")
+    if not amount then name, amount = body:match("^(.-)%s+%+?(%d+)%.?$") end
+    local stats = name and ENCHANT_NAMES[strtrim(name)]
+    if not stats then return true end -- an enchant that isn't a stat (Minor Speed, a proc): seen, not scored
+    for _, stat in ipairs(stats) do out[stat] = (out[stat] or 0) + tonumber(amount) end
+    return true
+end
+
 -- GetItemStats in StatLedger's keys, or nil while the item isn't loaded.
 function E.ApiStats(link)
     local fn = (C_Item and C_Item.GetItemStats) or GetItemStats
@@ -227,13 +253,15 @@ end
 function E.Scan(link)
     local T = ns.Tooltip or error("GearEngine.lua needs shared Tooltip.lua listed before it in the TOC")
     local lines = T.Lines("hyperlink", link)
-    local out = { equip = {}, unscored = false, unique = false, unusable = T.Unusable(lines) }
+    local out = { equip = {}, enchant = {}, unscored = false, unique = false, unusable = T.Unusable(lines) }
     for i = 2, #(lines or {}) do
         local text = lines[i][1]
         if text ~= "" then
             if text == UNIQUE or Starts(text, UNIQUE_EQUIPPED) then out.unique = true end
             local lower = strlower(text)
-            if Starts(lower, USE) or Starts(lower, PROC) then
+            if E.EnchantLine(text, out.enchant) then
+                -- (its stats are the enchant's: added on top of the item's, Read)
+            elseif Starts(lower, USE) or Starts(lower, PROC) then
                 out.unscored = true
             elseif E.EquipLine(text, out.equip) == false then
                 out.unscored = true
@@ -272,6 +300,7 @@ function E.Read(link)
     local scanned, complete = E.Scan(link)
     if not complete then Request(link) return nil end
     local values = E.Merge(api, scanned.equip)
+    for stat, v in pairs(scanned.enchant or {}) do values[stat] = (values[stat] or 0) + v end
     for stat, v in pairs(E.extra(link) or {}) do values[stat] = (values[stat] or 0) + v end
     local info = { unscored = scanned.unscored, unique = scanned.unique, unusable = scanned.unusable }
     local get = (C_Item and C_Item.GetItemInfo) or GetItemInfo

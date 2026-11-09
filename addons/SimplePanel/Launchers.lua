@@ -533,8 +533,7 @@ end
 
 function L:AttachLibDBIcon(e)
     if e.button or InCombatLockdown() then return end
-    local lib = LibStub and LibStub("LibDBIcon-1.0", true)
-    local b = (lib and lib.GetMinimapButton and lib:GetMinimapButton(e.ldbName)) or _G["LibDBIcon10_" .. e.ldbName]
+    local b = ns.LDB and ns.LDB.MinimapButtonFor(e.ldbName, e.obj)
     if b then
         Capture(e, b)
         Apply(e)

@@ -46,7 +46,7 @@ Every plugin has its own options on its right-click menu. Here's what each one s
 
 | Plugin | On the bar | Left-click |
 |---|---|---|
-| **Experience** | XP %, rested XP and XP per hour, drawn as an XP bar with the rested part in blue. The tooltip has time to level, kills to level and an XP-per-hour chart. Flashes on level up. | XP chart |
+| **Experience** | XP %, the XP of your finished quests, rested XP and XP per hour, drawn as an XP bar: finished quests in yellow, then rested in blue. The tooltip has time to level, kills to level and an XP-per-hour chart. Flashes on level up. | XP chart |
 | **Gold** | Your gold and this session's change. The tooltip lists every character's gold (this character, realm and faction, realm, or every realm) with a total and a 7-day chart. The bar can show their total. | Gold chart (session, 24 hours, 7 days, 30 days) |
 | **Professions** | Your profession's icon and skill, such as 145/150, as a skill bar. It turns yellow when you're near your cap and should visit a trainer. Choose which one, or show both side by side. Flashes on every skill-up. | Opens that profession (Mining opens Smelting) |
 | **Quests** | How many quests you have (white, turning yellow then red as the log fills), a **?** with how many are ready to hand in, and a map with how many are in your zone. The tooltip lists this zone's and your tracked quests with their objectives, or every quest if you prefer. Flashes and tells you when a quest is done. | Quest log |

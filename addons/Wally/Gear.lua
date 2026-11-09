@@ -19,6 +19,16 @@ local BLOCK_KEYS = { ITEM_MOD_BLOCK_VALUE_SHORT = true, ITEM_MOD_BLOCK_VALUE = t
 
 local cache = {}
 
+-- A fishing pole in your hands (weapon subclass 20) stands in for your weapons while you fish
+-- (Bandolier puts them back on), so it's no measure for a grey weapon.
+local MAIN_HAND = INVSLOT_MAINHAND or 16
+local function HoldingPole()
+    local id = GetInventoryItemID("player", MAIN_HAND)
+    if not id then return false end
+    local _, _, _, _, _, classID, subClassID = ns.Items.GetItemInfoInstant(id)
+    return classID == CLASS_WEAPON and subClassID == 20
+end
+
 local function FormatToPattern(fmt)
     if not fmt then return nil end
     fmt = fmt:gsub("([%(%)%.%+%-%*%?%[%]%^%$])", "%%%1")
@@ -124,7 +134,8 @@ end
 -- Grey gear is vendor trash unless it plainly beats what you wear, so it needs no stat priority and no
 -- selling by hand first. It can only beat a grey or white piece with nothing on it but armor (a stat
 -- is worth more than armor), or an empty slot, and only by more armor (DPS for a weapon). Returns
--- "wear", detail, the slot; "sell", detail; nil while item data is loading.
+-- "wear", detail, the slot; "sell", detail; nil while item data is loading, or for a weapon while
+-- you hold a fishing pole (judged again once it's off: never worn over it, never sold meanwhile).
 function Gear:GreyVerdict(link)
     local _, _, quality, _, needs, _, _, _, equipLoc, _, _, classID = C.GetItemInfo(link)
     if not quality then return nil end
@@ -138,6 +149,7 @@ function Gear:GreyVerdict(link)
     local new = Profile(link, equipLoc)
     if not new then return nil end
     local weapon = new.dps > 0
+    if weapon and HoldingPole() then return nil, "Fishing pole equipped: judged when it's off" end
     local function Worth(p) return weapon and p.dps or p.armor end
     if Worth(new) <= 0 then return "sell", "Poor quality (grey)" end
     local targets, why = E.Targets(equipLoc)
@@ -177,7 +189,7 @@ function Gear:WearGreys()
             local key = ns.Key(C.NameFromLink(info.link))
             local verdict, detail, slot = self:GreyVerdict(info.link)
             if verdict == "wear" and not ns.db.exclusions[key] then
-                EquipItemByName(info.link, slot)
+                if not C.EquipItemByName(info.link, slot) then return end
                 ns:Print(("Wearing %s (%s)."):format(info.link, detail))
                 return
             end

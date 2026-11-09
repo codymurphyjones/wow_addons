@@ -197,6 +197,74 @@ function B:Migrate(design)
     return self:Sanitize(design)
 end
 
+---------------------------------------------------------------------------
+-- Patterns (B.PATTERNS): both editors place them with these
+---------------------------------------------------------------------------
+
+-- The pattern's rules, new, on modifier `mod`; role A rules cast `seed` when given.
+function B:PatternRules(pattern, mod, seed)
+    local out = {}
+    for _, skeleton in ipairs(pattern.rules) do
+        local rule = self:NewRule(skeleton)
+        rule.mod = mod or "none"
+        if rule.role == "A" and seed then
+            rule.kind, rule.id, rule.name, rule.rank = seed.kind, seed.id, seed.name, seed.rank
+        end
+        out[#out + 1] = rule
+    end
+    return out
+end
+
+-- The row a pattern replaces: a lone catch-all or empty row (like a button's original spell).
+-- With `mod`, the lone row of that modifier; without, the design's only row.
+function B:LoneRow(rules, mod)
+    local only, n = nil, 0
+    for _, rule in ipairs(rules) do
+        if not mod or rule.mod == mod then
+            only, n = rule, n + 1
+        end
+    end
+    if n == 1 and (self:IsUnconditional(only) or not self:RuleHasAction(only)) then return only end
+end
+
+-- Where `pattern` would go, without changing anything. opts = { seed, sequence, mod }: with
+-- `mod` only that modifier is tried, otherwise the first one where none of its rows clash.
+-- Returns the new rules (their modifier set), the modifier, and the row they'd replace; or nil.
+function B:FitPattern(rules, pattern, opts)
+    opts = opts or {}
+    local lone = self:LoneRow(rules, opts.mod)
+    local mods = {}
+    if opts.mod then
+        mods[1] = opts.mod
+    else
+        for _, mod in ipairs(self.MODIFIERS) do mods[#mods + 1] = mod.key end
+    end
+    for _, mod in ipairs(mods) do
+        local new = self:PatternRules(pattern, mod, opts.seed)
+        local fits = true
+        for _, rule in ipairs(new) do
+            if self:HasConflict(rules, rule, lone, opts.sequence) then
+                fits = false
+                break
+            end
+        end
+        if fits then return new, mod, lone end
+    end
+end
+
+-- Adds `pattern` to `rules` (see FitPattern). Returns the new rules and the modifier, or nil.
+function B:PlacePattern(rules, pattern, opts)
+    local new, mod, lone = self:FitPattern(rules, pattern, opts)
+    if not new then return end
+    local pos = #rules + 1
+    for i, rule in ipairs(rules) do
+        if rule == lone then pos = i end
+    end
+    if lone then table.remove(rules, pos) end
+    for i, rule in ipairs(new) do table.insert(rules, pos + i - 1, rule) end
+    return new, mod
+end
+
 function B:CountRules(design)
     local n = 0
     for _, rule in ipairs(design.rules) do

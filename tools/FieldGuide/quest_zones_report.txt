@@ -1,0 +1,991 @@
+== Alliance: 36 zones, 493 areas
+  Dun Morogh (levels 1-13, required 1, preferred 8): 17 areas
+     1. 25.1,74.3  lv  1- 3 req  3 pref  3   5 quests    2250 XP   15.2 min   148 XP/min  pick-ups here 5/5  overlaps 2,3
+     2. 26.2,77.9  lv  4- 4 req  1 pref  4   2 quests    1901 XP   11.3 min   169 XP/min  pick-ups here 2/2  overlaps 1,3
+     3. 29.6,76.0  lv  5- 5 req  4 pref  5   3 quests    2002 XP    8.5 min   236 XP/min  pick-ups here 3/3  overlaps 1,2
+     4. 47.1,53.4  lv  5- 7 req  5 pref  6  10 quests   13604 XP   66.0 min   206 XP/min  pick-ups here 6/10  overlaps 9  from: Mountaineer Thalos, Hands Springsprocket, Marleth Barleybrew
+     5. 29.1,55.1  lv  5- 7 req  4 pref  6   4 quests    4498 XP   26.3 min   171 XP/min  pick-ups here 1/4  overlaps 7  from: Nori Pridedrift, Unguarded Thunder Ale Barrel, Pilot Bellowfiz
+     6. 56.0,45.6  lv  8- 8 req  5 pref  8   5 quests    6353 XP   28.2 min   226 XP/min  pick-ups here 4/5  from: Maxan Anvol
+     7. 27.9,46.9  lv  8- 8 req  2 pref  8   1 quests    2990 XP   17.1 min   175 XP/min  pick-ups here 1/1  overlaps 5,11,14  [one quest: prerequisite]
+     8. 41.4,48.9  lv  7- 9 req  5 pref  8   4 quests    7606 XP   44.1 min   172 XP/min  pick-ups here 3/4  overlaps 15  from: Gretta Ganter
+     9. 46.8,53.1  lv  8- 8 req  4 pref  8   3 quests    2847 XP   17.3 min   164 XP/min  pick-ups here 2/3  overlaps 4  from: Rejold Barleybrew
+    10. 41.9,35.4  lv  9- 9 req  5 pref  9   1 quests    2264 XP   12.2 min   185 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Rejold Barleybrew
+    11. 23.5,51.8  lv  9- 9 req  7 pref  9   1 quests    2042 XP   13.9 min   147 XP/min  pick-ups here 0/1  overlaps 7  [one quest: prerequisite]  from: Senir Whitebeard
+    12. 79.0,37.0  lv 10-11 req  8 pref 10   2 quests    1405 XP    2.8 min   511 XP/min  pick-ups here 2/2
+    13. 73.5,56.0  lv  9-11 req  7 pref 10   4 quests   13285 XP   63.5 min   209 XP/min  pick-ups here 3/4  overlaps 17  from: Rudra Amberstill
+    14. 27.2,42.4  lv 10-10 req  8 pref 10   3 quests    7357 XP   57.3 min   128 XP/min  pick-ups here 0/3  overlaps 7  from: Razzle Sprysprocket, Jemma Quikswitch, Pilot Bellowfiz
+    15. 38.5,53.9  lv 12-12 req  7 pref 12   1 quests     933 XP    1.1 min   882 XP/min  pick-ups here 1/1  overlaps 8  [one quest: worth the time]
+    16. 62.6,46.0  lv 12-12 req  6 pref 12   1 quests    1115 XP    1.5 min   742 XP/min  pick-ups here 1/1  [one quest: worth the time]
+    17. 69.1,59.4  lv 13-13 req  9 pref 13   3 quests    3880 XP   21.0 min   185 XP/min  pick-ups here 2/3  overlaps 13  from: Beldin Steelgrill
+  Elwynn Forest (levels 1-28, required 1, preferred 9): 19 areas
+     1. 48.5,40.7  lv  1- 2 req  1 pref  2   4 quests    1618 XP   12.5 min   129 XP/min  pick-ups here 4/4  overlaps 2,3
+     2. 48.3,34.0  lv  2- 3 req  1 pref  2   4 quests    5103 XP   39.8 min   128 XP/min  pick-ups here 4/4  overlaps 1,3,4
+     3. 50.5,40.6  lv  4- 4 req  2 pref  4   3 quests     875 XP    4.7 min   186 XP/min  pick-ups here 3/3  overlaps 1,2
+     4. 49.0,28.2  lv  3- 5 req  1 pref  4   2 quests    2734 XP   21.7 min   126 XP/min  pick-ups here 2/2  overlaps 2
+     5. 55.0,48.1  lv  4- 5 req  2 pref  4   3 quests    3280 XP   30.4 min   108 XP/min  pick-ups here 3/3
+     6. 44.4,63.5  lv  4- 6 req  5 pref  6   6 quests    2508 XP   15.3 min   164 XP/min  pick-ups here 2/6  overlaps 7,15,19  from: Tordrin Sternblade, Falkhaan Isenstrider, Gramma Stonefield
+     7. 41.8,69.1  lv  5- 7 req  5 pref  6   3 quests    2933 XP   20.4 min   144 XP/min  pick-ups here 1/3  overlaps 6,15,19  from: Marshal McBride, Billy Maclure
+     8. 29.8,86.0  lv  6- 6 req  5 pref  6   1 quests     359 XP    3.7 min    96 XP/min  pick-ups here 0/1  overlaps 13  [one quest: prerequisite]  from: Maybell Maclure
+     9. 52.1,65.2  lv  7- 7 req  5 pref  7   5 quests    4888 XP   21.1 min   232 XP/min  pick-ups here 4/5  from: Remy "Two Times"
+    10. 40.6,83.6  lv  6- 8 req  5 pref  7  10 quests   15697 XP   82.7 min   190 XP/min  pick-ups here 3/10  from: Marshal Dughan, Remy "Two Times", William Pestle
+    11. 61.8,48.5  lv  7- 7 req  1 pref  7   1 quests    1848 XP   13.9 min   133 XP/min  pick-ups here 0/1  [one quest: later]  from: Marshal Dughan
+    12. 73.8,78.4  lv  9-10 req  7 pref 10   8 quests   15114 XP   81.4 min   186 XP/min  pick-ups here 4/8  from: Marshal Dughan, Ma Stonefield, Rolf's corpse
+    13. 25.7,90.9  lv 10-11 req  6 pref 10   2 quests    4628 XP   25.1 min   184 XP/min  pick-ups here 0/2  overlaps 8  from: Deputy Rainer, Wanted Poster
+    14. 71.1,55.4  lv  9-10 req  7 pref 10   9 quests   10432 XP   60.2 min   173 XP/min  pick-ups here 1/9  from: Marshal Dughan, Hamish Bergwort, Supervisor Raelen
+    15. 42.1,65.9  lv 10-10 req  7 pref 10   2 quests    1584 XP    9.8 min   162 XP/min  pick-ups here 1/2  overlaps 6,7,19  from: Guard Thomas
+    16. 24.2,74.5  lv 10-10 req  6 pref 10   1 quests     423 XP    5.5 min    77 XP/min  pick-ups here 0/1  [one quest: later]  from: Marshal Dughan
+    17. 65.4,70.1  lv 20-20 req  1 pref 20   1 quests     155 XP   10.2 min    15 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+    18. 85.2,69.5  lv 28-28 req 22 pref 28   2 quests    2320 XP   10.5 min   222 XP/min  pick-ups here 1/2  from: Sealed Crate
+    19. 44.0,65.8  lv 28-28 req 22 pref 28   2 quests    2270 XP   20.3 min   112 XP/min  pick-ups here 1/2  overlaps 6,7,15  from: Clerk Daltry
+  Teldrassil (levels 1-12, required 1, preferred 8): 18 areas
+     1. 57.7,41.5  lv  1- 3 req  1 pref  2   6 quests    2097 XP   13.4 min   157 XP/min  pick-ups here 6/6  overlaps 2,4
+     2. 56.8,33.8  lv  4- 4 req  3 pref  4   5 quests    5954 XP   41.2 min   145 XP/min  pick-ups here 5/5  overlaps 1,3,4
+     3. 58.4,29.8  lv  5- 5 req  1 pref  5   2 quests    1409 XP    7.0 min   201 XP/min  pick-ups here 2/2  overlaps 2
+     4. 59.1,39.5  lv  5- 5 req  1 pref  5   1 quests      46 XP    1.0 min    46 XP/min  pick-ups here 1/1  overlaps 1,2  [one quest: prerequisite]
+     5. 56.5,59.3  lv  5- 7 req  4 pref  6   8 quests    5595 XP   29.1 min   192 XP/min  pick-ups here 4/8  overlaps 12  from: Tenaron Stormgrip, Porthannius, Gaerolas Talvethren
+     6. 64.7,58.9  lv  5- 6 req  4 pref  6   4 quests    5530 XP   31.4 min   176 XP/min  pick-ups here 3/4  overlaps 9  from: Tallonkai Swiftroot
+     7. 59.2,67.9  lv  5- 7 req  4 pref  7   3 quests    4023 XP   18.7 min   215 XP/min  pick-ups here 3/3  overlaps 14,15
+     8. 46.8,56.0  lv  8-10 req  5 pref  8   5 quests   10679 XP   48.5 min   220 XP/min  pick-ups here 5/5  overlaps 11
+     9. 68.9,52.8  lv  8- 8 req  1 pref  8   1 quests    1717 XP   10.0 min   171 XP/min  pick-ups here 0/1  overlaps 6  [one quest: later]  from: Tallonkai Swiftroot
+    10. 53.8,75.1  lv  9- 9 req  4 pref  9   1 quests    1518 XP    5.0 min   302 XP/min  pick-ups here 1/1  [one quest: worth the time]
+    11. 43.4,59.7  lv  9- 9 req  4 pref  9   3 quests    4360 XP   23.9 min   182 XP/min  pick-ups here 1/3  overlaps 8  from: Athridas Bearmantle, Corithras Moonrage
+    12. 55.3,56.8  lv  9- 9 req  4 pref  9   1 quests    1103 XP   11.2 min    99 XP/min  pick-ups here 0/1  overlaps 5  [one quest: prerequisite]  from: Sentinel Eralya Leafshadow
+    13. 38.9,35.5  lv  9-11 req  6 pref 10   6 quests    9366 XP   65.3 min   143 XP/min  pick-ups here 1/6  overlaps 16  from: Byancie, Rellian Greenspyre, Sentinel Kyra Starsong
+    14. 60.9,68.5  lv  9-10 req  4 pref 10   4 quests    4005 XP   36.0 min   111 XP/min  pick-ups here 1/4  overlaps 7,15  from: Rellian Greenspyre, Strange Fruited Plant, Strange Fronded Plant
+    15. 60.8,68.6  lv 12-12 req  9 pref 12   1 quests     915 XP    1.0 min   915 XP/min  pick-ups here 1/1  overlaps 7,14  [one quest: worth the time]
+    16. 36.5,35.4  lv 12-12 req  7 pref 12   3 quests    3115 XP   11.0 min   283 XP/min  pick-ups here 3/3  overlaps 13
+    17. 46.7,35.5  lv 12-12 req  5 pref 12   2 quests    4863 XP   30.4 min   160 XP/min  pick-ups here 0/2  from: Tallonkai Swiftroot, Priestess A'moora
+    18. 38.8,79.8  lv 12-12 req  4 pref 12   1 quests    1795 XP    8.7 min   205 XP/min  pick-ups here 0/1  [one quest: later]  from: Athridas Bearmantle
+  Zephras Isle (levels 1-13, required 2, preferred 9): 23 areas
+     1. 44.9,24.2  lv  1- 3 req  2 pref  2   8 quests    4294 XP   35.4 min   121 XP/min  pick-ups here 8/8  overlaps 2,3
+     2. 43.9,23.5  lv  4- 4 req  3 pref  4   3 quests    2949 XP   26.3 min   112 XP/min  pick-ups here 3/3  overlaps 1,3
+     3. 42.4,23.6  lv  4- 4 req  4 pref  4   2 quests     552 XP    6.3 min    88 XP/min  pick-ups here 2/2  overlaps 1,2
+     4. 36.8,29.5  lv  5- 5 req  2 pref  5   2 quests    3105 XP   21.9 min   142 XP/min  pick-ups here 2/2
+     5. 45.4,41.9  lv  5- 7 req  4 pref  6   8 quests   18516 XP  111.3 min   166 XP/min  pick-ups here 7/8  overlaps 7  from: Aetheen of the Gales
+     6. 41.5,50.9  lv  6- 8 req  5 pref  7   7 quests   15348 XP  103.6 min   148 XP/min  pick-ups here 6/7  overlaps 7,11  from: Aetheen of the Gales
+     7. 46.9,49.7  lv  8- 8 req  5 pref  8   2 quests    1283 XP   10.0 min   128 XP/min  pick-ups here 2/2  overlaps 5,6,11
+     8. 41.9,62.8  lv  8- 8 req  5 pref  8   2 quests    2834 XP   22.3 min   127 XP/min  pick-ups here 1/2  from: Constable Aonda
+     9. 49.4,74.0  lv  9-10 req 10 pref  9   9 quests   24260 XP  140.3 min   173 XP/min  pick-ups here 7/9  from: Belann Windwood, Dondallion Whisperwind
+    10. 62.9,69.7  lv  8- 9 req  6 pref  9   6 quests   21948 XP  130.6 min   168 XP/min  pick-ups here 3/6  overlaps 13,19,22  from: Aamelia Windfield, Danarii Bellowveil
+    11. 42.7,52.8  lv  9- 9 req  4 pref  9   1 quests    1617 XP   11.0 min   148 XP/min  pick-ups here 1/1  overlaps 6,7  [one quest: later]
+    12. 66.3,77.5  lv  9-11 req  6 pref 10   7 quests    6009 XP   42.7 min   141 XP/min  pick-ups here 4/7  overlaps 13,17,22,23  from: Constable Aonda, Dead Cultist
+    13. 66.1,70.4  lv 11-11 req  6 pref 11   6 quests    5900 XP   20.2 min   292 XP/min  pick-ups here 6/6  overlaps 10,12,17,19,22
+    14. 64.3,35.8  lv 11-12 req  8 pref 11   3 quests    6244 XP   24.6 min   254 XP/min  pick-ups here 3/3  overlaps 20
+    15. 57.7,31.4  lv 11-13 req  8 pref 11   3 quests    6909 XP   40.3 min   172 XP/min  pick-ups here 1/3  overlaps 20  from: Ealaane Nimbuswalker
+    16. 53.3,63.0  lv 11-11 req  6 pref 11   3 quests    5233 XP   33.8 min   155 XP/min  pick-ups here 1/3  from: Talaanis Shadowsong, Elaadrin Evengale
+    17. 66.3,77.7  lv 12-12 req  7 pref 12   3 quests     452 XP    1.1 min   395 XP/min  pick-ups here 3/3  overlaps 12,13,22,23
+    18. 63.5,51.2  lv 12-13 req  8 pref 12   3 quests    4826 XP   22.7 min   213 XP/min  pick-ups here 1/3  from: Valennia Stormfist, Vayn Moongaze
+    19. 61.2,71.0  lv 12-12 req  7 pref 12   1 quests     827 XP    4.7 min   174 XP/min  pick-ups here 1/1  overlaps 10,13,22  [one quest: prerequisite]
+    20. 59.2,39.0  lv 11-13 req  8 pref 12   7 quests   10596 XP   72.2 min   147 XP/min  pick-ups here 5/7  overlaps 14,15  from: Lotheluum Starbreeze, Iaadaria Bitterwind
+    21. 74.9,53.0  lv 12-12 req  7 pref 12   1 quests     497 XP    4.2 min   120 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Valennia Stormfist
+    22. 64.0,75.1  lv 12-12 req  8 pref 12   1 quests    1044 XP    8.4 min   124 XP/min  pick-ups here 0/1  overlaps 10,12,13,17,19,23  [one quest: later]  from: Elegael Thornpaw
+    23. 66.6,79.9  lv 13-13 req  7 pref 13   1 quests     106 XP    1.0 min   106 XP/min  pick-ups here 1/1  overlaps 12,17,22  [one quest: prerequisite]
+  Darkshore (levels 10-31, required 7, preferred 17): 19 areas
+     1. 36.3,44.7  lv 10-10 req 10 pref 10   2 quests    3212 XP   17.1 min   188 XP/min  pick-ups here 1/2  overlaps 5,6,9,13  from: Vesprystus
+     2. 33.9,35.7  lv 12-12 req  7 pref 12   1 quests    3220 XP   10.5 min   307 XP/min  pick-ups here 1/1  overlaps 13  [one quest: prerequisite]
+     3. 43.2,57.3  lv 12-14 req 12 pref 13   6 quests   16583 XP   65.5 min   253 XP/min  pick-ups here 1/6  from: Thundris Windweaver, Asterion, WANTED: Murkdeep!
+     4. 45.4,36.9  lv 12-14 req 10 pref 13   5 quests   17076 XP   68.2 min   250 XP/min  pick-ups here 5/5  overlaps 8
+     5. 34.1,48.6  lv 13-14 req 11 pref 14   2 quests    1885 XP    2.8 min   668 XP/min  pick-ups here 2/2  overlaps 1,6,9
+     6. 37.0,44.2  lv 13-15 req 14 pref 14   9 quests   11289 XP   56.0 min   202 XP/min  pick-ups here 2/9  overlaps 1,5,9,13  from: Beached Sea Turtle, Beached Sea Creature, Chief Archaeologist Greywhisker
+     7. 42.3,84.5  lv 14-16 req 10 pref 15   3 quests    9415 XP   53.6 min   175 XP/min  pick-ups here 1/3  overlaps 11,15,16  from: Terenthis, Buzzbox 323
+     8. 47.3,38.7  lv 15-16 req 11 pref 16   3 quests    8321 XP   40.6 min   205 XP/min  pick-ups here 0/3  overlaps 4  from: Thundris Windweaver, Cerellean Whiteclaw, Tharnariun Treetender
+     9. 36.6,45.6  lv 16-16 req 12 pref 16   1 quests    1481 XP    7.9 min   188 XP/min  pick-ups here 0/1  overlaps 1,5,6,13  [one quest: prerequisite]  from: Beached Sea Creature
+    10. 38.9,28.1  lv 17-17 req 13 pref 17   1 quests    1819 XP    5.8 min   314 XP/min  pick-ups here 1/1  [one quest: worth the time]
+    11. 41.1,81.3  lv 17-17 req 12 pref 17   6 quests   12327 XP   48.1 min   256 XP/min  pick-ups here 4/6  overlaps 7,15,16  from: Barithras Moonshade, Arch Druid Fandral Staghelm
+    12. 52.7,28.0  lv 17-17 req 15 pref 17   2 quests    7268 XP   31.1 min   233 XP/min  pick-ups here 0/2  overlaps 14,19  from: Barithras Moonshade, Gubber Blump
+    13. 37.8,40.7  lv 17-17 req 13 pref 17   2 quests    1375 XP   11.3 min   122 XP/min  pick-ups here 0/2  overlaps 1,2,6,9  from: Borgus Steelhand, Baros Alexston
+    14. 53.8,30.8  lv 18-18 req 15 pref 18   4 quests    9013 XP   26.9 min   335 XP/min  pick-ups here 1/4  overlaps 12,19  from: Tharnariun Treetender, Thundris Windweaver, Sentinel Elissa Starbreeze
+    15. 38.5,81.8  lv 18-18 req 15 pref 18   2 quests    4713 XP   24.4 min   193 XP/min  pick-ups here 1/2  overlaps 7,11,16  from: WANTED: Murkdeep!
+    16. 40.9,83.5  lv 20-22 req 17 pref 20   7 quests   15289 XP   49.7 min   308 XP/min  pick-ups here 4/7  overlaps 7,11,15  from: Terenthis, Archaeologist Hollee
+    17. 56.3,18.5  lv 20-20 req 15 pref 20   6 quests   21448 XP   84.2 min   255 XP/min  pick-ups here 2/6  overlaps 19  from: Onu, Owen Thadd, Arbal
+    18. 43.5,94.4  lv 24-24 req 19 pref 24   1 quests    2900 XP   10.3 min   283 XP/min  pick-ups here 0/1  [one quest: later]  from: Feero Ironhand
+    19. 56.0,26.3  lv 31-31 req 13 pref 31   1 quests    3369 XP    1.8 min  1822 XP/min  pick-ups here 1/1  overlaps 12,14,17  [one quest: prerequisite]
+  Westfall (levels 10-35, required 8, preferred 16): 18 areas
+     1. 56.4,30.5  lv 10-10 req  9 pref 10   1 quests     715 XP    2.6 min   279 XP/min  pick-ups here 1/1  overlaps 5,9  [one quest: prerequisite]
+     2. 56.6,49.1  lv 10-10 req 10 pref 10   3 quests    2055 XP   12.6 min   163 XP/min  pick-ups here 1/3  overlaps 6,12,15  from: Farmer Saldean, Dungar Longdrink
+     3. 47.6,20.5  lv 12-12 req  9 pref 12   2 quests    6332 XP   26.7 min   237 XP/min  pick-ups here 0/2  overlaps 18  from: Gryan Stoutmantle, Farmer Furlbrow
+     4. 26.5,53.6  lv 12-12 req  9 pref 12   1 quests    4299 XP   18.7 min   230 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Alba Fairmoon
+     5. 53.9,25.7  lv 12-14 req  9 pref 13   3 quests    9082 XP   32.1 min   283 XP/min  pick-ups here 2/3  overlaps 1,9  from: Alba Fairmoon
+     6. 56.4,46.2  lv 12-14 req 14 pref 13   3 quests    5435 XP   34.2 min   159 XP/min  pick-ups here 0/3  overlaps 2,12,15  from: Salma Saldean, Highlord Bolvar Fordragon, Magistrate Solomon
+     7. 60.7,74.4  lv 14-14 req  8 pref 14   1 quests    3564 XP   12.4 min   286 XP/min  pick-ups here 0/1  [one quest: later]  from: Captain Danuvin
+     8. 43.0,69.1  lv 14-15 req 10 pref 15   3 quests   13112 XP   50.5 min   259 XP/min  pick-ups here 0/3  overlaps 13,17  from: Gryan Stoutmantle, Scout Galiaan, Alba Fairmoon
+     9. 52.8,27.8  lv 15-16 req 10 pref 15   3 quests   13751 XP   65.4 min   210 XP/min  pick-ups here 2/3  overlaps 1,5  from: Captain Grayson
+    10. 35.5,50.1  lv 14-16 req 10 pref 15   3 quests    5044 XP   27.6 min   183 XP/min  pick-ups here 0/3  from: Alba Fairmoon, Baros Alexston, Captain's Footlocker
+    11. 40.6,17.0  lv 16-16 req 10 pref 16   1 quests    1048 XP    6.3 min   167 XP/min  pick-ups here 0/1  overlaps 18  [one quest: prerequisite]  from: Broken Barrel
+    12. 52.5,53.0  lv 16-16 req  9 pref 16   1 quests     580 XP   10.0 min    58 XP/min  pick-ups here 0/1  overlaps 2,6,15  [one quest: later]  from: Sprite Jumpsprocket
+    13. 43.8,70.4  lv 18-18 req 14 pref 18   2 quests    4766 XP   14.1 min   337 XP/min  pick-ups here 0/2  overlaps 8,17  from: Gryan Stoutmantle, The Defias Traitor
+    14. 38.3,80.5  lv 17-18 req  9 pref 18   2 quests    8156 XP   30.1 min   271 XP/min  pick-ups here 1/2  from: Gryan Stoutmantle
+    15. 56.3,47.5  lv 18-18 req 14 pref 18   1 quests     340 XP   10.0 min    34 XP/min  pick-ups here 0/1  overlaps 2,6,12  [one quest: prerequisite]  from: Master Mathias Shaw
+    16. 28.2,74.1  lv 19-20 req 15 pref 20   2 quests    6242 XP   18.9 min   329 XP/min  pick-ups here 2/2
+    17. 41.7,66.8  lv 20-21 req 17 pref 20   2 quests    2022 XP   22.5 min    90 XP/min  pick-ups here 0/2  overlaps 8,13  from: Owen Thadd, Collin Mauren
+    18. 45.0,21.8  lv 35-35 req 28 pref 35   1 quests    2750 XP   25.0 min   110 XP/min  pick-ups here 0/1  overlaps 3,11  [one quest: later]  from: Talvash del Kissel
+  Loch Modan (levels 11-22, required 7, preferred 16): 16 areas
+     1. 64.8,39.4  lv 11-11 req  7 pref 11   1 quests    4342 XP   14.4 min   302 XP/min  pick-ups here 0/1  overlaps 10,12  [one quest: later]  from: Vidra Hearthstove
+     2. 36.2,20.9  lv 11-11 req 10 pref 11   1 quests    4575 XP   19.6 min   234 XP/min  pick-ups here 0/1  overlaps 7  [one quest: later]  from: Mountaineer Kadrell
+     3. 35.3,89.5  lv 12-12 req 10 pref 12   1 quests    3784 XP   12.9 min   293 XP/min  pick-ups here 0/1  overlaps 9  [one quest: prerequisite]  from: Captain Rugelfuss
+     4. 31.4,74.3  lv 12-12 req 10 pref 12   1 quests    3358 XP   12.9 min   261 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Mountaineer Cobbleflint
+     5. 65.1,65.8  lv 15-15 req 10 pref 15   1 quests    1148 XP    2.4 min   475 XP/min  pick-ups here 0/1  overlaps 11  [one quest: worth the time]  from: Miran
+     6. 51.7,69.2  lv 15-15 req 10 pref 15   2 quests     416 XP    3.2 min   128 XP/min  pick-ups here 1/2  from: Jern Hornhelm
+     7. 35.5,24.3  lv 15-15 req  9 pref 15   1 quests    1701 XP    5.3 min   321 XP/min  pick-ups here 0/1  overlaps 2  [one quest: later]  from: Mountaineer Stormpike
+     8. 50.8,25.3  lv 15-15 req 12 pref 15   1 quests    2339 XP    9.0 min   260 XP/min  pick-ups here 0/1  [one quest: later]  from: Bingles Blastenheimer
+     9. 33.5,88.8  lv 15-17 req 10 pref 16   4 quests   12545 XP   37.7 min   332 XP/min  pick-ups here 1/4  overlaps 3  from: Mountaineer Gravelgaw, Mountaineer Wallbang, Captain Rugelfuss
+    10. 62.7,43.8  lv 15-17 req 12 pref 16   4 quests    9625 XP   35.6 min   270 XP/min  pick-ups here 0/4  overlaps 1,12  from: Marek Ironheart, Gnoarn, Daryl the Youngling
+    11. 70.2,67.3  lv 16-18 req 13 pref 18   3 quests    6469 XP   21.4 min   303 XP/min  pick-ups here 1/3  overlaps 5  from: Daryl the Youngling, Jern Hornhelm
+    12. 63.0,47.1  lv 18-18 req 16 pref 18   1 quests    3195 XP   13.3 min   239 XP/min  pick-ups here 0/1  overlaps 1,10  [one quest: prerequisite]  from: Chief Engineer Hinderweir VII
+    13. 70.0,24.6  lv 19-19 req 15 pref 19   1 quests    3999 XP   13.2 min   304 XP/min  pick-ups here 0/1  [one quest: later]  from: Magistrate Bluntnose
+    14. 81.7,64.1  lv 20-20 req 15 pref 20   1 quests    1550 XP    1.0 min  1550 XP/min  pick-ups here 1/1  [one quest: worth the time]
+    15. 37.9,50.5  lv 20-20 req 15 pref 20   3 quests    3521 XP   22.7 min   155 XP/min  pick-ups here 0/3  from: Owen Thadd, Vyrin Swiftwind, Discarded Fishing Toolbox
+    16. 78.5,14.3  lv 20-22 req 17 pref 21   2 quests    3012 XP   22.0 min   137 XP/min  pick-ups here 0/2  from: Owen Thadd, WANTED
+  Alterac Mountains (levels 13-44, required 1, preferred 38): 9 areas
+     1. 12.2,56.3  lv 13-13 req  7 pref 13   2 quests     770 XP   20.3 min    38 XP/min  pick-ups here 1/2  from: Elaadrin Evengale
+     2. 58.3,68.0  lv 33-33 req 26 pref 33   1 quests    6990 XP   22.0 min   318 XP/min  pick-ups here 0/1  [one quest: later]  from: Magistrate Henry Maleb
+     3. 48.5,57.7  lv 35-35 req  1 pref 35   1 quests     275 XP   10.2 min    27 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+     4. 61.2,43.4  lv 36-36 req 26 pref 36   1 quests    6548 XP   17.8 min   368 XP/min  pick-ups here 0/1  overlaps 8  [one quest: later]  from: Magistrate Henry Maleb
+     5. 38.4,51.2  lv 36-38 req 30 pref 37   2 quests   14727 XP   27.0 min   545 XP/min  pick-ups here 0/2  overlaps 6,9  from: Marshal Redpath, Loremaster Dibbs
+     6. 36.0,54.2  lv 40-40 req 30 pref 40   2 quests   13566 XP   28.7 min   472 XP/min  pick-ups here 0/2  overlaps 5,9  from: Marshal Redpath, Count Remington Ridgewell
+     7. 55.9,25.6  lv 40-40 req 30 pref 40   1 quests    4444 XP   11.1 min   400 XP/min  pick-ups here 0/1  [one quest: later]  from: Magistrate Henry Maleb
+     8. 61.0,44.1  lv 40-40 req 30 pref 40   1 quests    5701 XP   16.4 min   347 XP/min  pick-ups here 0/1  overlaps 4  [one quest: later]  from: Magistrate Henry Maleb
+     9. 35.6,54.4  lv 44-44 req 30 pref 44   1 quests    7033 XP   13.3 min   527 XP/min  pick-ups here 0/1  overlaps 5,6  [one quest: prerequisite]  from: Gerrig Bonegrip
+  Redridge Mountains (levels 14-27, required 12, preferred 22): 18 areas
+     1. 23.0,48.9  lv 14-16 req 14 pref 15   6 quests    3156 XP   27.4 min   115 XP/min  pick-ups here 2/6  overlaps 5,13  from: Guard Parker, General Marcus Jonathan, Gryan Stoutmantle
+     2. 36.4,54.7  lv 16-16 req 15 pref 16   1 quests    1079 XP    2.2 min   501 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Foreman Oslow
+     3. 10.4,67.9  lv 15-17 req 12 pref 16   2 quests    3016 XP   12.5 min   241 XP/min  pick-ups here 0/2  from: Darcy, Deputy Feldon
+     4. 28.1,75.9  lv 17-18 req 14 pref 18   2 quests    7246 XP   24.0 min   302 XP/min  pick-ups here 0/2  from: Deputy Feldon, Verner Osgood
+     5. 22.2,40.4  lv 18-20 req 18 pref 18   5 quests   10420 XP   54.7 min   191 XP/min  pick-ups here 2/5  overlaps 1  from: Gryan Stoutmantle, Smith Argus, Lord Ello Ebonlocke
+     6. 48.3,43.5  lv 18-18 req 15 pref 18   1 quests    3660 XP   11.2 min   328 XP/min  pick-ups here 0/1  overlaps 9  [one quest: later]  from: Chef Breanna
+     7. 52.6,58.1  lv 20-21 req 20 pref 20   2 quests   10169 XP   31.7 min   321 XP/min  pick-ups here 0/2  from: Dockmaster Baren
+     8. 69.8,80.5  lv 21-21 req 18 pref 21   1 quests    2542 XP   13.4 min   189 XP/min  pick-ups here 0/1  overlaps 16  [one quest: prerequisite]  from: Marshal Marris
+     9. 48.1,43.6  lv 21-21 req 15 pref 21   1 quests    2579 XP   15.7 min   165 XP/min  pick-ups here 0/1  overlaps 6  [one quest: later]  from: Foreman Oslow
+    10. 61.3,53.2  lv 21-23 req 20 pref 22   3 quests   15420 XP   41.2 min   375 XP/min  pick-ups here 0/3  overlaps 17  from: Marshal Marris, Old Lion Statue
+    11. 76.9,47.5  lv 21-23 req 20 pref 22   2 quests    9498 XP   38.1 min   250 XP/min  pick-ups here 0/2  overlaps 18  from: Theocritus, Bailiff Conacher
+    12. 10.6,49.3  lv 24-24 req 18 pref 24   1 quests    2339 XP    2.0 min  1174 XP/min  pick-ups here 1/1  [one quest: worth the time]
+    13. 27.7,48.7  lv 24-25 req 20 pref 24   2 quests    3704 XP   16.3 min   228 XP/min  pick-ups here 0/2  overlaps 1  from: Brother Paxton, Corporal Keeshan
+    14. 13.6,16.6  lv 24-24 req 20 pref 24   1 quests    2397 XP   21.0 min   114 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Foreman Oslow
+    15. 23.7,16.5  lv 25-25 req 20 pref 25   2 quests    7411 XP   16.1 min   461 XP/min  pick-ups here 0/2  from: Guard Howe, Verner Osgood
+    16. 72.8,86.3  lv 25-25 req 16 pref 25   1 quests    3303 XP   10.9 min   302 XP/min  pick-ups here 0/1  overlaps 8  [one quest: later]  from: Wanted: Incinerator Gar'im
+    17. 64.4,57.6  lv 25-26 req 18 pref 26   2 quests    8478 XP   20.1 min   422 XP/min  pick-ups here 0/2  overlaps 10  from: Marshal Marris, Wanted: Gath'Ilzogg
+    18. 75.1,43.3  lv 26-27 req 20 pref 26   2 quests    7194 XP   24.5 min   294 XP/min  pick-ups here 0/2  overlaps 11  from: Wanted: Lieutenant Fangore, Theocritus
+  The Barrens (levels 14-52, required 10, preferred 22): 7 areas
+     1. 52.5,11.2  lv 14-14 req 10 pref 14   3 quests    7105 XP   26.8 min   265 XP/min  pick-ups here 2/3  overlaps 3  from: Sputtervalve
+     2. 63.2,42.8  lv 14-16 req 11 pref 15   6 quests   15480 XP   62.7 min   247 XP/min  pick-ups here 5/6  overlaps 7  from: Control Console
+     3. 57.4, 7.3  lv 18-20 req 13 pref 18   5 quests   16400 XP   68.9 min   238 XP/min  pick-ups here 2/5  overlaps 1  from: Mebok Mizzyrix, Wharfmaster Dizzywig, Owen Thadd
+     4. 59.0,36.3  lv 20-21 req 17 pref 21   5 quests    7513 XP   46.6 min   161 XP/min  pick-ups here 1/5  from: Owen Thadd, Lomac Gearstrip, Ziz Fizziks
+     5. 47.8,85.0  lv 25-25 req 20 pref 25   1 quests    2000 XP   10.2 min   195 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Viktori Prism'Antras
+     6. 48.2,19.1  lv 25-25 req 20 pref 25   1 quests    2927 XP   11.1 min   263 XP/min  pick-ups here 0/1  [one quest: later]  from: Sentinel Velene Starstrike
+     7. 64.2,41.2  lv 51-52 req 48 pref 52   2 quests    7450 XP   20.9 min   357 XP/min  pick-ups here 0/2  overlaps 2  from: Marvon Rivetseeker, Greta Mosshoof
+  Ashenvale (levels 18-60, required 13, preferred 29): 18 areas
+     1. 26.2,38.7  lv 18-18 req 13 pref 18   1 quests    1000 XP   10.0 min   100 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Balthule Shadowstrike
+     2. 20.4,42.5  lv 19-21 req 18 pref 20   2 quests    4705 XP    9.1 min   515 XP/min  pick-ups here 1/2  from: Raene Wolfrunner
+     3. 31.4,26.8  lv 20-21 req 20 pref 20   2 quests    3322 XP    6.5 min   514 XP/min  pick-ups here 0/2  from: Orendil Broadleaf, Delgren the Purifier
+     4. 13.0,23.4  lv 19-20 req 19 pref 20   2 quests   10770 XP   31.6 min   341 XP/min  pick-ups here 1/2  from: Shindrell Swiftfire
+     5. 43.0,48.5  lv 20-22 req 20 pref 22   4 quests    6748 XP   18.6 min   363 XP/min  pick-ups here 2/4  from: Orendil Broadleaf, Kaela Shadowspear
+     6. 54.1,62.7  lv 24-24 req 18 pref 24   1 quests    3854 XP    8.4 min   457 XP/min  pick-ups here 0/1  [one quest: later]  from: Raene Wolfrunner
+     7. 36.9,67.2  lv 23-25 req 20 pref 25   5 quests   13449 XP   15.5 min   867 XP/min  pick-ups here 3/5  from: Pelturas Whitemoon, Delgren the Purifier
+     8. 39.6,36.3  lv 25-25 req 18 pref 25   1 quests    3230 XP    5.6 min   580 XP/min  pick-ups here 0/1  [one quest: later]  from: Raene Wolfrunner
+     9.  7.2,13.1  lv 25-25 req 20 pref 25   1 quests    3456 XP    6.9 min   502 XP/min  pick-ups here 0/1  [one quest: later]  from: Talen
+    10. 54.4,35.4  lv 27-27 req 18 pref 27   1 quests    2495 XP    2.0 min  1249 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+    11. 53.5,44.9  lv 28-30 req 25 pref 28   3 quests    4712 XP    6.5 min   726 XP/min  pick-ups here 2/3  from: Sentinel Melyria Frostshadow
+    12. 72.1,75.9  lv 28-30 req 24 pref 29   3 quests   10876 XP   21.4 min   508 XP/min  pick-ups here 0/3  overlaps 17,18  from: Shael'dryn, Kayneth Stillwind, Pelturas Whitemoon
+    13. 53.6,77.5  lv 28-30 req 18 pref 30   3 quests   10238 XP   13.4 min   763 XP/min  pick-ups here 2/3  from: Raene Wolfrunner
+    14. 83.3,49.1  lv 28-30 req 27 pref 30   4 quests   19355 XP   47.1 min   411 XP/min  pick-ups here 1/4  overlaps 15,16  from: Delgren the Purifier, Shindrell Swiftfire, Shandrina
+    15. 78.3,44.8  lv 32-32 req 26 pref 32   1 quests    3150 XP    9.2 min   342 XP/min  pick-ups here 0/1  overlaps 14,16  [one quest: prerequisite]  from: Illiyana
+    16. 78.5,44.6  lv 32-32 req 26 pref 32   2 quests   10604 XP   31.5 min   336 XP/min  pick-ups here 1/2  overlaps 14,15  from: Illiyana
+    17. 76.0,73.7  lv 31-32 req 24 pref 32   2 quests    4829 XP   19.0 min   254 XP/min  pick-ups here 0/2  overlaps 12,18  from: Tyrion, Kayneth Stillwind
+    18. 74.9,73.7  lv 60-60 req 26 pref 60   8 quests    9240 XP   36.2 min   255 XP/min  pick-ups here 0/8  overlaps 12,17  from: Clavicus Knavingham, Raedon Duskstriker, Mistina Steelshield
+  Duskwood (levels 20-35, required 1, preferred 27): 19 areas
+     1. 22.0,54.9  lv 20-22 req 18 pref 20   4 quests    6934 XP   16.4 min   422 XP/min  pick-ups here 0/4  overlaps 8  from: Chef Grual, Elaine Carevin, Sirra Von'Indi
+     2. 16.7,28.4  lv 20-20 req  1 pref 20   1 quests     155 XP   10.2 min    15 XP/min  pick-ups here 0/1  overlaps 7,10,19  [one quest: later]  from: Owen Thadd
+     3. 35.4,23.9  lv 21-21 req 19 pref 21   1 quests    5399 XP   19.3 min   280 XP/min  pick-ups here 0/1  [one quest: later]  from: Lars
+     4. 10.4,55.3  lv 21-21 req 17 pref 21   1 quests    3440 XP   14.1 min   244 XP/min  pick-ups here 0/1  [one quest: later]  from: Watcher Dodds
+     5. 81.0,65.1  lv 24-25 req 20 pref 24   4 quests    9516 XP   21.1 min   452 XP/min  pick-ups here 1/4  from: Commander Althea Ebonlocke, Madame Eva, Viktori Prism'Antras
+     6. 67.2,29.6  lv 24-24 req 18 pref 24   1 quests    5681 XP   22.9 min   248 XP/min  pick-ups here 0/1  [one quest: later]  from: Bath'rah the Windwatcher
+     7. 18.7,33.0  lv 23-25 req 20 pref 25   7 quests   31295 XP   88.4 min   354 XP/min  pick-ups here 0/7  overlaps 2,10,14,19  from: Elaine Carevin, Madame Eva, Tavernkeep Smitts
+     8. 19.7,49.0  lv 24-26 req 20 pref 25   3 quests   12090 XP   43.4 min   278 XP/min  pick-ups here 0/3  overlaps 1  from: Tavernkeep Smitts, Commander Althea Ebonlocke
+     9. 64.4,71.9  lv 28-29 req 23 pref 28   2 quests    9244 XP   22.3 min   414 XP/min  pick-ups here 0/2  from: Calor
+    10. 16.2,34.3  lv 27-29 req 20 pref 28   3 quests   17273 XP   48.6 min   355 XP/min  pick-ups here 1/3  overlaps 2,7,19  from: Abercrombie, Grimand Elmore
+    11. 72.9,46.9  lv 28-28 req 22 pref 28   5 quests    2620 XP   10.6 min   248 XP/min  pick-ups here 4/5  overlaps 12,15,18  from: Old Footlocker
+    12. 74.3,44.4  lv 28-28 req 28 pref 28   2 quests     800 XP   20.1 min    40 XP/min  pick-ups here 0/2  overlaps 11,15,18  from: Marshal Haggard, Elling Trias
+    13. 73.2,76.1  lv 30-31 req 25 pref 30   2 quests    8225 XP   13.8 min   597 XP/min  pick-ups here 0/2  from: Jonathan Carevin, Calor
+    14. 23.1,32.5  lv 30-32 req 20 pref 30   3 quests   18294 XP   38.1 min   480 XP/min  pick-ups here 0/3  overlaps 7,19  from: Commander Althea Ebonlocke, Lord Ello Ebonlocke, Sven Yorgen
+    15. 73.2,47.6  lv 30-31 req 25 pref 30   7 quests    9114 XP   22.5 min   405 XP/min  pick-ups here 5/7  overlaps 11,12,18  from: Abercrombie, Caravaneer Ruzzgot
+    16. 31.3,76.6  lv 30-30 req 28 pref 30   3 quests   11260 XP   32.2 min   350 XP/min  pick-ups here 0/3  from: Abercrombie, Viktori Prism'Antras, Watcher Backus
+    17. 78.3,36.0  lv 30-30 req 25 pref 30   1 quests    2450 XP   10.5 min   233 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Zardeth of the Black Claw
+    18. 74.4,44.6  lv 35-35 req 28 pref 35   4 quests    6092 XP   11.7 min   521 XP/min  pick-ups here 3/4  overlaps 11,12,15  from: A Weathered Grave
+    19. 17.2,33.2  lv 35-35 req 28 pref 35   2 quests    4345 XP   10.7 min   407 XP/min  pick-ups here 0/2  overlaps 2,7,10,14  from: Commander Althea Ebonlocke, Watcher Ladimore
+  Stonetalon Mountains (levels 20-28, required 1, preferred 23): 7 areas
+     1. 74.4,85.7  lv 20-20 req  1 pref 20   1 quests     155 XP   10.2 min    15 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+     2. 61.5,61.3  lv 20-22 req 17 pref 21  11 quests   20593 XP   84.5 min   244 XP/min  pick-ups here 5/11  from: Mebok Mizzyrix, Sentinel Thenysil, Lomac Gearstrip
+     3. 53.8,39.7  lv 21-21 req 18 pref 21   1 quests    6343 XP   23.3 min   272 XP/min  pick-ups here 0/1  overlaps 5  [one quest: later]  from: Shindrell Swiftfire
+     4. 73.2,59.6  lv 22-22 req 17 pref 22   2 quests    7483 XP   13.6 min   550 XP/min  pick-ups here 1/2  from: Gaxim Rustfizzle
+     5. 53.8,39.7  lv 24-24 req 20 pref 24   1 quests    4473 XP   14.3 min   313 XP/min  pick-ups here 1/1  overlaps 3  [one quest: later]
+     6. 32.6,67.2  lv 26-28 req 22 pref 26   4 quests   21629 XP   62.7 min   345 XP/min  pick-ups here 0/4  from: Kaela Shadowspear, Collin Mauren, Keeper Albagorm
+     7. 64.5,40.2  lv 27-27 req 16 pref 27   1 quests    2683 XP    3.5 min   763 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Ziz Fizziks
+  Wetlands (levels 20-35, required 1, preferred 28): 24 areas
+     1. 33.6,47.9  lv 20-20 req  1 pref 20   1 quests     155 XP   10.2 min    15 XP/min  pick-ups here 0/1  overlaps 6,10,17  [one quest: later]  from: Owen Thadd
+     2. 62.2,70.6  lv 21-21 req 20 pref 21   1 quests    7611 XP   23.5 min   324 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Rethiel the Greenwarden
+     3.  9.0,57.5  lv 20-22 req 18 pref 21   5 quests    5403 XP   42.7 min   127 XP/min  pick-ups here 1/5  overlaps 8,12,19,22  from: Chief Archaeologist Greywhisker, Einar Stonegrip, Tom "Half-fish" Wilson
+     4. 15.3,40.1  lv 22-22 req 20 pref 22   1 quests    7514 XP   23.0 min   327 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Karl Boran
+     5. 49.5,66.6  lv 21-22 req 20 pref 22   3 quests    9177 XP   43.6 min   210 XP/min  pick-ups here 0/3  from: Mountaineer Rockgar, Pilot Stonegear, Caitlin Grassman
+     6. 31.7,49.9  lv 24-24 req 22 pref 24   3 quests   11969 XP   24.6 min   486 XP/min  pick-ups here 1/3  overlaps 1,10,17  from: Archaeologist Flagongut, Tarrel Rockweaver
+     7. 43.3,24.5  lv 23-25 req 25 pref 24   3 quests   18635 XP   50.9 min   366 XP/min  pick-ups here 0/3  from: Rethiel the Greenwarden, Sida, Harlo Barnaby
+     8. 10.7,54.8  lv 24-25 req 21 pref 24   2 quests    1482 XP    6.7 min   221 XP/min  pick-ups here 1/2  overlaps 3,12,19,22  from: Merrin Rockweaver
+     9. 16.6,29.8  lv 25-26 req 20 pref 26   2 quests    7333 XP   19.0 min   386 XP/min  pick-ups here 1/2  overlaps 15  from: James Halloran
+    10. 33.6,48.8  lv 27-29 req 22 pref 27   3 quests   12184 XP   20.3 min   599 XP/min  pick-ups here 3/3  overlaps 1,6,17
+    11. 59.6,41.9  lv 26-28 req 23 pref 27   3 quests   23183 XP   72.2 min   321 XP/min  pick-ups here 1/3  overlaps 16  from: James Halloran, Captain Stoutfist
+    12. 10.7,62.2  lv 28-30 req 23 pref 29   7 quests   15104 XP   33.7 min   449 XP/min  pick-ups here 5/7  overlaps 3,8,19,22  from: Bishop Farthing, Intrepid's Locked Strongbox
+    13. 49.4,42.1  lv 29-29 req 22 pref 29   2 quests    6247 XP   20.1 min   310 XP/min  pick-ups here 0/2  overlaps 20  from: Captain Stoutfist, James Halloran
+    14. 68.4,32.7  lv 29-29 req 21 pref 29   1 quests    8651 XP   22.9 min   378 XP/min  pick-ups here 0/1  [one quest: later]  from: Howin Kindfeather
+    15. 14.7,26.3  lv 29-30 req 22 pref 30   2 quests   14393 XP   38.9 min   370 XP/min  pick-ups here 0/2  overlaps 9  from: First Mate Fitzsimmons
+    16. 60.3,40.8  lv 30-30 req 22 pref 30   2 quests    9054 XP   27.1 min   334 XP/min  pick-ups here 1/2  overlaps 11  from: Howin Kindfeather
+    17. 34.7,49.7  lv 31-31 req 23 pref 31   1 quests    3372 XP    2.7 min  1238 XP/min  pick-ups here 1/1  overlaps 1,6,10  [one quest: worth the time]
+    18. 49.8,15.7  lv 30-32 req 28 pref 31   5 quests   25697 XP   47.0 min   546 XP/min  pick-ups here 4/5  overlaps 21  from: Prospector Whelgar
+    19.  9.9,57.5  lv 31-31 req 23 pref 31   1 quests    1589 XP    6.6 min   239 XP/min  pick-ups here 0/1  overlaps 3,8,12,22  [one quest: later]  from: Tattered Spellbook
+    20. 50.5,50.8  lv 31-32 req 23 pref 32   2 quests    7032 XP   16.6 min   423 XP/min  pick-ups here 1/2  overlaps 13  from: Captain Stoutfist
+    21. 50.7,10.8  lv 33-33 req 28 pref 33   2 quests    5740 XP    1.9 min  3027 XP/min  pick-ups here 2/2  overlaps 18
+    22. 10.6,60.5  lv 33-35 req 30 pref 33   4 quests    2973 XP   13.2 min   225 XP/min  pick-ups here 2/4  overlaps 3,8,12,19  from: Elling Trias, Connor Rivers
+    23. 61.4,29.0  lv 34-34 req 26 pref 34   1 quests    4756 XP    6.1 min   779 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Longbraid the Grim
+    24. 76.4,46.3  lv 34-34 req 24 pref 34   1 quests    4954 XP   12.4 min   398 XP/min  pick-ups here 0/1  [one quest: later]  from: Howin Kindfeather
+  Thousand Needles (levels 29-35, required 1, preferred 31): 6 areas
+     1. 64.2,55.2  lv 29-29 req 27 pref 29   1 quests    4366 XP   15.6 min   281 XP/min  pick-ups here 0/1  [one quest: later]  from: Kristy Grant
+     2. 84.1,64.3  lv 30-30 req 29 pref 30   3 quests   20532 XP   34.0 min   604 XP/min  pick-ups here 1/3  from: Fizzle Brassbolts, Wizzle Brassbolts
+     3. 78.5,81.4  lv 30-31 req 28 pref 30   2 quests    5558 XP   19.7 min   282 XP/min  pick-ups here 1/2  overlaps 5  from: Pilot Longbeard
+     4. 12.4,37.0  lv 30-30 req 25 pref 30   1 quests    7983 XP   21.1 min   378 XP/min  pick-ups here 0/1  [one quest: later]  from: Fiora Longears
+     5. 78.0,88.5  lv 33-33 req 28 pref 33   1 quests    9246 XP   18.4 min   503 XP/min  pick-ups here 1/1  overlaps 3  [one quest: later]
+     6. 34.5,40.1  lv 35-35 req  1 pref 35   1 quests     275 XP   10.2 min    27 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+  Hillsbrad Foothills (levels 30-60, required 25, preferred 38): 7 areas
+     1. 41.1,69.4  lv 30-30 req 25 pref 30   1 quests    6932 XP   13.8 min   501 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Lieutenant Farren Orinelle
+     2. 52.3,57.0  lv 30-32 req 28 pref 31   5 quests   14355 XP   35.3 min   406 XP/min  pick-ups here 3/5  from: Foggy MacKreel, Lord Grayson Shadowbreaker
+     3. 44.0,29.3  lv 31-31 req 25 pref 31   1 quests    2500 XP   11.2 min   222 XP/min  pick-ups here 0/1  overlaps 6  [one quest: prerequisite]  from: Grand Mason Marblesten
+     4. 57.4,69.1  lv 32-32 req 25 pref 32   1 quests    6267 XP   12.9 min   486 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Lieutenant Farren Orinelle
+     5. 25.1,70.5  lv 32-32 req 25 pref 32   1 quests    6735 XP   16.4 min   409 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Lieutenant Farren Orinelle
+     6. 41.5,26.5  lv 34-34 req 30 pref 34   2 quests   17576 XP   33.7 min   521 XP/min  pick-ups here 0/2  overlaps 3  from: Darren Malvew, Bartolo Ginsetti
+     7. 16.6,79.6  lv 60-60 req 58 pref 60   2 quests   14594 XP   12.2 min  1194 XP/min  pick-ups here 0/2  from: Bodley
+  Stranglethorn Vale (levels 30-60, required 28, preferred 40): 31 areas
+     1. 36.0,11.3  lv 30-32 req 28 pref 31   4 quests    9568 XP   33.5 min   286 XP/min  pick-ups here 2/4  overlaps 2,4,9  from: Kravel Koalbeard, Krazek
+     2. 40.1, 8.8  lv 31-33 req 30 pref 32   5 quests   20436 XP   46.7 min   438 XP/min  pick-ups here 3/5  overlaps 1,4,5,9  from: Drizzlik, Krazek
+     3. 29.6,12.4  lv 33-33 req 28 pref 33   2 quests   13065 XP   30.0 min   435 XP/min  pick-ups here 2/2  overlaps 6
+     4. 36.0,12.6  lv 34-34 req 30 pref 34   2 quests   17908 XP   39.8 min   449 XP/min  pick-ups here 2/2  overlaps 1,2
+     5. 43.7, 9.4  lv 35-35 req 30 pref 35   1 quests    3016 XP    6.3 min   476 XP/min  pick-ups here 1/1  overlaps 2,14,17  [one quest: prerequisite]
+     6. 28.7,20.0  lv 35-36 req 30 pref 35   4 quests   35659 XP   83.1 min   429 XP/min  pick-ups here 0/4  overlaps 3,10,12  from: Ajeck Rouack, Kebok, Wizzle Brassbolts
+     7. 41.1,49.8  lv 35-35 req 30 pref 35   2 quests    9061 XP   24.5 min   370 XP/min  pick-ups here 0/2  overlaps 31  from: Crank Fizzlebub, Owen Thadd
+     8. 42.8,21.4  lv 36-37 req 31 pref 36   3 quests   24501 XP   45.7 min   536 XP/min  pick-ups here 0/3  from: Kebok, Drizzlik, Baron Revilgaz
+     9. 37.9, 3.2  lv 37-37 req 32 pref 37   4 quests   12843 XP   22.5 min   570 XP/min  pick-ups here 2/4  overlaps 1,2  from: Bookie Herod's Strongbox, Krazek
+    10. 24.7,22.3  lv 37-37 req 32 pref 37   4 quests   20175 XP   39.7 min   509 XP/min  pick-ups here 0/4  overlaps 6,12  from: Baron Revilgaz, Ajeck Rouack, Rigglefuzz
+    11. 27.0,76.5  lv 36-37 req 32 pref 37   6 quests    8467 XP   44.1 min   192 XP/min  pick-ups here 2/6  overlaps 15,18,26,29  from: Kravel Koalbeard, Corporal Kaleb, Archmage Ansirem Runeweaver
+    12. 25.6,22.4  lv 38-40 req 32 pref 38   3 quests   18428 XP   35.6 min   518 XP/min  pick-ups here 0/3  overlaps 6,10  from: Brother Nimetz, Drizzlik, Catelyn the Blade
+    13. 38.7,38.1  lv 38-38 req 28 pref 38   1 quests    7774 XP   16.4 min   475 XP/min  pick-ups here 0/1  overlaps 16,22  [one quest: prerequisite]  from: Sir S. J. Erlgadin
+    14. 48.0, 7.6  lv 37-38 req 30 pref 38   2 quests   11713 XP   27.5 min   426 XP/min  pick-ups here 1/2  overlaps 5,17  from: Sergeant Yohwa
+    15. 27.3,69.5  lv 39-41 req 37 pref 40   2 quests    6038 XP    3.5 min  1713 XP/min  pick-ups here 2/2  overlaps 11,18,25
+    16. 44.5,38.2  lv 40-42 req 37 pref 40   9 quests  178870 XP  348.7 min   513 XP/min  pick-ups here 0/9  overlaps 13,31  from: Barnil Stonepot, Brother Nimetz, Angus Stern
+    17. 48.6, 6.6  lv 40-40 req 30 pref 40   1 quests    8946 XP   18.5 min   484 XP/min  pick-ups here 0/1  overlaps 5,14  [one quest: prerequisite]  from: Lieutenant Doren
+    18. 27.6,76.8  lv 40-41 req 37 pref 41   4 quests    9346 XP   11.8 min   791 XP/min  pick-ups here 3/4  overlaps 11,15,26,29  from: Shakes O'Breen
+    19. 33.1,64.1  lv 41-41 req 30 pref 41   1 quests    7173 XP    9.9 min   724 XP/min  pick-ups here 0/1  overlaps 23,25,28  [one quest: prerequisite]  from: "Sea Wolf" MacKinley
+    20. 29.7,88.9  lv 41-42 req 37 pref 42   2 quests   18116 XP   25.9 min   699 XP/min  pick-ups here 2/2  overlaps 24
+    21. 30.1,43.9  lv 41-43 req 28 pref 42   2 quests   12081 XP   17.8 min   679 XP/min  pick-ups here 0/2  from: Hemet Nesingwary
+    22. 38.2,35.6  lv 43-43 req 28 pref 43   1 quests    6447 XP    4.9 min  1302 XP/min  pick-ups here 0/1  overlaps 13  [one quest: worth the time]  from: Hemet Nesingwary
+    23. 37.2,57.6  lv 44-45 req 40 pref 44   3 quests   27758 XP   33.4 min   831 XP/min  pick-ups here 0/3  overlaps 19  from: "Sea Wolf" MacKinley, Crank Fizzlebub, Fin Fizracket
+    24. 30.7,87.6  lv 44-45 req 40 pref 44   2 quests   12467 XP   17.3 min   719 XP/min  pick-ups here 1/2  overlaps 20,29  from: Grimbooze Thunderbrew
+    25. 27.7,61.9  lv 43-44 req 40 pref 44   2 quests   12895 XP   25.6 min   503 XP/min  pick-ups here 0/2  overlaps 15,19  from: Privateer Bloads, Grimbooze Thunderbrew
+    26. 27.7,78.5  lv 43-45 req 40 pref 44   4 quests   15603 XP   32.0 min   488 XP/min  pick-ups here 1/4  overlaps 11,18,29  from: Kravel Koalbeard, Stoley
+    27. 52.0,27.6  lv 44-46 req 30 pref 45   2 quests   19831 XP   31.3 min   635 XP/min  pick-ups here 0/2  overlaps 30  from: "Sea Wolf" MacKinley, Brother Nimetz
+    28. 37.0,69.7  lv 47-47 req 35 pref 47   1 quests    3858 XP    2.6 min  1499 XP/min  pick-ups here 0/1  overlaps 19  [one quest: worth the time]  from: Captain Hecklebury Smotts
+    29. 32.1,78.9  lv 50-51 req 45 pref 50   4 quests   31458 XP   16.8 min  1877 XP/min  pick-ups here 4/4  overlaps 11,18,24,26
+    30. 50.6,20.5  lv 58-58 req 45 pref 58   2 quests    5885 XP   11.4 min   514 XP/min  pick-ups here 1/2  overlaps 27  from: Loramus Thalipedes
+    31. 43.7,44.2  lv 60-60 req 40 pref 60   4 quests   13200 XP   35.1 min   376 XP/min  pick-ups here 0/4  overlaps 7,16  from: Clavicus Knavingham, Raedon Duskstriker, Mistina Steelshield
+  Arathi Highlands (levels 31-60, required 1, preferred 39): 17 areas
+     1. 48.8,88.0  lv 31-31 req 28 pref 31   1 quests    2500 XP   10.2 min   244 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Rhag Garmason
+     2. 25.6,25.9  lv 31-32 req 30 pref 32   3 quests   13033 XP   28.5 min   458 XP/min  pick-ups here 1/3  from: Captain Nials, Carved Figurine
+     3. 73.6,65.2  lv 35-35 req  1 pref 35   1 quests     275 XP   10.2 min    27 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+     4. 56.2,55.0  lv 36-38 req 30 pref 36   4 quests   15906 XP   24.0 min   664 XP/min  pick-ups here 3/4  from: Iridescent Shards
+     5. 68.1,77.8  lv 36-36 req 30 pref 36   1 quests   18481 XP   44.9 min   412 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Apprentice Kryten
+     6. 83.1,33.5  lv 37-37 req 32 pref 37   2 quests   11701 XP   30.2 min   388 XP/min  pick-ups here 0/2  from: Krazek, Shards of Myzrael
+     7. 26.7,63.8  lv 37-37 req 30 pref 37   1 quests    9217 XP   16.1 min   572 XP/min  pick-ups here 0/1  overlaps 11  [one quest: later]  from: Captain Nials
+     8. 54.8,81.9  lv 39-39 req 30 pref 39   1 quests    4661 XP    7.4 min   629 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Skuerto
+     9. 19.0,67.9  lv 39-39 req 30 pref 39   2 quests   13223 XP   21.8 min   606 XP/min  pick-ups here 0/2  overlaps 17  from: Skuerto
+    10. 46.6,47.0  lv 39-39 req 30 pref 39   1 quests     300 XP    1.0 min   300 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+    11. 27.8,64.6  lv 39-40 req 30 pref 40   2 quests   12580 XP   15.1 min   834 XP/min  pick-ups here 0/2  overlaps 7  from: Wanted Board
+    12. 32.8,81.1  lv 40-40 req 35 pref 40   3 quests    7850 XP   10.5 min   749 XP/min  pick-ups here 2/3  overlaps 15  from: Fleet Master Seahorn
+    13. 22.0,87.1  lv 40-40 req 35 pref 40   3 quests   19782 XP   27.1 min   729 XP/min  pick-ups here 0/3  from: First Mate Nilzlix, Captain Steelgut, Doctor Draxlegauge
+    14. 63.9,30.0  lv 42-42 req 30 pref 42   1 quests    4527 XP    6.9 min   656 XP/min  pick-ups here 0/1  overlaps 16  [one quest: prerequisite]  from: Stone of Inner Binding
+    15. 31.9,81.8  lv 44-44 req 35 pref 44   1 quests    4650 XP    1.0 min  4650 XP/min  pick-ups here 1/1  overlaps 12  [one quest: worth the time]
+    16. 62.6,34.1  lv 50-50 req 30 pref 50   1 quests    7453 XP   11.1 min   669 XP/min  pick-ups here 0/1  overlaps 14  [one quest: later]  from: Theldurin the Lost
+    17. 19.2,66.5  lv 60-60 req 57 pref 60   1 quests    6600 XP   10.2 min   644 XP/min  pick-ups here 0/1  overlaps 9  [one quest: prerequisite]  from: Magistrate Marduke
+  Desolace (levels 31-40, required 30, preferred 36): 10 areas
+     1. 37.3,90.7  lv 31-31 req 30 pref 31   1 quests   14067 XP   32.9 min   428 XP/min  pick-ups here 0/1  [one quest: later]  from: Corporal Melkins
+     2. 55.5,26.7  lv 33-35 req 30 pref 33   6 quests   23600 XP   45.6 min   518 XP/min  pick-ups here 2/6  from: Vahlarriel Demonslayer, Azore Aldamort, Owen Thadd
+     3. 76.1,19.9  lv 33-33 req 30 pref 33   1 quests   12054 XP   26.7 min   452 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Kreldig Ungor
+     4. 51.7,59.7  lv 34-35 req 30 pref 34   2 quests   13772 XP   26.2 min   526 XP/min  pick-ups here 0/2  from: Smeed Scrabblescrew, Kreldig Ungor
+     5. 67.2,56.6  lv 35-35 req 30 pref 35   1 quests    3869 XP    6.1 min   634 XP/min  pick-ups here 0/1  [one quest: later]  from: Cork Gizelton
+     6. 30.1,10.5  lv 36-36 req 30 pref 36   1 quests    5762 XP   10.1 min   568 XP/min  pick-ups here 0/1  overlaps 7  [one quest: later]  from: Rackmore's Log
+     7. 29.4, 8.8  lv 38-39 req 30 pref 38   2 quests    9594 XP   16.3 min   587 XP/min  pick-ups here 0/2  overlaps 6  from: Azore Aldamort, Kreldig Ungor
+     8. 53.4,69.4  lv 38-40 req 33 pref 39   3 quests   27488 XP   57.0 min   483 XP/min  pick-ups here 1/3  from: Bibbly F'utzbuckle, Kreldig Ungor
+     9. 63.9,90.0  lv 39-39 req 34 pref 39   2 quests   20017 XP   43.1 min   464 XP/min  pick-ups here 0/2  from: Brother Anton, Hornizz Brimbuzzle
+    10. 35.5,60.4  lv 39-40 req 34 pref 40   2 quests   10254 XP   22.3 min   460 XP/min  pick-ups here 1/2  from: Captain Pentigast
+  Dustwallow Marsh (levels 33-60, required 29, preferred 41): 7 areas
+     1. 66.7,47.8  lv 33-35 req 30 pref 35  10 quests   11730 XP   21.5 min   546 XP/min  pick-ups here 5/10  overlaps 5  from: Mikhail, Loose Dirt, Black Shield
+     2. 32.0,22.3  lv 35-35 req 30 pref 35   1 quests   23713 XP   42.4 min   560 XP/min  pick-ups here 0/1  [one quest: later]  from: "Swamp Eye" Jarl
+     3. 57.6,18.2  lv 35-36 req 32 pref 36   2 quests   12854 XP   35.2 min   365 XP/min  pick-ups here 0/2  from: Owen Thadd, Mudcrush Durtfeet
+     4. 46.5,24.6  lv 36-38 req 30 pref 37   3 quests    9731 XP   13.9 min   702 XP/min  pick-ups here 2/3  from: Archmage Tervosh
+     5. 66.5,49.2  lv 38-40 req 33 pref 38   7 quests   25171 XP   42.3 min   595 XP/min  pick-ups here 4/7  overlaps 1  from: Angus Stern, Balos Jacken, Theramore Guard Badge
+     6. 54.1,56.5  lv 41-41 req 29 pref 41   1 quests    3300 XP   10.2 min   322 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Razzeric
+     7. 76.4,19.4  lv 60-60 req 58 pref 60   1 quests   22688 XP   32.2 min   704 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Bodley
+  Badlands (levels 35-50, required 30, preferred 41): 16 areas
+     1. 55.1,41.6  lv 35-35 req 35 pref 35   2 quests    2252 XP   12.8 min   177 XP/min  pick-ups here 1/2  overlaps 8  from: Owen Thadd
+     2. 42.3,29.8  lv 35-37 req 35 pref 36   2 quests    7865 XP   11.6 min   677 XP/min  pick-ups here 0/2  overlaps 13  from: Prospector Ryedol, Lucien Tosselwrench
+     3. 19.7,43.9  lv 37-37 req 35 pref 37   1 quests    8731 XP   12.7 min   686 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+     4. 66.6,22.0  lv 38-38 req 35 pref 38   1 quests    2585 XP    3.8 min   688 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Sigrun Ironhew
+     5. 50.6,65.4  lv 38-39 req 30 pref 38   2 quests    8005 XP   24.5 min   327 XP/min  pick-ups here 0/2  overlaps 11  from: Prospector Ironband, Martek the Exiled
+     6. 42.0,80.5  lv 39-39 req 35 pref 39   1 quests    6074 XP    9.7 min   625 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Lotwil Veriatus
+     7. 52.3,79.0  lv 40-41 req 30 pref 40   3 quests    9379 XP   14.7 min   636 XP/min  pick-ups here 1/3  from: Gerrig Bonegrip
+     8. 56.0,48.8  lv 39-40 req 36 pref 40   2 quests    7868 XP   19.7 min   398 XP/min  pick-ups here 0/2  overlaps 1  from: Ghak Healtouch, Hammertoe Grez
+     9. 15.7,60.9  lv 40-40 req 33 pref 40   1 quests    5930 XP   10.2 min   580 XP/min  pick-ups here 0/1  [one quest: later]  from: Rigglefuzz
+    10.  7.4,78.2  lv 40-42 req 35 pref 41   2 quests   17092 XP   29.1 min   588 XP/min  pick-ups here 0/2  overlaps 12  from: Sigrun Ironhew, Lotwil Veriatus
+    11. 50.4,68.3  lv 42-42 req 30 pref 42   1 quests    9589 XP   24.0 min   399 XP/min  pick-ups here 1/1  overlaps 5  [one quest: later]
+    12. 12.6,75.5  lv 43-43 req 40 pref 43   1 quests    6187 XP   13.3 min   466 XP/min  pick-ups here 0/1  overlaps 10  [one quest: prerequisite]  from: Garek
+    13. 42.1,28.9  lv 44-44 req 35 pref 44   1 quests    5127 XP   11.3 min   454 XP/min  pick-ups here 0/1  overlaps 2  [one quest: later]  from: Historian Karnik
+    14. 26.0,45.8  lv 45-45 req 35 pref 45   1 quests    5486 XP    1.3 min  4363 XP/min  pick-ups here 1/1  [one quest: worth the time]
+    15. 82.3,33.4  lv 45-45 req 40 pref 45   1 quests    4850 XP    6.0 min   815 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Sigrun Ironhew
+    16. 82.0,49.7  lv 50-50 req 40 pref 50   1 quests    7293 XP    4.9 min  1491 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Garek
+  Swamp of Sorrows (levels 35-58, required 30, preferred 42): 10 areas
+     1. 63.9,20.3  lv 35-35 req 30 pref 35   2 quests    9450 XP   18.3 min   517 XP/min  pick-ups here 0/2  overlaps 8  from: Magtoor, Watcher Biggs
+     2. 25.6,55.9  lv 35-37 req 30 pref 36   2 quests   12002 XP   14.3 min   837 XP/min  pick-ups here 2/2
+     3. 14.0,61.7  lv 36-36 req 30 pref 36   1 quests   10166 XP   21.1 min   482 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Krazek
+     4. 53.1,29.6  lv 38-38 req 30 pref 38   1 quests    4477 XP    7.1 min   628 XP/min  pick-ups here 0/1  [one quest: later]  from: Galen Goodward
+     5. 95.6,75.7  lv 40-40 req 33 pref 40   1 quests   10616 XP   23.3 min   455 XP/min  pick-ups here 0/1  [one quest: later]  from: Morgan Stern
+     6. 12.5,35.5  lv 41-41 req 37 pref 41   1 quests    3802 XP   21.1 min   180 XP/min  pick-ups here 0/1  [one quest: later]  from: Acolyte Dellis
+     7. 85.1,85.3  lv 42-42 req 30 pref 42   1 quests    6197 XP   16.1 min   385 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Watcher Biggs
+     8. 62.5,23.1  lv 44-44 req 40 pref 44   1 quests    4650 XP   10.8 min   433 XP/min  pick-ups here 0/1  overlaps 1  [one quest: prerequisite]  from: Grimbooze Thunderbrew
+     9. 70.1,49.1  lv 43-45 req 38 pref 44   2 quests    3990 XP   20.8 min   192 XP/min  pick-ups here 0/2  from: Brohann Caskbelly, Owen Thadd
+    10. 33.9,66.1  lv 57-58 req 50 pref 57   5 quests   15650 XP   20.4 min   768 XP/min  pick-ups here 3/5  from: Ambassador Ardalan, Galvan the Ancient
+  Feralas (levels 43-60, required 38, preferred 47): 15 areas
+     1. 30.4,47.0  lv 43-45 req 40 pref 43   9 quests   28272 XP   36.1 min   783 XP/min  pick-ups here 8/9  overlaps 6  from: Wrecked Row Boat
+     2. 71.9,41.8  lv 43-43 req 38 pref 43   1 quests    9540 XP   20.0 min   477 XP/min  pick-ups here 0/1  overlaps 9  [one quest: prerequisite]  from: Rhapsody Shindigger
+     3. 54.1,69.0  lv 43-44 req 40 pref 44   3 quests   23313 XP   37.7 min   618 XP/min  pick-ups here 0/3  overlaps 15  from: Ginro Hearthkindle, Angelas Moonbreeze, Grimbooze Thunderbrew
+     4. 47.3,46.4  lv 44-45 req 40 pref 44   2 quests   10299 XP   25.1 min   410 XP/min  pick-ups here 1/2  overlaps 10  from: Yeh'kinya
+     5. 28.5,70.5  lv 45-45 req 40 pref 45   1 quests    6331 XP    9.6 min   660 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Latronicus Moonspear
+     6. 30.3,46.2  lv 46-46 req 40 pref 46   1 quests    6324 XP    1.2 min  5289 XP/min  pick-ups here 1/1  overlaps 1  [one quest: prerequisite]
+     7. 52.1,58.6  lv 46-46 req 40 pref 46   1 quests   12819 XP   19.1 min   670 XP/min  pick-ups here 0/1  overlaps 10  [one quest: prerequisite]  from: Pratt McGrubben
+     8. 72.5,61.3  lv 44-46 req 40 pref 46   3 quests   25998 XP   41.4 min   628 XP/min  pick-ups here 2/3  from: Ginro Hearthkindle
+     9. 68.1,43.0  lv 47-47 req 38 pref 47   2 quests   14315 XP   25.4 min   564 XP/min  pick-ups here 2/2  overlaps 2
+    10. 47.1,54.9  lv 48-48 req 45 pref 48   1 quests   12028 XP   14.5 min   830 XP/min  pick-ups here 1/1  overlaps 4,7  [one quest: worth the time]
+    11. 53.9,32.1  lv 48-48 req 40 pref 48   1 quests   12033 XP   17.7 min   681 XP/min  pick-ups here 0/1  overlaps 14  [one quest: later]  from: Pratt McGrubben
+    12. 38.5,14.2  lv 48-50 req 45 pref 49   4 quests   48004 XP   58.8 min   817 XP/min  pick-ups here 2/4  from: Zorbin Fandazzle, Troyas Moonbreeze
+    13. 45.1,25.6  lv 52-52 req 47 pref 52   2 quests    9219 XP   21.1 min   437 XP/min  pick-ups here 0/2  from: Donova Snowden, Muigin
+    14. 58.9,36.0  lv 57-57 req 53 pref 57   1 quests    6000 XP   13.8 min   436 XP/min  pick-ups here 0/1  overlaps 11  [one quest: prerequisite]  from: Aurora Skycaller
+    15. 57.1,76.3  lv 60-60 req 42 pref 60   1 quests    4200 XP   10.2 min   410 XP/min  pick-ups here 0/1  overlaps 3  [one quest: later]  from: Egg-O-Matic
+  Tanaris (levels 43-60, required 38, preferred 48): 11 areas
+     1. 63.8,31.8  lv 43-45 req 40 pref 44   4 quests   31109 XP   59.0 min   528 XP/min  pick-ups here 0/4  overlaps 4,7  from: Chief Engineer Bilgewhizzle, Spigot Operator Luglunket, "Sea Wolf" MacKinley
+     2. 72.8,47.4  lv 45-45 req 40 pref 45   5 quests   52186 XP   84.5 min   617 XP/min  pick-ups here 0/5  overlaps 10  from: Stoley, Wanted Poster, Haughty Modiste
+     3. 39.0,29.0  lv 46-46 req 38 pref 46   1 quests    5135 XP    7.1 min   722 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Senior Surveyor Fizzledowser
+     4. 61.8,38.2  lv 46-46 req 39 pref 46   1 quests    8817 XP   12.5 min   704 XP/min  pick-ups here 0/1  overlaps 1  [one quest: later]  from: Wanted Poster
+     5. 56.0,71.2  lv 48-48 req 39 pref 48   1 quests   11149 XP   17.8 min   626 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Senior Surveyor Fizzledowser
+     6. 36.6,49.2  lv 47-49 req 44 pref 48   2 quests   27916 XP   45.2 min   618 XP/min  pick-ups here 0/2  from: Senior Surveyor Fizzledowser, Andi Lynn
+     7. 66.8,24.4  lv 48-50 req 43 pref 49   2 quests   18035 XP   35.5 min   508 XP/min  pick-ups here 0/2  overlaps 1  from: Homing Robot OOX-17/TN, Tooga
+     8. 29.3,65.7  lv 49-50 req 45 pref 50   2 quests   25525 XP   39.3 min   649 XP/min  pick-ups here 0/2  from: Marin Noggenfogger, Tran'rek
+     9. 38.6,78.7  lv 48-50 req 45 pref 50   3 quests   16813 XP   28.1 min   599 XP/min  pick-ups here 1/3  from: Marvon Rivetseeker, Historian Karnik
+    10. 70.4,49.9  lv 54-54 req 47 pref 54   1 quests    6149 XP   21.1 min   291 XP/min  pick-ups here 0/1  overlaps 2,11  [one quest: prerequisite]  from: Eridan Bluewind
+    11. 64.9,50.2  lv 60-60 req 60 pref 60   1 quests    6600 XP   10.5 min   629 XP/min  pick-ups here 0/1  overlaps 10  [one quest: later]  from: Baristolth of the Shifting Sands
+  The Hinterlands (levels 43-51, required 1, preferred 48): 11 areas
+     1. 25.1,53.7  lv 43-45 req 40 pref 44   2 quests    7057 XP    7.2 min   978 XP/min  pick-ups here 0/2  overlaps 4  from: Gryphon Master Talonaxe
+     2. 64.3,70.2  lv 45-45 req 40 pref 45   1 quests   11668 XP   20.3 min   575 XP/min  pick-ups here 0/1  [one quest: later]  from: Fraggar Thundermantle
+     3. 36.0,72.8  lv 45-45 req  1 pref 45   1 quests     390 XP   10.2 min    38 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+     4. 28.1,57.8  lv 47-47 req 42 pref 47   1 quests    4200 XP   13.8 min   305 XP/min  pick-ups here 0/1  overlaps 1  [one quest: prerequisite]  from: Erelas Ambersky
+     5. 49.0,68.7  lv 48-48 req 40 pref 48   1 quests    7332 XP   13.0 min   562 XP/min  pick-ups here 0/1  overlaps 11  [one quest: prerequisite]  from: Gryphon Master Talonaxe
+     6. 76.6,58.3  lv 47-48 req 43 pref 48   3 quests   33738 XP   74.9 min   450 XP/min  pick-ups here 0/3  from: Agnar Beastamer, Homing Robot OOX-09/HL, Curgle Cranklehop
+     7. 57.2,41.7  lv 48-48 req 40 pref 48   1 quests   16698 XP   27.9 min   599 XP/min  pick-ups here 0/1  [one quest: later]  from: Fraggar Thundermantle
+     8. 40.6,59.7  lv 49-49 req 44 pref 49   1 quests    4550 XP   10.2 min   444 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Sprinkle
+     9. 57.6,86.8  lv 50-50 req 40 pref 50   1 quests    5900 XP   10.2 min   576 XP/min  pick-ups here 0/1  [one quest: later]  from: Yeh'kinya
+    10. 77.6,76.3  lv 50-50 req 40 pref 50   1 quests    4700 XP   10.2 min   459 XP/min  pick-ups here 0/1  [one quest: later]  from: Whiskey Slim
+    11. 53.4,67.1  lv 51-51 req 40 pref 51   1 quests    8435 XP    8.9 min   949 XP/min  pick-ups here 0/1  overlaps 5  [one quest: later]  from: Gryphon Master Talonaxe
+  Searing Gorge (levels 44-53, required 1, preferred 49): 10 areas
+     1. 54.5,50.5  lv 44-44 req 40 pref 44   1 quests    5600 XP   10.2 min   546 XP/min  pick-ups here 0/1  [one quest: later]  from: Grimbooze Thunderbrew
+     2. 37.8,49.5  lv 45-45 req  1 pref 45   1 quests     390 XP   10.2 min    38 XP/min  pick-ups here 0/1  overlaps 9  [one quest: later]  from: Owen Thadd
+     3. 63.4,65.0  lv 45-46 req 43 pref 46   2 quests   14044 XP   21.3 min   660 XP/min  pick-ups here 2/2
+     4. 31.8,51.7  lv 48-49 req 45 pref 48   2 quests   16965 XP   18.7 min   909 XP/min  pick-ups here 0/2  overlaps 9  from: Wanted/Missing/Lost & Found, Hansel Heavyhands
+     5. 74.5,19.4  lv 48-48 req 40 pref 48   1 quests    5825 XP    7.2 min   810 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Dorius Stonetender
+     6. 50.3,31.0  lv 49-49 req 45 pref 49   1 quests   10386 XP   12.6 min   824 XP/min  pick-ups here 0/1  [one quest: later]  from: Hansel Heavyhands
+     7. 40.3,38.1  lv 48-50 req 45 pref 50  11 quests   61868 XP   59.9 min  1033 XP/min  pick-ups here 11/11
+     8. 28.2,26.5  lv 50-52 req 40 pref 50   4 quests   20716 XP   22.4 min   926 XP/min  pick-ups here 2/4  from: Kalaran Windblade, Dying Archaeologist
+     9. 34.6,54.7  lv 52-53 req 48 pref 52   2 quests   13329 XP   16.2 min   824 XP/min  pick-ups here 0/2  overlaps 2,4  from: Squire Maltrake, A-Me 01
+    10. 41.5,24.9  lv 52-52 req 45 pref 52   1 quests    9163 XP   12.7 min   721 XP/min  pick-ups here 1/1  [one quest: later]
+  Azshara (levels 45-60, required 45, preferred 54): 8 areas
+     1. 19.1,64.6  lv 45-47 req 45 pref 47   3 quests   18720 XP   31.5 min   594 XP/min  pick-ups here 0/3  from: Loh'atu, Owen Thadd
+     2. 42.1,53.6  lv 52-53 req 47 pref 52   2 quests   18498 XP   37.8 min   489 XP/min  pick-ups here 0/2  overlaps 4  from: Tymor, Kim'jael
+     3. 56.5,29.1  lv 53-53 req 47 pref 53   1 quests    8199 XP    4.7 min  1734 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+     4. 41.5,52.5  lv 56-56 req 53 pref 56   1 quests    5800 XP   10.2 min   566 XP/min  pick-ups here 0/1  overlaps 2  [one quest: prerequisite]  from: Aurora Skycaller
+     5. 55.3,85.3  lv 58-58 req 45 pref 58   1 quests    8480 XP    3.6 min  2368 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Loramus Thalipedes
+     6. 60.8,66.3  lv 57-58 req 45 pref 58   3 quests    8315 XP    6.3 min  1320 XP/min  pick-ups here 2/3  overlaps 8  from: Lord Arkkoroc
+     7. 56.7,44.8  lv 58-58 req 45 pref 58   1 quests    9614 XP    9.5 min  1016 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Lord Arkkoroc
+     8. 60.8,66.3  lv 60-60 req 45 pref 60   1 quests    6630 XP   10.3 min   642 XP/min  pick-ups here 0/1  overlaps 6  [one quest: prerequisite]  from: Fallen Hero of the Horde
+  Blasted Lands (levels 45-60, required 1, preferred 54): 7 areas
+     1. 55.4,32.3  lv 45-45 req  1 pref 45   1 quests     390 XP   10.2 min    38 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+     2. 66.8,20.1  lv 45-47 req 40 pref 47   3 quests    6050 XP   20.4 min   296 XP/min  pick-ups here 1/3  from: Watchmaster Sorigal, Gryphon Master Talonaxe
+     3. 47.4,21.5  lv 50-50 req 45 pref 50   5 quests   50343 XP   47.3 min  1065 XP/min  pick-ups here 5/5  overlaps 7
+     4. 48.8,37.5  lv 55-55 req 45 pref 55   2 quests   21356 XP   15.9 min  1339 XP/min  pick-ups here 2/2  overlaps 7
+     5. 61.4,51.8  lv 57-57 req 45 pref 57   1 quests    8670 XP   12.0 min   722 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Fallen Hero of the Horde
+     6. 67.7,30.2  lv 58-60 req 45 pref 59   2 quests   16593 XP   13.6 min  1217 XP/min  pick-ups here 0/2  from: Fallen Hero of the Horde
+     7. 47.6,29.8  lv 60-60 req 45 pref 60   1 quests   10754 XP   11.1 min   968 XP/min  pick-ups here 0/1  overlaps 3,4  [one quest: later]  from: Fallen Hero of the Horde
+  Burning Steppes (levels 45-60, required 1, preferred 55): 11 areas
+     1. 29.0,28.9  lv 45-45 req  1 pref 45   1 quests     390 XP   10.2 min    38 XP/min  pick-ups here 0/1  overlaps 11  [one quest: later]  from: Owen Thadd
+     2. 54.1,40.8  lv 50-50 req 50 pref 50   1 quests    2350 XP    2.2 min  1060 XP/min  pick-ups here 0/1  [one quest: later]  from: Maxwort Uberglint
+     3. 80.7,44.8  lv 52-53 req 48 pref 52   2 quests   27927 XP   31.5 min   887 XP/min  pick-ups here 0/2  from: Oralius
+     4. 39.3,55.3  lv 53-53 req 48 pref 53   1 quests    6894 XP    9.3 min   739 XP/min  pick-ups here 0/1  overlaps 10  [one quest: prerequisite]  from: Oralius
+     5. 91.4,32.4  lv 52-54 req 52 pref 54   4 quests   41277 XP   45.7 min   902 XP/min  pick-ups here 2/4  from: Tinkee Steamboil, Helendis Riverhorn
+     6. 65.1,23.9  lv 54-54 req 50 pref 54   2 quests    5028 XP   17.9 min   281 XP/min  pick-ups here 0/2  from: Marshal Maxwell, Felnok Steelspring
+     7. 61.9,39.5  lv 54-54 req 50 pref 54   1 quests    5450 XP   10.2 min   532 XP/min  pick-ups here 0/1  [one quest: later]  from: Royal Historian Archesonus
+     8. 41.6,35.2  lv 56-56 req 50 pref 56   1 quests   27720 XP   42.4 min   654 XP/min  pick-ups here 0/1  [one quest: later]  from: Oralius
+     9. 45.4,44.4  lv 60-60 req 58 pref 60   1 quests    6600 XP   11.0 min   600 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Mux Manascrambler
+    10. 35.4,57.8  lv 60-60 req 58 pref 60   1 quests    7355 XP   11.1 min   662 XP/min  pick-ups here 0/1  overlaps 4  [one quest: later]  from: Mux Manascrambler
+    11. 26.4,24.4  lv 60-60 req  1 pref 60   1 quests     660 XP   10.2 min    64 XP/min  pick-ups here 0/1  overlaps 1  [one quest: later]  from: Jennea Cannon
+  Felwood (levels 48-60, required 1, preferred 54): 11 areas
+     1. 48.4,90.4  lv 48-48 req 45 pref 48   1 quests   11862 XP   13.0 min   914 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+     2. 36.8,60.5  lv 51-52 req 48 pref 52   2 quests   22870 XP   29.0 min   790 XP/min  pick-ups here 0/2  overlaps 6  from: Greta Mosshoof
+     3. 41.1,49.9  lv 52-52 req 48 pref 52   1 quests   13150 XP   23.3 min   564 XP/min  pick-ups here 0/1  overlaps 10  [one quest: prerequisite]  from: Laris Geardawdle
+     4. 43.7,40.0  lv 54-54 req 48 pref 54   1 quests    9537 XP    8.8 min  1088 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Taronn Redfeather
+     5. 52.1,83.1  lv 54-55 req 49 pref 54   5 quests   37918 XP   53.6 min   708 XP/min  pick-ups here 3/5  overlaps 9  from: J.D. Collie, Islen Waterseer
+     6. 36.2,60.3  lv 54-55 req 49 pref 55   3 quests   37440 XP   46.3 min   808 XP/min  pick-ups here 1/3  overlaps 2  from: Eridan Bluewind, Greta Mosshoof
+     7. 61.1,10.4  lv 55-56 req 52 pref 55   4 quests   36367 XP   52.3 min   695 XP/min  pick-ups here 1/4  from: Arathandris Silversky, Grazle, Donova Snowden
+     8. 47.1,19.1  lv 54-56 req 52 pref 56   3 quests   33182 XP   53.0 min   626 XP/min  pick-ups here 1/3  from: Eridan Bluewind, Donova Snowden
+     9. 51.4,82.0  lv 57-57 req 49 pref 57   1 quests    9656 XP    7.6 min  1276 XP/min  pick-ups here 0/1  overlaps 5  [one quest: worth the time]  from: Remains of Trey Lightforge
+    10. 38.6,48.6  lv 57-58 req 49 pref 58   2 quests   18523 XP   13.4 min  1382 XP/min  pick-ups here 0/2  overlaps 3  from: Jessir Moonbow, Greta Mosshoof
+    11. 65.2, 3.3  lv 60-60 req  1 pref 60   1 quests     660 XP   10.2 min    64 XP/min  pick-ups here 0/1  [one quest: later]  from: Jennea Cannon
+  Un'Goro Crater (levels 50-57, required 47, preferred 53): 13 areas
+     1. 52.8,46.7  lv 50-50 req 47 pref 50   1 quests    4700 XP   15.4 min   305 XP/min  pick-ups here 0/1  overlaps 13  [one quest: prerequisite]  from: Arch Druid Fandral Staghelm
+     2. 27.6,41.3  lv 51-51 req 49 pref 51   1 quests   18515 XP   25.5 min   726 XP/min  pick-ups here 0/1  overlaps 10  [one quest: later]  from: Shizzle
+     3. 32.3,74.4  lv 51-51 req 49 pref 51   1 quests   15066 XP   20.8 min   724 XP/min  pick-ups here 0/1  [one quest: later]  from: Spark Nilminer
+     4. 67.9,33.4  lv 52-53 req 48 pref 52   2 quests   20945 XP   25.2 min   830 XP/min  pick-ups here 0/2  from: Muigin, Williden Marshal
+     5. 64.7,14.9  lv 53-55 req 50 pref 53   5 quests   38132 XP   43.4 min   878 XP/min  pick-ups here 0/5  from: Torwa Pathfinder, Muigin, J.D. Collie
+     6. 44.9, 9.8  lv 52-54 req 48 pref 53   6 quests   32131 XP   37.3 min   862 XP/min  pick-ups here 3/6  overlaps 11  from: A Conspicuous Gravestone, A-Me 01, Tran'rek
+     7. 70.2,59.8  lv 52-53 req 48 pref 53   5 quests   27126 XP   32.6 min   832 XP/min  pick-ups here 0/5  from: Torwa Pathfinder, J.D. Collie, A Wrecked Raft
+     8. 46.9,82.7  lv 52-54 req 50 pref 53   3 quests   24675 XP   31.4 min   785 XP/min  pick-ups here 0/3  from: Alchemist Pestlezugg, Hol'anyee Marshal
+     9. 23.9,59.2  lv 53-53 req 47 pref 53   1 quests    7644 XP   11.8 min   649 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: J.D. Collie
+    10. 31.8,38.9  lv 54-55 req 49 pref 54   2 quests   24989 XP   39.2 min   637 XP/min  pick-ups here 0/2  overlaps 2  from: Laris Geardawdle, Beware of Pterrordax
+    11. 43.7, 8.3  lv 55-55 req 50 pref 55   2 quests   12186 XP   11.0 min  1110 XP/min  pick-ups here 1/2  overlaps 6  from: Ringo
+    12. 79.7,49.8  lv 56-56 req 48 pref 56   1 quests    8067 XP    3.6 min  2255 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Torwa Pathfinder
+    13. 49.7,47.6  lv 55-57 req 55 pref 56   4 quests   33143 XP   53.8 min   617 XP/min  pick-ups here 0/4  overlaps 1  from: Krakle, Liv Rizzlefix, Linken
+  Western Plaguelands (levels 50-60, required 1, preferred 57): 19 areas
+     1. 42.7,84.0  lv 50-50 req 50 pref 50   3 quests    1410 XP   30.0 min    47 XP/min  pick-ups here 0/3  overlaps 3,5,6,14  from: Crier Goodman, Courier Hammerfall, Herald Moonstalker
+     2. 40.1,52.5  lv 52-54 req 51 pref 52   4 quests   33104 XP   47.0 min   704 XP/min  pick-ups here 1/4  overlaps 19  from: Ol' Emma, High Priestess MacDonnell, Mulgris Deepriver
+     3. 44.7,82.9  lv 52-53 req 50 pref 52   4 quests   23590 XP   35.6 min   663 XP/min  pick-ups here 2/4  overlaps 1,5,6,10,14  from: Gregor Greystone, Scourge Cauldron
+     4. 47.6,46.2  lv 55-55 req 52 pref 55   4 quests   43239 XP   49.3 min   877 XP/min  pick-ups here 2/4  overlaps 7  from: High Priestess MacDonnell, Nathaniel Dumah
+     5. 43.0,84.0  lv 55-55 req 55 pref 55   3 quests   17474 XP   22.8 min   768 XP/min  pick-ups here 2/3  overlaps 1,3,6,14  from: Termite Barrel
+     6. 43.0,84.5  lv 55-55 req 50 pref 55   2 quests   17482 XP   23.4 min   747 XP/min  pick-ups here 0/2  overlaps 1,3,5,14  from: Scourge Cauldron
+     7. 51.5,40.6  lv 56-56 req 50 pref 56   1 quests    9550 XP    7.8 min  1218 XP/min  pick-ups here 1/1  overlaps 4  [one quest: prerequisite]
+     8. 54.5,62.4  lv 55-56 req 51 pref 56   2 quests   22964 XP   23.7 min   968 XP/min  pick-ups here 1/2  from: High Priestess MacDonnell
+     9. 44.6,68.1  lv 56-57 req 55 pref 56   5 quests   59909 XP   62.6 min   958 XP/min  pick-ups here 3/5  overlaps 15  from: Commander Ashlam Valorfist, Alchemist Arbington
+    10. 49.4,77.7  lv 56-56 req 50 pref 56   2 quests   13588 XP   23.1 min   587 XP/min  pick-ups here 1/2  overlaps 3,17  from: Pamela Redpath
+    11. 57.8,36.1  lv 57-57 req 50 pref 57   1 quests    7341 XP    3.3 min  2206 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+    12. 44.2,18.6  lv 56-58 req 50 pref 57   2 quests   14266 XP   16.3 min   873 XP/min  pick-ups here 0/2  overlaps 16  from: Carlin Redpath, Kirsta Deepshadow
+    13. 62.2,59.1  lv 58-58 req 50 pref 58   1 quests   11641 XP   12.4 min   942 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: High Priestess MacDonnell
+    14. 43.0,84.2  lv 58-60 req 56 pref 59   4 quests   31997 XP   21.3 min  1499 XP/min  pick-ups here 2/4  overlaps 1,3,5,6  from: Scourge Cauldron, Master Mathias Shaw
+    15. 42.4,67.9  lv 60-60 req 57 pref 60   7 quests   62634 XP   56.6 min  1106 XP/min  pick-ups here 3/7  overlaps 9  from: Commander Ashlam Valorfist, Alchemist Arbington, Haleh
+    16. 47.9,19.6  lv 60-60 req 52 pref 60   2 quests   28417 XP   39.4 min   721 XP/min  pick-ups here 1/2  overlaps 12  from: Myranda the Hag
+    17. 50.8,77.8  lv 60-60 req 52 pref 60   1 quests    4950 XP   10.0 min   495 XP/min  pick-ups here 0/1  overlaps 10  [one quest: prerequisite]  from: Tirion Fordring
+    18. 68.6,74.1  lv 58-60 req 57 pref 60   3 quests   11810 XP   29.3 min   403 XP/min  pick-ups here 0/3  from: Tirion Fordring, Jennea Cannon, Leonid Barthalomew the Revered
+    19. 38.2,54.6  lv 60-60 req  1 pref 60   1 quests     660 XP   10.2 min    64 XP/min  pick-ups here 0/1  overlaps 2  [one quest: later]  from: Jennea Cannon
+  Winterspring (levels 54-60, required 50, preferred 57): 12 areas
+     1. 58.6,20.2  lv 54-54 req 50 pref 54   1 quests   13136 XP   12.4 min  1057 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Felnok Steelspring
+     2. 61.6,38.6  lv 54-54 req 50 pref 54   1 quests    2700 XP   10.0 min   270 XP/min  pick-ups here 0/1  overlaps 10  [one quest: prerequisite]  from: Tinkee Steamboil
+     3. 59.8,74.2  lv 56-56 req 51 pref 56   1 quests    6240 XP    5.3 min  1185 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Donova Snowden
+     4. 67.3,35.0  lv 55-56 req 52 pref 56   3 quests   31207 XP   46.3 min   674 XP/min  pick-ups here 1/3  overlaps 10  from: Itharius, Donova Snowden
+     5. 30.7,41.4  lv 55-57 req 52 pref 56   6 quests   25713 XP   47.8 min   538 XP/min  pick-ups here 1/6  from: Erelas Ambersky, Krakle, Nafien
+     6. 52.0,30.4  lv 56-56 req 53 pref 56   3 quests    1915 XP   20.3 min    94 XP/min  pick-ups here 1/3  overlaps 9  from: Ivy Leafrunner, Daryn Lightwind
+     7. 54.5,43.4  lv 56-58 req 53 pref 57   2 quests   12387 XP   15.8 min   784 XP/min  pick-ups here 1/2  overlaps 12  from: Aurora Skycaller
+     8. 63.1,59.5  lv 57-57 req 52 pref 57   1 quests    3000 XP   10.0 min   300 XP/min  pick-ups here 0/1  overlaps 11  [one quest: prerequisite]  from: Erelas Ambersky
+     9. 52.1,30.4  lv 58-59 req 53 pref 58   2 quests    8978 XP    9.3 min   962 XP/min  pick-ups here 0/2  overlaps 6  from: Remorseful Highborne, Harlo Wigglesworth
+    10. 65.7,38.5  lv 58-60 req 52 pref 58   5 quests   49091 XP   61.2 min   802 XP/min  pick-ups here 2/5  overlaps 2,4  from: Salfa, Donova Snowden, Jennea Cannon
+    11. 62.4,64.5  lv 59-60 req 58 pref 59   7 quests   53754 XP   61.7 min   871 XP/min  pick-ups here 3/7  overlaps 8  from: Bodley, Jaron Stoneshaper, Witch Doctor Mau'ari
+    12. 54.5,51.2  lv 60-60 req 57 pref 60   2 quests    8787 XP   12.9 min   679 XP/min  pick-ups here 1/2  overlaps 7  from: Highlord Bolvar Fordragon
+  Eastern Plaguelands (levels 55-60, required 1, preferred 58): 14 areas
+     1. 34.3,23.3  lv 55-55 req 50 pref 55   2 quests   16736 XP   23.6 min   709 XP/min  pick-ups here 0/2  from: Carlin Redpath, Nathaniel Dumah
+     2. 27.3,75.7  lv 55-57 req 52 pref 55   4 quests   23689 XP   46.7 min   507 XP/min  pick-ups here 0/4  overlaps 10  from: Caretaker Alen, Marlene Redpath, Jessica Redpath
+     3. 14.0,24.2  lv 55-55 req 50 pref 55   1 quests    3084 XP    3.4 min   918 XP/min  pick-ups here 1/1  [one quest: later]
+     4. 45.9,44.4  lv 56-57 req 55 pref 56   4 quests   72566 XP   96.9 min   749 XP/min  pick-ups here 0/4  overlaps 14  from: Tirion Fordring, Duke Hydraxis, Carlin Redpath
+     5. 27.8,59.1  lv 56-56 req 52 pref 56   1 quests   15148 XP   20.3 min   745 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Tirion Fordring
+     6.  5.2,35.6  lv 56-56 req 52 pref 56   1 quests     708 XP    1.0 min   708 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+     7. 62.5,26.8  lv 58-58 req 52 pref 58   1 quests   12444 XP   17.3 min   721 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Tirion Fordring
+     8. 62.8,10.1  lv 58-60 req 54 pref 59   2 quests   21990 XP   31.1 min   707 XP/min  pick-ups here 0/2  from: Prospector Ironboot, Torn Scroll
+     9. 76.5,72.2  lv 60-60 req 58 pref 60   2 quests   14372 XP   12.2 min  1176 XP/min  pick-ups here 0/2  from: Bodley
+    10. 32.9,73.4  lv 60-60 req 55 pref 60   3 quests   30628 XP   28.5 min  1073 XP/min  pick-ups here 1/3  overlaps 2  from: Emmisary Whitebeard, Chromie
+    11. 70.7,48.0  lv 60-60 req 60 pref 60   7 quests   49049 XP   46.3 min  1060 XP/min  pick-ups here 4/7  from: Jennea Cannon, Magistrate Marduke, Tinkee Steamboil
+    12. 22.7,64.0  lv 60-60 req 56 pref 60   2 quests   25594 XP   29.4 min   871 XP/min  pick-ups here 0/2  from: Flint Shadowmore, Highlord Bolvar Fordragon
+    13. 26.9,14.9  lv 58-60 req 58 pref 60   3 quests   19752 XP   41.0 min   481 XP/min  pick-ups here 0/3  from: Smokey LaRue, Jennea Cannon, Deliana
+    14. 47.3,42.2  lv 60-60 req  1 pref 60   1 quests     660 XP   10.2 min    64 XP/min  pick-ups here 0/1  overlaps 4  [one quest: later]  from: Jennea Cannon
+  Silithus (levels 55-60, required 54, preferred 59): 13 areas
+     1. 58.2,20.1  lv 55-55 req 54 pref 55   2 quests   31483 XP   33.3 min   945 XP/min  pick-ups here 0/2  from: Beetix Ficklespragg, Windcaller Proudhorn
+     2. 61.5,52.6  lv 55-57 req 54 pref 56   2 quests   24126 XP   23.2 min  1039 XP/min  pick-ups here 0/2  overlaps 12  from: Layo Starstrike
+     3. 31.3,43.0  lv 57-57 req 54 pref 57   1 quests   15960 XP   16.8 min   951 XP/min  pick-ups here 0/1  [one quest: later]  from: Windcaller Proudhorn
+     4. 44.1,89.1  lv 57-59 req 54 pref 58   3 quests   38773 XP   34.0 min  1139 XP/min  pick-ups here 0/3  overlaps 11  from: Beetix Ficklespragg, Noggle Ficklespragg, Wanted Poster: Deathclasp
+     5. 21.9,17.5  lv 57-58 req 55 pref 58   2 quests   26575 XP   40.5 min   656 XP/min  pick-ups here 0/2  from: Duke Hydraxis, Geologist Larksbane
+     6. 48.8,58.1  lv 60-60 req 58 pref 60   1 quests   12046 XP    4.7 min  2548 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Geologist Larksbane
+     7. 50.2,34.3  lv 60-60 req 60 pref 60   4 quests   29099 XP   23.1 min  1258 XP/min  pick-ups here 1/4  from: Rutgar Glyphshaper, Hermit Ortell
+     8. 38.1,45.1  lv 59-60 req 60 pref 60   7 quests   97407 XP   90.5 min  1077 XP/min  pick-ups here 1/7  from: Hermit Ortell, Bor Wildmane, Huum Wildmane
+     9. 63.6,76.3  lv 59-60 req 58 pref 60   3 quests   21829 XP   20.6 min  1059 XP/min  pick-ups here 0/3  from: Bodley, Geologist Larksbane
+    10. 23.6,61.7  lv 60-60 req 60 pref 60   2 quests   27939 XP   26.9 min  1039 XP/min  pick-ups here 0/2  from: Baristolth of the Shifting Sands, Frankal Stonebridge
+    11. 41.0,88.7  lv 60-60 req 58 pref 60   1 quests    9424 XP    9.8 min   964 XP/min  pick-ups here 0/1  overlaps 4  [one quest: prerequisite]  from: Commander Mar'alith
+    12. 63.0,54.1  lv 60-60 req 58 pref 60   2 quests   34320 XP   60.5 min   568 XP/min  pick-ups here 0/2  overlaps 2  from: Rabine Saturna, Mux Manascrambler
+    13. 72.4,15.6  lv 60-60 req 60 pref 60   1 quests   10950 XP   10.5 min  1043 XP/min  pick-ups here 0/1  [one quest: later]  from: Huum Wildmane
+  Alterac Valley (levels 60-60, required 51, preferred 60): 2 areas
+     1. 47.2,87.0  lv 60-60 req 51 pref 60   1 quests    9950 XP   10.2 min   971 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Prospector Stonehewer
+     2. 47.9,12.3  lv 60-60 req 51 pref 60   4 quests   36497 XP   38.8 min   940 XP/min  pick-ups here 2/4  from: Sergeant Durgen Stormpike
+
+== Horde: 32 zones, 426 areas
+  Durotar (levels 1-12, required 1, preferred 8): 14 areas
+     1. 43.1,64.8  lv  1- 3 req  1 pref  2   5 quests    2598 XP   17.6 min   147 XP/min  pick-ups here 5/5  overlaps 2,3
+     2. 45.0,68.6  lv  4- 4 req  3 pref  4   1 quests     447 XP    1.0 min   447 XP/min  pick-ups here 1/1  overlaps 1,3  [one quest: prerequisite]
+     3. 41.3,67.6  lv  5- 5 req  1 pref  5   2 quests     690 XP    1.9 min   362 XP/min  pick-ups here 2/2  overlaps 1,2
+     4. 56.0,74.7  lv  5- 5 req  1 pref  5   1 quests     459 XP    4.0 min   114 XP/min  pick-ups here 0/1  [one quest: later]  from: Zureetha Fargaze
+     5. 57.6,55.8  lv  6- 8 req  3 pref  6   4 quests    5618 XP   34.0 min   165 XP/min  pick-ups here 0/4  from: Gar'Thok, Turroc, Vel'rin Fang
+     6. 48.5,47.8  lv  4- 6 req  4 pref  6   7 quests    7852 XP   47.8 min   164 XP/min  pick-ups here 3/7  overlaps 7  from: Foreman Thazz'ril, Zureetha Fargaze, Ukor
+     7. 52.2,43.1  lv  7- 7 req  4 pref  7   1 quests    1527 XP   12.5 min   122 XP/min  pick-ups here 0/1  overlaps 6  [one quest: prerequisite]  from: Master Gadrin
+     8. 50.9,80.1  lv  7- 8 req  5 pref  8   4 quests    6985 XP   34.6 min   202 XP/min  pick-ups here 3/4  from: Furl Scornbrow
+     9. 65.7,83.9  lv  8-10 req  6 pref  8   6 quests   10783 XP   54.7 min   197 XP/min  pick-ups here 0/6  from: Master Gadrin, Cook Torka, Xar'Ti
+    10. 50.9,25.9  lv  9-11 req  7 pref 10   2 quests    4412 XP   19.8 min   223 XP/min  pick-ups here 2/2
+    11. 59.1,44.7  lv 11-11 req  9 pref 11   2 quests    1098 XP    5.0 min   221 XP/min  pick-ups here 2/2
+    12. 40.5,29.4  lv 10-12 req  8 pref 11   4 quests    8625 XP   41.9 min   206 XP/min  pick-ups here 2/4  from: Gar'Thok, Orgnil Soulscar
+    13. 58.2,20.6  lv 11-12 req 10 pref 12   3 quests    5813 XP   30.8 min   189 XP/min  pick-ups here 0/3  from: Orgnil Soulscar
+    14. 52.5, 9.4  lv 12-12 req  9 pref 12   2 quests    2778 XP   18.1 min   154 XP/min  pick-ups here 1/2  from: Thrall
+  Tirisfal Glades (levels 1-20, required 1, preferred 9): 27 areas
+     1. 33.1,63.2  lv  1- 3 req  2 pref  2   5 quests    2429 XP   17.0 min   142 XP/min  pick-ups here 5/5  overlaps 3,4
+     2. 26.4,58.9  lv  4- 4 req  2 pref  4   2 quests    1908 XP   12.0 min   159 XP/min  pick-ups here 2/2
+     3. 37.8,66.2  lv  4- 4 req  2 pref  4   1 quests    2541 XP   18.0 min   141 XP/min  pick-ups here 1/1  overlaps 1,4  [one quest: prerequisite]
+     4. 33.9,66.8  lv  5- 5 req  3 pref  5   2 quests    1679 XP    6.9 min   244 XP/min  pick-ups here 2/2  overlaps 1,3
+     5. 56.1,53.8  lv  5- 7 req  5 pref  6   7 quests   10123 XP   46.7 min   217 XP/min  pick-ups here 5/7  overlaps 7,18,27  from: Gordo, Executor Arren
+     6. 38.5,50.2  lv  5- 7 req  6 pref  6   4 quests    5778 XP   37.6 min   154 XP/min  pick-ups here 3/4  overlaps 11  from: Apothecary Johaan
+     7. 61.5,51.6  lv  5- 7 req  4 pref  6   4 quests    3184 XP   22.8 min   140 XP/min  pick-ups here 2/4  overlaps 5,14,18,20,27  from: Calvin Montague, Executor Arren
+     8. 57.4,38.9  lv  6- 8 req  5 pref  7   2 quests    4318 XP   27.6 min   157 XP/min  pick-ups here 2/2  overlaps 19
+     9. 67.2,56.7  lv  8- 8 req  7 pref  8   1 quests    1587 XP    7.5 min   212 XP/min  pick-ups here 1/1  overlaps 14,22,24  [one quest: worth the time]
+    10. 14.5,60.3  lv  7- 9 req  6 pref  8   2 quests    7612 XP   45.1 min   169 XP/min  pick-ups here 0/2  from: Deathguard Burgess, Apothecary Johaan
+    11. 32.7,48.0  lv  8- 8 req  5 pref  8   1 quests    2191 XP   17.3 min   127 XP/min  pick-ups here 0/1  overlaps 6  [one quest: prerequisite]  from: Executor Zygand
+    12. 68.1,42.0  lv  8- 8 req  5 pref  8   2 quests     880 XP   10.3 min    86 XP/min  pick-ups here 0/2  from: Bethor Iceshard
+    13. 47.3,34.8  lv  8- 8 req  6 pref  8   1 quests    3724 XP   20.4 min   182 XP/min  pick-ups here 0/1  overlaps 17  [one quest: later]  from: Deathguard Dillinger
+    14. 63.4,55.5  lv  9- 9 req  6 pref  9   2 quests    1567 XP    6.5 min   239 XP/min  pick-ups here 2/2  overlaps 7,9,18,20,22,24,27
+    15. 51.3,67.4  lv  9- 9 req  5 pref  9   1 quests    2016 XP   11.1 min   182 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Executor Zygand
+    16.  9.7,66.4  lv 10-10 req  7 pref 10   3 quests    9760 XP   52.3 min   187 XP/min  pick-ups here 0/3  from: Carolai Anise, Hilda the Breaker, Ephram Barbaro
+    17. 46.7,36.4  lv 10-11 req  7 pref 10   2 quests    3052 XP   21.1 min   145 XP/min  pick-ups here 0/2  overlaps 13  from: Coleman Farthing
+    18. 61.3,50.8  lv 10-10 req  7 pref 10   1 quests     126 XP    1.0 min   126 XP/min  pick-ups here 1/1  overlaps 5,7,14,20,27  [one quest: prerequisite]
+    19. 58.7,30.8  lv 10-10 req  6 pref 10   1 quests    1521 XP    7.5 min   204 XP/min  pick-ups here 0/1  overlaps 8  [one quest: later]  from: Wanted!
+    20. 61.9,51.4  lv 11-11 req  6 pref 11   1 quests     897 XP    1.0 min   897 XP/min  pick-ups here 1/1  overlaps 7,14,18,27  [one quest: worth the time]
+    21. 79.5,57.5  lv 10-11 req  6 pref 11   4 quests    8295 XP   43.7 min   190 XP/min  pick-ups here 0/4  from: Executor Zygand, Deathguard Linnea, Junior Apothecary Holland
+    22. 67.4,57.8  lv 11-13 req 10 pref 12   4 quests   11962 XP   70.4 min   170 XP/min  pick-ups here 3/4  overlaps 9,14,24  from: Gunther Arcanus
+    23. 79.5,25.2  lv 12-12 req  5 pref 12   1 quests    1789 XP   10.8 min   165 XP/min  pick-ups here 0/1  [one quest: later]  from: Executor Zygand
+    24. 65.9,61.1  lv 13-13 req 10 pref 13   1 quests     839 XP    3.2 min   266 XP/min  pick-ups here 1/1  overlaps 9,14,22  [one quest: prerequisite]
+    25. 83.0,43.8  lv 13-13 req  6 pref 13   1 quests    2409 XP   12.3 min   196 XP/min  pick-ups here 0/1  [one quest: later]  from: Deathguard Linnea
+    26. 52.4,28.4  lv 13-13 req  7 pref 13   1 quests    3800 XP   22.3 min   171 XP/min  pick-ups here 0/1  [one quest: later]  from: Magistrate Sevren
+    27. 59.5,52.3  lv 20-20 req  1 pref 20   1 quests     155 XP   10.2 min    15 XP/min  pick-ups here 0/1  overlaps 5,7,14,18,20  [one quest: later]  from: Owen Thadd
+  Zephras Isle (levels 1-13, required 2, preferred 9): 23 areas
+     1. 44.5,24.5  lv  1- 3 req  2 pref  2   7 quests    3912 XP   31.6 min   124 XP/min  pick-ups here 7/7  overlaps 2,3
+     2. 45.2,23.8  lv  3- 4 req  3 pref  4   4 quests    3327 XP   30.1 min   110 XP/min  pick-ups here 4/4  overlaps 1,3
+     3. 42.4,23.6  lv  4- 4 req  4 pref  4   2 quests     552 XP    6.3 min    88 XP/min  pick-ups here 2/2  overlaps 1,2
+     4. 36.8,29.5  lv  5- 5 req  2 pref  5   2 quests    3105 XP   21.9 min   142 XP/min  pick-ups here 2/2
+     5. 44.6,41.9  lv  5- 7 req  4 pref  6  11 quests   24061 XP  143.4 min   168 XP/min  pick-ups here 9/11  overlaps 8  from: Aetheen of the Gales
+     6. 43.3,54.4  lv  7- 9 req  5 pref  8   6 quests   13047 XP   90.0 min   145 XP/min  pick-ups here 6/6  overlaps 7
+     7. 41.9,62.8  lv  8- 8 req  5 pref  8   2 quests    2834 XP   22.3 min   127 XP/min  pick-ups here 1/2  overlaps 6  from: Constable Aonda
+     8. 44.9,45.5  lv  8- 8 req  5 pref  8   1 quests     315 XP    2.5 min   127 XP/min  pick-ups here 1/1  overlaps 5  [one quest: prerequisite]
+     9. 59.1,77.5  lv  9- 9 req  4 pref  9   3 quests    2610 XP    9.1 min   287 XP/min  pick-ups here 3/3  overlaps 10,19
+    10. 62.5,70.2  lv  8- 9 req  6 pref  9   7 quests   23083 XP  134.7 min   171 XP/min  pick-ups here 3/7  overlaps 9,12,14,15,18  from: Aamelia Windfield, Danarii Bellowveil, Constable Aonda
+    11. 48.3,77.7  lv  9- 9 req  5 pref  9   7 quests   20700 XP  122.7 min   169 XP/min  pick-ups here 5/7  from: Nyalah Brightfire, Riaani Nightwind
+    12. 66.2,76.5  lv  9- 9 req  6 pref  9   1 quests    2069 XP   17.6 min   118 XP/min  pick-ups here 0/1  overlaps 10,14,15,18  [one quest: prerequisite]  from: Constable Aonda
+    13. 64.3,35.8  lv 11-12 req  8 pref 11   3 quests    6244 XP   24.6 min   254 XP/min  pick-ups here 3/3  overlaps 21
+    14. 66.2,76.9  lv 11-12 req  7 pref 11   5 quests    3213 XP   14.4 min   223 XP/min  pick-ups here 4/5  overlaps 10,12,18  from: Dead Cultist
+    15. 65.0,67.7  lv 11-12 req  7 pref 11   5 quests    6046 XP   29.0 min   208 XP/min  pick-ups here 4/5  overlaps 10,12,18  from: Ayessa Dawnsinger
+    16. 57.7,31.4  lv  9-11 req  8 pref 11   3 quests   10698 XP   56.7 min   189 XP/min  pick-ups here 0/3  overlaps 21,23  from: Ealaane Nimbuswalker, Endaria Mistgaze
+    17. 56.2,60.1  lv 11-11 req  6 pref 11   2 quests    2632 XP   14.5 min   181 XP/min  pick-ups here 1/2  from: Talaanis Shadowsong
+    18. 65.4,76.1  lv 11-12 req  8 pref 11   3 quests    1900 XP   11.0 min   173 XP/min  pick-ups here 2/3  overlaps 10,12,14,15  from: Elegael Thornpaw
+    19. 59.1,79.8  lv 12-13 req  7 pref 12   2 quests     792 XP    2.8 min   285 XP/min  pick-ups here 2/2  overlaps 9
+    20. 63.5,51.2  lv 12-13 req  8 pref 12   3 quests    4826 XP   22.7 min   213 XP/min  pick-ups here 1/3  from: Valennia Stormfist, Vayn Moongaze
+    21. 59.2,38.9  lv 11-13 req  8 pref 12   6 quests    9026 XP   55.5 min   163 XP/min  pick-ups here 5/6  overlaps 13,16,23  from: Lotheluum Starbreeze
+    22. 74.9,53.0  lv 12-12 req  7 pref 12   1 quests     909 XP    8.4 min   109 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Valennia Stormfist
+    23. 58.0,32.8  lv 13-13 req  8 pref 13   1 quests    2075 XP   13.0 min   160 XP/min  pick-ups here 1/1  overlaps 16,21  [one quest: later]
+  Mulgore (levels 2-31, required 1, preferred 13): 15 areas
+     1. 50.4,84.2  lv  2- 4 req  1 pref  3   8 quests   10639 XP   74.6 min   143 XP/min  pick-ups here 8/8
+     2. 39.7,66.7  lv  5- 6 req  4 pref  5   3 quests    7681 XP   35.9 min   214 XP/min  pick-ups here 3/3
+     3. 61.0,78.0  lv  5- 5 req  3 pref  5   1 quests    1557 XP    9.8 min   159 XP/min  pick-ups here 0/1  [one quest: later]  from: Brave Windfeather
+     4. 51.8,68.4  lv  6- 7 req  4 pref  6   2 quests    3553 XP    8.3 min   427 XP/min  pick-ups here 2/2
+     5. 46.5,63.9  lv  5- 7 req  5 pref  6   8 quests    3615 XP   13.2 min   274 XP/min  pick-ups here 7/8  overlaps 9  from: Antur Fallow
+     6. 44.2,51.1  lv  8- 8 req  4 pref  8   1 quests    1139 XP    4.1 min   278 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+     7. 57.4,62.0  lv  7- 9 req  5 pref  8   7 quests   15747 XP   73.4 min   215 XP/min  pick-ups here 2/7  overlaps 10  from: Mull Thunderhorn, Ruul Eagletalon, Maur Raincaller
+     8. 34.6,56.7  lv  7- 8 req  6 pref  8   4 quests    6451 XP   48.2 min   134 XP/min  pick-ups here 1/4  from: Baine Bloodhoof, Zarlman Two-Moons
+     9. 46.7,63.6  lv  9- 9 req  4 pref  9   2 quests     504 XP    3.8 min   133 XP/min  pick-ups here 1/2  overlaps 5  from: Malah Longwind
+    10. 60.2,64.2  lv 10-10 req  4 pref 10   1 quests    2978 XP   13.6 min   219 XP/min  pick-ups here 0/1  overlaps 7  [one quest: prerequisite]  from: Mull Thunderhorn
+    11. 42.7,25.0  lv 10-10 req  4 pref 10   1 quests    2201 XP   11.9 min   186 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Mull Thunderhorn
+    12. 56.3,30.6  lv 10-10 req 10 pref 10   3 quests    6933 XP   44.4 min   156 XP/min  pick-ups here 1/3  from: Skorn Whitecloud, Seer Wiserunner
+    13. 58.8,47.1  lv 10-12 req  5 pref 11   4 quests    9367 XP   59.9 min   156 XP/min  pick-ups here 0/4  from: Morin Cloudstalker, Boarton Shadetotem
+    14. 51.2,24.8  lv 14-14 req  3 pref 14   1 quests    1387 XP   11.1 min   125 XP/min  pick-ups here 0/1  [one quest: later]  from: Cairne Bloodhoof
+    15. 33.3, 9.8  lv 30-31 req 23 pref 30   4 quests   21533 XP   46.3 min   465 XP/min  pick-ups here 4/4
+  Silverpine Forest (levels 10-34, required 1, preferred 16): 20 areas
+     1. 53.7,25.8  lv 10-11 req 12 pref 10   2 quests    3297 XP   10.1 min   325 XP/min  pick-ups here 0/2  from: Dalar Dawnweaver
+     2. 43.6,41.4  lv 10-12 req 10 pref 10   5 quests    3686 XP   29.0 min   127 XP/min  pick-ups here 2/5  overlaps 9,16  from: Apothecary Johaan, Michael Garrett, Rane Yorick
+     3. 53.2,13.2  lv 11-12 req 10 pref 11   5 quests    8559 XP   28.8 min   297 XP/min  pick-ups here 2/5  from: Apothecary Renferrel, High Executor Hadrec
+     4. 49.7,79.3  lv 11-11 req 10 pref 11   1 quests    4538 XP   24.5 min   186 XP/min  pick-ups here 0/1  overlaps 8,15  [one quest: prerequisite]  from: Rane Yorick
+     5. 78.7,31.6  lv 11-11 req 10 pref 11   1 quests    2899 XP   16.8 min   172 XP/min  pick-ups here 0/1  overlaps 13  [one quest: later]  from: Quinn Yorick
+     6. 35.7,14.6  lv 12-12 req  9 pref 12   1 quests    4993 XP   30.4 min   164 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Apothecary Renferrel
+     7. 43.3,25.0  lv 14-14 req 10 pref 14   2 quests    5756 XP   22.0 min   262 XP/min  pick-ups here 0/2  from: High Executor Hadrec, Dalar Dawnweaver
+     8. 46.9,71.8  lv 14-16 req 12 pref 15   5 quests   11045 XP   40.2 min   275 XP/min  pick-ups here 1/5  overlaps 4  from: Dalar Dawnweaver, Shadow Priest Allister, Master Apothecary Faranell
+     9. 43.6,41.1  lv 14-16 req 12 pref 15   8 quests    4380 XP   39.1 min   112 XP/min  pick-ups here 3/8  overlaps 2,16  from: Dalaran Crate, Clarice Foster, Tonga Runetotem
+    10. 58.5,39.9  lv 15-16 req 10 pref 16   2 quests    2990 XP    9.7 min   309 XP/min  pick-ups here 0/2  from: Dalar Dawnweaver, High Executor Hadrec
+    11. 59.5,65.6  lv 16-16 req 10 pref 16   1 quests    3538 XP   13.5 min   263 XP/min  pick-ups here 0/1  overlaps 14,17,18  [one quest: prerequisite]  from: Shadow Priest Allister
+    12. 65.7,25.2  lv 17-18 req 12 pref 18   2 quests    7082 XP   22.5 min   314 XP/min  pick-ups here 1/2  overlaps 19  from: High Executor Hadrec
+    13. 77.7,29.8  lv 18-18 req  9 pref 18   1 quests    7804 XP   39.6 min   197 XP/min  pick-ups here 0/1  overlaps 5  [one quest: later]  from: Apothecary Renferrel
+    14. 60.5,73.8  lv 20-21 req 16 pref 20   2 quests    5384 XP   13.9 min   388 XP/min  pick-ups here 0/2  overlaps 11,18  from: Shadow Priest Allister
+    15. 45.2,85.0  lv 20-20 req 10 pref 20   2 quests    3604 XP   16.6 min   217 XP/min  pick-ups here 0/2  overlaps 4  from: Raleigh Andrean, Dalar Dawnweaver
+    16. 43.4,41.2  lv 20-20 req  1 pref 20   1 quests     155 XP   10.2 min    15 XP/min  pick-ups here 0/1  overlaps 2,9  [one quest: later]  from: Owen Thadd
+    17. 63.5,63.7  lv 20-22 req 10 pref 21   2 quests    2270 XP   14.6 min   156 XP/min  pick-ups here 0/2  overlaps 11  from: Owen Thadd, Shadow Priest Allister
+    18. 58.4,70.5  lv 23-23 req 20 pref 23   2 quests    4212 XP    4.7 min   900 XP/min  pick-ups here 2/2  overlaps 11,14
+    19. 65.7,23.7  lv 24-24 req 10 pref 24   1 quests    3010 XP    8.1 min   372 XP/min  pick-ups here 0/1  overlaps 12  [one quest: worth the time]  from: High Executor Hadrec
+    20. 68.3,45.5  lv 34-34 req 30 pref 34   1 quests     270 XP   20.2 min    13 XP/min  pick-ups here 0/1  [one quest: later]  from: Magus Wordeen Voidglare
+  The Barrens (levels 10-52, required 9, preferred 19): 29 areas
+     1. 51.9,30.4  lv 10-10 req 10 pref 10   6 quests    3247 XP   30.4 min   107 XP/min  pick-ups here 2/6  overlaps 3,10  from: Melor Stonehoof, Arch Druid Hamuul Runetotem, Tal
+     2. 63.4,38.5  lv 11-11 req  9 pref 11   1 quests    1198 XP    4.9 min   246 XP/min  pick-ups here 0/1  overlaps 4,6,8,13,21,23,29  [one quest: later]  from: Apothecary Helbrim
+     3. 52.7,31.0  lv 12-13 req 10 pref 12   6 quests   14703 XP   66.9 min   220 XP/min  pick-ups here 3/6  overlaps 1,10  from: Kargal Battlescar, Kirge Sternhorn, Thrall
+     4. 59.1,33.8  lv 13-13 req  9 pref 13   1 quests    6905 XP   24.8 min   278 XP/min  pick-ups here 1/1  overlaps 2,6,11,13,21,23  [one quest: prerequisite]
+     5. 61.2,21.7  lv 12-14 req 10 pref 13   3 quests    3302 XP   31.3 min   105 XP/min  pick-ups here 0/3  overlaps 11  from: Takrin Pathseeker, Neeru Fireblade, Thork
+     6. 63.0,37.3  lv 14-14 req  9 pref 14   2 quests     684 XP    2.4 min   280 XP/min  pick-ups here 2/2  overlaps 2,4,13,21,23,29
+     7. 44.6,20.5  lv 13-15 req 12 pref 14   5 quests   21890 XP   78.9 min   278 XP/min  pick-ups here 1/5  overlaps 14  from: Tonga Runetotem, Ak'Zeloth, Apothecary Helbrim
+     8. 62.9,46.5  lv 14-14 req  9 pref 14   2 quests    7100 XP   28.9 min   246 XP/min  pick-ups here 2/2  overlaps 2,15,27,29
+     9. 53.1,11.7  lv 14-16 req 10 pref 14   6 quests   16022 XP   66.2 min   242 XP/min  pick-ups here 3/6  overlaps 18  from: Sputtervalve, Sergra Darkthorn
+    10. 51.6,28.6  lv 15-15 req 11 pref 15   2 quests    8466 XP   36.5 min   232 XP/min  pick-ups here 0/2  overlaps 1,3  from: Brewmaster Drohn, Apothecary Zinge
+    11. 59.0,25.2  lv 15-15 req  9 pref 15   1 quests    4918 XP   26.5 min   186 XP/min  pick-ups here 1/1  overlaps 4,5,23  [one quest: later]
+    12. 45.0,36.6  lv 15-16 req 10 pref 16   2 quests   10194 XP   37.8 min   269 XP/min  pick-ups here 2/2  overlaps 19
+    13. 63.0,37.2  lv 16-16 req 10 pref 16   1 quests    4210 XP   19.7 min   214 XP/min  pick-ups here 0/1  overlaps 2,4,6,21,23,29  [one quest: prerequisite]  from: Control Console
+    14. 38.8,22.3  lv 16-17 req 13 pref 16   3 quests    9152 XP   47.0 min   195 XP/min  pick-ups here 1/3  overlaps 7  from: Darsok Swiftdagger, Zor Lonetree
+    15. 57.4,47.8  lv 16-18 req 13 pref 17   7 quests   22408 XP   83.6 min   268 XP/min  pick-ups here 2/7  overlaps 8,22  from: Tonga Runetotem, Gazlowe, Sergra Darkthorn
+    16. 46.0,60.8  lv 18-18 req 10 pref 18   2 quests    7778 XP   27.2 min   286 XP/min  pick-ups here 1/2  from: Sergra Darkthorn
+    17. 43.8,10.9  lv 18-20 req 17 pref 18   7 quests   11407 XP   45.7 min   250 XP/min  pick-ups here 4/7  from: Thork, Darn Talongrip, Darsok Swiftdagger
+    18. 57.0, 7.2  lv 18-20 req 13 pref 18   4 quests   11873 XP   53.8 min   221 XP/min  pick-ups here 2/4  overlaps 9  from: Wharfmaster Dizzywig, Owen Thadd
+    19. 46.0,41.1  lv 19-19 req 11 pref 19   1 quests    3002 XP   12.7 min   236 XP/min  pick-ups here 1/1  overlaps 12  [one quest: later]
+    20. 48.2,52.2  lv 20-21 req 14 pref 20   6 quests   33662 XP  110.4 min   305 XP/min  pick-ups here 3/6  from: Mankrik
+    21. 62.1,35.7  lv 18-20 req 15 pref 20   5 quests   17359 XP   69.7 min   249 XP/min  pick-ups here 1/5  overlaps 2,4,6,13,23,29  from: Vrang Wildgore, Jorn Skyseer, Gilthares Firebough
+    22. 55.6,43.9  lv 20-20 req 13 pref 20   2 quests    3872 XP   28.6 min   135 XP/min  pick-ups here 1/2  overlaps 15  from: Owen Thadd
+    23. 60.4,31.8  lv 21-21 req 16 pref 21   2 quests    3469 XP   14.4 min   241 XP/min  pick-ups here 1/2  overlaps 2,4,6,11,13,21  from: Ziz Fizziks
+    24. 46.5,78.7  lv 22-24 req 18 pref 23   4 quests   28010 XP   81.8 min   343 XP/min  pick-ups here 1/4  overlaps 25,26,28  from: Korran, Grunt Logmar, Tatternack Steelforge
+    25. 43.0,81.3  lv 25-25 req 17 pref 25   1 quests    5541 XP   19.2 min   288 XP/min  pick-ups here 0/1  overlaps 24,26  [one quest: prerequisite]  from: Mangletooth
+    26. 48.2,84.8  lv 26-26 req 17 pref 26   2 quests   12522 XP   35.2 min   355 XP/min  pick-ups here 2/2  overlaps 24,25,28
+    27. 65.1,47.2  lv 27-27 req 10 pref 27   2 quests    4210 XP    5.7 min   738 XP/min  pick-ups here 1/2  overlaps 8,29  from: Jorn Skyseer
+    28. 49.1,84.2  lv 30-30 req 22 pref 30   1 quests    2450 XP    1.0 min  2450 XP/min  pick-ups here 1/1  overlaps 24,26  [one quest: worth the time]
+    29. 63.6,40.4  lv 51-52 req 48 pref 52   3 quests   10000 XP   30.9 min   324 XP/min  pick-ups here 0/3  overlaps 2,6,8,13,21,27  from: Marvon Rivetseeker, Larion, Greta Mosshoof
+  Westfall (levels 16-35, required 1, preferred 22): 4 areas
+     1. 51.7,25.5  lv 16-16 req 10 pref 16   1 quests    3960 XP   17.7 min   224 XP/min  pick-ups here 0/1  [one quest: later]  from: Captain Grayson
+     2. 28.2,74.1  lv 19-20 req 15 pref 20   2 quests    6242 XP   18.9 min   329 XP/min  pick-ups here 2/2
+     3. 45.4,70.4  lv 20-20 req  1 pref 20   1 quests     155 XP   10.2 min    15 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+     4. 45.0,21.8  lv 35-35 req 28 pref 35   1 quests    2750 XP   25.0 min   110 XP/min  pick-ups here 0/1  [one quest: later]  from: Nogg
+  Stonetalon Mountains (levels 18-30, required 13, preferred 24): 14 areas
+     1. 76.7,89.8  lv 18-20 req 15 pref 18   5 quests    8573 XP   41.4 min   207 XP/min  pick-ups here 1/5  from: Makaba Flathoof, Owen Thadd, Darsok Swiftdagger
+     2. 58.5,90.6  lv 18-20 req 14 pref 19   2 quests    5294 XP   15.8 min   335 XP/min  pick-ups here 0/2  from: Mor'rogal
+     3. 66.3,50.8  lv 19-19 req 13 pref 19   1 quests    3250 XP   17.5 min   186 XP/min  pick-ups here 0/1  overlaps 5,8  [one quest: prerequisite]  from: Seereth Stonebreak
+     4. 55.1,70.9  lv 19-21 req 16 pref 20   4 quests    9278 XP   37.1 min   250 XP/min  pick-ups here 1/4  from: Xen'Zilla, Mebok Mizzyrix, Sputtervalve
+     5. 68.8,55.5  lv 21-22 req 17 pref 22   2 quests    6809 XP   14.1 min   484 XP/min  pick-ups here 1/2  overlaps 3  from: Ziz Fizziks
+     6. 59.0,62.6  lv 22-22 req 17 pref 22   1 quests    3075 XP    8.5 min   362 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Piznik
+     7. 48.8,40.7  lv 23-23 req 17 pref 23   1 quests    1684 XP    5.2 min   321 XP/min  pick-ups here 0/1  overlaps 11  [one quest: prerequisite]  from: Tammra Windfield
+     8. 66.8,46.1  lv 23-23 req 13 pref 23   2 quests    5430 XP   24.4 min   223 XP/min  pick-ups here 0/2  overlaps 3,12  from: Seereth Stonebreak, Apothecary Zamah
+     9. 32.1,65.9  lv 25-26 req 19 pref 26   5 quests   28538 XP   65.2 min   438 XP/min  pick-ups here 0/5  from: Maggran Earthbinder, Tammra Windfield, Tsunaman
+    10. 36.1,15.0  lv 25-26 req 20 pref 26   2 quests   11473 XP   40.1 min   286 XP/min  pick-ups here 0/2  from: Braelyn Firehand, Witch Doctor Jin'Zil
+    11. 48.1,40.3  lv 26-26 req 20 pref 26   1 quests    2100 XP   17.5 min   120 XP/min  pick-ups here 0/1  overlaps 7  [one quest: later]  from: Tah Winterhoof
+    12. 64.5,40.2  lv 27-27 req 16 pref 27   1 quests    2683 XP    3.5 min   763 XP/min  pick-ups here 0/1  overlaps 8  [one quest: worth the time]  from: Ziz Fizziks
+    13. 28.7,15.3  lv 29-29 req 20 pref 29   2 quests    5925 XP   15.9 min   372 XP/min  pick-ups here 0/2  from: Braelyn Firehand, Kadrak
+    14. 78.8,45.7  lv 30-30 req 25 pref 30   2 quests    1445 XP   10.3 min   141 XP/min  pick-ups here 1/2  from: Dorn Plainstalker
+  Ashenvale (levels 19-60, required 14, preferred 29): 10 areas
+     1. 11.8,26.2  lv 19-19 req 14 pref 19   1 quests    8798 XP   25.0 min   352 XP/min  pick-ups here 1/1  overlaps 3  [one quest: later]
+     2. 40.1,61.3  lv 22-22 req 18 pref 22   2 quests    4621 XP    6.0 min   764 XP/min  pick-ups here 2/2
+     3.  9.6,27.6  lv 23-23 req 20 pref 23   1 quests    2767 XP    3.2 min   853 XP/min  pick-ups here 1/1  overlaps 1  [one quest: worth the time]
+     4. 38.4,35.6  lv 24-24 req 21 pref 24   3 quests   14421 XP   36.9 min   391 XP/min  pick-ups here 1/3  overlaps 7  from: Karang Amakkar, Mitsuwa
+     5. 53.7,70.3  lv 24-26 req 23 pref 25   8 quests   25707 XP   50.9 min   505 XP/min  pick-ups here 0/8  from: Alonso, Torek, Kuray'bin
+     6. 79.1,46.9  lv 26-26 req 21 pref 26   1 quests    9757 XP   21.6 min   452 XP/min  pick-ups here 0/1  [one quest: later]  from: Pixel
+     7. 38.1,35.6  lv 27-27 req 22 pref 27   1 quests    5275 XP   15.2 min   348 XP/min  pick-ups here 0/1  overlaps 4  [one quest: later]  from: Locke Okarr
+     8. 62.0,51.4  lv 29-29 req 20 pref 29   1 quests    2772 XP   11.1 min   249 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Braelyn Firehand
+     9. 74.7,67.9  lv 30-30 req 25 pref 30   2 quests    4921 XP   11.4 min   431 XP/min  pick-ups here 1/2  overlaps 10  from: Braug Dimspirit
+    10. 74.8,73.6  lv 60-60 req 26 pref 60   9 quests    9900 XP   46.8 min   212 XP/min  pick-ups here 0/9  overlaps 9  from: Ralston Farnsley, Rumstag Proudstrider, Rashona Straglash
+  Hillsbrad Foothills (levels 22-60, required 17, preferred 31): 9 areas
+     1. 78.5,41.8  lv 22-23 req 17 pref 22   3 quests   13728 XP   32.8 min   418 XP/min  pick-ups here 0/3  from: Krusk, WANTED, Apothecary Lydon
+     2. 34.5,59.9  lv 22-22 req 19 pref 22   1 quests    9517 XP   30.9 min   308 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Apothecary Lydon
+     3. 53.1,37.3  lv 24-24 req 21 pref 24   1 quests    7559 XP   14.8 min   509 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Apothecary Lydon
+     4. 32.8,41.4  lv 24-26 req 21 pref 25   6 quests   26450 XP   56.3 min   469 XP/min  pick-ups here 0/6  overlaps 5  from: High Executor Darthalia, Apothecary Lydon, Deathguard Samsa
+     5. 31.7,49.4  lv 28-28 req 19 pref 28   2 quests    6279 XP   14.1 min   445 XP/min  pick-ups here 0/2  overlaps 4  from: High Executor Darthalia, Dangerous!
+     6. 64.4,61.3  lv 28-28 req 24 pref 28   1 quests    3037 XP    7.6 min   398 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Apothecary Lydon
+     7. 69.5,79.7  lv 30-30 req 26 pref 30   4 quests   17381 XP   41.2 min   422 XP/min  pick-ups here 0/4  from: Apothecary Lydon, High Executor Darthalia, Deathguard Humbert
+     8. 44.1,28.3  lv 33-33 req 29 pref 33   2 quests    7748 XP   11.0 min   704 XP/min  pick-ups here 0/2  from: Novice Thaivand
+     9. 16.6,79.6  lv 60-60 req 58 pref 60   2 quests   14594 XP   12.2 min  1194 XP/min  pick-ups here 0/2  from: Bodley
+  Thousand Needles (levels 25-35, required 1, preferred 29): 13 areas
+     1. 54.4,52.8  lv 26-26 req 24 pref 26   1 quests    2423 XP    2.3 min  1044 XP/min  pick-ups here 0/1  overlaps 11  [one quest: prerequisite]  from: Hagar Lightninghoof
+     2. 21.5,32.4  lv 26-26 req 24 pref 26   1 quests    2179 XP    6.3 min   344 XP/min  pick-ups here 0/1  overlaps 5  [one quest: prerequisite]  from: Hagar Lightninghoof
+     3. 37.7,39.3  lv 25-27 req 25 pref 26   4 quests   19168 XP   60.8 min   315 XP/min  pick-ups here 0/4  overlaps 6,13  from: Cliffwatcher Longhorn, Brave Moonhorn, Dorn Plainstalker
+     4. 34.2,31.1  lv 28-28 req 24 pref 28   3 quests    8676 XP   34.9 min   249 XP/min  pick-ups here 0/3  from: Cliffwatcher Longhorn, Magatha Grimtotem, Maggran Earthbinder
+     5. 17.6,32.5  lv 28-30 req 25 pref 29   5 quests   17956 XP   29.5 min   608 XP/min  pick-ups here 3/5  overlaps 2  from: Elu, Dorn Plainstalker
+     6. 39.3,36.8  lv 29-29 req 25 pref 29   4 quests   12888 XP   34.4 min   375 XP/min  pick-ups here 1/4  overlaps 3,13  from: Rau Cliffrunner, Wanted Poster - Arnak Grimtotem, Zangen Stonehoof
+     7. 84.1,64.3  lv 30-30 req 29 pref 30   3 quests   20532 XP   34.0 min   604 XP/min  pick-ups here 1/3  from: Fizzle Brassbolts, Wizzle Brassbolts
+     8. 26.7,53.8  lv 30-31 req 27 pref 30   2 quests    9974 XP   20.6 min   483 XP/min  pick-ups here 0/2  from: Dorn Plainstalker, Jandia
+     9. 15.0,19.0  lv 29-30 req 25 pref 30   2 quests    5655 XP   22.9 min   247 XP/min  pick-ups here 0/2  from: Tatternack Steelforge, Melor Stonehoof
+    10. 78.4,87.1  lv 31-33 req 28 pref 32   2 quests   12354 XP   27.8 min   444 XP/min  pick-ups here 2/2
+    11. 52.4,50.0  lv 33-33 req 25 pref 33   1 quests    3624 XP   11.1 min   326 XP/min  pick-ups here 0/1  overlaps 1  [one quest: later]  from: Calder Gray
+    12. 68.3,84.7  lv 35-35 req 29 pref 35   1 quests    6430 XP   11.1 min   578 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Moktar Krin
+    13. 34.5,40.1  lv 35-35 req  1 pref 35   1 quests     275 XP   10.2 min    27 XP/min  pick-ups here 0/1  overlaps 3,6  [one quest: later]  from: Owen Thadd
+  Desolace (levels 30-40, required 25, preferred 36): 15 areas
+     1. 52.6,54.4  lv 30-30 req 30 pref 30   1 quests    1200 XP   10.0 min   120 XP/min  pick-ups here 0/1  overlaps 5,8  [one quest: prerequisite]  from: Keldran
+     2. 71.7,45.1  lv 31-31 req 30 pref 31   1 quests   12491 XP   24.0 min   521 XP/min  pick-ups here 0/1  overlaps 6  [one quest: later]  from: Felgur Twocuts
+     3. 75.9,19.6  lv 33-33 req 25 pref 33   2 quests   16598 XP   34.2 min   486 XP/min  pick-ups here 0/2  from: Takata Steelblade, Maurin Bonesplitter
+     4. 55.0,27.7  lv 33-35 req 30 pref 33   3 quests   18158 XP   45.9 min   396 XP/min  pick-ups here 0/3  overlaps 13  from: Maurin Bonesplitter, Azore Aldamort, Owen Thadd
+     5. 53.2,57.4  lv 32-34 req 30 pref 33   3 quests    3855 XP   13.8 min   280 XP/min  pick-ups here 2/3  overlaps 1,8  from: Regthar Deathgate
+     6. 73.7,45.2  lv 35-35 req 30 pref 35   1 quests    5901 XP    9.1 min   646 XP/min  pick-ups here 0/1  overlaps 2  [one quest: prerequisite]  from: Felgur Twocuts
+     7. 67.2,56.6  lv 35-35 req 30 pref 35   1 quests    3869 XP    6.1 min   634 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Cork Gizelton
+     8. 54.0,55.1  lv 35-35 req 32 pref 35   2 quests    2449 XP   10.7 min   228 XP/min  pick-ups here 1/2  overlaps 1,5  from: Cliffwatcher Longhorn
+     9. 33.5,22.3  lv 35-36 req 32 pref 36   4 quests   25780 XP   55.1 min   468 XP/min  pick-ups here 1/4  from: Mai'Lahii, Maurin Bonesplitter, Drulzegar Skraghook
+    10. 22.4,73.1  lv 37-37 req 32 pref 37   1 quests    4144 XP    9.0 min   459 XP/min  pick-ups here 0/1  [one quest: later]  from: Nataka Longhorn
+    11. 53.9,70.4  lv 38-40 req 33 pref 38   4 quests   18991 XP   27.8 min   682 XP/min  pick-ups here 0/4  from: Taiga Wisemane, Rigger Gizelton, Bibbly F'utzbuckle
+    12. 28.2, 6.7  lv 38-38 req 30 pref 38   1 quests    5658 XP    8.7 min   653 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Azore Aldamort
+    13. 55.0,26.6  lv 38-38 req 32 pref 38   1 quests    6588 XP   14.5 min   455 XP/min  pick-ups here 0/1  overlaps 4  [one quest: prerequisite]  from: Taiga Wisemane
+    14. 64.2,91.6  lv 39-39 req 34 pref 39   1 quests    8377 XP   17.6 min   477 XP/min  pick-ups here 0/1  [one quest: later]  from: Hornizz Brimbuzzle
+    15. 35.5,60.4  lv 39-40 req 34 pref 40   2 quests   10018 XP   17.5 min   574 XP/min  pick-ups here 1/2  from: Gurda Wildmane
+  Stranglethorn Vale (levels 30-60, required 28, preferred 41): 28 areas
+     1. 36.7,11.2  lv 30-32 req 28 pref 31   7 quests   19706 XP   61.7 min   320 XP/min  pick-ups here 3/7  from: Drizzlik, Kravel Koalbeard, Roon Wildmane
+     2. 29.6,12.4  lv 33-33 req 28 pref 33   2 quests   13065 XP   30.0 min   435 XP/min  pick-ups here 2/2  overlaps 3,4,8
+     3. 24.4,14.1  lv 34-34 req 30 pref 34   2 quests   20531 XP   44.3 min   464 XP/min  pick-ups here 0/2  overlaps 2,4,8,15  from: Hemet Nesingwary, Nimboya
+     4. 26.9,18.6  lv 35-35 req 30 pref 35   3 quests   29462 XP   69.8 min   422 XP/min  pick-ups here 0/3  overlaps 2,3,8  from: Ajeck Rouack, Kebok, Wizzle Brassbolts
+     5. 41.1,49.8  lv 35-35 req 30 pref 35   2 quests    9061 XP   24.5 min   370 XP/min  pick-ups here 0/2  overlaps 24,28  from: Crank Fizzlebub, Owen Thadd
+     6. 42.8,21.4  lv 36-37 req 31 pref 36   3 quests   24501 XP   45.7 min   536 XP/min  pick-ups here 0/3  from: Kebok, Drizzlik, Baron Revilgaz
+     7. 33.6,25.2  lv 35-36 req 33 pref 36   3 quests   16534 XP   35.1 min   471 XP/min  pick-ups here 1/3  overlaps 23  from: Nazeer Bloodpike, Hemet Nesingwary
+     8. 26.0,18.3  lv 37-38 req 31 pref 37   6 quests   52738 XP  118.7 min   444 XP/min  pick-ups here 3/6  overlaps 2,3,4  from: Ajeck Rouack, Rigglefuzz, Drizzlik
+     9. 38.2,35.9  lv 37-38 req 33 pref 38   3 quests   28978 XP   52.8 min   549 XP/min  pick-ups here 2/3  overlaps 16  from: Sir S. J. Erlgadin
+    10. 45.5,37.6  lv 40-42 req 37 pref 40   9 quests  189990 XP  368.9 min   515 XP/min  pick-ups here 0/9  overlaps 24,28  from: Barnil Stonepot, Bubbling Cauldron, Sir S. J. Erlgadin
+    11. 27.3,69.5  lv 41-41 req 37 pref 41   1 quests    2826 XP    1.4 min  2008 XP/min  pick-ups here 1/1  overlaps 19,20  [one quest: prerequisite]
+    12. 28.3,80.9  lv 40-42 req 37 pref 41   6 quests   27462 XP   38.2 min   720 XP/min  pick-ups here 5/6  overlaps 17,20,21,26  from: Shakes O'Breen
+    13. 33.1,64.1  lv 41-41 req 33 pref 41   2 quests   13089 XP   20.1 min   651 XP/min  pick-ups here 0/2  overlaps 25  from: Far Seer Mok'thardin, "Sea Wolf" MacKinley
+    14. 29.8,44.3  lv 41-43 req 33 pref 41   3 quests   21067 XP   32.5 min   649 XP/min  pick-ups here 0/3  from: Hemet Nesingwary, Far Seer Mok'thardin
+    15. 23.5, 8.8  lv 41-41 req 30 pref 41   1 quests    5897 XP    9.6 min   614 XP/min  pick-ups here 0/1  overlaps 3  [one quest: prerequisite]  from: Nimboya
+    16. 38.2,35.6  lv 43-43 req 28 pref 43   1 quests    6447 XP    4.9 min  1302 XP/min  pick-ups here 0/1  overlaps 9  [one quest: worth the time]  from: Hemet Nesingwary
+    17. 27.9,79.9  lv 43-43 req 37 pref 43   2 quests    9853 XP   21.9 min   450 XP/min  pick-ups here 1/2  overlaps 12,20,21,26  from: Kravel Koalbeard
+    18. 37.6,57.8  lv 44-46 req 40 pref 44   4 quests   34664 XP   40.5 min   856 XP/min  pick-ups here 0/4  from: "Sea Wolf" MacKinley, Crank Fizzlebub, Fin Fizracket
+    19. 26.6,61.9  lv 43-44 req 38 pref 44   2 quests   19925 XP   30.6 min   652 XP/min  pick-ups here 0/2  overlaps 11  from: Privateer Bloads, Far Seer Mok'thardin
+    20. 27.1,77.2  lv 44-44 req 35 pref 44   1 quests    1850 XP   10.0 min   185 XP/min  pick-ups here 0/1  overlaps 11,12,17,21,26  [one quest: later]  from: Kravel Koalbeard
+    21. 29.4,83.1  lv 45-45 req 40 pref 45   2 quests   11717 XP   17.1 min   684 XP/min  pick-ups here 1/2  overlaps 12,17,20,26  from: Stoley
+    22. 52.0,27.6  lv 44-46 req 30 pref 45   2 quests   20251 XP   31.0 min   653 XP/min  pick-ups here 0/2  overlaps 27  from: "Sea Wolf" MacKinley, Kin'weelay
+    23. 32.3,27.7  lv 45-45 req 30 pref 45   1 quests     390 XP    1.0 min   390 XP/min  pick-ups here 1/1  overlaps 7  [one quest: prerequisite]
+    24. 44.8,45.5  lv 45-46 req 30 pref 46   2 quests   21981 XP   36.8 min   597 XP/min  pick-ups here 0/2  overlaps 5,10,28  from: Kin'weelay, Bubbling Cauldron
+    25. 37.0,69.7  lv 47-47 req 35 pref 47   1 quests    3858 XP    2.6 min  1499 XP/min  pick-ups here 0/1  overlaps 13  [one quest: worth the time]  from: Captain Hecklebury Smotts
+    26. 32.1,78.9  lv 50-51 req 45 pref 50   4 quests   31458 XP   16.8 min  1877 XP/min  pick-ups here 4/4  overlaps 12,17,20,21
+    27. 50.6,20.5  lv 58-58 req 45 pref 58   2 quests    5885 XP   11.4 min   514 XP/min  pick-ups here 1/2  overlaps 22  from: Loramus Thalipedes
+    28. 43.7,44.2  lv 60-60 req 40 pref 60   4 quests   13200 XP   35.5 min   372 XP/min  pick-ups here 0/4  overlaps 5,10,24  from: Ralston Farnsley, Rumstag Proudstrider, Rashona Straglash
+  Alterac Mountains (levels 32-44, required 1, preferred 38): 10 areas
+     1. 18.7,82.2  lv 32-34 req 30 pref 33   2 quests   12544 XP   26.1 min   481 XP/min  pick-ups here 0/2  from: Keeper Bel'varil, Magus Wordeen Voidglare
+     2. 18.7,59.0  lv 33-35 req 30 pref 34   3 quests    6671 XP   15.8 min   422 XP/min  pick-ups here 0/3  from: Magus Wordeen Voidglare, Keeper Bel'varil
+     3. 58.6,68.2  lv 34-34 req 29 pref 34   2 quests    4197 XP   13.6 min   308 XP/min  pick-ups here 1/2  from: Krusk
+     4. 48.5,57.7  lv 35-35 req  1 pref 35   1 quests     275 XP   10.2 min    27 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+     5. 61.6,42.6  lv 36-36 req 29 pref 36   1 quests    4851 XP   14.8 min   327 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Krusk
+     6. 37.5,67.2  lv 37-37 req 26 pref 37   1 quests    4761 XP   11.1 min   428 XP/min  pick-ups here 0/1  [one quest: later]  from: Melor Stonehoof
+     7. 40.9,46.6  lv 39-41 req 34 pref 40   2 quests    8736 XP   18.8 min   466 XP/min  pick-ups here 0/2  from: Melisara
+     8. 55.9,25.6  lv 40-40 req 35 pref 40   1 quests    3694 XP   11.2 min   331 XP/min  pick-ups here 0/1  [one quest: later]  from: WANTED
+     9. 39.3,14.6  lv 42-42 req 29 pref 42   1 quests    4991 XP   11.8 min   424 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Krusk
+    10. 35.6,54.3  lv 43-44 req 34 pref 44   2 quests   12638 XP   25.6 min   494 XP/min  pick-ups here 0/2  from: Melisara, Keeper Bel'dugur
+  Arathi Highlands (levels 32-60, required 1, preferred 39): 19 areas
+     1. 66.4,73.8  lv 32-32 req 30 pref 32   1 quests   11481 XP   22.9 min   502 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Drum Fel
+     2. 25.4,25.8  lv 32-33 req 30 pref 32   3 quests    9453 XP   33.9 min   279 XP/min  pick-ups here 1/3  from: Carved Figurine, Tor'gan
+     3. 33.0,44.6  lv 32-32 req 30 pref 32   1 quests    8315 XP   29.0 min   287 XP/min  pick-ups here 0/1  [one quest: later]  from: Tallow
+     4. 71.6,36.9  lv 34-34 req 29 pref 34   4 quests    8577 XP   16.3 min   525 XP/min  pick-ups here 4/4  overlaps 8,13,16
+     5. 73.6,65.2  lv 35-35 req  1 pref 35   1 quests     275 XP   10.2 min    27 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+     6. 82.0,34.9  lv 37-37 req 30 pref 37   1 quests    9601 XP   19.1 min   501 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Shards of Myzrael
+     7. 26.7,63.8  lv 37-37 req 32 pref 37   1 quests    6391 XP   14.7 min   434 XP/min  pick-ups here 0/1  overlaps 14  [one quest: prerequisite]  from: Zengu
+     8. 68.7,34.3  lv 36-38 req 32 pref 37   5 quests   14175 XP   45.7 min   310 XP/min  pick-ups here 2/5  overlaps 4,13,15,16  from: Genavie Callow, Nimboya, Iridescent Shards
+     9. 52.1,71.9  lv 37-38 req 30 pref 38   2 quests   16876 XP   34.0 min   497 XP/min  pick-ups here 0/2  from: Tor'gan, Drum Fel
+    10. 32.8,81.1  lv 40-40 req 35 pref 40   3 quests    7850 XP   10.5 min   749 XP/min  pick-ups here 2/3  overlaps 17  from: Fleet Master Seahorn
+    11. 22.0,87.1  lv 40-40 req 35 pref 40   3 quests   19782 XP   27.1 min   729 XP/min  pick-ups here 0/3  from: First Mate Nilzlix, Captain Steelgut, Doctor Draxlegauge
+    12. 19.5,67.1  lv 40-40 req 30 pref 40   2 quests   18235 XP   33.9 min   538 XP/min  pick-ups here 0/2  overlaps 19  from: Drum Fel, Korin Fel
+    13. 74.2,34.8  lv 40-40 req 32 pref 40   2 quests    3773 XP    7.9 min   475 XP/min  pick-ups here 1/2  overlaps 4,8,16  from: Keystone
+    14. 28.9,58.5  lv 40-42 req 35 pref 41   5 quests   25475 XP   36.1 min   705 XP/min  pick-ups here 0/5  overlaps 7  from: Zengu, Tor'gan
+    15. 63.9,30.0  lv 42-42 req 30 pref 42   1 quests    4527 XP    6.9 min   656 XP/min  pick-ups here 0/1  overlaps 8,18  [one quest: prerequisite]  from: Stone of Inner Binding
+    16. 73.8,34.0  lv 42-42 req 32 pref 42   1 quests    5404 XP    9.1 min   594 XP/min  pick-ups here 0/1  overlaps 4,8,13  [one quest: later]  from: Trollbane's Tomb
+    17. 31.9,81.8  lv 44-44 req 35 pref 44   1 quests    4650 XP    1.0 min  4650 XP/min  pick-ups here 1/1  overlaps 10  [one quest: worth the time]
+    18. 62.6,34.1  lv 50-50 req 30 pref 50   1 quests    7453 XP   11.1 min   669 XP/min  pick-ups here 0/1  overlaps 15  [one quest: worth the time]  from: Theldurin the Lost
+    19. 19.2,66.5  lv 60-60 req 57 pref 60   1 quests    6600 XP   10.2 min   644 XP/min  pick-ups here 0/1  overlaps 12  [one quest: prerequisite]  from: Magistrate Marduke
+  Badlands (levels 35-50, required 1, preferred 41): 11 areas
+     1. 56.7,39.9  lv 35-35 req  1 pref 35   1 quests     275 XP   10.2 min    27 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+     2. 19.7,43.9  lv 37-37 req 35 pref 37   1 quests    8731 XP   12.7 min   686 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+     3. 42.2,29.8  lv 37-37 req 35 pref 37   1 quests    3574 XP    6.7 min   530 XP/min  pick-ups here 0/1  [one quest: later]  from: Lucien Tosselwrench
+     4. 42.0,80.5  lv 39-39 req 35 pref 39   1 quests    6074 XP    9.7 min   625 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Lotwil Veriatus
+     5. 50.3,68.3  lv 39-39 req 28 pref 39   1 quests    6555 XP   14.3 min   459 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Martek the Exiled
+     6. 52.3,79.0  lv 40-41 req 30 pref 40   3 quests    9379 XP   14.7 min   636 XP/min  pick-ups here 1/3  from: Gerrig Bonegrip
+     7. 57.2,54.3  lv 39-40 req 36 pref 40   2 quests   33654 XP   65.0 min   518 XP/min  pick-ups here 0/2  from: Jarkal Mossmeld, Neeka Bloodscar
+     8. 15.7,60.9  lv 40-40 req 33 pref 40   1 quests    5930 XP   10.2 min   580 XP/min  pick-ups here 0/1  [one quest: later]  from: Rigglefuzz
+     9.  8.3,77.7  lv 42-43 req 40 pref 42   2 quests   13038 XP   19.1 min   682 XP/min  pick-ups here 0/2  from: Lotwil Veriatus, Gorn
+    10. 26.0,45.8  lv 45-45 req 35 pref 45   1 quests    5486 XP    1.3 min  4363 XP/min  pick-ups here 1/1  [one quest: worth the time]
+    11. 82.0,49.7  lv 50-50 req 40 pref 50   1 quests    7318 XP   12.3 min   594 XP/min  pick-ups here 0/1  [one quest: later]  from: Gorn
+  Dustwallow Marsh (levels 35-60, required 30, preferred 42): 10 areas
+     1. 38.1,32.7  lv 35-37 req 30 pref 35  10 quests   31270 XP   36.3 min   861 XP/min  pick-ups here 5/10  overlaps 6  from: Loose Dirt, Black Shield, Hoofprints
+     2. 32.0,22.3  lv 35-35 req 30 pref 35   1 quests   23713 XP   42.4 min   560 XP/min  pick-ups here 0/1  [one quest: later]  from: "Swamp Eye" Jarl
+     3. 71.5,51.2  lv 35-35 req 30 pref 35   1 quests    3666 XP    6.9 min   535 XP/min  pick-ups here 0/1  [one quest: later]  from: Nazeer Bloodpike
+     4. 54.7,20.3  lv 35-37 req 32 pref 36   3 quests   16989 XP   49.4 min   344 XP/min  pick-ups here 1/3  from: Owen Thadd, Mudcrush Durtfeet
+     5. 56.5,59.9  lv 40-41 req 30 pref 40   2 quests   12319 XP   37.1 min   332 XP/min  pick-ups here 0/2  from: Bubbling Cauldron, Razzeric
+     6. 36.6,32.0  lv 43-45 req 38 pref 43   3 quests    5892 XP    1.6 min  3798 XP/min  pick-ups here 3/3  overlaps 1
+     7. 39.5,67.2  lv 43-43 req 38 pref 43   4 quests   53382 XP  101.5 min   526 XP/min  pick-ups here 0/4  from: Overlord Mok'Morokk, Tharg, Draz'Zilb
+     8. 55.4,76.6  lv 45-45 req 38 pref 45   1 quests    9055 XP   16.6 min   546 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Draz'Zilb
+     9. 50.2,52.7  lv 45-45 req 35 pref 45   1 quests    4499 XP   11.1 min   405 XP/min  pick-ups here 0/1  [one quest: later]  from: Melor Stonehoof
+    10. 76.4,19.4  lv 60-60 req 58 pref 60   1 quests   22688 XP   32.2 min   704 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Bodley
+  Swamp of Sorrows (levels 35-60, required 30, preferred 45): 13 areas
+     1. 63.3,22.3  lv 35-35 req 30 pref 35   1 quests    4298 XP    9.4 min   455 XP/min  pick-ups here 0/1  [one quest: later]  from: Magtoor
+     2. 14.0,61.7  lv 36-36 req 30 pref 36   1 quests   10166 XP   21.1 min   482 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Krazek
+     3. 53.1,29.6  lv 38-38 req 30 pref 38   1 quests    4477 XP    7.1 min   628 XP/min  pick-ups here 0/1  [one quest: later]  from: Galen Goodward
+     4. 77.7,19.6  lv 40-42 req 35 pref 41   2 quests   19291 XP   36.6 min   527 XP/min  pick-ups here 0/2  from: Dar, Tok'Kar
+     5. 83.4,81.6  lv 42-43 req 37 pref 43   3 quests   28002 XP   47.8 min   586 XP/min  pick-ups here 2/3  overlaps 8  from: Apothecary Faustin
+     6. 72.1,53.0  lv 43-45 req 38 pref 44   2 quests    5158 XP   17.1 min   302 XP/min  pick-ups here 0/2  from: Fel'zerul, Owen Thadd
+     7. 95.1,73.8  lv 44-44 req 35 pref 44   1 quests   12074 XP   24.4 min   494 XP/min  pick-ups here 0/1  [one quest: later]  from: Dar
+     8. 83.8,80.4  lv 45-45 req 35 pref 45   1 quests    4499 XP    2.2 min  2046 XP/min  pick-ups here 1/1  overlaps 5  [one quest: prerequisite]
+     9. 63.1,84.7  lv 45-45 req 35 pref 45   1 quests   13082 XP   22.8 min   574 XP/min  pick-ups here 0/1  overlaps 11  [one quest: later]  from: Katar
+    10. 34.3,66.1  lv 50-50 req 45 pref 50   1 quests     470 XP    1.0 min   470 XP/min  pick-ups here 1/1  overlaps 12  [one quest: prerequisite]
+    11. 63.3,86.0  lv 55-55 req 45 pref 55   1 quests    6465 XP    7.5 min   858 XP/min  pick-ups here 0/1  overlaps 9  [one quest: prerequisite]  from: Bengor
+    12. 33.8,66.1  lv 57-58 req 45 pref 57   4 quests   11150 XP   10.4 min  1074 XP/min  pick-ups here 3/4  overlaps 10  from: Galvan the Ancient
+    13. 76.0,66.6  lv 60-60 req 55 pref 60   1 quests    7506 XP   11.1 min   676 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Emberstrife
+  Feralas (levels 42-60, required 38, preferred 47): 14 areas
+     1. 71.3,55.6  lv 42-43 req 39 pref 43   3 quests   22821 XP   33.5 min   681 XP/min  pick-ups here 0/3  overlaps 6  from: Hadoken Swiftstrider
+     2. 76.3,31.5  lv 43-43 req 38 pref 43   2 quests   15968 XP   25.5 min   626 XP/min  pick-ups here 2/2
+     3. 47.3,46.4  lv 44-45 req 40 pref 44   2 quests   10299 XP   25.1 min   410 XP/min  pick-ups here 1/2  from: Yeh'kinya
+     4. 60.0,67.1  lv 44-44 req 38 pref 44   1 quests   16797 XP   28.5 min   590 XP/min  pick-ups here 0/1  overlaps 7  [one quest: later]  from: Rok Orhan
+     5. 71.5,43.9  lv 43-45 req 40 pref 45   6 quests   44068 XP   79.3 min   556 XP/min  pick-ups here 4/6  overlaps 10  from: Belgrom Rockmaul, Neeru Fireblade
+     6. 74.9,61.9  lv 45-47 req 39 pref 46   2 quests   27049 XP   39.9 min   678 XP/min  pick-ups here 0/2  overlaps 1  from: Hadoken Swiftstrider
+     7. 57.6,69.0  lv 46-47 req 40 pref 46   2 quests   23785 XP   40.2 min   592 XP/min  pick-ups here 0/2  overlaps 4,14  from: Rok Orhan, Witch Doctor Uzer'i
+     8. 49.6,56.8  lv 46-48 req 45 pref 47   2 quests   27178 XP   41.8 min   651 XP/min  pick-ups here 0/2  from: Jangdor Swiftstrider, Zorbin Fandazzle
+     9. 53.9,32.1  lv 48-48 req 40 pref 48   1 quests   11102 XP   16.1 min   688 XP/min  pick-ups here 0/1  [one quest: later]  from: Jangdor Swiftstrider
+    10. 74.2,41.1  lv 50-50 req 40 pref 50   2 quests   15006 XP   11.2 min  1339 XP/min  pick-ups here 2/2  overlaps 5
+    11. 40.1,10.6  lv 50-50 req 45 pref 50   2 quests   31622 XP   42.5 min   744 XP/min  pick-ups here 0/2  from: Talo Thornhoof
+    12. 38.9,22.6  lv 48-50 req 45 pref 50   3 quests   39782 XP   58.5 min   680 XP/min  pick-ups here 0/3  from: Witch Doctor Uzer'i, Zorbin Fandazzle
+    13. 45.1,25.6  lv 52-52 req 47 pref 52   1 quests    5419 XP   11.1 min   488 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Donova Snowden
+    14. 57.1,76.3  lv 60-60 req 42 pref 60   1 quests    4200 XP   10.2 min   410 XP/min  pick-ups here 0/1  overlaps 7  [one quest: later]  from: Egg-O-Matic
+  The Hinterlands (levels 42-55, required 35, preferred 49): 14 areas
+     1. 23.4,58.1  lv 42-42 req 35 pref 42   1 quests    3450 XP   10.2 min   337 XP/min  pick-ups here 0/1  [one quest: later]  from: Nimboya
+     2. 34.4,72.7  lv 44-45 req 40 pref 45   3 quests    8586 XP   32.1 min   268 XP/min  pick-ups here 0/3  overlaps 14  from: Fel'zerul, Apothecary Lydon, Owen Thadd
+     3. 61.8,49.5  lv 48-48 req 44 pref 48   3 quests   33231 XP   46.0 min   722 XP/min  pick-ups here 0/3  from: Huntsman Markhor, Otho Moji'ko
+     4. 80.6,59.4  lv 48-50 req 44 pref 48   3 quests   24979 XP   35.6 min   702 XP/min  pick-ups here 0/3  from: Katoom the Angler, Homing Robot OOX-09/HL
+     5. 57.1,41.6  lv 48-48 req 44 pref 48   2 quests   24455 XP   39.9 min   613 XP/min  pick-ups here 0/2  from: Gilveradin Sunchaser, Smith Slagtree
+     6. 54.8,51.5  lv 47-48 req 44 pref 48   2 quests   21620 XP   42.6 min   508 XP/min  pick-ups here 0/2  from: Witch Doctor Uzer'i, Huntsman Markhor
+     7. 32.8,52.0  lv 47-49 req 44 pref 48   5 quests   30539 XP   62.1 min   491 XP/min  pick-ups here 1/5  from: Oran Snakewrithe, Otho Moji'ko, Malton Droffers
+     8. 47.5,66.2  lv 48-48 req 44 pref 48   1 quests   23190 XP   42.6 min   545 XP/min  pick-ups here 0/1  [one quest: later]  from: Mystic Yayo'jin
+     9. 82.7,44.0  lv 49-51 req 44 pref 50   2 quests   11371 XP   14.8 min   768 XP/min  pick-ups here 0/2  from: Lard, Musty Scroll
+    10. 63.2,70.8  lv 50-51 req 46 pref 50   3 quests   43613 XP   58.1 min   750 XP/min  pick-ups here 0/3  from: Primal Torntusk, Huntsman Markhor, Call to Arms!
+    11. 77.9,78.8  lv 50-51 req 46 pref 50   2 quests   11660 XP   16.8 min   693 XP/min  pick-ups here 0/2  from: Whiskey Slim, Elder Torntusk
+    12. 14.3,48.1  lv 50-50 req 44 pref 50   1 quests   10407 XP   18.7 min   558 XP/min  pick-ups here 0/1  [one quest: later]  from: Otho Moji'ko
+    13. 58.0,83.4  lv 50-51 req 46 pref 51   4 quests   41091 XP   45.1 min   910 XP/min  pick-ups here 1/4  from: Yeh'kinya, Call to Arms!, Primal Torntusk
+    14. 33.8,73.0  lv 55-55 req 40 pref 55   1 quests    9161 XP   21.1 min   434 XP/min  pick-ups here 0/1  overlaps 2  [one quest: prerequisite]  from: Master Gadrin
+  Tanaris (levels 43-60, required 38, preferred 48): 11 areas
+     1. 63.8,31.8  lv 43-45 req 40 pref 44   4 quests   31109 XP   59.0 min   528 XP/min  pick-ups here 0/4  overlaps 4,7  from: Chief Engineer Bilgewhizzle, Spigot Operator Luglunket, "Sea Wolf" MacKinley
+     2. 72.8,47.4  lv 45-45 req 40 pref 45   5 quests   52186 XP   84.5 min   617 XP/min  pick-ups here 0/5  overlaps 10  from: Stoley, Wanted Poster, Haughty Modiste
+     3. 39.0,29.0  lv 46-46 req 38 pref 46   1 quests    5135 XP    7.1 min   722 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Senior Surveyor Fizzledowser
+     4. 62.0,36.1  lv 46-46 req 39 pref 46   2 quests   15736 XP   22.9 min   686 XP/min  pick-ups here 0/2  overlaps 1  from: Chief Engineer Bilgewhizzle, Wanted Poster
+     5. 56.0,71.2  lv 48-48 req 39 pref 48   1 quests   11149 XP   17.8 min   626 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Senior Surveyor Fizzledowser
+     6. 36.6,49.2  lv 47-49 req 44 pref 48   2 quests   27916 XP   45.2 min   618 XP/min  pick-ups here 0/2  from: Senior Surveyor Fizzledowser, Andi Lynn
+     7. 66.8,24.4  lv 48-50 req 43 pref 49   2 quests   18035 XP   35.5 min   508 XP/min  pick-ups here 0/2  overlaps 1  from: Homing Robot OOX-17/TN, Tooga
+     8. 29.3,65.7  lv 49-50 req 45 pref 50   2 quests   25525 XP   39.3 min   649 XP/min  pick-ups here 0/2  from: Marin Noggenfogger, Tran'rek
+     9. 38.6,78.7  lv 48-50 req 45 pref 50   3 quests   16813 XP   28.1 min   599 XP/min  pick-ups here 1/3  from: Marvon Rivetseeker, Nara Wildmane
+    10. 70.4,49.9  lv 54-54 req 47 pref 54   1 quests    6149 XP   21.1 min   291 XP/min  pick-ups here 0/1  overlaps 2,11  [one quest: prerequisite]  from: Eridan Bluewind
+    11. 64.5,49.4  lv 60-60 req 60 pref 60   2 quests   14055 XP   21.8 min   645 XP/min  pick-ups here 0/2  overlaps 10  from: Emberstrife, Baristolth of the Shifting Sands
+  Azshara (levels 45-60, required 45, preferred 54): 7 areas
+     1. 19.1,64.6  lv 45-47 req 45 pref 47   3 quests   18720 XP   31.5 min   594 XP/min  pick-ups here 0/3  from: Loh'atu, Owen Thadd
+     2. 43.7,54.0  lv 52-53 req 47 pref 52   3 quests   19923 XP   32.8 min   608 XP/min  pick-ups here 0/3  from: Chemist Cuely, Jediga, Kim'jael
+     3. 57.1,28.9  lv 53-53 req 47 pref 53   2 quests   21330 XP   27.3 min   782 XP/min  pick-ups here 1/2  from: Ag'tor Bloodfist
+     4. 58.1,38.1  lv 56-58 req 45 pref 57   2 quests   15718 XP   21.2 min   743 XP/min  pick-ups here 1/2  from: Lord Arkkoroc
+     5. 55.3,85.3  lv 58-58 req 45 pref 58   1 quests    8480 XP    3.6 min  2368 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Loramus Thalipedes
+     6. 60.8,66.3  lv 57-58 req 45 pref 58   3 quests    8315 XP    6.3 min  1320 XP/min  pick-ups here 2/3  overlaps 7  from: Lord Arkkoroc
+     7. 60.8,66.3  lv 60-60 req 45 pref 60   1 quests    6630 XP   10.3 min   642 XP/min  pick-ups here 0/1  overlaps 6  [one quest: prerequisite]  from: Fallen Hero of the Horde
+  Blasted Lands (levels 45-60, required 1, preferred 54): 6 areas
+     1. 55.4,32.3  lv 45-45 req  1 pref 45   1 quests     390 XP   10.2 min    38 XP/min  pick-ups here 0/1  [one quest: later]  from: Owen Thadd
+     2. 47.4,21.5  lv 50-50 req 45 pref 50   5 quests   50343 XP   47.3 min  1065 XP/min  pick-ups here 5/5  overlaps 6
+     3. 48.8,37.5  lv 55-55 req 45 pref 55   2 quests   21356 XP   15.9 min  1339 XP/min  pick-ups here 2/2  overlaps 6
+     4. 61.4,51.8  lv 57-57 req 45 pref 57   1 quests    8670 XP   12.0 min   722 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Fallen Hero of the Horde
+     5. 67.7,30.2  lv 58-60 req 45 pref 59   2 quests   16593 XP   13.6 min  1217 XP/min  pick-ups here 0/2  from: Fallen Hero of the Horde
+     6. 47.6,29.8  lv 60-60 req 45 pref 60   1 quests   10754 XP   11.1 min   968 XP/min  pick-ups here 0/1  overlaps 2,3  [one quest: later]  from: Fallen Hero of the Horde
+  Burning Steppes (levels 45-60, required 1, preferred 55): 8 areas
+     1. 29.0,28.9  lv 45-45 req  1 pref 45   1 quests     390 XP   10.2 min    38 XP/min  pick-ups here 0/1  overlaps 8  [one quest: later]  from: Owen Thadd
+     2. 54.1,40.8  lv 50-50 req 50 pref 50   1 quests    2350 XP    2.2 min  1060 XP/min  pick-ups here 0/1  [one quest: later]  from: Maxwort Uberglint
+     3. 79.8,46.4  lv 52-53 req 48 pref 52   2 quests   12631 XP   14.0 min   901 XP/min  pick-ups here 1/2  from: Thal'trak Proudtusk
+     4. 92.7,32.3  lv 52-54 req 52 pref 54   3 quests   18865 XP   10.4 min  1816 XP/min  pick-ups here 2/3  from: Tinkee Steamboil
+     5. 59.7,37.4  lv 54-54 req 52 pref 54   1 quests   12916 XP   21.1 min   612 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Hierophant Theodora Mulvadania
+     6. 45.4,44.4  lv 60-60 req 58 pref 60   1 quests    6600 XP   11.0 min   600 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Mux Manascrambler
+     7. 35.4,57.8  lv 60-60 req 58 pref 60   1 quests    7355 XP   11.1 min   662 XP/min  pick-ups here 0/1  [one quest: later]  from: Mux Manascrambler
+     8. 26.4,24.4  lv 60-60 req  1 pref 60   1 quests     660 XP   10.2 min    64 XP/min  pick-ups here 0/1  overlaps 1  [one quest: later]  from: Jennea Cannon
+  Searing Gorge (levels 45-53, required 1, preferred 49): 7 areas
+     1. 37.8,49.5  lv 45-45 req  1 pref 45   1 quests     390 XP   10.2 min    38 XP/min  pick-ups here 0/1  overlaps 7  [one quest: later]  from: Owen Thadd
+     2. 63.4,65.0  lv 45-46 req 43 pref 46   2 quests   14044 XP   21.3 min   660 XP/min  pick-ups here 2/2
+     3. 31.8,51.7  lv 48-49 req 45 pref 48   2 quests   16965 XP   18.7 min   909 XP/min  pick-ups here 0/2  overlaps 7  from: Wanted/Missing/Lost & Found, Hansel Heavyhands
+     4. 50.3,31.0  lv 49-49 req 45 pref 49   1 quests   10386 XP   12.6 min   824 XP/min  pick-ups here 0/1  [one quest: later]  from: Hansel Heavyhands
+     5. 20.7,38.1  lv 50-50 req 40 pref 50   1 quests    6207 XP    5.3 min  1172 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Kalaran Windblade
+     6. 40.3,38.1  lv 48-50 req 45 pref 50  11 quests   61868 XP   59.9 min  1033 XP/min  pick-ups here 11/11
+     7. 34.6,54.7  lv 52-53 req 48 pref 52   2 quests   13329 XP   16.2 min   824 XP/min  pick-ups here 0/2  overlaps 1,3  from: Squire Maltrake, A-Me 01
+  Felwood (levels 48-60, required 1, preferred 54): 12 areas
+     1. 48.4,90.4  lv 48-48 req 45 pref 48   1 quests   11862 XP   13.0 min   914 XP/min  pick-ups here 1/1  overlaps 2  [one quest: prerequisite]
+     2. 48.2,94.3  lv 51-51 req 46 pref 51   1 quests   13219 XP   18.7 min   705 XP/min  pick-ups here 0/1  overlaps 1  [one quest: later]  from: Dreka'Sur
+     3. 36.8,60.5  lv 51-52 req 48 pref 52   2 quests   22870 XP   29.0 min   790 XP/min  pick-ups here 0/2  overlaps 6  from: Greta Mosshoof
+     4. 55.8,23.4  lv 52-52 req 47 pref 52   1 quests   12420 XP   22.0 min   565 XP/min  pick-ups here 0/1  [one quest: later]  from: Talo Thornhoof
+     5. 43.7,40.0  lv 54-54 req 48 pref 54   1 quests    9537 XP    8.8 min  1088 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Taronn Redfeather
+     6. 34.6,56.9  lv 54-55 req 49 pref 54   5 quests   31480 XP   34.6 min   910 XP/min  pick-ups here 3/5  overlaps 3  from: Harlo Wigglesworth, Greta Mosshoof
+     7. 50.3,81.7  lv 54-55 req 48 pref 54   4 quests   33263 XP   56.1 min   593 XP/min  pick-ups here 2/4  overlaps 10  from: J.D. Collie, Islen Waterseer
+     8. 61.1,10.4  lv 55-56 req 52 pref 55   4 quests   36534 XP   52.8 min   693 XP/min  pick-ups here 1/4  from: Maybess Riverbreeze, Grazle, Donova Snowden
+     9. 49.7,25.0  lv 56-56 req 52 pref 56   1 quests    7633 XP   13.3 min   572 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Donova Snowden
+    10. 51.4,82.0  lv 57-57 req 49 pref 57   1 quests    9656 XP    7.6 min  1276 XP/min  pick-ups here 0/1  overlaps 7  [one quest: worth the time]  from: Remains of Trey Lightforge
+    11. 38.6,48.6  lv 57-58 req 49 pref 58   2 quests   18523 XP   13.4 min  1382 XP/min  pick-ups here 0/2  from: Jessir Moonbow, Greta Mosshoof
+    12. 65.2, 3.3  lv 60-60 req  1 pref 60   1 quests     660 XP   10.2 min    64 XP/min  pick-ups here 0/1  [one quest: later]  from: Jennea Cannon
+  Un'Goro Crater (levels 50-57, required 47, preferred 53): 15 areas
+     1. 52.8,46.7  lv 50-50 req 47 pref 50   1 quests    4700 XP   15.6 min   302 XP/min  pick-ups here 0/1  overlaps 15  [one quest: prerequisite]  from: Arch Druid Hamuul Runetotem
+     2. 27.6,41.3  lv 51-51 req 49 pref 51   1 quests   18515 XP   25.5 min   726 XP/min  pick-ups here 0/1  overlaps 12  [one quest: later]  from: Shizzle
+     3. 32.3,74.4  lv 51-51 req 49 pref 51   1 quests   15066 XP   20.8 min   724 XP/min  pick-ups here 0/1  [one quest: later]  from: Spark Nilminer
+     4. 67.9,33.4  lv 52-53 req 48 pref 52   2 quests   12242 XP    9.3 min  1320 XP/min  pick-ups here 0/2  from: Larion, Williden Marshal
+     5. 62.4,72.4  lv 52-52 req 48 pref 52   2 quests   11172 XP   20.1 min   555 XP/min  pick-ups here 1/2  from: Jes'rimon
+     6. 72.0,57.5  lv 53-53 req 48 pref 53   4 quests   25587 XP   28.9 min   884 XP/min  pick-ups here 0/4  from: Torwa Pathfinder, J.D. Collie
+     7. 64.7,14.9  lv 53-55 req 50 pref 53   5 quests   38205 XP   43.4 min   880 XP/min  pick-ups here 0/5  from: Torwa Pathfinder, Larion, J.D. Collie
+     8. 44.9, 9.8  lv 52-54 req 48 pref 53   6 quests   32131 XP   37.3 min   862 XP/min  pick-ups here 3/6  overlaps 11  from: A Conspicuous Gravestone, A-Me 01, Tran'rek
+     9. 46.9,82.7  lv 52-54 req 50 pref 53   3 quests   24675 XP   31.4 min   785 XP/min  pick-ups here 0/3  from: Alchemist Pestlezugg, Hol'anyee Marshal
+    10. 23.9,59.2  lv 53-53 req 47 pref 53   1 quests    7644 XP   11.8 min   649 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: J.D. Collie
+    11. 43.7, 8.3  lv 55-55 req 50 pref 55   2 quests   12186 XP   11.0 min  1110 XP/min  pick-ups here 1/2  overlaps 8  from: Ringo
+    12. 27.4,41.6  lv 55-55 req 49 pref 55   1 quests   12856 XP   17.8 min   721 XP/min  pick-ups here 0/1  overlaps 2  [one quest: later]  from: Beware of Pterrordax
+    13. 55.6,66.8  lv 55-55 req 48 pref 55   1 quests    7549 XP   11.1 min   679 XP/min  pick-ups here 0/1  [one quest: later]  from: Chemist Fuely
+    14. 79.7,49.8  lv 56-56 req 48 pref 56   1 quests    8067 XP    3.6 min  2255 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Torwa Pathfinder
+    15. 49.7,47.6  lv 55-57 req 55 pref 56   4 quests   33143 XP   53.8 min   617 XP/min  pick-ups here 0/4  overlaps 1  from: Krakle, Liv Rizzlefix, Linken
+  Western Plaguelands (levels 52-60, required 1, preferred 57): 12 areas
+     1. 40.2,52.4  lv 52-54 req 51 pref 53   5 quests   35193 XP   50.6 min   695 XP/min  pick-ups here 1/5  overlaps 12  from: Ol' Emma, High Executor Derrington, Shadow Priestess Vandis
+     2. 47.6,46.2  lv 55-55 req 52 pref 55   4 quests   27354 XP   28.5 min   959 XP/min  pick-ups here 2/4  overlaps 3  from: Shadow Priestess Vandis, Mickey Levine
+     3. 51.5,40.6  lv 56-56 req 50 pref 56   1 quests    9550 XP    7.8 min  1218 XP/min  pick-ups here 1/1  overlaps 2  [one quest: prerequisite]
+     4. 45.6,72.4  lv 55-57 req 55 pref 56   8 quests   66558 XP   82.3 min   809 XP/min  pick-ups here 5/8  overlaps 9  from: High Executor Derrington, Pamela Redpath, Apothecary Dithers
+     5. 54.5,62.4  lv 55-56 req 51 pref 56   2 quests   20637 XP   27.8 min   743 XP/min  pick-ups here 1/2  from: Shadow Priestess Vandis
+     6. 57.8,36.1  lv 57-57 req 50 pref 57   1 quests    7341 XP    3.3 min  2206 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+     7. 44.2,18.6  lv 56-58 req 50 pref 57   2 quests   14266 XP   16.3 min   873 XP/min  pick-ups here 0/2  overlaps 10  from: Carlin Redpath, Kirsta Deepshadow
+     8. 62.2,59.1  lv 58-58 req 50 pref 58   1 quests    9776 XP   15.7 min   622 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Shadow Priestess Vandis
+     9. 44.2,71.4  lv 60-60 req 57 pref 60  10 quests   75447 XP   75.0 min  1006 XP/min  pick-ups here 3/10  overlaps 4  from: High Executor Derrington, Apothecary Dithers, Alexi Barov
+    10. 47.9,19.6  lv 60-60 req 52 pref 60   2 quests   28417 XP   39.4 min   721 XP/min  pick-ups here 1/2  overlaps 7  from: Myranda the Hag
+    11. 68.6,74.1  lv 58-60 req 57 pref 60   3 quests   11810 XP   29.3 min   403 XP/min  pick-ups here 0/3  from: Tirion Fordring, Jennea Cannon, Leonid Barthalomew the Revered
+    12. 38.2,54.6  lv 60-60 req  1 pref 60   1 quests     660 XP   10.2 min    64 XP/min  pick-ups here 0/1  overlaps 1  [one quest: later]  from: Jennea Cannon
+  Winterspring (levels 54-60, required 52, preferred 58): 7 areas
+     1. 63.0,32.7  lv 54-56 req 53 pref 56   7 quests   68279 XP   95.9 min   712 XP/min  pick-ups here 3/7  overlaps 4  from: Tinkee Steamboil, Itharius, Trull Failbane
+     2. 29.9,40.9  lv 55-57 req 52 pref 56   5 quests   20063 XP   35.3 min   568 XP/min  pick-ups here 1/5  from: Krakle, Nafien, Deadwood Cauldron
+     3. 62.1,64.2  lv 56-58 req 53 pref 58   3 quests   25084 XP   28.1 min   893 XP/min  pick-ups here 0/3  overlaps 7  from: Donova Snowden, Trull Failbane, Storm Shadowhoof
+     4. 65.1,38.5  lv 58-60 req 53 pref 58   6 quests   52576 XP   61.6 min   854 XP/min  pick-ups here 3/6  overlaps 1  from: Salfa, Donova Snowden, Jennea Cannon
+     5. 65.1,21.6  lv 59-59 req 52 pref 59   1 quests    9540 XP   15.0 min   636 XP/min  pick-ups here 0/1  [one quest: later]  from: Trull Failbane
+     6. 49.8, 9.8  lv 60-60 req 53 pref 60   1 quests   14655 XP   13.3 min  1105 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Storm Shadowhoof
+     7. 58.8,62.8  lv 60-60 req 58 pref 60   5 quests   31468 XP   39.1 min   805 XP/min  pick-ups here 1/5  overlaps 3  from: Bodley, Witch Doctor Mau'ari, Emberstrife
+  Eastern Plaguelands (levels 55-60, required 1, preferred 58): 16 areas
+     1. 34.3,23.3  lv 55-55 req 50 pref 55   2 quests   16736 XP   23.6 min   709 XP/min  pick-ups here 0/2  from: Carlin Redpath, Mickey Levine
+     2. 26.3,73.3  lv 55-57 req 54 pref 55   5 quests   25139 XP   56.8 min   443 XP/min  pick-ups here 0/5  from: Caretaker Alen, Marlene Redpath, Jessica Redpath
+     3. 14.0,24.2  lv 55-55 req 50 pref 55   1 quests    3084 XP    3.4 min   918 XP/min  pick-ups here 1/1  [one quest: later]
+     4. 45.4,45.7  lv 56-58 req 55 pref 56   5 quests   92253 XP  122.6 min   752 XP/min  pick-ups here 0/5  overlaps 16  from: Tirion Fordring, Duke Hydraxis, Carlin Redpath
+     5. 27.8,59.1  lv 56-56 req 52 pref 56   1 quests   15148 XP   20.3 min   745 XP/min  pick-ups here 0/1  overlaps 14  [one quest: prerequisite]  from: Tirion Fordring
+     6.  5.2,35.6  lv 56-56 req 52 pref 56   1 quests     708 XP    1.0 min   708 XP/min  pick-ups here 1/1  [one quest: prerequisite]
+     7. 62.5,26.8  lv 58-58 req 52 pref 58   1 quests   12444 XP   17.3 min   721 XP/min  pick-ups here 0/1  [one quest: prerequisite]  from: Tirion Fordring
+     8. 62.8,10.1  lv 58-60 req 54 pref 59   2 quests   21990 XP   31.1 min   707 XP/min  pick-ups here 0/2  from: Prospector Ironboot, Torn Scroll
+     9. 32.3,78.1  lv 60-60 req 55 pref 60   2 quests   18350 XP   10.8 min  1705 XP/min  pick-ups here 1/2  from: Chromie
+    10. 76.5,72.2  lv 60-60 req 58 pref 60   2 quests   14372 XP   12.2 min  1176 XP/min  pick-ups here 0/2  from: Bodley
+    11. 70.7,48.0  lv 60-60 req 60 pref 60   7 quests   49049 XP   46.3 min  1060 XP/min  pick-ups here 4/7  from: Jennea Cannon, Magistrate Marduke, Tinkee Steamboil
+    12. 63.3,67.2  lv 60-60 req 56 pref 60   1 quests   11777 XP   11.7 min  1010 XP/min  pick-ups here 0/1  [one quest: worth the time]  from: Nathanos Blightcaller
+    13. 48.5,21.6  lv 60-60 req 56 pref 60   4 quests   51230 XP   65.4 min   783 XP/min  pick-ups here 0/4  from: Nathanos Blightcaller, Varimathras, Emmisary Gormok
+    14. 24.2,61.3  lv 60-60 req 56 pref 60   2 quests   20017 XP   27.3 min   734 XP/min  pick-ups here 1/2  overlaps 5  from: Crusader Lord Valdelmar
+    15. 26.9,14.9  lv 58-60 req 58 pref 60   3 quests   19752 XP   41.0 min   481 XP/min  pick-ups here 0/3  from: Smokey LaRue, Jennea Cannon, Mokvar
+    16. 47.3,42.2  lv 60-60 req  1 pref 60   1 quests     660 XP   10.2 min    64 XP/min  pick-ups here 0/1  overlaps 4  [one quest: later]  from: Jennea Cannon
+  Silithus (levels 55-60, required 54, preferred 59): 11 areas
+     1. 58.2,20.1  lv 55-55 req 54 pref 55   2 quests   31483 XP   33.3 min   945 XP/min  pick-ups here 0/2  from: Beetix Ficklespragg, Windcaller Proudhorn
+     2. 58.2,54.9  lv 55-57 req 54 pref 57   3 quests   40086 XP   40.5 min   990 XP/min  pick-ups here 0/3  overlaps 10  from: Layo Starstrike, Windcaller Proudhorn
+     3. 44.1,89.1  lv 57-59 req 54 pref 58   3 quests   38773 XP   34.0 min  1139 XP/min  pick-ups here 0/3  overlaps 9  from: Beetix Ficklespragg, Noggle Ficklespragg, Wanted Poster: Deathclasp
+     4. 21.9,17.5  lv 57-58 req 55 pref 58   2 quests   26575 XP   40.5 min   656 XP/min  pick-ups here 0/2  from: Duke Hydraxis, Geologist Larksbane
+     5. 51.3,70.8  lv 60-60 req 58 pref 60   4 quests   33636 XP   20.0 min  1684 XP/min  pick-ups here 1/4  from: Bodley, Geologist Larksbane
+     6. 50.2,34.3  lv 60-60 req 60 pref 60   4 quests   29099 XP   23.1 min  1258 XP/min  pick-ups here 1/4  from: Rutgar Glyphshaper, Hermit Ortell
+     7. 23.6,61.7  lv 60-60 req 60 pref 60   2 quests   27939 XP   26.9 min  1039 XP/min  pick-ups here 0/2  from: Baristolth of the Shifting Sands, Frankal Stonebridge
+     8. 38.9,44.1  lv 59-60 req 60 pref 60   6 quests   90426 XP   88.8 min  1018 XP/min  pick-ups here 0/6  from: Hermit Ortell, Bor Wildmane, Huum Wildmane
+     9. 41.0,88.7  lv 60-60 req 58 pref 60   1 quests    9424 XP    9.8 min   964 XP/min  pick-ups here 0/1  overlaps 3  [one quest: prerequisite]  from: Commander Mar'alith
+    10. 63.0,54.1  lv 60-60 req 58 pref 60   2 quests   34320 XP   60.5 min   568 XP/min  pick-ups here 0/2  overlaps 2  from: Rabine Saturna, Mux Manascrambler
+    11. 72.4,15.6  lv 60-60 req 60 pref 60   1 quests   10950 XP   10.5 min  1043 XP/min  pick-ups here 0/1  [one quest: later]  from: Huum Wildmane
+  Alterac Valley (levels 60-60, required 51, preferred 60): 2 areas
+     1. 48.4, 9.8  lv 60-60 req 51 pref 60   3 quests   39424 XP   45.3 min   871 XP/min  pick-ups here 0/3  from: Corporal Teeka Bloodsnarl, Smith Regzar, Voggah Deathgrip
+     2. 48.0,86.4  lv 60-60 req 51 pref 60   2 quests    7260 XP   11.3 min   642 XP/min  pick-ups here 1/2  from: Corporal Teeka Bloodsnarl
+

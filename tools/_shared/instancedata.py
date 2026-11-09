@@ -179,10 +179,11 @@ def by_area():
     return {i['area']: i for i in INSTANCES}
 
 
-# The classic 5-player dungeons Field Guide routes: their views, keyed by area ID.
-_LEVELING = [i for i in INSTANCES if i['kind'] == 'dungeon' and not i.get('custom')]
+# The 5-player dungeons Field Guide routes, Forever's own included (Hall of Thanes, Ruins of
+# Lordaeron...: their quests come from QuestieDB like the rest): their views, keyed by area ID.
+_LEVELING = [i for i in INSTANCES if i['kind'] == 'dungeon']
 LEVELS = {i['area']: i['levels'] for i in _LEVELING}
-FINAL_BOSSES = {i['area']: list(i['bosses']) for i in _LEVELING}
+FINAL_BOSSES = {i['area']: list(i.get('bosses') or []) for i in _LEVELING}
 INSTANCE_MAPS = {i['area']: i['instanceID'] for i in _LEVELING}
 
 

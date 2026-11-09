@@ -104,7 +104,7 @@ local function Build(p)
                     .. (f.maxPrice and ("max %s each"):format(ns.Compat.Money(f.maxPrice))
                         or ("max market +%d%%%s per item"):format(tolerance, entry.tolerance and ", custom" or ""))
             else
-                detail = ("%d/%d bought  ·  %s %s"):format(entry.bought or 0, entry.qty, seen and "seen at" or "market", W.Money(market))
+                detail = ("%d/%d bought  ·  %s %s"):format(ns.Lists:Got(entry), entry.qty, seen and "seen at" or "market", W.Money(market))
                 if market then detail = detail .. ("  ·  max %s (+%d%%%s)"):format(ns.Compat.Money(market * (1 + tolerance / 100)),
                     tolerance, entry.tolerance and ", custom" or "") end
             end
@@ -124,7 +124,7 @@ local function Build(p)
                 icon = f and "Interface\\Icons\\INV_Misc_Spyglass_03" or W.IconFor(e or entry), link = entry.link or (e and e.link),
                 text = ns.Lists:Describe(entry), detail = detail,
                 right = remaining > 0 and market and ("~" .. ns.Compat.Money(market * remaining)) or (remaining == 0 and "|cff59f28cdone|r" or nil),
-                bar = entry.qty > 0 and math.min(1, (entry.bought or 0) / entry.qty) or nil,
+                bar = entry.qty > 0 and math.min(1, ns.Lists:Got(entry) / entry.qty) or nil,
                 barText = "",
                 selected = selected == entry,
                 dim = remaining == 0 and 0.55 or nil,

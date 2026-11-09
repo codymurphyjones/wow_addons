@@ -109,8 +109,7 @@ local function ReadMerchant()
     local learned = false
     for i = 1, (GetMerchantNumItems and GetMerchantNumItems() or 0) do
         local id = C.IDFromLink(GetMerchantItemLink(i))
-        local _, _, price, quantity, _, _, _, extendedCost = GetMerchantItemInfo(i)
-        price, quantity = C.Num and C.Num(price) or price, C.Num and C.Num(quantity) or quantity
+        local price, quantity, extendedCost = ns.Items.MerchantItemInfo(i)
         if id and type(price) == "number" and price > 0 and not extendedCost then
             local each = math.floor(price / math.max(1, quantity or 1) + 0.5)
             if ns.db.vendorBuy[id] ~= each then
@@ -151,6 +150,9 @@ end
 function Prices:AuctionatorAge(id) return ns.AuctionPrice.Age(id) end
 
 local function SampleAuctionator()
+    -- Another pool's prices (Booty Bay, Quickcoin...) aren't your market's: its history is yours.
+    local here = ns.Pools and ns.Pools:Current()
+    if here and here ~= ns.Pools:Home() then return end
     local items = Items()
     for id in pairs(Prices:Tracked()) do
         -- An old price isn't today's price: only what Auctionator saw today is recorded.

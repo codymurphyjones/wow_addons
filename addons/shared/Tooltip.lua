@@ -120,7 +120,19 @@ T.KINDS = KINDS
 local scanName = addonName .. "SharedScanTooltip"
 local scan
 local function Scanner()
-    scan = scan or CreateFrame("GameTooltip", scanName, nil, "GameTooltipTemplate")
+    if not scan then
+        scan = CreateFrame("GameTooltip", scanName, nil, "GameTooltipTemplate")
+        -- The template's unit health bar: never seen here, and it compares the unit's health, which
+        -- the game keeps secret on this client. Ours (an addon's) may not compare a secret: every
+        -- unit read errored ("attempt to compare ... a secret number value, while execution tainted").
+        local bar = scan.StatusBar or _G[scanName .. "StatusBar"]
+        if bar then
+            bar:SetScript("OnValueChanged", nil)
+            bar:SetScript("OnUpdate", nil)
+            if bar.UnregisterAllEvents then bar:UnregisterAllEvents() end
+            bar:Hide()
+        end
+    end
     scan:SetOwner(WorldFrame, "ANCHOR_NONE") -- a hidden tooltip loses its owner: set it every scan
     scan:ClearLines()
     return scan

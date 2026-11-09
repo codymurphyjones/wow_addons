@@ -1,0 +1,1052 @@
+{
+ "91723": {
+  "name": "Delicate Instruments",
+  "pre": [],
+  "evidence": []
+ },
+ "91725": {
+  "name": "Stolen Enchanting Supplies",
+  "pre": [],
+  "evidence": []
+ },
+ "91732": {
+  "name": "Good Steel",
+  "pre": [],
+  "evidence": []
+ },
+ "91733": {
+  "name": "Downstream",
+  "pre": [],
+  "evidence": []
+ },
+ "91741": {
+  "name": "Nibbled-On Book",
+  "pre": [],
+  "evidence": []
+ },
+ "91920": {
+  "name": "Wild Eyes",
+  "pre": [
+   430
+  ],
+  "evidence": [
+   {
+    "date": "2026-11-05",
+    "user": "",
+    "text": "The quest  \"Return to Quinn\", which you pick up in The Sepulcher is required before you can do this quest."
+   }
+  ]
+ },
+ "91921": {
+  "name": "Return to Quinn (Again)",
+  "pre": [],
+  "evidence": []
+ },
+ "92401": {
+  "name": "A Frightened Request",
+  "pre": [],
+  "evidence": []
+ },
+ "92415": {
+  "name": "Remember That I Love You",
+  "pre": [],
+  "evidence": []
+ },
+ "92421": {
+  "name": "Light's Justice",
+  "pre": [],
+  "evidence": []
+ },
+ "92422": {
+  "name": "The Wrath of Rath'mael",
+  "pre": [
+   99156
+  ],
+  "evidence": [
+   {
+    "date": "2026-11-05",
+    "user": "",
+    "text": "Prerequisite is [quest=99156]"
+   }
+  ]
+ },
+ "92432": {
+  "name": "An Alarming Request",
+  "pre": [],
+  "evidence": []
+ },
+ "92434": {
+  "name": "Blood in the Streets",
+  "pre": [],
+  "evidence": []
+ },
+ "92456": {
+  "name": "A Green Sample",
+  "pre": [],
+  "evidence": []
+ },
+ "92457": {
+  "name": "Starving Arcane",
+  "pre": [],
+  "evidence": []
+ },
+ "92458": {
+  "name": "Heart of Disruption",
+  "pre": [],
+  "evidence": []
+ },
+ "92459": {
+  "name": "Friend of the Kirin Tor",
+  "pre": [],
+  "evidence": []
+ },
+ "92460": {
+  "name": "Coming of Age",
+  "pre": [],
+  "evidence": []
+ },
+ "92464": {
+  "name": "Elemental Unrest",
+  "pre": [],
+  "evidence": []
+ },
+ "92465": {
+  "name": "Agitators",
+  "pre": [],
+  "evidence": []
+ },
+ "92471": {
+  "name": "Aetheen of the Gales",
+  "pre": [],
+  "evidence": []
+ },
+ "92474": {
+  "name": "Falling With Style",
+  "pre": [],
+  "evidence": []
+ },
+ "92489": {
+  "name": "Power Overwhelming",
+  "pre": [],
+  "evidence": []
+ },
+ "92514": {
+  "name": "Welcome to Shen'dar Village",
+  "pre": [],
+  "evidence": []
+ },
+ "92544": {
+  "name": "Al'Aketh Thugs",
+  "pre": [],
+  "evidence": []
+ },
+ "92595": {
+  "name": "The Windshapers",
+  "pre": [],
+  "evidence": []
+ },
+ "92596": {
+  "name": "The High Order",
+  "pre": [],
+  "evidence": []
+ },
+ "92598": {
+  "name": "The Gift of Skysight",
+  "pre": [],
+  "evidence": []
+ },
+ "92679": {
+  "name": "Blood Tithe",
+  "pre": [],
+  "evidence": []
+ },
+ "92706": {
+  "name": "WANTED: Bruuz",
+  "pre": [],
+  "evidence": []
+ },
+ "92742": {
+  "name": "Testing the Wells",
+  "pre": [],
+  "evidence": []
+ },
+ "92743": {
+  "name": "A Conqueror's Crown",
+  "pre": [],
+  "evidence": []
+ },
+ "92744": {
+  "name": "Murloc Gills",
+  "pre": [],
+  "evidence": []
+ },
+ "92841": {
+  "name": "Valley of Bones",
+  "pre": [],
+  "evidence": []
+ },
+ "92909": {
+  "name": "Harvesting the Harvesters",
+  "pre": [],
+  "evidence": []
+ },
+ "93034": {
+  "name": "Valley of Bones",
+  "pre": [],
+  "evidence": []
+ },
+ "93159": {
+  "name": "The Strange Hermit",
+  "pre": [],
+  "evidence": []
+ },
+ "93176": {
+  "name": "My Little Friends",
+  "pre": [],
+  "evidence": []
+ },
+ "93224": {
+  "name": "Carved Centaur Totems",
+  "pre": [],
+  "evidence": []
+ },
+ "93225": {
+  "name": "Carved Centaur Totems",
+  "pre": [],
+  "evidence": []
+ },
+ "93317": {
+  "name": "Crab Season",
+  "pre": [],
+  "evidence": []
+ },
+ "93461": {
+  "name": "Welcome to Shen'dar Village",
+  "pre": [],
+  "evidence": []
+ },
+ "93791": {
+  "name": "Speak with Belann",
+  "pre": [],
+  "evidence": []
+ },
+ "94414": {
+  "name": "The Anchors of Zephras",
+  "pre": [],
+  "evidence": []
+ },
+ "94484": {
+  "name": "Unnerving Silence",
+  "pre": [],
+  "evidence": []
+ },
+ "94493": {
+  "name": "A Sacrifice in Vain",
+  "pre": [],
+  "evidence": []
+ },
+ "94872": {
+  "name": "Buying Friendship: Magram",
+  "pre": [],
+  "evidence": []
+ },
+ "94896": {
+  "name": "Aid For The Refugees",
+  "pre": [],
+  "evidence": []
+ },
+ "94897": {
+  "name": "The Fate of a Loved One",
+  "pre": [],
+  "evidence": []
+ },
+ "94947": {
+  "name": "Welcome to Azeroth",
+  "pre": [],
+  "evidence": []
+ },
+ "95041": {
+  "name": "Data Hoarders",
+  "pre": [],
+  "evidence": []
+ },
+ "95195": {
+  "name": "Bloodied Insignia",
+  "pre": [],
+  "evidence": []
+ },
+ "95204": {
+  "name": "Crest of Lordaeron",
+  "pre": [],
+  "evidence": []
+ },
+ "95212": {
+  "name": "Never Saddle on Quality",
+  "pre": [],
+  "evidence": []
+ },
+ "95213": {
+  "name": "Stolen Blasting Powder",
+  "pre": [],
+  "evidence": []
+ },
+ "95216": {
+  "name": "The New Plague",
+  "pre": [],
+  "evidence": []
+ },
+ "95314": {
+  "name": "That Shadowvale Green Elixir",
+  "pre": [],
+  "evidence": []
+ },
+ "95350": {
+  "name": "Welcome to Azeroth",
+  "pre": [],
+  "evidence": []
+ },
+ "95494": {
+  "name": "Bruised Pride and Lion Hides",
+  "pre": [],
+  "evidence": []
+ },
+ "95495": {
+  "name": "The Hermit Tanner",
+  "pre": [],
+  "evidence": []
+ },
+ "95507": {
+  "name": "Vrang's Game",
+  "pre": [],
+  "evidence": []
+ },
+ "95508": {
+  "name": "Unwelcome Guests",
+  "pre": [],
+  "evidence": []
+ },
+ "95621": {
+  "name": "Trouble in the Valley",
+  "pre": [],
+  "evidence": []
+ },
+ "95646": {
+  "name": "Horrors in the Highland",
+  "pre": [],
+  "evidence": []
+ },
+ "95664": {
+  "name": "Elder Knowledge",
+  "pre": [],
+  "evidence": []
+ },
+ "95697": {
+  "name": "Changing Tastes",
+  "pre": [],
+  "evidence": []
+ },
+ "95737": {
+  "name": "Seeking Caitlin",
+  "pre": [],
+  "evidence": []
+ },
+ "95774": {
+  "name": "Her Name Is Olgra",
+  "pre": [],
+  "evidence": []
+ },
+ "95810": {
+  "name": "Lost Relic Carry",
+  "pre": [],
+  "evidence": []
+ },
+ "95883": {
+  "name": "The Tortured Soul",
+  "pre": [],
+  "evidence": []
+ },
+ "95885": {
+  "name": "The Offering of Blood",
+  "pre": [],
+  "evidence": []
+ },
+ "95981": {
+  "name": "Watching the Roads",
+  "pre": [],
+  "evidence": []
+ },
+ "95998": {
+  "name": "The Great Outdoors",
+  "pre": [],
+  "evidence": []
+ },
+ "95999": {
+  "name": "WANTED: Incinerator Gar'im",
+  "pre": [],
+  "evidence": []
+ },
+ "96101": {
+  "name": "The Great Outdoors",
+  "pre": [],
+  "evidence": []
+ },
+ "96130": {
+  "name": "Chakuyak",
+  "pre": [],
+  "evidence": []
+ },
+ "96139": {
+  "name": "The Valor Family",
+  "pre": [],
+  "evidence": []
+ },
+ "96241": {
+  "name": "Talkin' bout Toxins, Mon",
+  "pre": [],
+  "evidence": []
+ },
+ "96259": {
+  "name": "Defending the Dead",
+  "pre": [],
+  "evidence": []
+ },
+ "96260": {
+  "name": "Stronger than Steel",
+  "pre": [],
+  "evidence": []
+ },
+ "96261": {
+  "name": "The Broodmother",
+  "pre": [
+   96259
+  ],
+  "evidence": [
+   {
+    "date": "2026-10-20",
+    "user": "",
+    "text": "Today I had to complete [quest=96259] before this quest became available."
+   }
+  ]
+ },
+ "96391": {
+  "name": "Underground Map",
+  "pre": [],
+  "evidence": []
+ },
+ "96392": {
+  "name": "Farsen's Watch",
+  "pre": [],
+  "evidence": []
+ },
+ "96394": {
+  "name": "The Restless Dead",
+  "pre": [],
+  "evidence": []
+ },
+ "96403": {
+  "name": "Important Heirlooms",
+  "pre": [],
+  "evidence": []
+ },
+ "96408": {
+  "name": "A Visitor to Dun Morogh",
+  "pre": [],
+  "evidence": []
+ },
+ "96604": {
+  "name": "The Great Outdoors",
+  "pre": [],
+  "evidence": []
+ },
+ "96605": {
+  "name": "The Great Outdoors",
+  "pre": [],
+  "evidence": []
+ },
+ "96606": {
+  "name": "The Great Outdoors",
+  "pre": [],
+  "evidence": []
+ },
+ "96607": {
+  "name": "The Great Outdoors",
+  "pre": [],
+  "evidence": []
+ },
+ "96608": {
+  "name": "The Great Outdoors",
+  "pre": [],
+  "evidence": []
+ },
+ "96800": {
+  "name": "Past Due",
+  "pre": [],
+  "evidence": []
+ },
+ "96821": {
+  "name": "Legging It",
+  "pre": [],
+  "evidence": []
+ },
+ "96822": {
+  "name": "For Honor",
+  "pre": [],
+  "evidence": []
+ },
+ "96825": {
+  "name": "This Fruit Could Bite Back",
+  "pre": [],
+  "evidence": []
+ },
+ "96895": {
+  "name": "The Argent Emissary",
+  "pre": [],
+  "evidence": []
+ },
+ "96984": {
+  "name": "Heart of Disruption",
+  "pre": [],
+  "evidence": []
+ },
+ "96986": {
+  "name": "The Grave Knight",
+  "pre": [],
+  "evidence": []
+ },
+ "96988": {
+  "name": "Source of Power",
+  "pre": [],
+  "evidence": []
+ },
+ "97003": {
+  "name": "Chol'aruk the Ravener",
+  "pre": [],
+  "evidence": []
+ },
+ "97005": {
+  "name": "Chol'aruk the Ravener",
+  "pre": [],
+  "evidence": []
+ },
+ "97220": {
+  "name": "Philmor's Favor",
+  "pre": [],
+  "evidence": []
+ },
+ "97223": {
+  "name": "Bloodtalon Matriarch",
+  "pre": [],
+  "evidence": []
+ },
+ "97225": {
+  "name": "Forgotten Loa Idols",
+  "pre": [],
+  "evidence": []
+ },
+ "97234": {
+  "name": "Reading Room",
+  "pre": [],
+  "evidence": []
+ },
+ "97242": {
+  "name": "Yelmak's Medley",
+  "pre": [],
+  "evidence": []
+ },
+ "97246": {
+  "name": "Meal Appeal",
+  "pre": [],
+  "evidence": []
+ },
+ "97249": {
+  "name": "Favorite Food",
+  "pre": [],
+  "evidence": []
+ },
+ "97250": {
+  "name": "Wrongly Blamed, Justly Corrected",
+  "pre": [],
+  "evidence": []
+ },
+ "97253": {
+  "name": "Parts and Pieces",
+  "pre": [],
+  "evidence": []
+ },
+ "97275": {
+  "name": "Whuut's the Rush",
+  "pre": [
+   812,
+   97242
+  ],
+  "evidence": [
+   {
+    "date": "2026-10-07",
+    "user": "",
+    "text": "Prerequisite for this seems to be [url=https://www.wowhead.com/forever/quest=812/need-for-a-cure]Need for a Cure[/url]."
+   },
+   {
+    "date": "2026-11-05",
+    "user": "",
+    "text": "The prerequisite for this quest is [url=https://www.wowhead.com/forever/quest=97242/yelmaks-medley]Yelmak's Medley[/url]."
+   }
+  ]
+ },
+ "97277": {
+  "name": "Grund and Gozwin",
+  "pre": [],
+  "evidence": []
+ },
+ "97279": {
+  "name": "Wayward Weapons",
+  "pre": [],
+  "evidence": []
+ },
+ "97281": {
+  "name": "A Simmering Storm",
+  "pre": [],
+  "evidence": []
+ },
+ "97287": {
+  "name": "Shrewd Negotiations",
+  "pre": [],
+  "evidence": []
+ },
+ "97288": {
+  "name": "Unending Torment",
+  "pre": [],
+  "evidence": []
+ },
+ "97289": {
+  "name": "Unending Torment",
+  "pre": [],
+  "evidence": []
+ },
+ "97290": {
+  "name": "Unending Torment",
+  "pre": [],
+  "evidence": []
+ },
+ "97291": {
+  "name": "Unending Torment",
+  "pre": [],
+  "evidence": []
+ },
+ "97292": {
+  "name": "Unending Torment",
+  "pre": [],
+  "evidence": []
+ },
+ "97326": {
+  "name": "Rocks to Rests",
+  "pre": [],
+  "evidence": []
+ },
+ "97485": {
+  "name": "Traditions of the Bluff",
+  "pre": [],
+  "evidence": []
+ },
+ "97538": {
+  "name": "Pigments for Paints",
+  "pre": [],
+  "evidence": []
+ },
+ "97558": {
+  "name": "Hides for the Forsaken",
+  "pre": [],
+  "evidence": []
+ },
+ "97891": {
+  "name": "Prompt Potion Runner",
+  "pre": [],
+  "evidence": []
+ },
+ "97894": {
+  "name": "Business in Auberdine",
+  "pre": [],
+  "evidence": []
+ },
+ "97914": {
+  "name": "Expanding Horizons",
+  "pre": [],
+  "evidence": []
+ },
+ "97985": {
+  "name": "Thundering Hearts",
+  "pre": [],
+  "evidence": []
+ },
+ "98013": {
+  "name": "Swelling Forces",
+  "pre": [],
+  "evidence": []
+ },
+ "98025": {
+  "name": "WANTED: Jai'vhanel",
+  "pre": [],
+  "evidence": []
+ },
+ "98027": {
+  "name": "Gleaming Crescent Necklace",
+  "pre": [],
+  "evidence": []
+ },
+ "98042": {
+  "name": "It's All Fun and Games Until...",
+  "pre": [],
+  "evidence": []
+ },
+ "98059": {
+  "name": "Hillsbrad's Hoard",
+  "pre": [],
+  "evidence": []
+ },
+ "98067": {
+  "name": "Eyes of the Sentinels",
+  "pre": [],
+  "evidence": []
+ },
+ "98070": {
+  "name": "Stop the Screeching",
+  "pre": [],
+  "evidence": []
+ },
+ "98071": {
+  "name": "Brewer's Trade",
+  "pre": [],
+  "evidence": []
+ },
+ "98072": {
+  "name": "Crocs of the Sky",
+  "pre": [],
+  "evidence": []
+ },
+ "98094": {
+  "name": "Scout Support",
+  "pre": [],
+  "evidence": []
+ },
+ "98095": {
+  "name": "Valuable Vantages",
+  "pre": [],
+  "evidence": []
+ },
+ "98189": {
+  "name": "Return the Statuette",
+  "pre": [],
+  "evidence": []
+ },
+ "98190": {
+  "name": "A Friend of the Family",
+  "pre": [],
+  "evidence": []
+ },
+ "98191": {
+  "name": "A Friend of the Family",
+  "pre": [],
+  "evidence": []
+ },
+ "98197": {
+  "name": "Spoils of War",
+  "pre": [],
+  "evidence": []
+ },
+ "98209": {
+  "name": "Bloom of the Heavens",
+  "pre": [],
+  "evidence": []
+ },
+ "98216": {
+  "name": "Understanding Our Present",
+  "pre": [],
+  "evidence": []
+ },
+ "98219": {
+  "name": "The Shamed Lieutenant",
+  "pre": [],
+  "evidence": []
+ },
+ "98221": {
+  "name": "From the Ashes",
+  "pre": [],
+  "evidence": []
+ },
+ "98223": {
+  "name": "Old Habits",
+  "pre": [],
+  "evidence": []
+ },
+ "98230": {
+  "name": "This Land Was Their Land",
+  "pre": [],
+  "evidence": []
+ },
+ "98240": {
+  "name": "Crimson Crate Delivery",
+  "pre": [],
+  "evidence": []
+ },
+ "98245": {
+  "name": "Razormaw Needling",
+  "pre": [],
+  "evidence": []
+ },
+ "98251": {
+  "name": "Never Coming Back",
+  "pre": [],
+  "evidence": []
+ },
+ "98252": {
+  "name": "A Void Path",
+  "pre": [],
+  "evidence": []
+ },
+ "98282": {
+  "name": "Alchemical Hazards",
+  "pre": [],
+  "evidence": []
+ },
+ "98283": {
+  "name": "Carnage",
+  "pre": [],
+  "evidence": []
+ },
+ "98291": {
+  "name": "Death to the Dragonmaw",
+  "pre": [],
+  "evidence": []
+ },
+ "98297": {
+  "name": "Stopping the Cycle",
+  "pre": [
+   98293,
+   98291
+  ],
+  "evidence": [
+   {
+    "date": "2026-10-04",
+    "user": "",
+    "text": "You also need to do: \r\n\"Forced Disarmament\" (quest starts when u loot a crate near 60.8."
+   },
+   {
+    "date": "2026-10-04",
+    "user": "",
+    "text": "After completing that u will get \"Death to the Dragonmaw\"."
+   }
+  ]
+ },
+ "98298": {
+  "name": "Arugal's Folly",
+  "pre": [],
+  "evidence": []
+ },
+ "98299": {
+  "name": "Stop the Spread",
+  "pre": [
+   99
+  ],
+  "evidence": [
+   {
+    "date": "2026-10-17",
+    "user": "",
+    "text": "This quest have a prerequisite:\nComplete 5th quest in Series [quest=99] taken from same NPC - [npc=1938]."
+   }
+  ]
+ },
+ "98300": {
+  "name": "Word to Ironforge",
+  "pre": [],
+  "evidence": []
+ },
+ "98310": {
+  "name": "Gleaning Our Future",
+  "pre": [],
+  "evidence": []
+ },
+ "98313": {
+  "name": "For Further Study",
+  "pre": [],
+  "evidence": []
+ },
+ "98321": {
+  "name": "Flintfire's Shipment",
+  "pre": [],
+  "evidence": []
+ },
+ "98322": {
+  "name": "Secure the Mountain",
+  "pre": [],
+  "evidence": []
+ },
+ "98326": {
+  "name": "Frosthowl",
+  "pre": [],
+  "evidence": []
+ },
+ "98341": {
+  "name": "The Great Windborne Cat Spirit",
+  "pre": [],
+  "evidence": []
+ },
+ "98387": {
+  "name": "Blackrock Blockade",
+  "pre": [],
+  "evidence": []
+ },
+ "98389": {
+  "name": "A Light in the Darkness",
+  "pre": [],
+  "evidence": []
+ },
+ "98391": {
+  "name": "The Sisterhood of Elune",
+  "pre": [],
+  "evidence": []
+ },
+ "98404": {
+  "name": "The Great Windborne Cat Spirit",
+  "pre": [],
+  "evidence": []
+ },
+ "98407": {
+  "name": "Show of Force",
+  "pre": [],
+  "evidence": []
+ },
+ "98418": {
+  "name": "Shared Fury",
+  "pre": [],
+  "evidence": []
+ },
+ "98424": {
+  "name": "Fizsprocket's Notes",
+  "pre": [],
+  "evidence": []
+ },
+ "98430": {
+  "name": "The Longwalkers",
+  "pre": [],
+  "evidence": []
+ },
+ "98459": {
+  "name": "A Lack of Virtue",
+  "pre": [],
+  "evidence": []
+ },
+ "98461": {
+  "name": "Unrequited Love",
+  "pre": [],
+  "evidence": []
+ },
+ "98463": {
+  "name": "Talk of the Town",
+  "pre": [],
+  "evidence": []
+ },
+ "98512": {
+  "name": "Al'Aketh Assassins",
+  "pre": [],
+  "evidence": []
+ },
+ "98738": {
+  "name": "Blessings of the Great Windborne Cat Spirit",
+  "pre": [],
+  "evidence": []
+ },
+ "98815": {
+  "name": "Highland Hides",
+  "pre": [],
+  "evidence": []
+ },
+ "98823": {
+  "name": "Earthen Echo",
+  "pre": [],
+  "evidence": []
+ },
+ "98824": {
+  "name": "Prehistoric Prism",
+  "pre": [],
+  "evidence": []
+ },
+ "98906": {
+  "name": "The Battle for Darkspear Islands!",
+  "pre": [],
+  "evidence": []
+ },
+ "99046": {
+  "name": "The Lost Runner",
+  "pre": [],
+  "evidence": []
+ },
+ "99047": {
+  "name": "Not Dead Yet",
+  "pre": [],
+  "evidence": []
+ },
+ "99048": {
+  "name": "A Missing Hand",
+  "pre": [],
+  "evidence": []
+ },
+ "99053": {
+  "name": "Escaping Ban'ethil",
+  "pre": [],
+  "evidence": []
+ },
+ "99079": {
+  "name": "Longwalker Malah",
+  "pre": [],
+  "evidence": []
+ },
+ "99108": {
+  "name": "Sparring Match",
+  "pre": [],
+  "evidence": []
+ },
+ "99123": {
+  "name": "Lost in the Shadows",
+  "pre": [],
+  "evidence": []
+ },
+ "99127": {
+  "name": "A Net Disaster",
+  "pre": [],
+  "evidence": []
+ },
+ "99134": {
+  "name": "Discipline",
+  "pre": [],
+  "evidence": []
+ },
+ "99141": {
+  "name": "Patience",
+  "pre": [],
+  "evidence": []
+ },
+ "99143": {
+  "name": "Bottles and Baubles",
+  "pre": [],
+  "evidence": []
+ },
+ "99144": {
+  "name": "Seeking Refuge",
+  "pre": [],
+  "evidence": []
+ },
+ "99158": {
+  "name": "Dawn in the Mountains",
+  "pre": [],
+  "evidence": []
+ },
+ "99159": {
+  "name": "Finding Warmth",
+  "pre": [],
+  "evidence": []
+ },
+ "99411": {
+  "name": "Kyle's Gone Missing!",
+  "pre": [],
+  "evidence": []
+ }
+}

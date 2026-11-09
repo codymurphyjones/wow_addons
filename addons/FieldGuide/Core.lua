@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.5"
+ns.VERSION = "0.1.19"
 -- Field Guide's logo, shipped in the addon (Media\make_icon.py draws it).
 ns.ICON = "Interface\\AddOns\\FieldGuide\\Media\\Icon"
 
@@ -11,7 +11,10 @@ ns.Guides = {}
 ns.Quests = {}
 
 -- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
-ns.SAVED = { db = "FieldGuideDB", char = "FieldGuideCharDB" }
+ns.SAVED = { db = "FieldGuideDB", char = "FieldGuideCharDB",
+    -- The settings a character may keep its own copy of (Setup.lua); the rest is shared data.
+    own = { "shown", "locked", "nextSteps", "focusQuestie", "dock", "manageTracking", "autoAccept",
+        "autoAcceptGuide", "autoTurnIn" } }
 
 ns.DEFAULTS = {
     shown = true,
@@ -24,7 +27,8 @@ ns.DEFAULTS = {
     autoAccept = true,  -- take quests when you talk to their givers (AutoQuest.lua)
     autoAcceptGuide = true, -- ...only the ones the guide has on its list
     autoTurnIn = true,  -- hand quests in, unless there's a reward to pick
-    detourMinutes = 2,  -- Leveling: how far off the route a quick quest may be (minutes of extra walking)
+    questMacro = false, -- the account-wide quest item macro is yours and kept up to date (QuestMacro.lua)
+    questMacroAsked = false, -- you answered the prompt to make it
     questCheck = {},    -- [questID] = whether the server has it, for one game build (Exists.lua)
     wingMaps = {},      -- [uiMapID inside a dungeon] = the wing it belongs to, learned as you play
     -- The field (UI.lua) and what it learned: how long you stay to read (seconds), how often you look
@@ -38,19 +42,25 @@ ns.CHAR_DEFAULTS = {
     section = nil,   -- a section id you picked; nil: the next one worth doing
     skipped = {},    -- step keys you skipped by hand
     paused = false,  -- the guide keeps its hands off Waypoint's arrow
+    shelved = nil,   -- quests the guide had tracked when you paused it: untracked meanwhile, tracked again on Play
+    stashed = nil,   -- quests tracked when you pressed Play ({ id, by }): untracked while the guide runs, tracked again on Pause
     ignored = {},    -- quests you skipped (or left because their item didn't drop): never suggested, nor what needs them
+    later = {},      -- dungeon quests skipped for now: [questID] = your level then. The leveling route leaves them
+                     -- until you level up; the dungeon list keeps offering them (Instance.lua)
     deferred = {},   -- Zone Clear: quests you skipped once. They wait until the rest of the zone is done
     doneByHand = {}, -- quests you marked done ("Done it"), whatever the game's record says
     lastPick = nil,  -- the zone section Automatic last chose (kept while you travel through others)
-    handIns = {},    -- finished quests off the route that the plan took on (E.WithHandIns)
-    early = {},      -- quests of a higher bracket taken while passing: they wait for their level (E.WithEarly)
-    adopted = {},    -- quests worth doing that you were beside, on the route or not (E.WithNearby)
+    early = {},      -- quests of a higher bracket taken early: they wait for their level (E.Early)
     carried = {},    -- quests in your log, off the route, worth finishing in the zone you're following (E.Carried)
     rerun = {},      -- quests whose item didn't drop and you chose to run the dungeon again for
     ran = {},        -- ["dungeon:wing"] = true: that run (or wing) is over on the current route
     preference = "leveling", -- "leveling": XP and convenience first; "clear": every quest of the zone you're on
     notOffered = {}, -- quests their giver didn't offer you when you got there (Exists.lua)
     waitZone = nil,  -- paused until you leave this zone (a skipped trip with nothing left here)
+    zoneLock = nil,  -- a zone you chose to stay in (the arrow's menu): no other zone until it has nothing left
+    guideZone = nil, -- a zone you chose from the guide list (GuidePicker.lua): its areas first while it has work for you
+    dungeonPaths = {},   -- dungeon quests you chose to get ready for while leveling: [questID] = { inst, level, head } (DungeonPaths.lua)
+    dungeonPathsNo = {}, -- dungeon quests you said no to: [questID] = true (never asked again; /fg paths reset)
     whyLog = {},     -- the last few picks of a section outside your zone, and why (Engine.lua, E:Why)
 }
 
@@ -60,6 +70,14 @@ ns:OnChanged(function()
     if ns.UI then ns.UI:Refresh() end
     if ns.MinimapButton then ns.MinimapButton:Refresh() end
     if ns.DungeonPicker then ns.DungeonPicker:Refresh() end
+    if ns.DungeonTodo then ns.DungeonTodo:Refresh() end
+    if ns.GuidePicker then ns.GuidePicker:Refresh() end
+end)
+
+-- A login or /reload: the first route is worked out while the loading screen is still up, where
+-- the frame it takes (~100 ms, its caches cold) can't be seen, not in the first frames you play.
+ns:On("PLAYER_ENTERING_WORLD", function(isLogin, isReload)
+    if (isLogin or isReload) and ns.Engine and ns.char then ns.Engine:Update() end
 end)
 
 ns:On("PLAYER_LOGIN", function()
@@ -77,6 +95,8 @@ local function Help()
     ns:Print("/fg mode leveling, /fg mode clear - XP and convenience first, or finish every quest of the zone you're on")
     ns:Print("/fg missing - quests left out because the server doesn't have them (/fg recheck: ask the server again)")
     ns:Print("/fg dungeons - dungeons in your level range with quests left (/fg dungeon <n>: guide me there, /fg dungeon stop)")
+    ns:Print("/fg macro - make the Quest Item macro (uses the quest item you need now) and put it on your cursor")
+    ns:Print("/fg paths - dungeon paths you accepted (quests that lead to a dungeon quest, fitted into your leveling; /fg paths stop, /fg paths reset)")
     ns:Print("/fg skip - skip the current quest (Field Guide stops suggesting it), /fg unskip - bring skipped quests back")
     ns:Print("/fg why - why the guide picked this section, and what it sees in your zone's quests")
     ns:Print("/fg arrow - point Waypoint's arrow at the current step again")
@@ -104,6 +124,10 @@ SlashCmdList.FIELDGUIDE = function(msg)
         ns.Engine:ChooseSection(arg)
     elseif cmd == "dungeon" or cmd == "dungeons" then
         ns.Instance:Command(arg)
+    elseif cmd == "macro" then
+        ns.QuestMacro:Command()
+    elseif cmd == "paths" or cmd == "path" then
+        ns.DungeonPaths:Command(arg)
     elseif cmd == "why" then
         for _, line in ipairs(ns.Engine:Why()) do ns:Print(line) end
     elseif cmd == "skip" then
@@ -134,7 +158,13 @@ SlashCmdList.FIELDGUIDE = function(msg)
         end
     elseif cmd == "recheck" then
         ns.Exists:Recheck()
-        ns:Print("Asking the server about the guide's quests again.")
+        -- Quests a giver didn't offer get another try too (an earlier quest may be done by now).
+        local back = 0
+        for id in pairs(ns.char.notOffered) do ns.char.notOffered[id] = nil; back = back + 1 end
+        ns.Engine:Invalidate()
+        ns:Print(("Asking the server about the guide's quests again%s."):format(
+            back > 0 and (", and %d quest%s a giver didn't offer %s back on the route"):format(back, back == 1 and "" or "s", back == 1 and "is" or "are") or ""))
+        ns:Changed()
     elseif cmd == "settings" or cmd == "options" or cmd == "config" then
         ns.Settings:Open()
     -- The toggles change the same options as Options > AddOns > Field Guide (ns:SetOption), so the
@@ -154,8 +184,10 @@ SlashCmdList.FIELDGUIDE = function(msg)
         wipe(ns.char.skipped)
         wipe(ns.char.doneByHand)
         wipe(ns.char.ignored)
+        wipe(ns.char.later)
         wipe(ns.char.deferred)
         wipe(ns.char.notOffered)
+        if ns.char.leftHandIns then wipe(ns.char.leftHandIns) end
         ns.Engine:Invalidate()
         ns:Print("Skipped steps, quests you marked done, and quests their giver didn't offer, are back.")
         ns:Changed()
@@ -163,6 +195,9 @@ SlashCmdList.FIELDGUIDE = function(msg)
         ns:Print(ns:ToggleOption("db.focusQuestie") and "The current quest goes to the top of Questie's tracker." or "Questie's tracker is left alone.")
     elseif cmd == "minimap" then
         ns:ToggleOption("char.minimap.hide")
+    elseif cmd == "slow" then
+        ns.db.slowWatch = ns.db.slowWatch == false
+        ns:Print(ns.db.slowWatch and "Slow-call watch on: a call that holds a frame past 100 ms is said in chat." or "Slow-call watch off.")
     else
         Help()
     end
@@ -171,4 +206,101 @@ end
 ns:Compartment(function()
     ns.db.shown = not ns.db.shown
     ns:Changed()
+end)
+
+-- ---------------------------------------------------------------------------------------------
+-- Slow-call watch (/fg slow turns it off and on), like Waypoint's: Field Guide's calls timed, and
+-- one that holds a frame past SLOW_MS said in chat with the calls inside it that took the time.
+-- Calls into Waypoint show up as Waypoint's own "Waypoint slow" lines. Work inside the planner's
+-- coroutine isn't timed: it gives the frame back by itself.
+-- ---------------------------------------------------------------------------------------------
+local SLOW_MS = 100
+local depth, inner = 0, {}
+-- One frame's calls together: several calls under SLOW_MS each can still hold a frame (a /reload),
+-- so a frame whose calls add up to SLOW_MS is said too, with the calls that took the time.
+local frameSum, frameParts, frameSaid, frameInner = 0, {}, false, {}
+local function FrameAdd(name, ms)
+    frameSum = frameSum + ms
+    frameParts[name] = (frameParts[name] or 0) + ms
+end
+-- Background work (the planner's and the zone pick's slices) counts toward the frame too.
+function ns.SlowFrameNote(name, ms) FrameAdd(name, ms) end
+-- A stretch of a timed call that isn't a call of its own (Engine:Update's stages), named in the line too.
+function ns.SlowNote(name, ms)
+    if depth > 0 then inner[name] = (inner[name] or 0) + ms end
+end
+local function Done(name, t0, ...)
+    local spent = debugprofilestop() - t0
+    depth = depth - 1
+    if depth > 0 then
+        inner[name] = (inner[name] or 0) + spent
+    else
+        FrameAdd(name, spent)
+        if spent >= SLOW_MS then
+            frameSaid = true
+            local parts = {}
+            for k, v in pairs(inner) do
+                if v >= 5 then parts[#parts + 1] = { k, v } end
+            end
+            table.sort(parts, function(a, b) return a[2] > b[2] end)
+            local text = {}
+            for i = 1, math.min(6, #parts) do text[i] = ("%s %d"):format(parts[i][1], parts[i][2]) end
+            print(("|cffff8c33Field Guide slow:|r %s %d ms%s%s"):format(name, spent,
+                InCombatLockdown() and " (in combat)" or "", #text > 0 and (": " .. table.concat(text, ", ")) or ""))
+        end
+        for k, v in pairs(inner) do frameInner[k] = (frameInner[k] or 0) + v end
+        wipe(inner)
+    end
+    return ...
+end
+local function Wrap(tbl, label)
+    if type(tbl) ~= "table" then return end
+    local names = {}
+    for k, fn in pairs(tbl) do
+        if type(k) == "string" and type(fn) == "function" then names[#names + 1] = k end
+    end
+    for _, k in ipairs(names) do
+        local fn = rawget(tbl, k)
+        local name = label .. ":" .. k
+        tbl[k] = function(...)
+            -- (Only calls one deep inside a timed one are timed: the line names no deeper ones, and
+            -- timing every small call an update makes thousands of times cost more than they did.)
+            if depth >= 2 or (ns.db and ns.db.slowWatch == false) or coroutine.running() then return fn(...) end
+            if depth == 0 then wipe(inner) end
+            depth = depth + 1
+            return Done(name, debugprofilestop(), fn(...))
+        end
+    end
+end
+-- (An error inside a timed call leaves the count up: set right again every frame.)
+local watchFrame = CreateFrame("Frame")
+watchFrame:SetScript("OnUpdate", function()
+    depth = 0
+    if frameSum >= SLOW_MS and not frameSaid and not (ns.db and ns.db.slowWatch == false) then
+        local parts = {}
+        for k, v in pairs(frameParts) do
+            if v >= 5 then parts[#parts + 1] = { k, v } end
+        end
+        table.sort(parts, function(a, b) return a[2] > b[2] end)
+        local text = {}
+        for i = 1, math.min(6, #parts) do text[i] = ("%s %d"):format(parts[i][1], parts[i][2]) end
+        -- ...and what took the time inside them (Engine:Update's stages and the calls it made).
+        local ins = {}
+        for k, v in pairs(frameInner) do
+            if v >= 4 then ins[#ins + 1] = { k, v } end
+        end
+        table.sort(ins, function(a, b) return a[2] > b[2] end)
+        local inside = {}
+        for i = 1, math.min(10, #ins) do inside[i] = ("%s %d"):format(ins[i][1], ins[i][2]) end
+        print(("|cffff8c33Field Guide slow frame:|r %d ms in %d calls: %s%s"):format(frameSum, #parts, table.concat(text, ", "),
+            #inside > 0 and ("; inside: " .. table.concat(inside, ", ")) or ""))
+    end
+    frameSum, frameSaid = 0, false
+    wipe(frameParts)
+    wipe(frameInner)
+end)
+ns:On("PLAYER_LOGIN", function()
+    for _, key in ipairs({ "Engine", "UI", "Progress", "QuestLog", "AutoQuest", "Exists", "Instance", "Settings", "DungeonPicker" }) do
+        Wrap(ns[key], key)
+    end
 end)

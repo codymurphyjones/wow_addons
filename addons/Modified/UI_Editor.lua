@@ -934,38 +934,15 @@ function E:InsertPattern(pattern)
             break
         end
     end
-    -- A lone catch-all row (like the button's original spell) is replaced.
-    if #rules == 1 and (B:IsUnconditional(rules[1]) or not B:RuleHasAction(rules[1])) then
-        wipe(rules)
-    end
-
-    local new = {}
-    for _, skeleton in ipairs(pattern.rules) do
-        local rule = B:NewRule(skeleton)
-        if rule.role == "A" and seed then SetAction(rule, seed) end
-        new[#new + 1] = rule
-    end
-
-    -- Put the whole pattern on the first modifier where none of its rows clash.
-    local chosen
-    for _, mod in ipairs(B.MODIFIERS) do
-        local fits = true
-        for _, rule in ipairs(new) do
-            rule.mod = mod.key
-            if B:HasConflict(rules, rule, nil, self.draft.sequence) then fits = false end
-        end
-        if fits then
-            chosen = mod
-            break
-        end
-    end
-    if not chosen then
+    -- The whole pattern goes on the first modifier where none of its rows clash; a lone
+    -- catch-all row (like the button's original spell) is replaced (MacroBuilder.lua).
+    local _, mod = B:PlacePattern(rules, pattern, { seed = seed, sequence = self.draft.sequence })
+    if not mod then
         ns:Print("That pattern doesn't fit: every modifier already uses those conditions.")
         return
     end
-    for _, rule in ipairs(new) do rules[#rules + 1] = rule end
-    if chosen.key ~= "none" then
-        ns:Print(("Pattern added on %s (the earlier modifiers already use those conditions)."):format(chosen.label))
+    if mod ~= "none" then
+        ns:Print(("Pattern added on %s (the earlier modifiers already use those conditions)."):format(B:ModLabel(mod)))
     end
     self:Refresh()
 end
@@ -996,7 +973,8 @@ function E:Apply()
     if ok == "queued" then
         ns:Print("In combat. The macro will be applied when combat ends.")
     elseif ok then
-        ns:Print(("Updated %s (%s)."):format(ns.Bars:Describe(slot), self.draft.macroName))
+        local design = ns.db.designs[slot]
+        ns:Print(("Updated %s (%s)."):format(ns.Bars:Describe(slot), design and design.macroName or "?"))
         ReloadIfNeeded()
     elseif err then
         ns:Print("|cffff5555" .. err .. "|r")

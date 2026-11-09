@@ -4,7 +4,9 @@ local _, ns = ...
 -- Shift when you talk to an NPC to do it by hand. It stops, for you to decide, at anything that's
 -- yours to choose: a reward to pick, or gold a quest wants. Quests you skipped aren't taken, repeatable
 -- quests are left alone, and gray ones are only taken in Zone Clear. With Accept Field Guide Quests on,
--- only the quests the guide has you picking up are taken; the others are yours to take or leave.
+-- only the quests on the guide's pick-up list are taken (anywhere on it: if the NPC offers it, it's
+-- yours to take); the others are yours to take or leave. An NPC with several: the first wanted one, and
+-- the next when the list comes back after it.
 local A = {}
 ns.AutoQuest = A
 
@@ -74,6 +76,8 @@ local function FromGreeting()
     if ns.db.autoAccept then
         for i = 1, Call(GetNumAvailableQuests) or 0 do
             local trivial, _, repeatable, _, id = Call(GetAvailableQuestInfo, i)
+            -- (No quest ID in this list: the title says which.)
+            if not id then id = ns.Engine:WantedByTitle(Call(GetAvailableTitle, i)) end
             if Takes(id, trivial, repeatable) then
                 Mark(id)
                 return SelectAvailableQuest(i)

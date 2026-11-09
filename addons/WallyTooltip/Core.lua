@@ -7,7 +7,7 @@ local _, ns = ...
 -- one that covers least. When every spot would cover something vital, the tooltip goes where Edit
 -- Mode puts it (the game's own default). /wtip
 WallyTooltip = WallyTooltip or {}
-ns.VERSION = "0.1.2"
+ns.VERSION = "0.1.5"
 
 -- Events and saved variables: the shared Core.lua (addons/shared). Print stays here.
 ns.SAVED = { db = "WallyTooltipDB" }
@@ -17,6 +17,7 @@ ns.DEFAULTS = {
     glide = true,        -- a tooltip that's showing glides to a new spot (off: it jumps)
     combatAware = true,  -- in a fight, and while you move, keep the middle of the screen clearer
     combatKeepOut = true, -- in a fight, never over the middle of the screen (a square, half the screen's height)
+    minimapAside = true, -- a tooltip for something on the minimap goes beside the map, not over it
     debug = false,       -- say in chat where each tooltip went, and why
 }
 

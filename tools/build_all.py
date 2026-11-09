@@ -80,6 +80,7 @@ STEPS = [
     ("WealthPlanner", "build_vendor_items.py", [], "which items vendors sell", [_questiedb]),
     ("WealthPlanner", "fetch_farms.py", [], "farming drops and spawns (Wowhead)", []),
     ("shared", "build_instances.py", [], "the dungeons and raids Field Guide, SpyGlass and Fireside share (QuestieDB)", [_questiedb]),
+    ("shared", "build_quest_items.py", [], "the items quests ask you to carry, so Wally never sells them mid-quest (QuestieDB)", [_questiedb]),
     ("shared", "build_recipes.py", [], "recipes for SpyGlass's journal and Wealth Planner's crafting, read once (Wowhead)", []),
     ("FieldGuide", "fetch_xp.py", [], "quest XP (QuestieDB + Wowhead cache)", [_questiedb]),
     ("FieldGuide", "zone_walks.py", [], "real walks between zones (Waypoint's walkable ground)", []),

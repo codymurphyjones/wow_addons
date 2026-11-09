@@ -29,8 +29,11 @@ local function Num(v) v = Readable(v); return type(v) == "number" and v or nil e
 
 I.NUM_BAGS = NUM_BAG_SLOTS or 4
 I.NUM_REAGENT_BAGS = NUM_REAGENTBAG_SLOTS or 0
-I.BANK = BANK_CONTAINER or -1
-I.NUM_BANK_BAGS = NUM_BANKBAGSLOTS or 6
+-- The bank on WoW Forever: up to 9 tabs, bags 6-14 (Enum.BagIndex.CharacterBankTab_1...). A tab
+-- not bought yet has no slots. (There's no bank container: bag -1 is the keyring.)
+local BI = Enum and Enum.BagIndex
+I.BANK_TABS = {}
+for i = 1, 9 do I.BANK_TABS[i] = (BI and BI["CharacterBankTab_" .. i]) or (5 + i) end
 
 -- Item IDs the addons name.
 I.ITEMS = { HEARTHSTONE = 6948 }
@@ -148,6 +151,27 @@ function I.GetItemFamily(item)
 end
 
 -- ---------------------------------------------------------------------------
+-- Merchant
+-- ---------------------------------------------------------------------------
+
+-- The open merchant's item at index: price (copper for the whole stack), stack size, and whether
+-- it also costs items or currency. The 12.x engine has C_MerchantFrame.GetItemInfo (a table) in
+-- place of the old global GetMerchantItemInfo. Nil when neither answers.
+function I.MerchantItemInfo(index)
+    local MF = C_MerchantFrame
+    if MF and MF.GetItemInfo then
+        local info = MF.GetItemInfo(index)
+        if type(info) ~= "table" then return nil end
+        return Num(info.price), Num(info.stackCount), Readable(info.hasExtendedCost) and true or false
+    end
+    if GetMerchantItemInfo then
+        local _, _, price, quantity, _, _, _, extendedCost = GetMerchantItemInfo(index)
+        return Num(price), Num(quantity), Readable(extendedCost) and true or false
+    end
+    return nil
+end
+
+-- ---------------------------------------------------------------------------
 -- Links
 -- ---------------------------------------------------------------------------
 
@@ -184,11 +208,38 @@ function I.GetNumSlots(bag)
     return GetContainerNumSlots(bag) or 0
 end
 
--- free, family (0 = a normal bag)
+-- A profession bag's family from the bag item itself: its item family, else its subclass
+-- (Container: 1 soul, 2 herb, 3 enchanting, 4 engineering, 5 gem, 6 mining, 7 leatherworking,
+-- 8 inscription). 0 for a normal bag, the backpack and reagent bags. Cached per bag item.
+local SUBCLASS_FAMILY = { [1] = 4, [2] = 32, [3] = 64, [4] = 128, [5] = 512, [6] = 1024, [7] = 8, [8] = 16 }
+local itemBagFamily = {}
+function I.BagItemFamily(bag)
+    if type(bag) ~= "number" or bag < 1 or bag > I.NUM_BAGS then return 0 end
+    local toInv = (CC and CC.ContainerIDToInventoryID) or ContainerIDToInventoryID
+    if not toInv then return 0 end
+    local ok, inv = pcall(toInv, bag)
+    local id = ok and inv and GetInventoryItemID("player", inv)
+    if not id then return 0 end
+    local fam = itemBagFamily[id]
+    if fam then return fam end
+    fam = I.GetItemFamily(id)
+    if type(fam) ~= "number" or fam <= 0 then
+        local _, _, _, _, _, classID, subClassID = I.GetItemInfoInstant(id)
+        fam = (classID == I.CLASS.CONTAINER and SUBCLASS_FAMILY[subClassID]) or 0
+    end
+    itemBagFamily[id] = fam
+    return fam
+end
+
+-- free, family (0 = a normal bag). The client doesn't always say a bag's family with its free
+-- slots; read as 0, a herb bag looked like a normal one, and sorting or emptying a bag kept
+-- trying to put anything in it (the game refusing each time). So with none given, the bag item's
+-- own family is used (BagItemFamily).
 function I.GetFreeSlots(bag)
     local free, family
     if CC and CC.GetContainerNumFreeSlots then free, family = CC.GetContainerNumFreeSlots(bag)
     else free, family = GetContainerNumFreeSlots(bag) end
+    if not family or family == 0 then family = I.BagItemFamily(bag) end
     return free or 0, family or 0
 end
 
@@ -260,6 +311,91 @@ function I.IsSlotBound(bag, slot)
     return TooltipBound(bag, slot)
 end
 
+-- ---------------------------------------------------------------------------
+-- Quest items
+-- ---------------------------------------------------------------------------
+
+-- Names of the items your active quests ask for ("Cactus Apple"), lower case. Rebuilt after
+-- QUEST_LOG_UPDATE; built on first use.
+local questNeeds
+local function ObjectiveItem(text, objType)
+    if type(text) ~= "string" or (objType and objType ~= "item") then return nil end
+    local name = text:match("^(.-):%s*%d+%s*/%s*%d+") or text:match("^%d+%s*/%s*%d+%s+(.+)$")
+    return name and name:lower()
+end
+local function BuildQuestNeeds()
+    questNeeds = {}
+    local QL = C_QuestLog
+    local count = (QL and QL.GetNumQuestLogEntries and QL.GetNumQuestLogEntries())
+        or (GetNumQuestLogEntries and GetNumQuestLogEntries()) or 0
+    for i = 1, count do
+        local n = GetNumQuestLeaderBoards and GetNumQuestLeaderBoards(i) or 0
+        for j = 1, n do
+            local ok, text, objType = pcall(GetQuestLogLeaderBoard, j, i)
+            local name = ok and ObjectiveItem(text, objType)
+            if name then questNeeds[name] = true end
+        end
+        if n == 0 and QL and QL.GetInfo and QL.GetQuestObjectives then
+            local info = QL.GetInfo(i)
+            local objectives = info and info.questID and not info.isHeader and QL.GetQuestObjectives(info.questID)
+            for _, o in ipairs(objectives or {}) do
+                local name = ObjectiveItem(o.text, o.type)
+                if name then questNeeds[name] = true end
+            end
+        end
+    end
+    return questNeeds
+end
+local questFrame = CreateFrame("Frame")
+questFrame:RegisterEvent("QUEST_LOG_UPDATE")
+questFrame:SetScript("OnEvent", function() questNeeds = nil end)
+
+-- Whether you're on a quest that needs this item, from ns.QUEST_ITEMS (shared QuestItems.lua,
+-- built from QuestieDB) when the addon loads it. IsOnQuest asks by quest ID, so collapsed headers
+-- in the quest log don't hide anything.
+local function OnQuestFor(link)
+    local needs = ns.QUEST_ITEMS
+    local isOn = C_QuestLog and C_QuestLog.IsOnQuest
+    local id = needs and isOn and I.IDFromLink(link)
+    local quests = id and needs[id]
+    if not quests then return false end
+    for _, questID in ipairs(quests) do
+        local ok, on = pcall(isOn, questID)
+        if ok and on == true then return true end
+    end
+    return false
+end
+
+-- Whether an item is for a quest, and why: its class is Quest, it's quest-bound ("Quest Item"
+-- on the tooltip), the bag says it's a quest item, you're on a quest QuestItems.lua says needs it,
+-- or an active quest asks for it by name (read from the quest log: the fallback for items the
+-- data lacks). bag and slot are optional.
+function I.IsQuestItem(link, bag, slot)
+    if not link then return false end
+    if OnQuestFor(link) then return true, "Needed for a quest" end
+    local name, _, _, _, _, _, _, _, _, _, _, classID, _, bindType = I.GetItemInfo(link)
+    if not classID then
+        local _
+        _, _, _, _, _, classID = I.GetItemInfoInstant(link)
+    end
+    if classID == I.CLASS.QUEST then return true, "Quest item" end
+    if bindType == ((Enum and Enum.ItemBind and Enum.ItemBind.Quest) or 4) then return true, "Quest item" end
+    if bag and slot then
+        local fn = (CC and CC.GetContainerItemQuestInfo) or GetContainerItemQuestInfo
+        if fn then
+            local ok, a, b = pcall(fn, bag, slot)
+            if ok then
+                local isQuest, questID = a, b
+                if type(a) == "table" then isQuest, questID = a.isQuestItem, a.questID end
+                if isQuest or questID then return true, "Quest item" end
+            end
+        end
+    end
+    name = name or I.NameFromLink(link)
+    if name and (questNeeds or BuildQuestNeeds())[name:lower()] then return true, "Needed for a quest" end
+    return false
+end
+
 -- Item link at an ItemLocation (needs C_Item.DoesItemExist and GetItemLink), or nil.
 function I.LinkFromLocation(location)
     if not (location and CI and CI.DoesItemExist and CI.GetItemLink) then return nil end
@@ -268,15 +404,68 @@ function I.LinkFromLocation(location)
     return CI.GetItemLink(location)
 end
 
-function I.UseContainerItem(bag, slot)
-    if CC and CC.UseContainerItem then return CC.UseContainerItem(bag, slot) end
-    return UseContainerItem(bag, slot)
+-- Bag items right-clicked (used, sold at a vendor, equipped): fn(bag, slot) for each, just after.
+-- Not a hook on UseContainerItem itself: on the 12.x engine a hooked UseContainerItem is the
+-- hooking addon's, so every item used from the bags, the game's own included, was blocked
+-- ("Wally tried to call the protected function UNKNOWN()"). The clicks are followed instead, on
+-- the game's bag buttons (HookScript runs after the game's own click, which stays the game's),
+-- plus I.UseContainerItem's own calls and any addon button that reports with I.BagItemUsed.
+local usedFns, hookedButtons = {}, setmetatable({}, { __mode = "k" })
+
+function I.BagItemUsed(bag, slot)
+    for _, fn in ipairs(usedFns) do
+        local ok, err = pcall(fn, bag, slot)
+        if not ok then geterrorhandler()(err) end
+    end
 end
 
--- Hooks the function used to sell/use bag items, on whichever table owns it.
-function I.HookUseContainerItem(fn)
-    if CC and CC.UseContainerItem then hooksecurefunc(CC, "UseContainerItem", fn)
-    else hooksecurefunc("UseContainerItem", fn) end
+local function OnItemButtonClick(self, button)
+    if button ~= "RightButton" or IsModifiedClick() then return end
+    local ok, bag = pcall(self.GetBagID, self)
+    local slot = self.GetID and self:GetID()
+    if ok and type(bag) == "number" and type(slot) == "number" then I.BagItemUsed(bag, slot) end
+end
+
+local function BagFrames()
+    local out = { _G.ContainerFrameCombinedBags }
+    for i = 1, NUM_CONTAINER_FRAMES or 13 do out[#out + 1] = _G["ContainerFrame" .. i] end
+    return out
+end
+
+-- The game makes its bag buttons as its windows need them: new ones are followed when a window
+-- lays its buttons out.
+-- (Only open windows: one never opened yet can fail partway through its list, and the whole walk
+-- is guarded, since this runs while an addon's files load: an error there stopped the file.)
+local function FollowButtons(f)
+    if not (f and f.EnumerateValidItems and f:IsShown()) then return end
+    pcall(function()
+        for _, b in f:EnumerateValidItems() do
+            if not hookedButtons[b] and b.HookScript then
+                hookedButtons[b] = true
+                b:HookScript("OnClick", OnItemButtonClick)
+            end
+        end
+    end)
+end
+
+function I.OnBagItemUsed(fn)
+    usedFns[#usedFns + 1] = fn
+    if #usedFns > 1 then return end
+    for _, f in pairs(BagFrames()) do
+        if f then
+            pcall(function()
+                if f.UpdateItemLayout then hooksecurefunc(f, "UpdateItemLayout", FollowButtons) end
+                f:HookScript("OnShow", FollowButtons)
+            end)
+            FollowButtons(f)
+        end
+    end
+end
+
+function I.UseContainerItem(bag, slot)
+    if CC and CC.UseContainerItem then CC.UseContainerItem(bag, slot)
+    else UseContainerItem(bag, slot) end
+    I.BagItemUsed(bag, slot)
 end
 
 function I.PickupItem(bag, slot)
@@ -284,15 +473,23 @@ function I.PickupItem(bag, slot)
     return PickupContainerItem(bag, slot)
 end
 
+-- The global EquipItemByName is gone on WoW Forever (calling it errored); C_Item has it.
+-- Answers false when neither exists.
+function I.EquipItemByName(item, slot)
+    local fn = (CI and CI.EquipItemByName) or EquipItemByName
+    if not fn then return false end
+    fn(item, slot)
+    return true
+end
+
 -- "bags": backpack and bags. "reagent": the reagent bag (none when NUM_REAGENTBAG_SLOTS is unset).
--- "bank": the bank's own slots and its bags.
+-- "bank": the bank's tabs (I.BANK_TABS).
 function I.BagList(which)
     local list = {}
     if which == "reagent" then
         for b = I.NUM_BAGS + 1, I.NUM_BAGS + I.NUM_REAGENT_BAGS do list[#list + 1] = b end
     elseif which == "bank" then
-        list[1] = I.BANK
-        for b = I.NUM_BAGS + 1, I.NUM_BAGS + I.NUM_BANK_BAGS do list[#list + 1] = b end
+        for i, b in ipairs(I.BANK_TABS) do list[i] = b end
     else
         for b = 0, I.NUM_BAGS do list[#list + 1] = b end
     end

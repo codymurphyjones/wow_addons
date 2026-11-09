@@ -6,11 +6,22 @@ local _, ns = ...
 -- (all in Guides\Data.lua). id = the dungeon's area ID: its name, levels, entrance, map,
 -- final bosses and wings are ns.Instances' (shared\Instances.lua).
 -- wingOf = [quest] = the wing it's done in; follow = [inside quest] = the quests it leads to;
--- before = [quest] = done outside before going in (true), or started there ("part").
+-- before = [quest] = done outside before going in (true), or started there ("part");
+-- after = the quests offered only once something inside is done (build_guides.py after_the_run):
+-- picked up and handed in after the run (those after a quest started inside are in its follow).
 ns.DungeonQuests = {
     { id = 2437, -- Ragefire Chasm
       Alliance = {  },
-      Horde = { 5723, 5728, 5761 },
+      Horde = { 5723, 5722, 5728, 5761 },
+      inside = { Alliance = {  }, Horde = { 5724 } } },
+    { id = 16611, -- Ruins of Lordaeron
+      Alliance = {  },
+      Horde = { 92401, 92421, 92422, 95216 },
+      follow = { [92415] = { 95161 }, [97288] = { 97289, 97290, 97291, 97292 } },
+      inside = { Alliance = { 92415, 95189, 95195 }, Horde = { 97288, 95204 } } },
+    { id = 16919, -- The Hall of Thanes
+      Alliance = { 96394, 96403, 96393 },
+      Horde = {  },
       inside = { Alliance = {  }, Horde = {  } } },
     { id = 718, -- Wailing Caverns
       Alliance = { 1486, 959, 1491, 1487 },
@@ -24,78 +35,97 @@ ns.DungeonQuests = {
       inside = { Alliance = {  }, Horde = {  } } },
     { id = 209, -- Shadowfang Keep
       Alliance = {  },
-      Horde = { 1013, 1014 },
+      Horde = { 1098, 1013, 1014 },
       inside = { Alliance = {  }, Horde = {  } } },
+    { id = 16732, -- Excavation Site: Wetlands
+      Alliance = { 98815, 95646, 95737 },
+      Horde = { 95663, 95697 },
+      follow = { [95664] = { 98823 }, [95810] = { 98824 } },
+      inside = { Alliance = { 95810 }, Horde = { 95664, 95682 } } },
     { id = 717, -- The Stockade
       Alliance = { 386, 377, 387, 388, 378, 391 },
       Horde = {  },
       inside = { Alliance = {  }, Horde = {  } } },
     { id = 719, -- Blackfathom Deeps
-      Alliance = { 971, 1275, 1199 },
-      Horde = { 6562, 6563, 6565, 6921, 6564 },
+      Alliance = { 971, 1198, 1275, 1199 },
+      Horde = { 6562, 6563, 1198, 6565, 6921, 6564 },
       before = { [1275] = true, [6563] = true },
-      inside = { Alliance = {  }, Horde = { 6922 } } },
+      inside = { Alliance = { 1200 }, Horde = { 6561, 6922 } } },
+    { id = 16544, -- City of Dalaran
+      Alliance = { 92456, 92457, 92458, 92489 },
+      Horde = { 96984, 96986, 96988 },
+      inside = { Alliance = {  }, Horde = {  } } },
     { id = 796, -- Scarlet Monastery
       Alliance = { 1050, 96800, 1053 },
       Horde = { 1113, 1160, 1049 },
       wingOf = { [1049] = "lib", [1050] = "lib", [1053] = "cath", [1113] = "cath", [1160] = "lib" },
-      inside = { Alliance = {  }, Horde = {  } } },
+      inside = { Alliance = {  }, Horde = { 1051 } } },
     { id = 491, -- Razorfen Kraul
       Alliance = { 1221, 1101 },
       Horde = { 1221, 1109, 1102 },
-      inside = { Alliance = {  }, Horde = {  } } },
+      inside = { Alliance = { 1142, 1144 }, Horde = { 1144 } } },
     { id = 721, -- Gnomeregan
       Alliance = { 2922, 2923, 2926, 2927, 2931, 2924, 2925, 2928, 2930, 2962, 2929 },
       Horde = { 2841, 2842 },
-      before = { [2926] = "part" },
-      inside = { Alliance = {  }, Horde = {  } } },
+      before = { [2926] = true },
+      follow = { [2947] = { 2948 }, [2949] = { 2950 } },
+      inside = { Alliance = { 2904, 2951, 2952, 2945, 2947 }, Horde = { 2904, 2951, 2952, 2945, 2949 } } },
     { id = 722, -- Razorfen Downs
       Alliance = { 6626, 3636 },
-      Horde = { 6626, 6521, 3341 },
-      before = { [6521] = true, [6626] = true },
+      Horde = { 6626, 3341 },
+      before = { [6626] = true },
       follow = { [6522] = { 6521 } },
-      inside = { Alliance = {  }, Horde = { 6522 } } },
+      inside = { Alliance = { 3523, 3525 }, Horde = { 6522, 3523, 3525 } } },
     { id = 1337, -- Uldaman
-      Alliance = { 721, 2418, 704, 709, 722, 2199, 17, 1360, 2361, 1139, 2198 },
-      Horde = { 2418, 709, 2283, 2202, 2338, 2342, 2339, 2340, 2341 },
+      Alliance = { 721, 2418, 704, 709, 722, 2398, 2199, 17, 2200, 1360, 1139, 2198 },
+      Horde = { 2418, 709, 2283, 2202, 2342 },
       before = { [17] = "part", [704] = true, [709] = true, [1360] = true, [2202] = "part", [2283] = "part", [2342] = true, [2418] = "part" },
-      inside = { Alliance = {  }, Horde = {  } } },
+      after = { Alliance = {  }, Horde = { 2284, 2340, 2341 } },
+      follow = { [2204] = { 2361 }, [2279] = { 2439, 2963, 2946, 2954, 2977, 2964 }, [2280] = { 2440, 2965, 2966, 2954, 2967, 2968 }, [2318] = { 2338, 2339, 2340, 2341 } },
+      inside = { Alliance = { 2240, 2201, 2204, 2278, 2279 }, Horde = { 2318, 2278, 2280 } } },
     { id = 1176, -- Zul'Farrak
       Alliance = { 2864, 2865, 3042, 2846, 2861, 2768, 2991, 3527, 2770 },
       Horde = { 2864, 2865, 2936, 3042, 2846, 2861, 2768, 3527, 2770 },
       inside = { Alliance = {  }, Horde = {  } } },
     { id = 2100, -- Maraudon
-      Alliance = { 7070, 7028, 7041, 7067, 7065 },
-      Horde = { 7068, 7028, 7029, 7067, 7064 },
+      Alliance = { 7070, 7028, 7041, 7067, 7044, 7065 },
+      Horde = { 7068, 7028, 7029, 7067, 7044, 7064 },
       before = { [7029] = "part", [7041] = "part", [7068] = true, [7070] = true },
-      inside = { Alliance = {  }, Horde = {  } } },
+      inside = { Alliance = { 7046, 7066 }, Horde = { 7046, 7066 } } },
     { id = 1477, -- The Temple of Atal'Hakkar
-      Alliance = { 1475, 1446, 3528 },
-      Horde = { 1445, 3380, 1446, 3528 },
-      inside = { Alliance = {  }, Horde = {  } } },
+      Alliance = { 1475, 3446, 3447, 1446, 3528 },
+      Horde = { 1445, 3380, 3446, 3447, 1446, 3528 },
+      inside = { Alliance = { 3373 }, Horde = { 3373 } } },
     { id = 1584, -- Blackrock Depths
-      Alliance = { 3801, 4136, 4324, 4123, 4126, 4128, 4263, 4286, 4024 },
-      Horde = { 3801, 4081, 4136, 4324, 4002, 4082, 7201, 4123, 4133, 4134, 3907, 4024, 4063, 4121, 4122, 4132 },
-      inside = { Alliance = {  }, Horde = {  } } },
+      Alliance = { 3801, 3802, 4136, 4324, 4241, 4123, 4126, 4128, 4263, 4286, 4024, 4341 },
+      Horde = { 3801, 3802, 3981, 4081, 4136, 4324, 7201, 4123, 4133, 4134, 3907, 4024, 4063 },
+      after = { Alliance = {  }, Horde = { 4082, 4121, 4122, 4132 } },
+      follow = { [4001] = { 4002, 4003 }, [4242] = { 4264 }, [4322] = { 6402, 6403, 6501, 6502 }, [4361] = { 4362 } },
+      inside = { Alliance = { 4201, 4242, 4282, 4322, 4342, 4361, 4363, 7604, 9015 }, Horde = { 4001, 4201, 4004, 7604, 9015 } } },
     { id = 1583, -- Blackrock Spire
-      Alliance = { 4788, 4701, 4729, 4862, 4734, 4735, 4764, 4765, 4766, 4866, 4907, 5081, 5102, 6502, 8966, 8989 },
-      Horde = { 4788, 4724, 4729, 4862, 4734, 4735, 4768, 4769, 4866, 4903, 4907, 4974, 6569, 6602, 8966, 8989 },
-      wingOf = { [4701] = "lower", [4724] = "lower", [4734] = "upper", [4735] = "upper", [4764] = "upper", [4788] = "lower", [4862] = "lower", [4903] = "lower", [4974] = "upper", [5081] = "lower", [5089] = "lower", [5102] = "upper", [6502] = "upper", [6569] = "upper", [6602] = "upper" },
-      follow = { [5089] = { 5102 } },
-      inside = { Alliance = { 5089 }, Horde = {  } } },
+      Alliance = { 4788, 4701, 4729, 4862, 4734, 4764, 4766, 4866, 4907, 6502, 8966, 7761 },
+      Horde = { 4788, 4724, 4729, 4862, 4981, 4734, 4768, 4769, 4866, 4903, 4907, 8966, 7761 },
+      wingOf = { [4701] = "lower", [4724] = "lower", [4734] = "upper", [4735] = "upper", [4742] = "lower", [4764] = "upper", [4788] = "lower", [4862] = "lower", [4867] = "lower", [4903] = "lower", [4974] = "upper", [5081] = "lower", [5089] = "lower", [5102] = "upper", [6502] = "upper", [6569] = "upper", [6602] = "upper" },
+      after = { Alliance = { 4735, 4765, 8970, 8985, 8989, 8994, 8995 }, Horde = { 4735, 4941, 4974, 6566, 6567, 6568, 6569, 6570, 6582, 6585, 6601, 6602, 8970, 8985, 8989, 8994, 8995 } },
+      follow = { [5002] = { 5081 }, [5089] = { 5102 }, [5160] = { 5161, 5162, 5164, 5166, 5167 } },
+      inside = { Alliance = { 5001, 5002, 4742, 4743, 4867, 5047, 5089, 5160 }, Horde = { 4982, 4983, 4742, 4743, 4867, 5047, 5160 } } },
     { id = 2557, -- Dire Maul
-      Alliance = { 7488, 7494, 7441, 7482, 8967, 8990 },
-      Horde = { 7489, 7492, 7441, 7481, 8967, 8990 },
-      wingOf = { [7441] = "east", [7481] = "north", [7482] = "north", [7488] = "east", [7489] = "east", [8967] = "east", [8990] = "east" },
-      inside = { Alliance = {  }, Horde = {  } } },
+      Alliance = { 7488, 7494, 7441, 7482, 8948 },
+      Horde = { 7489, 7492, 7441, 7481, 8948 },
+      wingOf = { [5518] = "north", [5525] = "north", [7441] = "east", [7461] = "north", [7481] = "north", [7482] = "north", [7488] = "east", [7489] = "east", [7703] = "north", [8949] = "north", [8950] = "west", [8967] = "east", [8990] = "east" },
+      after = { Alliance = { 8970, 8985, 8990 }, Horde = { 8970, 8985, 8990 } },
+      follow = { [8950] = { 9015, 8951, 8960, 8961, 8962, 8967 } },
+      inside = { Alliance = { 5518, 5525, 5528, 7461, 7703, 7877, 8949, 8950 }, Horde = { 5518, 5525, 5528, 7461, 7703, 7877, 8949, 8950 } } },
     { id = 2017, -- Stratholme
-      Alliance = { 5212, 5213, 5214, 5243, 5251, 5263, 5282, 5848, 8968, 8991 },
-      Horde = { 5212, 5213, 5214, 5243, 5251, 5263, 5282, 5848, 6163, 8968, 8991 },
+      Alliance = { 5212, 5214, 5243, 5251, 5282, 5463, 5848, 8945 },
+      Horde = { 5212, 5214, 5243, 5251, 5282, 5463, 5848, 6163, 8945 },
       wingOf = { [5212] = "dead", [5214] = "live", [5251] = "live", [5262] = "live", [5263] = "dead", [6163] = "dead" },
+      after = { Alliance = { 5213, 8947, 8948, 8949, 8950, 9015, 8951, 8960, 8961, 8962, 8968, 8970, 8985, 8991 }, Horde = { 5213, 8947, 8948, 8949, 8950, 9015, 8961, 8962, 8968, 8970, 8985, 8991 } },
       follow = { [5262] = { 5263, 5264, 5265 } },
-      inside = { Alliance = { 5262 }, Horde = { 5262 } } },
+      inside = { Alliance = { 5125, 5262 }, Horde = { 5125, 5262 } } },
     { id = 2057, -- Scholomance
-      Alliance = { 5529, 4771, 5343, 5382, 5384, 5466, 5515, 5531, 8969, 8992 },
-      Horde = { 5529, 4771, 5341, 5382, 5384, 5466, 5515, 5531, 8969, 8992 },
+      Alliance = { 5529, 4771, 5343, 5382, 5531, 8969 },
+      Horde = { 5529, 4771, 5341, 5382, 5531, 8969 },
+      after = { Alliance = { 5384, 5461, 5462, 5463, 5465, 5466, 5515, 8970, 8985, 8992 }, Horde = { 5384, 5461, 5462, 5463, 5465, 5466, 5515, 8970, 8985, 8992 } },
       inside = { Alliance = {  }, Horde = {  } } },
 }

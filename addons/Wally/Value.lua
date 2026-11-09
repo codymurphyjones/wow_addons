@@ -32,11 +32,13 @@ function Value:AuctionPrice(link) return AuctionPrice(link) end
 function Value:AuctionAge(link) return AP.Age(link) end
 
 -- ---------------------------------------------------------------------------
--- Posting prices: Auctionator's price minus your undercut. The modern auction house only takes
--- buyouts in whole silver, and an item is never listed for less than a vendor would pay.
+-- Posting prices: Auctionator's price minus your undercut, in copper, and never under a copper. (Forever's
+-- auction house takes copper prices for commodities: Silverleaf posted at 49c. Rounding those down to
+-- whole silver with a 1 silver floor listed a 28c Scroll of Protection at 1s, nearly four times what it
+-- sells for.) Other items (gear, bags: one per auction) still take only whole silver: a Small Red Pouch
+-- at 2s 99c got "Internal auction error", so PostPrice rounds those down. An item is never listed for
+-- less than a vendor would pay (PostPrice).
 -- ---------------------------------------------------------------------------
-
-local SILVER = 100
 
 function Value:Undercut(market)
     local o = ns.db.options.auction
@@ -48,8 +50,7 @@ function Value:Undercut(market)
     else
         price = market * (1 - (o.undercut or 0) / 100)
     end
-    price = math.floor(price / SILVER) * SILVER
-    return math.max(SILVER, price)
+    return math.max(1, math.floor(price))
 end
 
 function Value:DescribeUndercut()
@@ -78,7 +79,10 @@ end
 -- Returns (unit, details). unit is nil when the item shouldn't be posted; details.reason says why.
 -- details = { market, age, stale, vendor, reason, normal (30-day, from Wealth Planner), crashed
 -- (the market far under normal: posting now sells cheap) }
-function Value:PostPrice(link)
+local SILVER = 100
+
+-- wholeSilver: true for an item posted one per auction (not a commodity): rounded down to whole silver.
+function Value:PostPrice(link, wholeSilver)
     local d = {}
     local name, _, _, _, _, _, _, _, _, _, vendor = C.GetItemInfo(link)
     if not name then
@@ -96,6 +100,7 @@ function Value:PostPrice(link)
     end
     d.crashed, d.normal = AP.Crashed(d.market, link)
     local unit = self:Undercut(d.market)
+    if wholeSilver then unit = math.max(SILVER, math.floor(unit / SILVER) * SILVER) end
     if d.vendor > 0 and unit <= d.vendor then
         d.reason = "Worth more at a vendor (" .. C.Money(d.vendor) .. ")."
         return nil, d

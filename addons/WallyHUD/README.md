@@ -32,12 +32,12 @@ It loads last: its TOC lists every addon of ours as an optional dependency. It r
   - `/whud report`;
   - the **Report** button on the error notice. That notice shows in the bottom right only when an addon error actually happens, at most once a minute, and fades after 10 seconds. Errors still go wherever they went before.
 - **Flag carriers** (RightColumn.lua): the battleground flag carrier frames sit in the column the game stacks down the right of the screen (`RightManagedFrameContainer`), which Edit Mode can't move. `/whud flags` shows a box over that column to drag; `/whud flags` again locks it (remembered), `/whud flags reset` puts it back. The column moves as one: the flag carriers are protected buttons the game won't let addons move in a fight, so the column is moved out of combat and keeps its place through fights. If the game lays it out again in a fight, it goes back where you put it when the fight ends.
-- **Frames Edit Mode can't move** (Movers.lua): when you open the game's Edit Mode, every game frame that neither Edit Mode nor Bartender4 moves gets a box of its own. Drag a box to move its frame; right-click it to put the frame back. Your places are remembered (account-wide) and kept when the game lays the screen out again. The flag carrier column's box comes up with them.
+- **Frames Edit Mode can't move** (Movers.lua): off by default (**Move the frames Edit Mode can't** in the settings; not in any wizard). With it on, when you open the game's Edit Mode, every game frame that neither Edit Mode nor Bartender4 moves gets a box of its own. Drag a box to move its frame; right-click it to put the frame back. Your places are remembered (account-wide) and kept when the game lays the screen out again. The flag carrier column's box comes up with them.
   - The list: player, target, focus, pet, party and boss frames, cast bar, minimap, buffs, debuffs, weapon enchants, quest tracker, durability figure, vehicle seats, breath/fatigue bars, encounter power bar, talking head and damage meter (each only when this client's Edit Mode doesn't already move it), plus the top-center objectives, the below-minimap widgets, error messages, raid warnings, boss emotes, zone name text, loot rolls, alerts, event toasts, the boss kill banner, Battle.net toasts, quest timers, the loss-of-control alert, GM ticket status and the framerate.
   - Left alone: frames Bartender4 replaces, frames held in a SaddleBags panel, frames SimplePanel places itself (its minimap square and the buffs beside it), and the player frame while the orb replaces it.
   - `/whud move` brings up the boxes without Edit Mode, and again locks them. `/whud move list` shows each frame and what moves it in this client. `/whud move reset` puts them all back.
   - Protected frames (unit frames) move only out of combat.
-- **Camera** (Camera.lua): the camera zooms out as far as the game allows, past the limit in the game's own settings (the `cameraDistanceMaxZoomFactor` CVar, raised at every login). On by default; switching **Maximum camera distance** off puts back the limit you had before.
+- **PvE / PvP targeting** (TargetMode.lua): a button in the menu bar's own style (a micro button's stone background), just left of the Character button, at the bar's scale. It's anchored to the Character button, so it moves and hides with the bar. Forever's Tab targets creatures only. Click it for **PvP**: the keys you've bound to Target Nearest Enemy and Target Previous Enemy (Tab and Shift+Tab by default) target enemy players instead. Click again for **PvE**. It works with override bindings, so your key bindings never change, and turning the option off gives Tab back to the game. Bindings can't change in a fight: a click then takes effect when the fight ends, and chat says so. There's a key for it in Key Bindings > AddOns > WallyHUD. The icon is a paw print for PvE and your faction's banner for PvP, shown pressed in.
 - **Density** (Density.lua): Minimal hides the minimap buttons, Standard (the default) shows them. SimplePanel's plugins are left alone.
 
 ## Vitals (Vitals.lua)
@@ -68,6 +68,41 @@ Questie.lua restyles Questie's quest tracker from here, after every redraw, with
 - **Tracker frame:** a hairline panel.
 
 Turn it off under **Objectives in the suite's look** in the settings, then `/reload`.
+
+## Emote wheel
+
+A round wheel around your cursor in the suite's look: a ring of dark glass with an iron rim, the orb's bezel and smoky glass as its hub, and the wedge under the cursor lit in the accent colour. The hub names what's under the cursor (and the emote's command). Anywhere in a wedge counts, round edges and all. It works in two steps:
+1. **Pick a category:** Fun (top), Social (right), Battle (left), or **Quick** (bottom).
+2. **Pick the emote:** that category's eight emotes appear in a ring. Click one to do it.
+
+- **Quick learns from you:** it holds the eight emotes you use most from the wheel, with the most recent one first on a tie. Until it has learned eight, a starter set fills the rest (Dance, Wave, Cheer, Laugh, Bow, Thank, Hello, Roar).
+- **Opening it:** an account-wide macro, **EmoteWheel** (`/click WallyHUDEmoteWheelToggle`), opens it. Put the macro on any bar or bind its key; every character on the account has it.
+- **Going back and closing:** click the hub, or right-click anywhere on the wheel, to go back to the categories. Escape, the macro again, or a click anywhere else closes the wheel.
+- **Combat:** the wheel opens out of combat only. Each emote runs the game's real slash command (like `/dance`) from a secure button, which can't be shown, hidden or changed during a fight; a fight starting closes the wheel. The art is drawn by `tools/WallyHUD/make_emote_wheel.py`.
+
+The categories start as:
+- **Fun:** Dance, Cheer, Laugh, Flex, Chicken, Train, Joke, Roar.
+- **Social:** Wave, Hello, Bow, Thank, Salute, Yes, No, Bye.
+- **Battle:** Charge, Attack target, Help me, Heal me, Incoming, Out of mana, Follow me, Wait.
+
+**Options > AddOns > WallyHUD > Emote Wheel** sets it up:
+- Fun, Social and Battle's eight emotes each, clockwise from the top, picked from the game's real emote commands (`/dance`, `/wave`, `/cheer`, `/flex`, `/train`, `/salute`, `/charge` and about 50 more, grouped as Fun, Greetings, Reactions, Poses and Battle calls);
+- what Quick holds right now, and **Forget usage** to start it over;
+- the macro's code, which you can select and copy;
+- **Create / update macro**, **Pick it up for a bar** (it goes onto your cursor), and **Try the wheel**;
+- whether the macro exists yet, and whether its code is current.
+
+## Party on quest cards
+
+In a group, Questie's quest card (a quest link clicked or hovered in chat) gets a **Party** part under it: each member's state for that quest, by name in their class colour:
+- **On it**, or **Ready to turn in** once every objective is done;
+- **Done**: they've handed it in;
+- **Needs** and the quest it needs first;
+- **Can pick it up**;
+- **Level N**: they're below the level it needs;
+- **Can't take it**: class, race, or a quest that rules it out.
+
+Members running WallyHUD answer for themselves over a private addon channel, and the card fills in as their answers arrive. For members without it, the card shows what Questie's own party sharing says, which only covers quests in their log; otherwise "No answer". Questie's files aren't changed. Turn it off under **Party on quest cards**.
 
 ## Settings
 

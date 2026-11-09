@@ -121,6 +121,16 @@ ns:OnLoad(function()
         end
     end
     indexed = nil
+    -- Runs that finished while AddRun stopped at its first player (it added an undefined
+    -- "kills"): the rest of the party is put on record now. AddRun skips whoever already has a run.
+    local current = ns.db.currentRun
+    for _, run in ipairs(ns.db.runs or {}) do
+        if type(run) == "table" and run.stop and not run.recorded and not run.temp and run.id ~= current
+            and type(run.members) == "table" and run.id then
+            local ok = pcall(H.AddRun, H, run)
+            if not ok then run.recorded = true end
+        end
+    end
 end)
 
 -- A player by name ("Given Family" in any shape, or the given name alone), or nil.
@@ -188,23 +198,38 @@ function H:OnDeath(run, d)
     end
 end
 
--- A finished run: everyone in it gets it on their record.
+local function Has(list, id)
+    for _, v in ipairs(list or {}) do
+        if v == id then return true end
+    end
+    return false
+end
+
+-- A finished run: everyone in it gets it on their record. Safe to run again on the same run: a
+-- player who already has it is left as they are (run.recorded marks a run that got all the way).
 function H:AddRun(run)
-    run.bossKills = ns.Run.BossKills(run)
+    local kills = ns.Run.BossKills(run)
+    run.bossKills = kills
+    local stop = run.stop or time()
     for full, m in pairs(run.members) do
         local p = self:Get(full, true)
-        p.class, p.race, p.level = m.class or p.class, m.race or p.race, m.level or p.level
-        p.guild = m.guild or p.guild
-        p.last, p.lastRole = run.stop or time(), ns.Blame.RoleOf(run, full)
-        -- Someone who left before the run began (kicked while forming) sat at its fire, but didn't run it.
-        if not m.before then
-            table.insert(p.runs, run.id)
-            p.t.runs = p.t.runs + 1
-            if run.finished then p.t.finished = p.t.finished + 1 end
-            p.t.wipes = p.t.wipes + (run.wipes or 0)
-            p.t.bosses = p.t.bosses + kills
+        if not Has(p.runs, run.id) then
+            p.class, p.race, p.level = m.class or p.class, m.race or p.race, m.level or p.level
+            p.guild = m.guild or p.guild
+            if not p.last or stop >= p.last then
+                p.last, p.lastRole = stop, ns.Blame.RoleOf(run, full)
+            end
+            -- Someone who left before the run began (kicked while forming) sat at its fire, but didn't run it.
+            if not m.before then
+                table.insert(p.runs, run.id)
+                p.t.runs = (p.t.runs or 0) + 1
+                if run.finished then p.t.finished = (p.t.finished or 0) + 1 end
+                p.t.wipes = (p.t.wipes or 0) + (run.wipes or 0)
+                p.t.bosses = (p.t.bosses or 0) + kills
+            end
         end
     end
+    run.recorded = true
 end
 
 -- The most common thing a player gets blamed for.

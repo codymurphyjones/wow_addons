@@ -10,7 +10,8 @@ local _, ns = ...
 -- Names checked against Questie's own code: QuestieLoader:ImportModule(name) (it hands back an
 -- empty table for a module it doesn't have: check for the function you need), modules
 -- "QuestieDB" (QueryQuestSingle(id, field) and IsDoable(id) are plain functions, GetQuest(id)),
--- "QuestiePlayer" (currentQuestlog), "QuestieTracker" (:Update(), IsTrackedByQuestie(id),
+-- "ActiveQuests" (GetAll(): questId -> { quest }; Questie 12.6+), "QuestiePlayer" (currentQuestlog,
+-- before that), "QuestieTracker" (:Update(), IsTrackedByQuestie(id),
 -- :UntrackQuestId(id)), "TrackerUtils" (:FocusQuest(id), :FocusObjective(id, index), :UnFocus()),
 -- Questie.db.char.TrackerFocus (a quest ID, or "questId objectiveIndex"), Questie.db.char.complete
 -- (questId -> true), Questie.API.RegisterOnReady(fn) / Questie.API.isReady.
@@ -228,26 +229,62 @@ function K.Quest(id)
     return QDB and (Call(QDB.GetQuest, id)) or nil
 end
 
--- The quests in your log as Questie knows them: questId -> quest object (QuestiePlayer.currentQuestlog,
--- Questie's own table: read it, don't change it), or nil.
+-- The quests in your log as Questie knows them: questId -> quest object, or nil. Questie 12.6 moved
+-- them from QuestiePlayer.currentQuestlog (its own table: read it, don't change it) to ActiveQuests,
+-- one { questId, quest } per quest (quest nil when Questie's database lacks it); without this the
+-- log read as empty and Waypoint's quest arrow said "Nothing to point at".
 function K.QuestLog()
     local QP = K.Mod("QuestiePlayer")
-    return QP and type(QP.currentQuestlog) == "table" and QP.currentQuestlog or nil
+    if QP and type(QP.currentQuestlog) == "table" then return QP.currentQuestlog end
+    local AQ = K.Mod("ActiveQuests")
+    if not (AQ and type(AQ.GetAll) == "function") then return nil end
+    local ok, all = pcall(AQ.GetAll)
+    if not (ok and type(all) == "table") then return nil end
+    local log = {}
+    for id, a in pairs(all) do
+        if type(a) == "table" and type(a.quest) == "table" then log[id] = a.quest end
+    end
+    return log
 end
 
--- Whether Questie's tracker shows a quest.
+-- Whether Questie's own tracker is on. Turned off (Questie > Tracker > Enable tracker), Questie
+-- stops recording what you track (its AddQuestWatch hook returns at once), so its tracked list
+-- goes stale: a quest tracked in the quest log never showed up and Waypoint's arrow stayed empty.
+-- The game's own quest watches are the tracked list then.
+function K.TrackerOn()
+    local db = type(Questie) == "table" and type(Questie.db) == "table" and Questie.db.profile
+    return not (type(db) == "table" and db.trackerEnabled == false)
+end
+
+-- Whether the game itself watches a quest (the quest log's track checkbox, shift-click).
+local function GameWatched(id)
+    if C_QuestLog and C_QuestLog.GetQuestWatchType then
+        local ok, kind = pcall(C_QuestLog.GetQuestWatchType, id)
+        if ok then return kind ~= nil end
+    end
+    local index = GetQuestLogIndexByID and GetQuestLogIndexByID(id)
+    if IsQuestWatched and index and index > 0 then return Call(IsQuestWatched, index) and true or false end
+    return false
+end
+
+-- Whether a quest is tracked: on Questie's tracker, or watched by the game while that tracker is off.
 function K.IsTracked(id)
+    if not K.TrackerOn() then return GameWatched(id) end
     local QT = K.Mod("QuestieTracker")
     return QT and Call(QT.IsTrackedByQuestie, id) and true or false
 end
 
--- The quests Questie's tracker shows: questId -> quest object.
+-- The quests tracked (K.IsTracked) that Questie knows: questId -> quest object.
 function K.Tracked()
     local out = {}
     local log, QT = K.QuestLog(), K.Mod("QuestieTracker")
-    if not (log and QT and QT.IsTrackedByQuestie) then return out end
+    if not log then return out end
+    local on = K.TrackerOn()
+    if on and not (QT and QT.IsTrackedByQuestie) then return out end
     for id, quest in pairs(log) do
-        if type(quest) == "table" and Call(QT.IsTrackedByQuestie, id) then out[id] = quest end
+        if type(quest) == "table" and (on and Call(QT.IsTrackedByQuestie, id) or (not on and GameWatched(id))) then
+            out[id] = quest
+        end
     end
     return out
 end

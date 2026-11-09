@@ -21,7 +21,10 @@ S.page = ns.NewOptionsPage({ name = "Modified", build = function(p)
             .. "until the UI is reloaded. With this on, Modified reloads right after you apply or revert a button. "
             .. "With it off, click Reload UI in /mod (or type /reload) before your next fight." })
 
-    p:Header("The /mod window")
+    p:Header("The editor")
+    p:Check({ path = "db.classicEditor", label = "Open the classic editor with /mod",
+        tooltip = "/mod and the Modified key binding open the classic window (a list of bars and a row-by-row editor) "
+            .. "instead of the veil. /mod veil still opens the new editor, and /mod classic always opens the classic one." })
     p:Check({ path = "db.showEmpty", label = "Show empty bars",
         tooltip = "The bar list shows action bars that have nothing on them too.",
         apply = function() if ns.UI then ns.UI:Refresh() end end })

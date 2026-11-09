@@ -61,9 +61,15 @@ local function MarkTainted()
 end
 
 -- Creates the macro or rewrites its body and icon. Returns its index, or nil and an error.
-local function WriteMacro(name, text)
+-- With oldName (the name the button's macro had before), that macro is renamed instead of a new
+-- one made: it stays on the button and keeps its slot in /macro.
+local function WriteMacro(name, text, oldName)
     local index = ns.MacroIndex(name)
-    if index then
+    local old = not index and oldName and oldName ~= name and ns.MacroIndex(oldName)
+    if old then
+        MarkTainted()
+        EditMacro(old, name, ICON, text)
+    elseif index then
         -- Leave an unchanged macro alone: every write taints the action bars.
         -- The icon is reset to "?" whenever the body is rewritten.
         local body = GetMacroBody(index)
@@ -92,6 +98,75 @@ local function PlaceMacro(index, slot)
     ClearCursor()
 end
 
+---------------------------------------------------------------------------
+-- Macro names: after the key bound to the button ("Mod SHIFT-F"), else "Mod_<slot>"
+---------------------------------------------------------------------------
+
+-- The binding command of each bar's buttons (Options > Key Bindings > Action Bars). The main bar's
+-- keys also press its other pages and the stance/form pages.
+local COMMANDS = {
+    { start = 1,   stop = 24,  command = "ACTIONBUTTON" },
+    { start = 73,  stop = 120, command = "ACTIONBUTTON" },
+    { start = 61,  stop = 72,  command = "MULTIACTIONBAR1BUTTON" },
+    { start = 49,  stop = 60,  command = "MULTIACTIONBAR2BUTTON" },
+    { start = 25,  stop = 36,  command = "MULTIACTIONBAR3BUTTON" },
+    { start = 37,  stop = 48,  command = "MULTIACTIONBAR4BUTTON" },
+    { start = 145, stop = 156, command = "MULTIACTIONBAR5BUTTON" },
+    { start = 157, stop = 168, command = "MULTIACTIONBAR6BUTTON" },
+    { start = 169, stop = 180, command = "MULTIACTIONBAR7BUTTON" },
+}
+
+local NAME_MAX = 16 -- the game's limit on a macro name
+local SHORT = { { "SHIFT%-", "S-" }, { "CTRL%-", "C-" }, { "ALT%-", "A-" }, { "MOUSEWHEELUP", "WhUp" },
+    { "MOUSEWHEELDOWN", "WhDn" }, { "NUMPAD", "N" }, { "BUTTON", "M" } }
+
+-- The first key bound to a slot's button, or nil. A bar addon's button (Bartender, Dominos...) is
+-- bound by its own name ("CLICK BT4Button1:LeftButton"): the veil knows the button it lit.
+function M:KeyFor(slot)
+    local button = ns.Veil and ns.Veil.buttonOf and ns.Veil.buttonOf[slot]
+    local name = button and button:GetName()
+    if name then
+        local key = GetBindingKey("CLICK " .. name .. ":LeftButton")
+        if key then return key end
+        local command = rawget(button, "commandName") or rawget(button, "bindingAction")
+        key = type(command) == "string" and GetBindingKey(command)
+        if key then return key end
+    end
+    for _, bar in ipairs(COMMANDS) do
+        if slot >= bar.start and slot <= bar.stop then
+            return GetBindingKey(bar.command .. ((slot - bar.start) % 12 + 1))
+        end
+    end
+end
+
+-- Is this macro name free for this slot? Not when another button's design uses it, or when a
+-- macro of yours (not made by Modified) already has it: that one is never overwritten.
+local function NameFree(name, slot, oldName)
+    for other, design in pairs(ns.db.designs) do
+        if other ~= slot and design.macroName == name then return false end
+    end
+    return name == oldName or not ns.MacroIndex(name)
+end
+
+-- The name a slot's macro gets when it's saved: "Mod " and its key, shortened to fit (SHIFT- to S-,
+-- BUTTON4 to M4...). Two buttons on one key (the main bar and a stance page) keep them apart with
+-- the slot number; with no key, or no free name, the old "Mod_<slot>".
+function M:NameFor(slot, oldName)
+    local key = self:KeyFor(slot)
+    if key then
+        local name = "Mod " .. key
+        for _, pair in ipairs(SHORT) do
+            if #name <= NAME_MAX then break end
+            name = name:gsub(pair[1], pair[2])
+        end
+        local tries = { name, (name .. " " .. slot) }
+        for _, try in ipairs(tries) do
+            if #try <= NAME_MAX and NameFree(try, slot, oldName) then return try end
+        end
+    end
+    return "Mod_" .. slot
+end
+
 function M:IsOnSlot(design, slot)
     local actionType = GetActionInfo(slot)
     local text = GetActionText(slot)
@@ -113,11 +188,14 @@ function M:Apply(slot, design)
         if not ok then return false, reason end
     end
 
+    local oldName = ns.db.designs[slot] and ns.db.designs[slot].macroName
+    design.macroName = self:NameFor(slot, oldName)
+
     local result, err = true, nil
     local deferred = InCombatLockdown()
     local ranNow = ns:RunOutOfCombat("apply" .. slot, function()
         local index
-        index, err = WriteMacro(design.macroName, text)
+        index, err = WriteMacro(design.macroName, text, oldName)
         if not index then
             result = false
             if deferred then ns:Print("|cffff5555" .. err .. "|r") end -- nobody else will report it

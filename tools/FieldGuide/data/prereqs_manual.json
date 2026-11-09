@@ -1,0 +1,83 @@
+{
+ "_about": "Prerequisites checked by hand, for quests whose data has none or the wrong ones. build_guides.py applies these first, over Questie's, the reversed chains and Wowhead's comments. { questId: { pre: [questId, ...], any: true when one of them is enough, note } }",
+ "95216": {
+  "pre": [451],
+  "note": "The New Plague (Horde, Ruins of Lordaeron): needs A Recipe For Death done (the chain 447, 450, 451; 451 needs the other two). Reported in game, 2026-11-06."
+ },
+ "91920": {
+  "pre": [430],
+  "note": "Wild Eyes: 'The quest Return to Quinn ... is required before you can do this quest' (Wowhead comment)."
+ },
+ "92422": {
+  "pre": [99156],
+  "note": "The Wrath of Rath'mael: 'Prerequisite is Rear Guard Patrol' (Wowhead comment, 2026-11-05)."
+ },
+ "92457": {
+  "pre": [92432],
+  "note": "Starving Arcane (Alliance): offered after An Alarming Request (Wowhead comment)."
+ },
+ "92458": {
+  "pre": [92432],
+  "note": "Heart of Disruption (Alliance): offered after An Alarming Request (Wowhead comment)."
+ },
+ "96261": {
+  "pre": [96259],
+  "note": "The Broodmother: 'I had to complete Defending the Dead before this quest became available' (Wowhead comment)."
+ },
+ "97275": {
+  "pre": [812],
+  "note": "Whuut's the Rush: 'Prerequisite for this seems to be Need for a Cure' (Wowhead comment)."
+ },
+ "98299": {
+  "pre": [99],
+  "note": "Stop the Spread: 'Complete 5th quest in Series (Arugal's Folly) taken from same NPC' (Wowhead comment)."
+ },
+ "98297": {
+  "pre": [98293, 98221, 98291],
+  "note": "Stopping the Cycle: 'You also need to do' Forced Disarmament, From the Ashes and Death to the Dragonmaw: all three (Wowhead comment)."
+ },
+ "98094": {
+  "pre": [527],
+  "note": "Scout Support (Horde, Hillsbrad, High Executor Darthalia): only offered once the first Battle of Hillsbrad is done. Reported in game, 2026-11-08."
+ },
+ "98823": {
+  "pre": [95664],
+  "note": "Earthen Echo (Horde, Excavation Site: Wetlands; rewards Heavehammer): Bashana Runetotem gives it after Elder Knowledge, the quest the Titan Relic starts (it drops inside, off the Relic Guardian). Wowhead's series, 2026-11-08: an after-the-run quest, not one to pick up before. Reported in game."
+ },
+ "98824": {
+  "pre": [95810],
+  "note": "Prehistoric Prism (Alliance, Excavation Site: Wetlands; rewards Heavehammer): Prospector Whelgar gives it after Lost Relic Carry, the quest the Titan Relic starts (it drops inside, off the Relic Guardian). Wowhead's series, 2026-11-08."
+ },
+ "97289": {
+  "pre": [97288],
+  "note": "Unending Torment part 2 (Horde, Ruins of Lordaeron): after part 1, which the Abominable Head starts (it drops inside). Wowhead's series, 2026-11-08 (audit_dungeons.py)."
+ },
+ "97290": {
+  "pre": [97289],
+  "note": "Unending Torment part 3: after part 2 (Wowhead's series, 2026-11-08)."
+ },
+ "97291": {
+  "pre": [97290],
+  "note": "Unending Torment part 4: after part 3 (Wowhead's series, 2026-11-08)."
+ },
+ "97292": {
+  "pre": [97291],
+  "note": "Unending Torment part 5: after part 4 (Wowhead's series, 2026-11-08)."
+ },
+ "95682": {
+  "pre": [95663],
+  "note": "Open the Maw (Horde, Excavation Site: Wetlands): the Deathstalker Agent inside gives it once Dragonmaw Rumors is handed in to him (Wowhead's series, 2026-11-08)."
+ },
+ "96984": {
+  "pre": [92434],
+  "note": "Heart of Disruption (Horde, City of Dalaran): after Blood in the Streets (Wowhead's series, 2026-11-08)."
+ },
+ "4734": {
+  "pre": [4907],
+  "note": "Egg Freezing (Blackrock Spire): Tinkee gives it after Tinkee Steamboil (Wowhead's series, 2026-11-08); Questie had Return to Tinkee, which comes before that."
+ },
+ "2770": {
+  "pre": [],
+  "note": "Gahz'rilla (Zul'Farrak): The Brassbolts Brothers is an optional Alliance breadcrumb (Wowhead's series marks it Optional, 2026-11-08); the quest needs nothing first, so Horde can take it from Wizzle Brassbolts."
+ }
+}

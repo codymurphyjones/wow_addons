@@ -20,6 +20,8 @@ local _, ns = ...
 -- The cheapest wins, unless even that one puts more than VITAL_SHARE of the tooltip over something
 -- vital: then it goes where Edit Mode puts it (the game's default spot), as without this addon. A
 -- tooltip the game shows at the cursor (your setting) is left there.
+-- Unit frames are never covered, in or out of a fight: a spot over one is never taken, and Edit
+-- Mode's spot only when it's clear of them (else the best spot that is).
 -- In a fight (combatKeepOut) the middle of the screen is off limits, not just costly: a square
 -- KEEP_OUT of the screen's height on a side, centred. Spots over it are never taken (four more,
 -- just outside it in line with the cursor, are tried instead), Edit Mode's spot only when it's
@@ -37,6 +39,7 @@ local S = {}
 
 local MARGIN = 12        -- from the screen's edges
 local NEAR = 34          -- from the cursor (clear of what Screen keeps around it: 30 either way)
+local GAP = 8            -- from the edge of what you're pointing at in the world (Screen:Pointed)
 local FAR = 1.6          -- cost of being a whole screen away from the cursor (near it is where you're looking)
 local STAY = 0.18        -- where it is now costs this much less (steadiness)
 local HEADING = 0.45     -- a spot straight ahead of a cursor on the move costs this much more
@@ -139,7 +142,7 @@ end
 
 -- The spots to try for a w x h tooltip: { name, x, y } (bottom left), on the screen. zone: the
 -- square kept clear in a fight, with four spots just outside it in line with the cursor.
-local function Spots(w, h, cx, cy, W, H, here, zone)
+local function Spots(w, h, cx, cy, W, H, here, zone, pointed)
     local out = {}
     local function Add(name, x, y)
         local fx = math.max(MARGIN, math.min(W - w - MARGIN, x))
@@ -152,6 +155,17 @@ local function Spots(w, h, cx, cy, W, H, here, zone)
         Add("above right of the cursor", cx + NEAR, cy + NEAR)
         Add("below left of the cursor", cx - NEAR - w, cy - NEAR - h)
         Add("above left of the cursor", cx - NEAR - w, cy + NEAR)
+    end
+    -- Just outside what you're pointing at, when that's bigger than the cursor's own box (a
+    -- creature or player in the world): beside it in line with the cursor, above or below it.
+    local p = pointed
+    if p and cx and (p.w > 2 * NEAR + 8 or p.h > 2 * NEAR + 8) then
+        Add("right of what you're pointing at", p.x + p.w + GAP, cy - h / 2)
+        Add("left of what you're pointing at", p.x - GAP - w, cy - h / 2)
+        Add("right of it, low", p.x + p.w + GAP, p.y)
+        Add("left of it, low", p.x - GAP - w, p.y)
+        Add("above what you're pointing at", cx - w / 2, p.y + p.h + GAP)
+        Add("below what you're pointing at", cx - w / 2, p.y - GAP - h)
     end
     if zone and cx then
         Add("left of the middle", zone.x - NEAR - w, cy - h / 2)
@@ -173,6 +187,16 @@ local function Spots(w, h, cx, cy, W, H, here, zone)
     Add("left side, low", left, H / 3 - h / 2)
     Add("left side, high", left, H * 2 / 3 - h / 2)
     return out
+end
+
+-- How much of a w x h tooltip at x, y covers what's never covered (from the obstacles: unit frames,
+-- and what you're pointing at).
+local function OverUnits(x, y, w, h, obstacles)
+    local over = 0
+    for _, o in ipairs(obstacles) do
+        if o.unit or o.hard then over = over + Overlap(x, y, w, h, o) end
+    end
+    return over
 end
 
 -- The best spot for the tooltip: x, y (bottom left, UIParent units), its name and what it covers;
@@ -200,8 +224,8 @@ function Place:Choose(w, h, ctx)
     local best, bestCost, bestVital
     local nearest, nearestOver -- the spot over the middle least, for when none is clear of it
     ctx.skipped = 0
-    for _, spot in ipairs(Spots(w, h, cx, cy, W, H, ctx.here, ctx.keepOut)) do
-        local over = OverMiddle(spot.x, spot.y, w, h, ctx)
+    for _, spot in ipairs(Spots(w, h, cx, cy, W, H, ctx.here, ctx.keepOut, obstacles.pointed)) do
+        local over = OverMiddle(spot.x, spot.y, w, h, ctx) + OverUnits(spot.x, spot.y, w, h, obstacles)
         if over > 0 then
             ctx.skipped = ctx.skipped + 1
             if not nearestOver or over < nearestOver then nearest, nearestOver = spot, over end
@@ -235,7 +259,8 @@ function Place:Choose(w, h, ctx)
 end
 
 -- Whether the tooltip at Edit Mode's spot (its holder where it rests, the tooltip pinned to it by
--- the same corner) is clear of the middle. Puts the holder back there to look; not knowing is no.
+-- the same corner) is clear of the middle (in a fight) and of the unit frames. Puts the holder back
+-- there to look; not knowing is no.
 function Place:RestClear(w, h, ctx)
     local holder, corner = S.info.holder, S.info.corner or ""
     Place.Release(holder)
@@ -243,7 +268,12 @@ function Place:RestClear(w, h, ctx)
     if not (ok and hx) then return false end
     local x = corner:find("RIGHT") and hx + hw - w or hx
     local y = corner:find("TOP") and hy + hh - h or hy
-    return OverMiddle(x, y, w, h, ctx) == 0
+    local keep = ns.Screen:UnitFrames()
+    local us = UIParent:GetEffectiveScale()
+    local cx, cy = GetCursorPosition()
+    local p = ns.Screen:Pointed(cx / us, cy / us, ctx)
+    keep[#keep + 1] = { x = p.x, y = p.y, w = p.w, h = p.h, hard = true }
+    return OverMiddle(x, y, w, h, ctx) == 0 and OverUnits(x, y, w, h, keep) == 0
 end
 
 -- Places the tooltip now (it may be about to grow: it's placed again then).
@@ -266,9 +296,9 @@ function Place:Now(tip)
         ctx.pad = { w = biggest.w, h = biggest.h, corner = S.info.corner }
     end
     local spot, tried = self:Choose(w, h, ctx)
-    -- In a fight, Edit Mode's spot only when it's clear of the middle: else the best spot that is
-    -- (or, when none is, the one over it least).
-    if not spot and ctx.keepOut and tried and not self:RestClear(w, h, ctx) then spot = tried end
+    -- Edit Mode's spot only when it's clear of the unit frames (and in a fight of the middle): else
+    -- the best spot that is (or, when none is, the one over them least).
+    if not spot and tried and not self:RestClear(w, h, ctx) then spot = tried end
     if ctx.skipped > 0 then ns.stats.keptOut = ns.stats.keptOut + 1 end
     S.info.keptOut = ctx.skipped > 0
     if spot then
@@ -402,6 +432,54 @@ glider:SetScript("OnUpdate", function(_, dt)
 end)
 
 -- ---------------------------------------------------------------------------------------------
+-- The minimap: what's on it (the game's blips, other addons' pins) shows its tooltip at the cursor,
+-- which is on the map, so the tooltip covered the map you were reading. While the cursor is over
+-- the minimap, a tooltip pinned to the cursor (or to something on the map) is moved out beside the
+-- map instead, on the side towards the middle of the screen, still following the cursor up and
+-- down: its anchor is changed (SetAnchorType), nothing else. The game sets the anchor again every
+-- frame while you're on the map (Minimap_OnUpdate); this runs right after each time (SetOwner hook).
+-- ---------------------------------------------------------------------------------------------
+
+local ASIDE_GAP = 10 -- UIParent units between the map's edge and the tooltip
+local CURSOR_ANCHORS = { ANCHOR_CURSOR = true, ANCHOR_CURSOR_LEFT = true, ANCHOR_CURSOR_RIGHT = true, ANCHOR_PRESERVE = false }
+
+-- The minimap's rectangle (UIParent units), when it's showing.
+local function MapRect()
+    local m = Minimap
+    if not (m and m:IsVisible()) then return nil end
+    return ns.Screen.Rect(m)
+end
+
+-- Whether f is the minimap or sits on it (a pin, a blip button).
+local function OnMap(f)
+    local depth = 0
+    while f and depth < 6 do
+        if f == Minimap then return true end
+        f = f.GetParent and f:GetParent()
+        depth = depth + 1
+    end
+    return false
+end
+
+local function Aside(tip, owner, anchor)
+    if not (ns.db and ns.db.enabled and ns.db.minimapAside ~= false) then return end
+    if not (tip.SetAnchorType and (CURSOR_ANCHORS[anchor] or OnMap(owner))) then return end
+    local x, y, w, h = MapRect()
+    if not x then return end
+    local us = UIParent:GetEffectiveScale()
+    local cx, cy = GetCursorPosition()
+    cx, cy = cx / us, cy / us
+    if cx < x - 4 or cx > x + w + 4 or cy < y - 4 or cy > y + h + 4 then return end
+    -- The side towards the middle of the screen: left of a map on the right, right of one on the left.
+    local s = (Num(tip:GetEffectiveScale()) or us) / us
+    if x + w / 2 > UIParent:GetWidth() / 2 then
+        pcall(tip.SetAnchorType, tip, "ANCHOR_CURSOR_LEFT", -((cx - x) + ASIDE_GAP) / s, 0)
+    else
+        pcall(tip.SetAnchorType, tip, "ANCHOR_CURSOR_RIGHT", ((x + w - cx) + ASIDE_GAP) / s, 0)
+    end
+end
+
+-- ---------------------------------------------------------------------------------------------
 -- Hooks
 -- ---------------------------------------------------------------------------------------------
 
@@ -440,11 +518,15 @@ ns:On("PLAYER_LOGIN", function()
         Again(tooltip)
     end)
     -- Anything that sets the tooltip's owner after that places it itself.
-    hooksecurefunc(tip, "SetOwner", function(self) Gone(self); S.info = nil end)
+    hooksecurefunc(tip, "SetOwner", function(self, owner, anchor)
+        Gone(self); S.info = nil
+        Aside(self, owner, anchor)
+    end)
     tip:HookScript("OnSizeChanged", Again)
     tip:HookScript("OnShow", Again)
     tip:HookScript("OnHide", function(self) Gone(self); S.info = nil end)
-    -- The cursor moving onto it: somewhere else, so it doesn't cover what you're pointing at.
+    -- The cursor moving onto it, or (in the world) what you're pointing at coming under it as the
+    -- cursor moves: somewhere else, so it doesn't cover what you're pointing at.
     local acc = 0
     tip:HookScript("OnUpdate", function(self, dt)
         acc = acc + dt
@@ -455,7 +537,12 @@ ns:On("PLAYER_LOGIN", function()
         local us = UIParent:GetEffectiveScale()
         local cx, cy = GetCursorPosition()
         cx, cy = cx / us, cy / us
-        if cx > r.x - 8 and cx < r.x + r.w + 8 and cy > r.y - 8 and cy < r.y + r.h + 8 then
+        local under = cx > r.x - 8 and cx < r.x + r.w + 8 and cy > r.y - 8 and cy < r.y + r.h + 8
+        if not under and not S.info.owner then
+            local p = ns.Screen:Pointed(cx, cy, nil)
+            under = Overlap(r.x, r.y, r.w, r.h, p) > 0
+        end
+        if under then
             last = nil
             Again(self)
         end

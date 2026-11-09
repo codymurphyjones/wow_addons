@@ -1,6 +1,7 @@
-"""Data for the Dungeon Pull Planner: every floor of every dungeon and raid in
-Journal/ZoneArt.lua's ns.InstanceArt, its map picture, and the mob packs on it.
-Writes Journal/PullData.lua and Media/Pulls/<Key>-<floor>.blp.
+"""Mob positions for every floor of every dungeon and raid in Journal/ZoneArt.lua's
+ns.InstanceArt: the mob packs on each floor, which SpyGlass draws on OneForAll's dungeon maps
+(Journal/MobPins.lua). Writes Journal/PullData.lua. (The floors' map art is still read, to tell
+which floor a spawn stands on, but no longer written: the dungeon maps are OneForAll's.)
 
 Where things come from (Wowhead shows no creature coordinates inside instances,
 on any branch, so spawns come from the open CMaNGOS classic world database):
@@ -797,9 +798,6 @@ def main():
                 img = floor_image(fetcher, floors, u)
                 if img is None:
                     report.append("%s floor %d (%d): no map art" % (k, n, u))
-                else:
-                    save_blp(img, path)
-                    total_bytes += os.path.getsize(path)
                 entry["floors"].append({
                     "file": fname, "w": USED_W, "h": USED_H, "name": floors.floor_name(u), "uiMap": u,
                     "subzones": floors.subzones(u, names.get(mapid)), "world": floors.world_rect(u)})

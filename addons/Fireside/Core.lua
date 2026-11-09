@@ -1,11 +1,11 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.2"
+ns.VERSION = "0.1.7"
 ns.PREFIX = "|cff55d6beFireside|r"
 ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon"
 
 -- Events, saved variables, Print, Changed and timers: the shared Core.lua (addons/shared).
-ns.SAVED = { db = "FiresideDB", char = "FiresideCharDB" }
+ns.SAVED = { db = "FiresideDB", char = "FiresideCharDB", own = { "options" } } -- own: a character may keep its own (Setup.lua)
 
 ns.DEFAULTS = {
     options = {

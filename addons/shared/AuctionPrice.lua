@@ -23,8 +23,20 @@ function AP.HasAuctionator()
     return api and (api.GetAuctionPriceByItemID or api.GetAuctionPriceByItemLink) and true or false
 end
 
--- Auctionator's latest price, in copper, by item ID or link; or nil.
+-- Wealth Planner's price for the auction pool you're at (else your faction's): Auctionator keeps
+-- one price for every auction house you visit, so Booty Bay's would stand in for your own city's.
+local function PoolPrice(item)
+    local wp = WealthPlannerAPI
+    if not (wp and wp.PoolPrice) or item == nil then return nil end
+    local ok, price, age = pcall(wp.PoolPrice, item)
+    if ok and type(price) == "number" and price > 0 then return price, age end
+end
+
+-- The latest price, in copper, by item ID or link; or nil: the auction pool's (above), else
+-- Auctionator's.
 function AP.Market(item)
+    local pool = PoolPrice(item)
+    if pool then return pool end
     local api = API()
     if not api or item == nil then return nil end
     if type(item) == "number" then
@@ -33,8 +45,10 @@ function AP.Market(item)
     return api.GetAuctionPriceByItemLink and Positive(pcall(api.GetAuctionPriceByItemLink, Caller(), item)) or nil
 end
 
--- Days since Auctionator last saw it (0 = today), by item ID or link; or nil.
+-- Days since it was last seen (0 = today), by item ID or link; or nil.
 function AP.Age(item)
+    local price, age = PoolPrice(item)
+    if price then return age end
     local api = API()
     if not api or item == nil then return nil end
     local fn = type(item) == "number" and api.GetAuctionAgeByItemID or api.GetAuctionAgeByItemLink
@@ -46,6 +60,56 @@ end
 local function ItemID(item)
     if type(item) == "number" then return item end
     if type(item) == "string" then return tonumber(item:match("item:(%d+)")) end
+end
+
+-- ---------------------------------------------------------------------------
+-- Trend at your faction's auction houses only: Wealth Planner's daily lows per auction pool
+-- (WealthPlannerAPI.PoolHistory). Auctionator's own history can't be used: it keeps one price for
+-- every house you visit, so a Booty Bay scan would read as a jump or a crash. Without Wealth
+-- Planner there's no trend (nil).
+-- ---------------------------------------------------------------------------
+
+AP.STEAMWHEEDLE = "steamwheedle"
+
+local function HomeHistory(item)
+    local wp = WealthPlannerAPI
+    if not (wp and wp.PoolHistory) or item == nil then return nil end
+    local ok, days, now, today = pcall(wp.PoolHistory, item)
+    if ok and type(days) == "table" and type(now) == "number" and now > 0 and type(today) == "number" then
+        return days, now, today
+    end
+end
+
+-- The latest price at your faction's houses minus the price there at the start of the last `days`
+-- days, in copper; or nil when the history doesn't reach back that far. The start is the day
+-- `days` ago, else the scanned day nearest it within a quarter of the window (at least a day):
+-- scans are rarely daily.
+function AP.Trend(item, days)
+    local prices, now, today = HomeHistory(item)
+    if not prices then return nil end
+    local start = today - days
+    local slack = math.max(1, math.floor(days / 4))
+    for off = 0, slack do
+        -- Nearest first; on a tie the older day, so the window is never shorter than asked.
+        local p = prices[start - off] or (start + off < today and prices[start + off]) or nil
+        if type(p) == "number" and p > 0 then return now - p end
+    end
+    return nil
+end
+
+-- Whether your faction's houses have a price for the item (the trend lines then show N/A rather
+-- than nothing).
+function AP.HasHistory(item)
+    return HomeHistory(item) ~= nil
+end
+
+-- The latest price at one auction pool (AP.STEAMWHEEDLE, "alliance", "horde", ...): copper, days
+-- old; or nil (not seen there, or no Wealth Planner).
+function AP.PoolPrice(item, pool)
+    local wp = WealthPlannerAPI
+    if not (wp and wp.PoolPrice and pool) or item == nil then return nil end
+    local ok, price, age = pcall(wp.PoolPrice, item, pool)
+    if ok and type(price) == "number" and price > 0 then return price, age end
 end
 
 -- Wealth Planner's view of an item: { normal, ma7, ma30, chg7, days, signal }, or nil without it

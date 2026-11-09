@@ -14,6 +14,8 @@ local JUMP = { 0.35, 1, 0.45 } -- the arrow at a cliff's edge: the way to jump
 local f
 local buttons = {} -- owner -> { text, icon, color, tooltip, onClick }, from other addons (API:SetButton)
 local sides = {}   -- owner -> { icon, title, text, onClick }, the button left of the arrow (API:SetSide)
+local sides2 = {}  -- the same for the second button, under it (API:SetSide's slot 2)
+local sides3 = {}  -- a small button at the frame's top-left corner, outside it (API:SetSide's slot 3)
 local MIN_W, MAX_W = 230, 330 -- the frame widens to fit its text, up to MAX_W
 
 -- A line's text, set only when it changed (the arrow updates often; most of the time nothing has).
@@ -191,6 +193,27 @@ local function Build()
     f:SetScript("OnLeave", GameTooltip_Hide)
     f:SetScript("OnUpdate", function(_, elapsed) Arrow:Tick(elapsed) end)
 
+    -- Minimize (top left): the arrow folds down to a small tab (see Mini), click it to unfold.
+    f.minimize = CreateFrame("Button", nil, f)
+    f.minimize:SetSize(12, 12); f.minimize:SetPoint("TOPLEFT", 2, -2)
+    f.minimize:SetFrameLevel(f:GetFrameLevel() + 6)
+    f.minimize.bar = f.minimize:CreateTexture(nil, "OVERLAY")
+    f.minimize.bar:SetColorTexture(1, 1, 1, 1)
+    f.minimize.bar:SetSize(7, 2); f.minimize.bar:SetPoint("CENTER", 0, -1)
+    f.minimize.bar:SetVertexColor(GOLD[1], GOLD[2], GOLD[3], 0.6)
+    f.minimize:SetScript("OnEnter", function(self)
+        self.bar:SetVertexColor(1, 1, 1, 1)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:AddLine("Minimize")
+        GameTooltip:AddLine("Folds the arrow down to a small tab; click the tab to bring it back.", 0.8, 0.8, 0.8, true)
+        GameTooltip:Show()
+    end)
+    f.minimize:SetScript("OnLeave", function(self)
+        self.bar:SetVertexColor(GOLD[1], GOLD[2], GOLD[3], 0.6)
+        GameTooltip:Hide()
+    end)
+    f.minimize:SetScript("OnClick", function() Arrow:SetMinimized(true) end)
+
     -- Another addon's button (one shows: the first by owner name): a small icon when it gives
     -- one, a text button otherwise.
     local function ExtraScripts(btn)
@@ -237,32 +260,44 @@ local function Build()
     f.restore:SetScript("OnLeave", GameTooltip_Hide)
     f.restore:Hide()
 
-    -- Another addon's button on the left, outside the frame (one shows: the first by owner name).
-    f.side = CreateFrame("Button", nil, f, "BackdropTemplate")
-    f.side:SetSize(30, 30); f.side:SetPoint("RIGHT", f, "LEFT", -3, 0)
-    if f.side.SetBackdrop then
-        f.side:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
-        f.side:SetBackdropColor(0, 0, 0, 0.5)
-        f.side:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 0.35)
-        if WallyHUD and WallyHUD.Panel then WallyHUD.Panel(f.side, "base") end
+    -- Another addon's buttons on the left, outside the frame (one each shows: the first by owner
+    -- name): the side button, and a second one under it (slot 2).
+    local function SideButton(list, size)
+        local b = CreateFrame("Button", nil, f, "BackdropTemplate")
+        size = size or 30
+        b:SetSize(size, size)
+        if b.SetBackdrop then
+            b:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+            b:SetBackdropColor(0, 0, 0, 0.5)
+            b:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 0.35)
+            if WallyHUD and WallyHUD.Panel then WallyHUD.Panel(b, "base") end
+        end
+        b.icon = b:CreateTexture(nil, "ARTWORK")
+        local inset = size >= 24 and 4 or 2
+        b.icon:SetPoint("TOPLEFT", inset, -inset); b.icon:SetPoint("BOTTOMRIGHT", -inset, inset)
+        b:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+        b:SetScript("OnClick", function(self)
+            local s = self.owner and list[self.owner]
+            if s and s.onClick then pcall(s.onClick, self) end
+        end)
+        b:SetScript("OnEnter", function(self)
+            local s = self.owner and list[self.owner]
+            if not s then return end
+            GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+            if s.title then GameTooltip:AddLine(s.title) end
+            if s.text then GameTooltip:AddLine(s.text, 1, 1, 1, true) end
+            GameTooltip:Show()
+        end)
+        b:SetScript("OnLeave", GameTooltip_Hide)
+        b:Hide()
+        return b
     end
-    f.side.icon = f.side:CreateTexture(nil, "ARTWORK")
-    f.side.icon:SetPoint("TOPLEFT", 4, -4); f.side.icon:SetPoint("BOTTOMRIGHT", -4, 4)
-    f.side:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
-    f.side:SetScript("OnClick", function(self)
-        local s = self.owner and sides[self.owner]
-        if s and s.onClick then pcall(s.onClick, self) end
-    end)
-    f.side:SetScript("OnEnter", function(self)
-        local s = self.owner and sides[self.owner]
-        if not s then return end
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        if s.title then GameTooltip:AddLine(s.title) end
-        if s.text then GameTooltip:AddLine(s.text, 1, 1, 1, true) end
-        GameTooltip:Show()
-    end)
-    f.side:SetScript("OnLeave", GameTooltip_Hide)
-    f.side:Hide()
+    f.side = SideButton(sides)
+    f.side:SetPoint("RIGHT", f, "LEFT", -3, 0)
+    f.side2 = SideButton(sides2)
+    -- The small one (slot 3): above the frame's left edge, outside it.
+    f.side3 = SideButton(sides3, 16)
+    f.side3:SetPoint("BOTTOMRIGHT", f, "TOPLEFT", -3, 3)
 end
 
 local function FirstButton()
@@ -282,11 +317,36 @@ local function LayoutButton()
     f.side.owner = first
     f.side:SetShown(first ~= nil)
     if first then f.side.icon:SetTexture(sides[first].icon) end
-    -- (It stays on the screen with the frame, moved up against the left edge.)
-    f:SetClampRectInsets(first and -33 or 0, 0, 0, 0)
+    -- The second button: under the first, or in its place when there's none.
+    local second
+    for o in pairs(sides2) do
+        if not second or o < second then second = o end
+    end
+    f.side2.owner = second
+    f.side2:SetShown(second ~= nil)
+    f.side2:ClearAllPoints()
+    if first then f.side2:SetPoint("TOP", f.side, "BOTTOM", 0, -3) else f.side2:SetPoint("RIGHT", f, "LEFT", -3, 0) end
+    if second then f.side2.icon:SetTexture(sides2[second].icon) end
+    local third
+    for o in pairs(sides3) do
+        if not third or o < third then third = o end
+    end
+    f.side3.owner = third
+    f.side3:SetShown(third ~= nil)
+    if third then f.side3.icon:SetTexture(sides3[third].icon) end
+    -- (They stay on the screen with the frame, moved up against the left edge.)
+    f:SetClampRectInsets((first or second or third) and -33 or 0, 0, 0, third and 22 or 0)
     local owner, b = FirstButton()
     f.extra.owner, f.extraIcon.owner = owner, owner
     local right = b and (b.icon and -32 or -56) or -8
+    -- The class quest icon (ClassQuest.lua): left of the owner's button, the same size; the title
+    -- and the restore icon move over for it.
+    local cq = ns.ClassQuest
+    if cq and cq.Shown and cq:Shown() then
+        local x = b and (b.icon and -33 or -57) or -5
+        cq:Anchor(f, x)
+        right = x - 28
+    end
     -- The restore icon: only when the arrow has drifted from what its owner expects.
     local managed = ns.Targets:GetManager() ~= nil and ns.Targets:Altered()
     f.restore:SetShown(managed)
@@ -337,9 +397,15 @@ function Arrow:SetButton(owner, button)
     self:Refresh()
 end
 
-function Arrow:SetSide(owner, side)
+-- Lays the arrow's buttons out again (the class quest icon came or went).
+function Arrow:Relayout()
+    if f then LayoutButton() end
+end
+
+function Arrow:SetSide(owner, side, slot)
     if type(owner) ~= "string" then return end
-    sides[owner] = type(side) == "table" and side or nil
+    local list = (slot == 2 and sides2) or (slot == 3 and sides3) or sides
+    list[owner] = type(side) == "table" and side or nil
     if f then LayoutButton() end
 end
 
@@ -452,6 +518,72 @@ function Arrow:Tick(elapsed)
     elseif not f.arrow:IsShown() then
         shownAngle, shownRotation = nil, nil
     end
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Minimized (ns.db.arrowMin): the arrow folds down to a small, faint tab where its top-left corner
+-- was. The tab still points the way; click it to unfold. Windows docked under the arrow stay put.
+-- ---------------------------------------------------------------------------------------------
+
+local mini
+
+local function Mini()
+    if mini then return mini end
+    mini = CreateFrame("Button", "WaypointArrowMini", UIParent, "BackdropTemplate")
+    mini:SetSize(22, 22); mini:SetFrameStrata("MEDIUM"); mini:SetClampedToScreen(true)
+    mini:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0)
+    if mini.SetBackdrop then
+        mini:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+        mini:SetBackdropColor(0, 0, 0, 0.5)
+        mini:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 0.35)
+        if WallyHUD and WallyHUD.Panel then WallyHUD.Panel(mini, "base") end
+    end
+    mini.icon = mini:CreateTexture(nil, "ARTWORK")
+    mini.icon:SetSize(18, 18); mini.icon:SetPoint("CENTER")
+    mini.icon:SetTexture(ARROW)
+    mini:SetAlpha(0.4)
+    mini:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    mini:SetScript("OnClick", function(_, button)
+        if button == "RightButton" then Arrow:ShowMenu() else Arrow:SetMinimized(false) end
+    end)
+    mini:SetScript("OnEnter", function(self)
+        self:SetAlpha(1)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine("Waypoint")
+        local title = f.title and f.title.shownText
+        if title and title ~= "" then GameTooltip:AddLine(title, 1, 1, 1, true) end
+        local where = f.where and f.where.shownText
+        if where and where ~= "" then GameTooltip:AddLine(where, 0.8, 0.8, 0.8, true) end
+        GameTooltip:AddLine("Click: show the arrow again", 0.75, 0.8, 0.85)
+        GameTooltip:AddLine("Right-click: menu", 0.75, 0.8, 0.85)
+        GameTooltip:Show()
+    end)
+    mini:SetScript("OnLeave", function(self) self:SetAlpha(0.4); GameTooltip:Hide() end)
+    -- The arrow's own updates (it's hidden, so its OnUpdate doesn't run), and its turn copied.
+    mini:SetScript("OnUpdate", function(self, elapsed)
+        Arrow:Tick(elapsed)
+        local pointing = f.arrow:IsShown() and shownRotation ~= nil
+        if pointing then
+            self.icon:SetTexture(ARROW)
+            self.icon:SetRotation(shownRotation)
+            self.icon:SetVertexColor(f.arrow:GetVertexColor())
+        elseif self.icon.lastTex ~= "check" then
+            self.icon:SetRotation(0)
+            self.icon:SetVertexColor(1, 1, 1)
+        end
+        if pointing then self.icon.lastTex = "arrow"
+        elseif self.icon.lastTex ~= "check" then
+            self.icon:SetTexture("Interface\\RaidFrame\\ReadyCheck-Ready")
+            self.icon.lastTex = "check"
+        end
+    end)
+    return mini
+end
+
+function Arrow:SetMinimized(on)
+    ns.db.arrowMin = on and true or nil
+    GameTooltip:Hide()
+    self:Refresh()
 end
 
 -- How far it is to p along the planned way (the route's walk, Route.lua's R:Way), from where you
@@ -691,6 +823,7 @@ function Arrow:Update()
     local riding = rt and rt:Riding()
     -- On a boat or zeppelin with nothing to point at: the ride and its countdown all the same.
     if riding and not (e and p) then
+        self:SetCast(nil)
         f.compass:Hide()
         Paint(nil)
         f.arrow:Hide(); f.check:Hide()
@@ -701,6 +834,7 @@ function Arrow:Update()
         return
     end
     if not (e and p) then
+        self:SetCast(nil)
         local _, b = FirstButton()
         Paint(b and { color = b.color } or nil)
         f.arrow:Hide(); f.check:Hide()
@@ -725,6 +859,8 @@ function Arrow:Update()
     local fl = ns.Flight
     local flying = fl and fl:Flying()
     if flying then
+        -- (A hearthstone or teleport button from before take-off would sit over the text.)
+        self:SetCast(nil)
         f.arrow:Hide(); f.check:Hide()
         Text(f.title, "Flying to " .. flying.to)
         Text(f.where, flying.left and ("Lands in about " .. fl.Clock(flying.left)) or "In flight")
@@ -732,6 +868,7 @@ function Arrow:Update()
         return
     end
     if riding then
+        self:SetCast(nil)
         f.arrow:Hide(); f.check:Hide()
         Text(f.title, "On the " .. riding.label)
         Text(f.where, RideText(riding))
@@ -905,6 +1042,11 @@ function Arrow:ShowMenu()
                 end
                 root:CreateDivider()
             end
+            -- ...and its own on/off settings: { { label (or a function), checked(), toggle() }, ... }.
+            for _, c in ipairs(m.checks or {}) do
+                local label = type(c.label) == "function" and c.label() or c.label
+                root:CreateCheckbox(label, c.checked, c.toggle)
+            end
         end
         -- The map shows a way that isn't there: block it, plan around it.
         if ns.Route and (ns.Flight.route or ns.Route:Way()) then
@@ -978,6 +1120,7 @@ function Arrow:Refresh()
     if not ns.db then return end
     if ns:InBattleground() then
         if f then f:Hide() end
+        if mini then mini:Hide() end
         return
     end
     local hasButton = next(buttons) ~= nil or ns.Targets:GetManager() ~= nil
@@ -985,11 +1128,18 @@ function Arrow:Refresh()
     local show = not ns.db.arrowHidden and (hasButton or riding or ns.Targets.current ~= nil and ns.Targets.point ~= nil)
     if not show then
         if f then f:Hide() end
+        if mini then mini:Hide() end
         return
     end
     Build()
     LayoutButton()
-    f:Show()
+    if ns.db.arrowMin then
+        f:Hide()
+        Mini():Show()
+    else
+        if mini then mini:Hide() end
+        f:Show()
+    end
     self:Update()
 end
 

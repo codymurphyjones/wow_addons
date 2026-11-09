@@ -244,16 +244,10 @@ function W.AskText(prompt, default, fn)
 end
 
 -- Three-way prompt used by the Cart when nothing is within tolerance. Escape counts as Cancel.
-StaticPopupDialogs[KEY .. "_PROMPT3"] = {
-    text = "%s", button1 = "Buy Cheapest", button2 = CANCEL or "Cancel", button3 = "Skip Item",
-    OnAccept = function(_, data) data.done = true; data.fns[1]() end,
-    OnAlt = function(_, data) data.done = true; data.fns[3]() end,
-    OnCancel = function(_, data) if not data.done then data.done = true; data.fns[2]() end end,
-    timeout = 0, whileDead = 1, hideOnEscape = 1, showAlert = 1, preferredIndex = 3,
-}
+-- (This addon's own popup, W.Ask: never the game's StaticPopup frames, which it would taint.)
 -- W.Prompt3(text, buyCheapestFn, cancelFn, skipFn)
 function W.Prompt3(text, a, b, c)
-    StaticPopup_Show(KEY .. "_PROMPT3", text, nil, { fns = { a, b, c } })
+    W.Ask({ text = text, buttons = { { "Buy Cheapest", a }, { "Skip Item", c }, { CANCEL or "Cancel", b } }, onCancel = b })
 end
 
 -- Quartermaster: adds the item on the cursor to a list or prebuilt list (default: Browse's add target).

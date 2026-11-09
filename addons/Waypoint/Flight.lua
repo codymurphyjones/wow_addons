@@ -299,6 +299,14 @@ end
 local waitingToMove = false
 ns:On("PLAYER_ENTERING_WORLD", function(isLogin, isReload)
     if isLogin or isReload then waitingToMove = true end
+    -- The loading screen is still up: what the first plan unpacks (the land map under you, the
+    -- stops' walks) is done now, where the time can't be seen, not in a frame once you're playing.
+    local c, n, w = ns.Nav:Player()
+    if not c then return end
+    if ns.Grid and ns.Grid.Warm then pcall(ns.Grid.Warm, ns.Grid, c, n, w) end
+    if ns.ZoneWays and ns.ZoneWays.Warm and ns.Route then
+        pcall(function() ns.ZoneWays:Warm(c, n, w, ns.Route:RoadMode().id) end)
+    end
 end)
 ns:On("PLAYER_STARTED_MOVING", function()
     if waitingToMove then
@@ -314,12 +322,19 @@ local function StillWaiting()
     return waitingToMove
 end
 
+local PLAN_EVERY_COMBAT = 5  -- ...while you're fighting (the frames are yours; the route barely moves)
 local nextPlan, lastTarget = 0, nil
+-- The same place, whatever table it came in (an addon setting its target again, Questie's points
+-- built afresh): not a new target, so it waits for the next round like any other re-plan.
+local function SamePlace(a, b)
+    return a == b or (a and b and a.mapID == b.mapID and a.x == b.x and a.y == b.y) or false
+end
 function F:Update(p)
     if StillWaiting() then return end
     local now = GetTime()
-    if p == lastTarget and now < nextPlan then return end
-    lastTarget, nextPlan = p, now + PLAN_EVERY
+    if SamePlace(p, lastTarget) and now < nextPlan then return end
+    lastTarget = p
+    nextPlan = now + (InCombatLockdown() and PLAN_EVERY_COMBAT or PLAN_EVERY)
     self:Plan(p)
 end
 
@@ -731,6 +746,104 @@ end
 
 local function OnTaxi() return UnitOnTaxi and C.Readable(UnitOnTaxi("player")) and true or false end
 
+-- ---------------------------------------------------------------------------------------------
+-- Landing: was the flight finished?
+-- ---------------------------------------------------------------------------------------------
+-- Off the taxi isn't proof of arriving (a flight cut short, a disconnect). So the flight master of
+-- the flight point you flew to is looked up by name (Data/Places.lua: Wind Rider, Gryphon,
+-- Hippogryph and Flight Masters, Bat Handlers of your side, the nearest to the flight point), and
+-- the flight counts as finished once you stand within LANDED yards of them. Only then are its time,
+-- the flight point's exact place and the route learned. When the NPC data can't confirm it within
+-- LANDING_WAIT seconds (no master found, or the landing spot is a few yards further from them),
+-- landing within ARRIVE yards of the flight point counts; further off, the flight was cut short and
+-- nothing is learned from it.
+local LANDED = 6          -- yards from the flight master that confirm the landing
+local LANDING_WAIT = 8    -- seconds to wait for that before falling back to the flight point
+local MASTER_NEAR = 150   -- a flight master this close to the flight point is its own
+local ARRIVE = 150        -- yards from the flight point that still count as landed there
+local landing             -- { from, to, took, since }: off the taxi, not yet settled
+
+local MASTER_TITLES = { ["Wind Rider Master"] = true, ["Gryphon Master"] = true, ["Hippogryph Master"] = true,
+    ["Bat Handler"] = true, ["Flight Master"] = true }
+local function IsMasterTitle(t) return type(t) == "string" and (MASTER_TITLES[t] or t:find("Flight Master", 1, true)) end
+
+-- The flight master at a flight point: { name, c, n, w }, or false (none known). Cached per point.
+local masters = {}
+local function Master(nodeName)
+    if masters[nodeName] ~= nil then return masters[nodeName] end
+    masters[nodeName] = false
+    local node = Node(nodeName)
+    local npcs = ns.Places and ns.Places.npcs
+    if not (node and npcs) then return false end
+    local f = UnitFactionGroup and UnitFactionGroup("player")
+    local mine = f == "Alliance" and "A" or f == "Horde" and "H" or nil
+    local best, bestYards
+    for _, n in pairs(npcs) do
+        if IsMasterTitle(n[2]) and mine and type(n[3]) == "string" and n[3]:find(mine, 1, true) then
+            for m, x, y in tostring(n[4] or ""):gmatch("(%d+),([%d%.]+),([%d%.]+)") do
+                local c, wn, ww = ns.Nav:World({ mapID = tonumber(m), x = tonumber(x), y = tonumber(y) })
+                if c and c == node.c then
+                    local d = Dist(node.n, node.w, wn, ww)
+                    if d <= MASTER_NEAR and (not bestYards or d < bestYards) then
+                        best, bestYards = { name = n[1], c = c, n = wn, w = ww }, d
+                    end
+                end
+            end
+        end
+    end
+    masters[nodeName] = best or false
+    return masters[nodeName]
+end
+F.Master = function(_, nodeName) return Master(nodeName) or nil end
+
+-- Where you stand in the world: c, n, w, or nil.
+local function HereWorld()
+    local m, x, y = Here()
+    if not m then return nil end
+    return ns.Nav:World({ mapID = m, x = x, y = y })
+end
+
+-- The flight ended where it was going: learn its time, the route and the flight point.
+local function Arrived(l)
+    if l.from and l.to and l.took > 10 then
+        DB().times[l.from .. ">" .. l.to] = math.floor(l.took + 0.5)
+        spy = nil
+    end
+    if l.from and l.to and not Retired(l.from) and not Retired(l.to) then
+        Reach()[l.from] = Reach()[l.from] or {}
+        Reach()[l.from][l.to] = true
+        groups, ways = nil, {}
+    end
+    if l.to then
+        SetExact(l.to)
+        Known()[l.to] = true
+        at = l.to
+    end
+end
+
+local function Landing()
+    local l = landing
+    if not l then return end
+    if not l.to then landing = nil; return end
+    local c, n, w = HereWorld()
+    if not c then return end
+    local m = Master(l.to)
+    if m and m.c == c and Dist(n, w, m.n, m.w) <= LANDED then
+        landing = nil
+        Arrived(l)
+        if ns.db.debug then ns:Print(("Landed at %s, beside %s."):format(l.to, m.name)) end
+        return
+    end
+    if GetTime() - l.since < LANDING_WAIT then return end
+    landing = nil
+    local node = Node(l.to)
+    if node and node.c == c and Dist(n, w, node.n, node.w) <= ARRIVE then
+        Arrived(l)
+    elseif ns.db.debug then
+        ns:Print(("The flight to %s ended short of it: not learned from."):format(l.to))
+    end
+end
+
 local function Watch()
     if not ns.db then return end
     if OnTaxi() then
@@ -744,25 +857,13 @@ local function Watch()
         return
     end
     if flying then
-        local took = GetTime() - flying.start
-        if flying.from and flying.to and took > 10 then
-            DB().times[flying.from .. ">" .. flying.to] = math.floor(took + 0.5)
-            spy = nil
-        end
-        if flying.from and flying.to and not Retired(flying.from) and not Retired(flying.to) then
-            Reach()[flying.from] = Reach()[flying.from] or {}
-            Reach()[flying.from][flying.to] = true
-            groups, ways = nil, {}
-        end
-        if flying.to then
-            SetExact(flying.to)
-            Known()[flying.to] = true
-            at = flying.to
-        end
-        -- Landed: the plan made before the flight is behind you; plan again from here.
+        -- Off the taxi: the plan made before the flight is behind you; plan again from here. Whether
+        -- it landed where it was going is settled by Landing (below) before anything is learned.
+        landing = { from = flying.from, to = flying.to, took = GetTime() - flying.start, since = GetTime() }
         flying, F.route = nil, nil
         ns:Changed()
     end
+    if landing then Landing() end
     -- The fastest mount you've ridden: how fast you'd travel a long way.
     if IsMounted and C.Readable(IsMounted()) then
         local run = GetUnitSpeed and C.Num(select(2, GetUnitSpeed("player")))

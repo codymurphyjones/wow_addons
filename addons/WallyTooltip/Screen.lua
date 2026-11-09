@@ -38,6 +38,16 @@ local NAMED = {
         "MicroMenuContainer", "BagsBar", "MainMenuBarBackpackButton" },
 }
 
+-- Unit frames: never covered, at any cost (Place.lua skips every spot over one). Yours, your
+-- target's and focus's, your pet's, the party and raid frames, boss and arena frames, and WallyHUD's
+-- orb when it stands in for your player frame.
+local UNIT_FRAMES = { "PlayerFrame", "TargetFrame", "TargetFrameToT", "FocusFrame", "FocusFrameToT", "PetFrame",
+    "PartyFrame", "PartyMemberFrame1", "PartyMemberFrame2", "PartyMemberFrame3", "PartyMemberFrame4",
+    "CompactRaidFrameContainer", "CompactPartyFrame", "Boss1TargetFrame", "Boss2TargetFrame", "Boss3TargetFrame",
+    "Boss4TargetFrame", "Boss5TargetFrame", "ArenaEnemyFrames", "WallyHUDPlayerOrb" }
+local IS_UNIT = {}
+for _, name in ipairs(UNIT_FRAMES) do IS_UNIT[name] = true end
+
 -- Frames addon code may not touch at all (the game's protected ones): never looked at.
 local function Forbidden(f)
     return f.IsForbidden ~= nil and f:IsForbidden()
@@ -74,7 +84,15 @@ function Screen:Obstacles(cx, cy, ctx)
     local W, H = UIParent:GetWidth(), UIParent:GetHeight()
     local out, seen = {}, {}
     local function Add(x, y, w, h, weight, name)
-        out[#out + 1] = { x = x, y = y, w = w, h = h, weight = weight, name = name }
+        out[#out + 1] = { x = x, y = y, w = w, h = h, weight = weight, name = name, unit = IS_UNIT[name] }
+    end
+    for _, name in ipairs(UNIT_FRAMES) do
+        local f = _G[name]
+        if type(f) == "table" and not seen[f] then
+            seen[f] = true
+            local ok, x, y, w, h = pcall(Rect, f)
+            if ok and x and not (w > W * 0.9 and h > H * 0.5) then Add(x, y, w, h, VITAL, name) end
+        end
     end
     for weight, names in pairs(NAMED) do
         for _, name in ipairs(names) do
@@ -125,7 +143,55 @@ function Screen:Obstacles(cx, cy, ctx)
             end
         end
     end
-    -- What you're pointing at: around the cursor.
-    if cx then Add(cx - 30, cy - 30, 60, 60, VITAL, "the cursor") end
+    -- What you're pointing at: never covered (Place.lua skips every spot over it).
+    if cx then
+        local p = Screen:Pointed(cx, cy, ctx)
+        out[#out + 1] = { x = p.x, y = p.y, w = p.w, h = p.h, weight = VITAL, name = p.name, hard = true }
+        out.pointed = p
+    end
+    return out
+end
+
+-- What you're pointing at, as a rectangle (UIParent units). A button or window: the 60x60 round
+-- the cursor (its own rectangle counts as "what it's about"). Something in the world is far bigger
+-- than that on screen: a creature or player is a box round the cursor (POINTED_UNIT), reaching up
+-- to take in its nameplate (the body is between the name and the cursor); an object (a herb, a
+-- mailbox) a smaller one (POINTED_OBJECT).
+local POINTED_UNIT = { left = 90, right = 90, down = 110, up = 90 }
+local POINTED_OBJECT = { left = 70, right = 70, down = 70, up = 70 }
+local function Truthy(v)
+    if v == nil or (issecretvalue and issecretvalue(v)) then return false end
+    return v and true or false
+end
+function Screen:Pointed(cx, cy, ctx)
+    if ctx and ctx.focus then
+        return { x = cx - 30, y = cy - 30, w = 60, h = 60, name = "the cursor" }
+    end
+    local unit = Truthy(UnitExists("mouseover"))
+    local r = unit and POINTED_UNIT or POINTED_OBJECT
+    local l, rt, b, t = cx - r.left, cx + r.right, cy - r.down, cy + r.up
+    if unit and C_NamePlate and C_NamePlate.GetNamePlateForUnit then
+        local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, "mouseover")
+        if ok and type(plate) == "table" and not Forbidden(plate) then
+            local ok2, x, y, w, h = pcall(Rect, plate)
+            -- (only a plate above the cursor and near it: one far off isn't this unit's on screen)
+            if ok2 and x and y + h > cy and y - cy < 400 and math.abs(x + w / 2 - cx) < 300 then
+                l, rt, t = math.min(l, x), math.max(rt, x + w), math.max(t, y + h)
+            end
+        end
+    end
+    return { x = l, y = b, w = rt - l, h = t - b, name = unit and "what you're pointing at" or "the cursor" }
+end
+
+-- Just the unit frames showing now (Obstacles' shape): for checking Edit Mode's spot.
+function Screen:UnitFrames()
+    local out = {}
+    for _, name in ipairs(UNIT_FRAMES) do
+        local f = _G[name]
+        if type(f) == "table" then
+            local ok, x, y, w, h = pcall(Rect, f)
+            if ok and x then out[#out + 1] = { x = x, y = y, w = w, h = h, name = name, unit = true } end
+        end
+    end
     return out
 end
