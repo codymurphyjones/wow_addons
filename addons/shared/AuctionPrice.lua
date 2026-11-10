@@ -70,6 +70,7 @@ end
 -- ---------------------------------------------------------------------------
 
 AP.STEAMWHEEDLE = "steamwheedle"
+AP.LOGISTICS = "quickcoin" -- the logistics camps' auction house (Crossroads, Three Corners), both factions
 
 local function HomeHistory(item)
     local wp = WealthPlannerAPI
@@ -84,7 +85,30 @@ end
 -- days, in copper; or nil when the history doesn't reach back that far. The start is the day
 -- `days` ago, else the scanned day nearest it within a quarter of the window (at least a day):
 -- scans are rarely daily.
+--
+-- The daily trend (days 1) is measured in hours instead: the latest scan against the oldest scan of
+-- the last 24 hours, once those are at least DAY_MIN_SPAN apart (two scans, 12 hours of data).
+local DAY, DAY_MIN_SPAN = 24 * 3600, 12 * 3600
+
+local function DailyTrend(item)
+    local wp = WealthPlannerAPI
+    if not (wp and wp.PoolRecent) or item == nil then return nil end
+    local ok, recent = pcall(wp.PoolRecent, item)
+    if not (ok and type(recent) == "table" and #recent >= 4) then return nil end
+    local n = #recent
+    local lastT, lastP = recent[n - 1], recent[n]
+    local since = time() - DAY
+    for i = 1, n - 3, 2 do -- (never the latest itself)
+        local t, p = recent[i], recent[i + 1]
+        if t >= since then
+            if lastT - t >= DAY_MIN_SPAN and type(p) == "number" and p > 0 then return lastP - p end
+            return nil -- the oldest scan in the window is too recent: under 12 hours of data
+        end
+    end
+end
+
 function AP.Trend(item, days)
+    if days == 1 then return DailyTrend(item) end
     local prices, now, today = HomeHistory(item)
     if not prices then return nil end
     local start = today - days

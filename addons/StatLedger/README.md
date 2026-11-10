@@ -101,9 +101,12 @@ changing one here affects new profiles, not existing ones.
 Scoring addons all price stats through `:Score`, so they agree. A point of a main stat is 1; other
 stats use rough item budgets (Attack Power 0.5, Spell Power 0.86, MP5 2.5, ...). Crit is priced in the
 stat that buys it: 1% crit costs as much as the Agility that gives your class 1% crit at your level
-(about 10 for a level 30 druid), capped at its item budget of 14. Agility, Strength and Intellect also
-earn half the worth of what they produce for your class (crit, attack power, armor, spell crit), by
-your weights, so the stat that feeds your top stats counts for more without running away.
+(about 10 for a level 30 druid), capped at its item budget of 14. When Strength or Agility gives
+attack power you value (AP or RAP in your list), it's worth exactly what it produces, at full rate: a
+cat's Strength is 2 AP and its Agility 1 AP plus its crit and armor, whatever their rank. Otherwise
+Agility, Strength and Intellect keep their own worth and earn half the worth of what they produce
+(crit, armor, spell crit), by your weights, so the stat that feeds your top stats counts for more
+without running away.
 
 Stat keys: STR AGI STA INT SPI AP RAP SP HEAL FIRE FROST SHADOW ARCANE NATURE CRIT SPELLCRIT
 HIT HASTE MP5 ARMOR DEF DODGE PARRY BLOCK BLOCKVALUE DPS. Ignore keys your addon doesn't score.

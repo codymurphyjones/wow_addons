@@ -3,7 +3,9 @@ local _, Z = ...
 -- Ride timing. You stand at a dock (A), the boat or zeppelin carries you off (you move without
 -- moving yourself): the ride from A is on and its timer runs. It ends at B, where the ride lands
 -- (where you got off last time, else the dock in the destination town), once you stand still or
--- walk on solid ground there, or walk past any other dock's sign. How long it took from boarding
+-- walk on solid ground there, or walk past any other dock's sign. It also ends wherever you go
+-- indoors (no deck is: Undercity, a building), or stand or walk on solid ground for a few seconds
+-- far from A (you ran off at B without stopping, straight into town). How long it took from boarding
 -- is learned for A's dock (ZeppelinSignsDB.rides) and is the countdown next time. A ride never
 -- timed counts down from the route's own length (RideTimes.lua, 180 seconds for a sign you added),
 -- corrected as you go by how fast you're closing on B when B is known. The countdown shows as a bar under the signs: A on the left, B on the right.
@@ -152,6 +154,7 @@ local function OnRide(now, c, wx, wy, speed, moved, dt, carried)
     if elapsed > MAX_RIDE or Flag(IsSwimming) then return End(false) end
     -- How fast you're carried, smoothed.
     if carried then
+        r.carriedAt = now
         local v = moved / dt
         r.speed = r.speed and (r.speed * 0.8 + v * 0.2) or v
     end
@@ -166,6 +169,13 @@ local function OnRide(now, c, wx, wy, speed, moved, dt, carried)
     if elapsed >= MIN_RIDE then
         -- Never left: you stepped off again, or what moved you wasn't the ride.
         if still and fromA < 40 then return End(false) end
+        -- Off the deck: indoors (no deck is), or on solid ground away from A (on a moving deck its
+        -- speed adds to your steps, so you're never "grounded" there). Before half the ride's time
+        -- it was never a ride (you floated off a platform): no time is learned from it.
+        local early = elapsed < r.expect * 0.5
+        if (Flag(IsIndoors) and fromA > 60) or (still and fromA > 60) then
+            return End(not early, r.carriedAt or r.stillSince or now)
+        end
         -- Past another town's dock (not a neighbouring pier back in A's town, like Auberdine's three).
         local at = DockAt(c, wx, wy)
         local elsewhere = at and at.sign ~= r.sign and ((at.sign.place and at.sign.place ~= r.sign.place) or fromA > 300)
@@ -193,12 +203,19 @@ local function Tick()
         return End(false)
     end
     local c, wx, wy = Z.PlayerWorldPos()
-    if not c then return end -- a loading screen (the zeppelin crossing to another continent): keep going
+    if not c then
+        -- A loading screen (the zeppelin crossing to another continent): keep going. Somewhere with no
+        -- map position for long: give up at the longest a ride can be.
+        if ride and now - ride.boarded > MAX_RIDE then End(false) end
+        return
+    end
     local speed = OwnSpeed()
     local moved = last and last.c == c and Dist(wx, wy, last.wx, last.wy) or nil
     local dt = last and math.max(0.1, now - last.t) or TICK
     last = { c = c, wx = wx, wy = wy, t = now }
+    -- Falling or floating down (off the Thunder Bluff skyship platform) moves you too: never carried.
     local carried = moved ~= nil and speed == 0 and moved / dt > CARRIED_SPEED
+        and not Flag(IsFalling) and not Flag(IsFlying)
     carriedN = carried and carriedN + 1 or 0
 
     if ride then return OnRide(now, c, wx, wy, speed, moved, dt, carried) end
@@ -212,8 +229,9 @@ local function Tick()
         local s = dock.spot
         if now - dock.left > LEAVE_SECS or s.continent ~= c or Dist(wx, wy, s.wx, s.wy) > LEAVE_RANGE then dock = nil end
     end
-    -- Carried off from a dock: on its ride since the first of those checks.
-    if dock and carriedN >= BOARD_CHECKS then
+    -- Carried off from a dock: on its ride since the first of those checks. Never indoors: that's an
+    -- elevator (Undercity's, right after you walk off its zeppelin tower), not a deck.
+    if dock and carriedN >= BOARD_CHECKS and not Flag(IsIndoors) then
         local s = dock.spot
         dock = nil
         Begin(s, now - (BOARD_CHECKS - 1) * TICK)

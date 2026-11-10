@@ -7,7 +7,7 @@ local _, ns = ...
 -- window over the whole screen below SimplePanel's bar, every line selectable and copyable.
 -- Without WallyHUD the same colours are used (copied below) and the game's chat font is kept.
 WallyChat = WallyChat or {}
-ns.VERSION = "0.1.7"
+ns.VERSION = "0.1.8"
 
 -- Events and saved variables: the shared Core.lua (addons/shared). Print stays here.
 ns.SAVED = { db = "WallyChatDB" }

@@ -2075,6 +2075,10 @@ local atDock -- { d, since }: the dock you stand at, since when
 local trip   -- { d, since, left }: the dock you walked away from, until you arrive or give up
 local port   -- { kind, spell, at, c, n, w }: a hearthstone or teleport just cast
 local last   -- { c, n, w }: where you were at the last check
+local carriedN = 0 -- checks in a row you were carried (a ride needs BOARD_CHECKS: an elevator is a few)
+local groundN = 0  -- checks in a row on solid ground, moving yourself or standing still, while riding
+local BOARD_CHECKS = 3
+local LEAVE_SECS, LEAVE_RANGE = 180, 200 -- boarding counts for the dock you walked off this long, this close
 local swimSince, tipAt = nil, -INF -- swimming in your own form since; when we last said to shift
 
 local function NearestDock(c, n, w)
@@ -2492,11 +2496,34 @@ local function Watch()
     if not c then return end
     LearnStep(c, n, w, now)
 
-    -- Off the ride you were on: it arrived, or you never got on.
+    -- Carried along: you moved while not moving yourself (standing on a boat or zeppelin). Walking on
+    -- solid ground (your own speed is all your movement) or standing still is the opposite.
+    local carried, grounded = false, false
+    if last and last.c == c then
+        local speed = C.Num(GetUnitSpeed and C.Call(GetUnitSpeed, "player")) or 0
+        local moved = Dist(n, w, last.n, last.w)
+        -- (Falling or floating down a platform moves you too: not carried.)
+        carried = speed == 0 and moved > 3 and not C.Readable(C.Call(IsFalling)) and not C.Readable(C.Call(IsFlying))
+        grounded = (speed == 0 and moved < 0.3) or (speed > 0 and math.abs(moved / 0.5 - speed) < 1.5)
+    end
+    last = { c = c, n = n, w = w }
+    carriedN = carried and carriedN + 1 or 0
+
+    -- Off the ride you were on: it arrived, or you never got on. Indoors (no deck is: Undercity), or
+    -- on solid ground for a few seconds away from the dock you left: off.
     local r = R.riding
     if r then
-        local stayed = r.d.c == c and now - r.left > 20 and Dist(n, w, r.d.n, r.d.w) < 40
-        if now - r.since > 2 * r.expect + 60 or stayed or C.Readable(C.Call(IsSwimming)) then StopRiding() end
+        groundN = grounded and groundN + 1 or 0
+        local fromDock = r.d.c == c and r.d.n and Dist(n, w, r.d.n, r.d.w) or math.huge
+        local stayed = now - r.left > 20 and fromDock < 40
+        local off = now - r.left > 20 and fromDock > 60
+            and (C.Readable(C.Call(IsIndoors)) or groundN >= 4)
+        if now - r.since > 2 * r.expect + 60 or stayed or off or C.Readable(C.Call(IsSwimming)) then
+            StopRiding()
+            if off then trip = nil end
+        end
+    else
+        groundN = 0
     end
 
     -- Arrived where the dock you left goes.
@@ -2516,14 +2543,6 @@ local function Watch()
         end
     end
 
-    -- Carried along: you moved while not moving yourself (standing on a boat or zeppelin).
-    local carried = false
-    if last and last.c == c then
-        local speed = C.Num(GetUnitSpeed and C.Call(GetUnitSpeed, "player")) or 0
-        carried = speed == 0 and Dist(n, w, last.n, last.w) > 3
-    end
-    last = { c = c, n = n, w = w }
-
     -- At a dock, or just walked off one.
     local d = NearestDock(c, n, w)
     if d then
@@ -2538,8 +2557,11 @@ local function Watch()
         trip = { d = atDock.d, since = atDock.since, left = now }
         atDock = nil
     end
-    -- Carried away from the dock you left: you're on its ride.
-    if trip and carried and not R.riding then
+    -- Carried away from the dock you left (soon after leaving it, near it, outdoors, and for a few
+    -- checks: an elevator or a moving platform in town isn't a ride): you're on its ride.
+    local fresh = trip and now - trip.left <= LEAVE_SECS and trip.d.c == c and trip.d.n
+        and Dist(n, w, trip.d.n, trip.d.w) <= LEAVE_RANGE and not C.Readable(C.Call(IsIndoors))
+    if fresh and carriedN >= BOARD_CHECKS and not R.riding then
         SawDeparture(trip.d.t.key)
         local _, ride = R:Departure(trip.d.t.key, 0)
         R.riding = { d = trip.d, since = trip.since, left = now, expect = ride or R:RideSecs(trip.d.t) }

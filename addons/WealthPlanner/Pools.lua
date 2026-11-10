@@ -37,10 +37,14 @@ local NPC_POOL = {
 }
 -- Where the auctioneer's GUID can't be read: the neutral towns by subzone.
 local NEUTRAL_TOWNS = { ["Booty Bay"] = true, ["Gadgetzan"] = true, ["Everlook"] = true }
+-- The logistics camps (the "quickcoin" pool, shown as Logistics for both factions): Durotar Supply
+-- and Logistics by the Crossroads, the Azeroth Commerce Authority at Three Corners. An auctioneer
+-- there not in NPC_POOL still counts as Logistics.
+local LOGISTICS_CAMPS = { ["Durotar Supply and Logistics"] = true, ["Azeroth Commerce Authority"] = true }
 
 local NAMES = {
     alliance = "Alliance", horde = "Horde", steamwheedle = "Steamwheedle",
-    quickcoin = "Quickcoin", zephras = "Zephras Isle", bloodcoin = "Bloodcoin",
+    quickcoin = "Logistics", zephras = "Zephras Isle", bloodcoin = "Bloodcoin",
 }
 local ORDER = { alliance = 1, horde = 2, steamwheedle = 3, quickcoin = 4, zephras = 5, bloodcoin = 6 }
 
@@ -85,6 +89,7 @@ local function PoolHere()
     if id then
         local pool = NPC_POOL[id]
         if pool then return pool end
+        if GetSubZoneText and LOGISTICS_CAMPS[GetSubZoneText()] then return "quickcoin" end
         pool = "npc" .. id
         local name = UnitName and UnitName("npc")
         local zone = (GetSubZoneText and GetSubZoneText() ~= "" and GetSubZoneText()) or (GetZoneText and GetZoneText()) or "?"
@@ -94,6 +99,7 @@ local function PoolHere()
         return pool
     end
     if GetSubZoneText and NEUTRAL_TOWNS[GetSubZoneText()] then return N end
+    if GetSubZoneText and LOGISTICS_CAMPS[GetSubZoneText()] then return "quickcoin" end
     return Pools:Home()
 end
 
@@ -121,6 +127,10 @@ end
 -- e[4]: day (ns.Today) -> the lowest price seen that day at this pool, for HISTORY_DAYS days (the
 -- monthly trend in Wally's tooltips reaches back 30 days, give or take a week).
 local HISTORY_DAYS = 40
+-- e[5]: the scans of the last RECENT_KEEP seconds, flat { time, copper, time, copper, ... } (oldest
+-- first): Wally's daily trend compares now against 24 hours ago, not against a calendar day. Scans
+-- less than MERGE seconds apart are one point (the lower price).
+local RECENT_KEEP, MERGE = 30 * 3600, 600
 
 local function Record(dbKey, price, available)
     local pool = last
@@ -140,6 +150,21 @@ local function Record(dbKey, price, available)
         end
     end
     if not days[today] or price < days[today] then days[today] = price end
+    local now = e[2]
+    local recent = type(e[5]) == "table" and e[5] or {}
+    e[5] = recent
+    local n = #recent
+    if n >= 2 and now - recent[n - 1] < MERGE then
+        if price < recent[n] then recent[n] = price end
+    else
+        recent[n + 1], recent[n + 2] = now, price
+    end
+    local drop = 0
+    while drop + 2 <= #recent and recent[drop + 1] < now - RECENT_KEEP do drop = drop + 2 end
+    if drop > 0 then
+        for i = 1, #recent - drop do recent[i] = recent[i + drop] end
+        for i = #recent, #recent - drop + 1, -1 do recent[i] = nil end
+    end
 end
 
 -- One pool's price: copper, days since seen, how many were up; or nil.
@@ -156,6 +181,14 @@ function Pools:History(item, pool)
     local e = key and store and pool and store[pool] and store[pool][key]
     if not (e and type(e[4]) == "table") then return nil end
     return e[4], e[1], ns.Today()
+end
+
+-- One pool's recent scans: { time, copper, time, copper, ... }, oldest first (the last 30 hours);
+-- or nil.
+function Pools:Recent(item, pool)
+    local key, store = Key(item), Store()
+    local e = key and store and pool and store[pool] and store[pool][key]
+    return e and type(e[5]) == "table" and #e[5] >= 2 and e[5] or nil
 end
 
 -- Every pool's price for an item: { { pool, name, price, age, available, home, here } }, the pool

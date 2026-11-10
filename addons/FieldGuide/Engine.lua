@@ -1108,7 +1108,7 @@ function E:PickSection(guide)
         end
     end
     -- On a flight: nothing changes until you land.
-    if lastPick and UnitOnTaxi and UnitOnTaxi("player") then
+    if lastPick and E.Plain(UnitOnTaxi, "player") then
         for _, s in ipairs(Sections(guide)) do
             if s.id == lastPick then return s end
         end
@@ -4019,9 +4019,19 @@ end
 -- E.carriedBy: what you're on ("a flight", "zeppelin to Undercity"), while held; E.heldChanges:
 -- something asked for an update while held.
 
+-- A game value for the player, or nil when the client keeps it secret (Forever hides some, like
+-- your speed, outside cities): a secret can't be compared or even tested for true.
+local function Plain(fn, ...)
+    if not fn then return nil end
+    local ok, v = pcall(fn, ...)
+    if not ok or (issecretvalue and issecretvalue(v)) then return nil end
+    return v
+end
+E.Plain = Plain
+
 -- What carries you now, or nil.
 function E:TravellingOn()
-    if UnitOnTaxi and UnitOnTaxi("player") then return "a flight" end
+    if Plain(UnitOnTaxi, "player") then return "a flight" end
     local wp = Waypoint
     if type(wp) == "table" and wp.Riding then
         local ok, r = pcall(wp.Riding, wp)
@@ -4381,13 +4391,15 @@ function E:Clock() return course and course.clock or "reset" end
 
 function E:CheckCourse(seconds)
     local step = self.current and self.steps[self.current]
-    if not step or ns.char.paused or ns.char.instance or E.carriedBy or (UnitOnTaxi and UnitOnTaxi("player")) then
+    if not step or ns.char.paused or ns.char.instance or E.carriedBy or Plain(UnitOnTaxi, "player") then
         course = nil
         return
     end
     local key = StepKey(step)
     if not (course and course.key == key) then course = { key = key, clock = 0 } end
-    if UnitAffectingCombat("player") or (GetUnitSpeed("player") or 0) == 0 then return end
+    -- (Speed unreadable: can't tell whether you're moving, so the clock waits.)
+    local speed = Plain(GetUnitSpeed, "player")
+    if Plain(UnitAffectingCombat, "player") or type(speed) ~= "number" or speed == 0 then return end
     local c, n, w = ns.WorldMap.Player()
     if not c then return end
     local at = { c, n, w }

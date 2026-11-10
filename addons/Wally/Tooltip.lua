@@ -37,10 +37,12 @@ local function AddLines(tooltip, link)
         end
     end
     -- Market trend at your faction's auction houses (Wealth Planner's history per auction pool):
-    -- today's price against the start of each window. Then Steamwheedle's latest price on its own.
+    -- today's price against the start of each window. Then the latest price at Steamwheedle and at
+    -- the logistics camps (one line, "Logistics", for Horde and Alliance alike).
     local AP = ns.AuctionPrice
     local steam = AP.PoolPrice(link, AP.STEAMWHEEDLE)
-    if steam or AP.HasHistory(link) or AP.Market(link) then
+    local logistics = AP.PoolPrice(link, AP.LOGISTICS)
+    if steam or logistics or AP.HasHistory(link) or AP.Market(link) then
         for _, w in ipairs(TRENDS) do
             local diff = AP.Trend(link, w.days)
             local text, c = "N/A", TREND_COLOR.none
@@ -52,6 +54,8 @@ local function AddLines(tooltip, link)
         end
         local c = steam and { 1, 1, 1 } or TREND_COLOR.none
         tooltip:AddDoubleLine("Wally: Steamwheedle", steam and C.Money(steam) or "N/A", 0.6, 0.75, 0.8, c[1], c[2], c[3])
+        c = logistics and { 1, 1, 1 } or TREND_COLOR.none
+        tooltip:AddDoubleLine("Wally: Logistics", logistics and C.Money(logistics) or "N/A", 0.6, 0.75, 0.8, c[1], c[2], c[3])
     end
     local key = ns.Key(C.NameFromLink(link))
     local h = key and ns.db.habits[key]

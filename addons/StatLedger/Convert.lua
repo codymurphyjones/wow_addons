@@ -9,9 +9,13 @@ local API = ns.API
 -- 1. Crit is priced in the stat that buys it. 1% crit costs as much as the Agility that
 --    gives 1% crit to your class at your level (a level 30 druid: about 10), never more
 --    than its item budget. A flat 14 made one 1% crit item outrank 10 Agility.
--- 2. Stats share in what they produce. A point of Agility also gives crit (and, for some
---    classes, attack power and armor); it earns DERIVED_SHARE of their worth by your
---    weights. Half, not all, so stacking one stat can't run away.
+-- 2. Strength and Agility are worth what they turn into. When one gives attack power you
+--    value (AP or RAP in your list), it's priced as exactly what it produces, at full rate:
+--    a cat's Strength is 2 AP, its Agility 1 AP plus its crit and armor. Its own rank and
+--    item budget don't count then; budget is what a stat costs an item, not what it's worth.
+-- 3. Other stats share in what they produce (Intellect's spell crit, Agility's crit for a
+--    class whose Agility gives no attack power): DERIVED_SHARE of its worth on top of their
+--    own. Half, not all, so stacking one stat can't run away.
 local Cv = {}
 ns.Convert = Cv
 
@@ -63,12 +67,23 @@ function Cv:Budget(stat, amount)
     return budget
 end
 
--- The worth of amount of stat under weights ({ [stat] = weight }, StatLedger's): its own
--- worth plus DERIVED_SHARE of what it produces.
+-- Whether stat turns into attack power you value: then it's worth only what it produces.
+local POWER = { AP = true, RAP = true }
+local function Converts(list, weights)
+    for _, d in ipairs(list) do
+        if POWER[d[1]] and (weights[d[1]] or 0) > 0 then return true end
+    end
+    return false
+end
+
+-- The worth of amount of stat under weights ({ [stat] = weight }, StatLedger's): what it
+-- produces at full rate when it turns into attack power you value, else its own worth plus
+-- DERIVED_SHARE of what it produces.
 function Cv:Value(stat, amount, weights)
-    local own = amount * self:Budget(stat, amount) * (weights[stat] or 0)
-    local derived = 0
     local list = A.DERIVED[Who()] and A.DERIVED[Who()][stat]
+    local full = list and amount > 0 and Converts(list, weights)
+    local own = full and 0 or amount * self:Budget(stat, amount) * (weights[stat] or 0)
+    local derived = 0
     if list and amount > 0 then
         for _, d in ipairs(list) do
             local to, per = d[1], d[2]
@@ -82,7 +97,7 @@ function Cv:Value(stat, amount, weights)
             end
         end
     end
-    return own + derived * A.Solve(A.DERIVED_SHARE)
+    return own + derived * (full and 1 or A.Solve(A.DERIVED_SHARE))
 end
 
 -- total, contrib { [stat] = worth } for an item's values { [stat] = amount }. Each stat's

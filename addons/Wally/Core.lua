@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.20"
+ns.VERSION = "0.1.21"
 ns.PREFIX = "|cff55d6beWally|r"
 ns.ICON = "Interface/AddOns/Wally/Media/Wally"
 ns.HISTORY_MAX = 200

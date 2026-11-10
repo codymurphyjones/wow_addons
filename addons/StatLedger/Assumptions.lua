@@ -140,7 +140,8 @@ A.DERIVED = {
     SHAMAN = { STR = { { "AP", 2 } }, AGI = { CRIT, ARMOR }, INT = { SPELL } },
     MAGE = { INT = { SPELL } },
     WARLOCK = { INT = { SPELL } },
-    DRUID = { STR = { { "AP", 2 } }, AGI = { CRIT, { "AP", 2 }, ARMOR }, INT = { SPELL } },
+    -- Cat form: 2 AP per Strength, 1 per Agility (Classic's figures; UNVERIFIED on Forever).
+    DRUID = { STR = { { "AP", 2 } }, AGI = { CRIT, { "AP", 1 }, ARMOR }, INT = { SPELL } },
 }
 
 ---------------------------------------------------------------------------

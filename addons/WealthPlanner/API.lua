@@ -13,6 +13,8 @@ local _, ns = ...
 --   WealthPlannerAPI.PoolPrices(item) -> { { pool, name, price, age, available, home, here } }
 --   WealthPlannerAPI.PoolHistory(item, pool) -> { [day] = lowest copper that day }, latest copper,
 --                                      today (days are whole days since 1970); or nil. pool nil: yours
+--   WealthPlannerAPI.PoolRecent(item, pool) -> { time, copper, time, copper, ... }: the scans of the
+--                                      last 30 hours, oldest first; or nil. pool nil: yours
 --   WealthPlannerAPI.HomePool() -> your faction's pool ("alliance" or "horde")
 -- Version 2: the shared registry (RegisterCallback); no events yet.
 local API = ns.NewAPI("WealthPlannerAPI", 2)
@@ -49,6 +51,11 @@ end
 function API.PoolHistory(item, pool)
     if not (ns.db and ns.Pools and item) then return nil end
     return ns.Pools:History(item, pool or ns.Pools:Home())
+end
+
+function API.PoolRecent(item, pool)
+    if not (ns.db and ns.Pools and item) then return nil end
+    return ns.Pools:Recent(item, pool or ns.Pools:Home())
 end
 
 function API.HomePool()

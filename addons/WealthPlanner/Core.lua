@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-ns.VERSION = "0.1.12"
+ns.VERSION = "0.1.13"
 ns.PREFIX = "|cff55d6beWealth Planner|r"
 -- Built from the folder name so the path survives renaming the folder.
 ns.ICON = "Interface\\AddOns\\" .. addonName .. "\\Media\\Icon"
@@ -15,6 +15,8 @@ ns.DEFAULTS = {
     options = {
         chat = true,
         poolTooltip = true,  -- item tooltips: the price at each auction pool (Pools.lua)
+        craftProfit = true,  -- the profession window's To Craft / Profit, priced per auction house (Crafting.lua)
+        hideAuctionatorPrices = true, -- Auctionator's own "Auction" tooltip lines off (Crafting.lua)
         historyDays = 120,   -- days of price history kept per item
         investTarget = 50,   -- % of your wealth to keep invested (goods and auctions)
         cashReserve = 5,     -- gold that's never counted as available to invest

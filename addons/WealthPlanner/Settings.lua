@@ -36,6 +36,16 @@ S.page = ns.NewOptionsPage({ name = "Wealth Planner", build = function(p)
         tooltip = "Each auction pool's price on its own line: your faction's cities, Steamwheedle (Booty Bay, Gadgetzan, "
             .. "Everlook) and Forever's new auctioneers. Auctionator keeps one price for all of them, so a visit to "
             .. "Booty Bay would replace your own city's price; these are kept apart." })
+    p:Check({ path = "db.options.craftProfit", label = "Crafting cost and profit by auction house",
+        tooltip = "On the profession window, Auctionator's To Craft and Profit lines are worked out again with your "
+            .. "auction house's prices (the one open now, else your faction's) instead of whichever house was scanned "
+            .. "last, in exact copper. When another house would pay better, its profit shows below.",
+        apply = function() if ns.Crafting then ns.Crafting:RefreshProfit() end end })
+    p:Check({ path = "db.options.hideAuctionatorPrices", label = "Hide Auctionator's auction price on tooltips",
+        tooltip = "Auctionator's Auction line is the last price scanned at any auction house. With this on it's "
+            .. "switched off in Auctionator's settings, so the prices by auction house are the ones you see. "
+            .. "Turn this off to get Auctionator's line back.",
+        apply = function() if ns.Crafting then ns.Crafting:AuctionatorTooltips() end end })
     p:Check({ path = "db.options.alerts", label = "Chat alerts for watched prices",
         tooltip = "When a scan sees a watched item cross the buy or sell price you set on its chart." })
     p:Check({ path = "db.options.chat", label = "Print messages in chat" })
